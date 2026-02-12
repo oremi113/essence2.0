@@ -1,182 +1,36 @@
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-# ESSENCE
-Clean Rebuild – Migration Architecture
+## Getting Started
 
+First, run the development server:
 
-## Phase 0: Decision Locks + Repo Foundation
-
-This repository represents a clean rebuild of ESSENCE.
-
-Phase 0 exists to:
-- Lock architectural decisions
-- Establish infrastructure
-- Create documentation
-- Prepare for implementation
-
-There is intentionally **no product logic in this phase**.
-
-
----
-
-
-## Architecture (Locked)
-
-- Next.js App Router (Vercel)
-- Supabase Auth
-- Supabase Postgres
-- Supabase Storage (direct uploads via signed URLs)
-- ElevenLabs (server-side only)
-- Direct SQL (no ORM abstraction layer)
-- Synchronous processing for MVP
-
-
----
-
-
-## Core Primitives (Locked)
-
-- User
-- VoiceProfile
-- TrainingClip
-- Message
-- Recipient
-
-
----
-
-
-## Non-Negotiables
-
-- Audio is never stored in the database
-- Server decides, client requests
-- Messages are immutable
-- No scope creep beyond MVP
-
-
----
-
-
-## MVP Definition
-
-Onboarding  
-→ Voice Training  
-→ Voice Creation  
-→ Generate 1 Message  
-→ Playback  
-→ Basic Memory Shelf  
-
-Anything outside this flow is out of scope for MVP.
-
-
----
-
-
-## Phase 0 Scope
-
-Included in Phase 0:
-
-- Repository setup
-- CI configuration
-- Environment structure
-- Supabase project setup
-- Storage bucket creation
-- Decision documentation
-- API contract definition
-
-Not included in Phase 0:
-
-- Feature UI
-- Business logic
-- ElevenLabs integration
-- Database implementation beyond structure planning
-
-
----
-
-
-## Local Development
-
-1. Clone the repository
-
-2. Install dependencies
-
-```
-
-npm install
-
-```
-
-3. Create local environment file
-
-```
-
-cp .env.example .env.local
-
-```
-
-Fill in required keys:
-- NEXT_PUBLIC_SUPABASE_URL
-- NEXT_PUBLIC_SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY
-- ELEVENLABS_API_KEY
-
-4. Start development server
-
-```
-
+```bash
 npm run dev
-
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-App runs at:
-http://localhost:3000
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-Health check endpoint:
-http://localhost:3000/health
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
----
+## Learn More
 
+To learn more about Next.js, take a look at the following resources:
 
-## Environment Rules
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-- Service role key is server-only
-- ElevenLabs key is server-only
-- No secrets in client code
-- No secrets committed to Git
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Deploy on Vercel
 
----
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-
-## Documentation
-
-All architectural decisions live in:
-
-/docs
-
-Key files:
-- DECISIONS.md
-- STORAGE_PATHS.md
-- API_CONTRACTS.md
-- SECURITY.md
-- RUNBOOK.md
-
-These documents are part of the architecture.
-
-
----
-
-
-## Phase 0 Exit Criteria
-
-Phase 0 is complete when:
-
-- Repo builds and deploys
-- CI passes
-- Supabase project is configured
-- Storage buckets are created
-- Environment variables are validated
-- All architectural decisions are documented
-
-Only then does feature development begin.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
