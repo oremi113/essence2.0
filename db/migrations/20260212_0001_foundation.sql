@@ -1,16 +1,21 @@
--- ESSENCE Phase 0
--- Canonical schema snapshot
--- This file represents the FULL database state after all migrations.
+begin;
 
-create extension "pgcrypto";
+create extension if not exists "pgcrypto";
 
--- Enums
-create type training_clip_status as enum ('uploaded', 'processing', 'ready', 'failed');
-create type message_status as enum ('generating', 'ready', 'failed');
-create type plan_tier as enum ('vault', 'legacy', 'guardian');
+-- Status enums
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'training_clip_status') then
+    create type training_clip_status as enum ('uploaded', 'processing', 'ready', 'failed');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'message_status') then
+    create type message_status as enum ('generating', 'ready', 'failed');
+  end if;
+end $$;
 
 -- Voice Profiles
-create table public.voice_profiles (
+create table if not exists public.voice_profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   label text,
@@ -38,7 +43,7 @@ using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
 -- Recipients
-create table public.recipients (
+create table if not exists public.recipients (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
@@ -65,8 +70,8 @@ for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
--- Training Clips
-create table public.training_clips (
+-- Training Clips (metadata only)
+create table if not exists public.training_clips (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   voice_profile_id uuid not null references public.voice_profiles(id) on delete cascade,
@@ -97,8 +102,8 @@ for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
--- Messages
-create table public.messages (
+-- Messages (immutable)
+create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   voice_profile_id uuid not null references public.voice_profiles(id) on delete restrict,
@@ -123,21 +128,4 @@ for select
 using (auth.uid() = user_id);
 
 create policy "messages_insert_own"
-on public.messages
-for insert
-with check (auth.uid() = user_id);
-
--- User Entitlements
-create table public.user_entitlements (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  plan plan_tier not null default 'vault',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-alter table public.user_entitlements enable row level security;
-
-create policy "user_entitlements_select_own"
-on public.user_entitlements
-for select
-using (auth.uid() = user_id);
+on
