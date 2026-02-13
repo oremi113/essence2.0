@@ -15,15 +15,17 @@ function SignInForm() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setChecking(false);
-      if (user) router.replace(next);
-    });
+    fetch("/api/me")
+      .then((res) => {
+        setChecking(false);
+        if (res.ok) router.replace(next);
+      })
+      .catch(() => setChecking(false));
   }, [router, next]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
