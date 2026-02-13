@@ -29,5 +29,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Check Supabase env (values hidden)
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL is set: $([ -n \"$NEXT_PUBLIC_SUPABASE_URL\" ] && echo yes || echo no)"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY is set: $([ -n \"$NEXT_PUBLIC_SUPABASE_ANON_KEY\" ] && echo yes || echo no)"
+
       - name: Build
         run: npm run build
