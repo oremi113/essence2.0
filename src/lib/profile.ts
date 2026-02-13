@@ -18,24 +18,24 @@ export async function getOrCreateProfile(): Promise<Profile> {
     throw new Error("getOrCreateProfile requires an authenticated user");
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: findError } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", user.id)
-    .single();
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  if (existing) {
-    return existing as Profile;
-  }
+  if (findError) throw findError;
+  if (existing) return existing as Profile;
 
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error: insertError } = await supabase
     .from("profiles")
-    .insert({ id: user.id, display_name: null })
-    .select()
+    .insert({
+      user_id: user.id,
+      display_name: user.email ?? null,
+    })
+    .select("*")
     .single();
 
-  if (error) {
-    throw new Error(`Failed to create profile: ${error.message}`);
-  }
+  if (insertError) throw insertError;
   return inserted as Profile;
 }
