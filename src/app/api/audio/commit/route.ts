@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     if (row.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (row.status !== "pending_upload" && row.status !== "failed") {
-      return NextResponse.json({ error: "Clip not in pending_upload or failed state" }, { status: 400 });
+    if (row.status !== "uploading") {
+      return NextResponse.json({ error: "Clip not in uploading state" }, { status: 400 });
     }
 
     const bucket = row.storage_bucket || AUDIO_BUCKET;
@@ -68,16 +68,19 @@ export async function POST(request: Request) {
 
     const { error: updateError } = await supabaseAuth
       .from("training_clips")
-      .update({ status: "ready", bytes: byteSize, mime_type: mime })
+      .update({ status: "uploaded", bytes: byteSize, mime_type: mime })
       .eq("id", id)
       .eq("user_id", user.id);
 
     if (updateError) {
-      console.error("[commit] update failed:", updateError.message);
-      return NextResponse.json({ error: "Failed to commit" }, { status: 500 });
+      console.error("[commit] update failed:", updateError.message, updateError);
+      return NextResponse.json(
+        { error: "Failed to commit", detail: updateError.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ ok: true, status: "ready", byteSize });
+    return NextResponse.json({ ok: true, status: "uploaded", byteSize });
   } catch (err) {
     console.error("[commit]", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

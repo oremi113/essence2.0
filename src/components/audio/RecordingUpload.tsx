@@ -86,7 +86,8 @@ export function RecordingUpload({
       });
       if (!initRes.ok) {
         const data = await initRes.json().catch(() => ({}));
-        throw new Error(data.error || "Init upload failed");
+        const msg = data.detail ? `${data.error}: ${data.detail}` : (data.error || "Init upload failed");
+        throw new Error(msg);
       }
       const init = await initRes.json();
       const { id, signedUploadUrl, uploadToken, requiredHeaders } = init;
@@ -111,7 +112,8 @@ export function RecordingUpload({
       });
       if (!commitRes.ok) {
         const data = await commitRes.json().catch(() => ({}));
-        throw new Error(data.error || "Commit failed");
+        const msg = data.detail ? `${data.error}: ${data.detail}` : (data.error || "Commit failed");
+        throw new Error(msg);
       }
 
       setClipId(id);

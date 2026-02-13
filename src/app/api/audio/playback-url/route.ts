@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     if (row.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (row.status !== "ready") {
+    if (row.status !== "uploaded") {
       return NextResponse.json({ error: "Clip not ready for playback" }, { status: 400 });
     }
 
