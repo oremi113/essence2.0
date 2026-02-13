@@ -20,6 +20,9 @@ export default async function HomePage() {
       <h1>Home</h1>
       <p>Signed in as {user.email ?? "unknown"}.</p>
       <p>Profile status: {profile.onboarding_state}</p>
+      <p>
+        <a href="/app/record">Record training clip</a> (Phase 4: init → upload → commit → playback)
+      </p>
       <SignOutButton />
     </main>
   );
