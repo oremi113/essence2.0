@@ -1,9 +1,9 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.rpc("healthcheck");
     if (error) {
       return NextResponse.json(
