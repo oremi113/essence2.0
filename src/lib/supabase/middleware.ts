@@ -12,7 +12,7 @@ export async function updateSession(request: NextRequest): Promise<{
     return { response: NextResponse.next({ request }), user: null };
   }
 
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
   const supabase = createServerClient(url, anonKey, {
     cookies: {
