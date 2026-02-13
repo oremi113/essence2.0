@@ -36,6 +36,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "promptId (prompt_index) required and must be >= 1" }, { status: 400 });
     }
 
+    // Clear any stale "uploading" row from a previous failed attempt (allows retry)
+    await supabaseAuth
+      .from("training_clips")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("voice_profile_id", voiceProfileId)
+      .eq("prompt_index", promptIndex)
+      .eq("status", "uploading");
+
     // Insert row first so we have an id for the path (deterministic path includes id)
     const { data: row, error: insertError } = await supabaseAuth
       .from("training_clips")
@@ -43,7 +52,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         voice_profile_id: voiceProfileId,
         prompt_index: promptIndex,
-        status: "pending_upload",
+        status: "uploading",
         storage_bucket: AUDIO_BUCKET,
         storage_path: "pending", // required NOT NULL; set to real path below
       })
@@ -51,8 +60,11 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError) {
-      console.error("[init-upload] insert failed:", insertError.message);
-      return NextResponse.json({ error: "Failed to create clip" }, { status: 500 });
+      console.error("[init-upload] insert failed:", insertError.message, insertError);
+      return NextResponse.json(
+        { error: "Failed to create clip", detail: insertError.message },
+        { status: 500 }
+      );
     }
 
     const clipId = row.id;

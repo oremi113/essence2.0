@@ -1,41 +1,45 @@
 import "server-only";
+import { getOrCreateProfile } from "@/lib/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type Profile = {
+export type VoiceProfile = {
   id: string;
+  user_id: string;
+  label: string;
+  status: string;
   created_at: string;
-  display_name: string | null;
-  onboarding_state: string;
-  last_active_at: string | null;
+  updated_at: string;
 };
 
-export async function getOrCreateProfile(): Promise<Profile> {
+export async function getOrCreateVoiceProfile(): Promise<VoiceProfile> {
+  await getOrCreateProfile();
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    throw new Error("getOrCreateProfile requires an authenticated user");
+    throw new Error("getOrCreateVoiceProfile requires an authenticated user");
   }
 
   const { data: existing, error: findError } = await supabase
-    .from("profiles")
+    .from("voice_profiles")
     .select("*")
     .eq("user_id", user.id)
+    .limit(1)
     .maybeSingle();
 
   if (findError) throw findError;
-  if (existing) return existing as Profile;
+  if (existing) return existing as VoiceProfile;
 
   const { data: inserted, error: insertError } = await supabase
-    .from("profiles")
+    .from("voice_profiles")
     .insert({
       user_id: user.id,
-      display_name: user.email ?? null,
+      label: "Default",
     })
     .select("*")
     .single();
 
   if (insertError) throw insertError;
-  return inserted as Profile;
+  return inserted as VoiceProfile;
 }
