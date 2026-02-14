@@ -96,7 +96,6 @@ export function RecordingUpload({
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = getPreferredMime();
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
@@ -163,7 +162,7 @@ export function RecordingUpload({
         throw new Error(msg);
       }
       const init = await initRes.json();
-      const { id, signedUploadUrl, uploadToken, requiredHeaders } = init;
+      const { id, signedUploadUrl, requiredHeaders } = init;
 
       // 2) Direct upload: PUT to signed URL (or use SDK uploadToSignedUrl)
       const putRes = await fetch(signedUploadUrl, {

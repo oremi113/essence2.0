@@ -218,7 +218,7 @@ export function VoiceCreationView() {
         </p>
         {viewState === "taking_longer" && (
           <p style={{ marginTop: 16, fontSize: 14, color: "#555" }}>
-            Voice creation can take 1–3 minutes. You can wait here—we'll show success or an error when it finishes. If it's been several minutes, you can go back and try again; you'll see the result then.
+            Voice creation can take 1–3 minutes. You can wait here—we&apos;ll show success or an error when it finishes. If it&apos;s been several minutes, you can go back and try again; you&apos;ll see the result then.
           </p>
         )}
         <p style={{ marginTop: 16 }}>
