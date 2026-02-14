@@ -44,13 +44,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Clip not ready for playback" }, { status: 400 });
     }
 
-    const bucket = row.storage_bucket || "essence-audio";
-    const objectPath = row.storage_path;
+    if (!row.storage_bucket || !row.storage_path) {
+      return NextResponse.json({ error: "Audio file not found" }, { status: 404 });
+    }
 
     const service = createSupabaseServiceClient();
     const { data: signed, error: signError } = await service.storage
-      .from(bucket)
-      .createSignedUrl(objectPath, DOWNLOAD_EXPIRY_SEC);
+      .from(row.storage_bucket)
+      .createSignedUrl(row.storage_path, DOWNLOAD_EXPIRY_SEC);
 
     if (signError) {
       console.error("[playback-url] sign failed:", signError.message);

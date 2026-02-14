@@ -6,6 +6,7 @@ import "server-only";
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
 const REQUEST_TIMEOUT_MS = 90_000; // 90 s — fail fast so user sees error instead of hanging
+const TTS_MODEL_ID = "eleven_multilingual_v2";
 
 /** ElevenLabs /v1/voices/add expects multipart field "name" and "files" (one or more audio files). */
 const FORM_FIELD_FILES = "files";
@@ -107,6 +108,104 @@ export async function createVoiceFromClips(
         return { ok: false, status: 504, message: "Request timed out" };
       }
       console.error("[elevenlabs] request error:", err.message);
+      return { ok: false, status: 502, message: err.message };
+    }
+    return { ok: false, status: 502, message: "Unknown error" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Text-to-Speech (Phase 6)
+// ---------------------------------------------------------------------------
+
+export type GenerateSpeechParams = {
+  /** ElevenLabs voice id (vendor_voice_id from voice_profiles). */
+  voiceId: string;
+  /** Text to speak. */
+  text: string;
+};
+
+export type GenerateSpeechResult =
+  | { ok: true; audioBuffer: Buffer; contentType: string }
+  | { ok: false; status: number; code?: string; message: string };
+
+/**
+ * Generate speech audio from text using a cloned voice.
+ * Returns raw audio bytes (MP3) — caller stores to Supabase Storage.
+ */
+export async function generateSpeech(
+  params: GenerateSpeechParams
+): Promise<GenerateSpeechResult> {
+  const { voiceId, text } = params;
+  if (!voiceId?.trim()) {
+    return { ok: false, status: 400, message: "Voice ID is required" };
+  }
+  if (!text?.trim()) {
+    return { ok: false, status: 400, message: "Text is required" };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(
+      `${ELEVENLABS_BASE}/text-to-speech/${encodeURIComponent(voiceId)}`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": getApiKey(),
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text: text.trim(),
+          model_id: TTS_MODEL_ID,
+        }),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      let message = `ElevenLabs TTS error ${res.status}`;
+      let code: string | undefined;
+      try {
+        const data = JSON.parse(errBody);
+        message =
+          typeof data?.detail?.message === "string"
+            ? data.detail.message
+            : typeof data?.message === "string"
+              ? data.message
+              : message;
+        code = data?.detail?.code ?? data?.error;
+      } catch {
+        /* not JSON */
+      }
+      console.error("[elevenlabs] TTS failed:", res.status, code ?? "", message);
+      return { ok: false, status: res.status, code, message };
+    }
+
+    const arrayBuf = await res.arrayBuffer();
+    const audioBuffer = Buffer.from(arrayBuf);
+    if (audioBuffer.length === 0) {
+      console.error("[elevenlabs] TTS returned empty audio");
+      return { ok: false, status: 502, message: "Voice service returned empty audio" };
+    }
+
+    return {
+      ok: true,
+      audioBuffer,
+      contentType: res.headers.get("content-type") ?? "audio/mpeg",
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error) {
+      if (err.name === "AbortError") {
+        console.error("[elevenlabs] TTS timeout");
+        return { ok: false, status: 504, message: "Request timed out" };
+      }
+      console.error("[elevenlabs] TTS error:", err.message);
       return { ok: false, status: 502, message: err.message };
     }
     return { ok: false, status: 502, message: "Unknown error" };
