@@ -284,8 +284,8 @@ export function NewMessageView({
           <button type="button" onClick={handleNewMessage}>
             Create another message
           </button>
-          <a href="/app/record" style={{ marginLeft: 12 }}>
-            Back to Record
+          <a href="/app/shelf" style={{ marginLeft: 12 }}>
+            Memory Shelf
           </a>
         </div>
       </div>
@@ -302,8 +302,8 @@ export function NewMessageView({
           <button type="button" onClick={handleRetry}>
             Try again
           </button>
-          <a href="/app/record" style={{ marginLeft: 12 }}>
-            Back to Record
+          <a href="/app/shelf" style={{ marginLeft: 12 }}>
+            Memory Shelf
           </a>
         </div>
       </div>

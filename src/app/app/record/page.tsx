@@ -25,6 +25,11 @@ export default async function RecordPage() {
 
   return (
     <main style={{ padding: 24 }}>
+      <nav style={{ marginBottom: 16, fontSize: 14 }}>
+        <a href="/app/shelf">Memory Shelf</a>
+        <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
+        <a href="/app/messages/new">New Message</a>
+      </nav>
       <h1>Record training clip</h1>
       <p>Record audio and upload directly to storage, then commit metadata.</p>
       <RecordingUploadWrapper voiceProfiles={voiceProfiles} />

@@ -21,6 +21,11 @@ export default async function NewMessagePage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 600 }}>
+      <nav style={{ marginBottom: 16, fontSize: 14 }}>
+        <a href="/app/shelf">Memory Shelf</a>
+        <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
+        <a href="/app/record">Record</a>
+      </nav>
       <NewMessageView voiceProfiles={profiles ?? []} />
     </main>
   );
