@@ -2,11 +2,21 @@ import "server-only";
 import { getOrCreateProfile } from "@/lib/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/** Matches public.voice_profile_status enum. Keep in sync with DB. */
+export type VoiceProfileStatus =
+  | "created"
+  | "collecting"
+  | "queued"
+  | "processing"
+  | "ready"
+  | "failed"
+  | "archived";
+
 export type VoiceProfile = {
   id: string;
   user_id: string;
   label: string;
-  status: string;
+  status: VoiceProfileStatus;
   created_at: string;
   updated_at: string;
 };

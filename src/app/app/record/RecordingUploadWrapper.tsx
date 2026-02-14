@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { RecordingUpload } from "@/components/audio/RecordingUpload";
 
 export function RecordingUploadWrapper({
@@ -39,10 +40,17 @@ export function RecordingUploadWrapper({
         />
       </label>
       {voiceProfileId ? (
-        <RecordingUpload
-          voiceProfileId={voiceProfileId}
-          promptIndex={promptIndex}
-        />
+        <>
+          <RecordingUpload
+            voiceProfileId={voiceProfileId}
+            promptIndex={promptIndex}
+          />
+          <p style={{ marginTop: 16 }}>
+            <Link href={`/app/voice/create?voiceProfileId=${encodeURIComponent(voiceProfileId)}`}>
+              Create voice from clips
+            </Link>
+          </p>
+        </>
       ) : (
         <p>Select a voice profile to record.</p>
       )}

@@ -2,11 +2,18 @@
 
 /**
  * 3-step pipeline: init-upload (server) -> direct PUT to signed URL (client) -> commit (server).
- * State: idle | recording | uploading | committing | ready | error
+ * State: idle | recording | uploading | committing | ready | error | permission_denied
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 
-type Status = "idle" | "recording" | "uploading" | "committing" | "ready" | "error";
+type Status =
+  | "idle"
+  | "recording"
+  | "uploading"
+  | "committing"
+  | "ready"
+  | "error"
+  | "permission_denied";
 
 type ClipRow = {
   id: string;
@@ -49,6 +56,8 @@ export function RecordingUpload({
   const [clipsLoading, setClipsLoading] = useState(false);
   const [clipsError, setClipsError] = useState<string | null>(null);
   const [unavailableClipIds, setUnavailableClipIds] = useState<Set<string>>(new Set());
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playbackAudioRef = useRef<HTMLAudioElement | null>(null);
   const playingClipIdRef = useRef<string | null>(null);
   const playbackRetryUsedRef = useRef(false);
@@ -101,9 +110,23 @@ export function RecordingUpload({
 
       recorder.start(100);
       setStatus("recording");
+      setRecordingSeconds(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingSeconds((s) => s + 1);
+      }, 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start microphone");
-      setStatus("error");
+      const isPermissionDenied =
+        err instanceof Error &&
+        (err.name === "NotAllowedError" ||
+          err.name === "PermissionDeniedError" ||
+          /permission|denied|blocked/i.test(err.message));
+      if (isPermissionDenied) {
+        setError("Microphone access was blocked.");
+        setStatus("permission_denied");
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to start microphone");
+        setStatus("error");
+      }
     }
   }, []);
 
@@ -111,6 +134,10 @@ export function RecordingUpload({
     const recorder = recorderRef.current;
     if (!recorder || status !== "recording") return;
 
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
     recorder.stop();
     setStatus("uploading");
 
@@ -193,6 +220,16 @@ export function RecordingUpload({
     setPlaybackUrl(data.url);
   }, [clipId]);
 
+  const resetToRecordAgain = useCallback(() => {
+    setStatus("idle");
+    setClipId(null);
+    setPlaybackUrl(null);
+    setPlaybackUnavailable(false);
+    setError(null);
+    setRecordingSeconds(0);
+    playbackRetriedRef.current = false;
+  }, []);
+
   const handleAudioError = useCallback(() => {
     if (!playbackRetriedRef.current) {
       playbackRetriedRef.current = true;
@@ -263,11 +300,19 @@ export function RecordingUpload({
         </button>
       )}
       {status === "recording" && (
-        <button type="button" onClick={stopAndUpload}>
-          Stop and upload
-        </button>
+        <p style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span aria-live="polite">{recordingSeconds}s</span>
+          <button type="button" onClick={stopAndUpload}>
+            Stop and upload
+          </button>
+        </p>
       )}
-      {(status === "uploading" || status === "committing") && <p>Please wait…</p>}
+      {(status === "uploading" || status === "committing") && (
+        <p aria-busy="true" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-block", width: 18, height: 18, border: "2px solid #333", borderTopColor: "transparent", borderRadius: "50%", animation: "recording-spin 0.8s linear infinite" }} />
+          Please wait…
+        </p>
+      )}
       {status === "ready" && (
         <div>
           <p>Saved.</p>
@@ -283,6 +328,11 @@ export function RecordingUpload({
               style={{ display: "block", marginTop: 8 }}
             />
           )}
+          <p style={{ marginTop: 12 }}>
+            <button type="button" onClick={resetToRecordAgain}>
+              Record again
+            </button>
+          </p>
         </div>
       )}
       {status === "error" && (
@@ -290,6 +340,16 @@ export function RecordingUpload({
           Retry
         </button>
       )}
+      {status === "permission_denied" && (
+        <div>
+          <p style={{ color: "var(--color-error, #c00)" }}>{error ?? "Microphone access was blocked."}</p>
+          <p>Enable the microphone in your browser settings (e.g. address bar or site settings), then click Retry.</p>
+          <button type="button" onClick={() => { setStatus("idle"); setError(null); }}>
+            Retry
+          </button>
+        </div>
+      )}
+      <style dangerouslySetInnerHTML={{ __html: "@keyframes recording-spin { to { transform: rotate(360deg); } }" }} />
       {voiceProfileId && (
         <div style={{ marginTop: 24 }}>
           <strong>Recent clips</strong>
