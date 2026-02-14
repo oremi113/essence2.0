@@ -236,13 +236,21 @@ export function VoiceCreationView() {
       <div style={{ padding: 24 }}>
         <h2>Your voice is ready</h2>
         <p>You can now use this voice to create messages.</p>
-        <button
-          type="button"
-          onClick={() => router.push("/app/record")}
-          style={{ marginTop: 16 }}
-        >
-          Continue
-        </button>
+        <div style={{ marginTop: 16 }}>
+          <button
+            type="button"
+            onClick={() => router.push("/app/messages/new")}
+          >
+            Create a message
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/app/record")}
+            style={{ marginLeft: 8 }}
+          >
+            Back to Record
+          </button>
+        </div>
       </div>
     );
   }

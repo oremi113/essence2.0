@@ -232,9 +232,8 @@ export async function POST(
     const service = createSupabaseServiceClient();
     const audioBlobs: Blob[] = [];
     for (const clip of clips) {
-      const bucket = clip.storage_bucket || "essence-audio";
       const { data: blob, error: dlError } = await service.storage
-        .from(bucket)
+        .from(clip.storage_bucket)
         .download(clip.storage_path);
       if (dlError || !blob) {
         console.error("[start] clip download failed:", clip.id, dlError?.message);
