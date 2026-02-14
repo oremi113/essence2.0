@@ -1,14 +1,6 @@
 /**
+ * GET  /api/messages — List messages for the authed user (Memory Shelf).
  * POST /api/messages — Create a message using a preserved voice.
- *
- * Synchronous flow (MVP):
- *   1. Validate input + auth + voice profile ownership
- *   2. Insert message row (status = generating)
- *   3. Call ElevenLabs TTS
- *   4. Upload audio to Supabase Storage
- *   5. Update message row (status = saving → saved)
- *
- * On failure at any step the row is set to status = failed with a safe message.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -19,6 +11,64 @@ import { NextResponse } from "next/server";
 export const maxDuration = 120; // 2 min — TTS + upload
 
 const MAX_PROMPT_LENGTH = 2000;
+const LIST_LIMIT = 50;
+
+// ---------------------------------------------------------------------------
+// GET — List messages (Memory Shelf)
+// ---------------------------------------------------------------------------
+
+export async function GET() {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: messages, error } = await supabase
+      .from("messages")
+      .select(
+        "id, status, title, body_text, created_at, recipient_id, recipients(name)"
+      )
+      .eq("user_id", user.id)
+      .in("status", ["saved", "failed"])
+      .order("created_at", { ascending: false })
+      .limit(LIST_LIMIT);
+
+    if (error) {
+      console.error("[messages GET list]", error.message);
+      return NextResponse.json(
+        { error: "Could not load messages" },
+        { status: 500 }
+      );
+    }
+
+    const items = (messages ?? []).map((m) => ({
+      id: m.id,
+      status: m.status,
+      title: m.title,
+      bodyExcerpt: m.body_text
+        ? m.body_text.length > 80
+          ? m.body_text.slice(0, 80) + "…"
+          : m.body_text
+        : null,
+      recipientName:
+        (m.recipients as unknown as { name: string } | null)?.name ?? null,
+      createdAt: m.created_at,
+    }));
+
+    return NextResponse.json({ messages: items });
+  } catch (err) {
+    console.error("[messages GET list]", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST — Create message (Phase 6)
+// ---------------------------------------------------------------------------
 
 function sanitize(msg: string, max = 500): string {
   return String(msg).replace(/\s+/g, " ").trim().slice(0, max);
