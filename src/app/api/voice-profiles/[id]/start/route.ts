@@ -1,16 +1,23 @@
 /**
  * POST: Start voice creation (ElevenLabs). Idempotent; enforces min clips and retry backoff.
  * Long-running: downloads clips then calls ElevenLabs (can take 1–2 min).
+ *
+ * Phase 8: centralized guard for daily cap, structured logging, no auto-retry.
+ * NEVER retry ElevenLabs within the same request. Mark failed and return.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createVoiceFromClips } from "@/lib/elevenlabs";
 import { NextResponse } from "next/server";
+import { handleRouteError } from "@/lib/errors";
+import { logEvent, logError, generateRequestId, durationSince, withRequestId } from "@/lib/logger";
+import { assertCanStartVoiceCreation } from "@/lib/guards";
+import { isDedupBlocked, recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
 
 export const maxDuration = 300; // 5 min (allow ElevenLabs + download time)
 
 const MIN_CLIP_COUNT = 10;
-/** Minimum total audio size (~1 min at low bitrate). ElevenLabs recommends at least 1 minute of audio for voice cloning. */
+/** Minimum total audio size (~1 min at low bitrate). */
 const MIN_TOTAL_BYTES = 100 * 1024; // 100 KB
 const MAX_ATTEMPTS = 3;
 const BACKOFF_MS = [0, 5 * 60 * 1000, 30 * 60 * 1000, 2 * 60 * 60 * 1000] as const;
@@ -33,9 +40,12 @@ function sanitizeErrorMessage(msg: string, maxLen = 500): string {
 }
 
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const requestId = generateRequestId();
+  const startMs = Date.now();
+
   try {
     const { id: voiceProfileId } = await params;
     const supabase = await createSupabaseServerClient();
@@ -43,8 +53,33 @@ export async function POST(
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withRequestId(
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        requestId
+      );
     }
+
+    // --- In-memory dedup (UX polish only) ---
+    if (isDedupBlocked(user.id, "voice_create")) {
+      logEvent({
+        event: "voice_create_dedup",
+        requestId,
+        userId: user.id,
+        voiceProfileId,
+        outcome: "rejected",
+      });
+      return withRequestId(
+        NextResponse.json(
+          { error: "Request already in progress. Please wait.", code: "RATE_LIMIT_EXCEEDED", retryable: true },
+          { status: 429 }
+        ),
+        requestId
+      );
+    }
+
+    // --- Centralized guard: daily voice creation cap ---
+    const service = createSupabaseServiceClient();
+    await assertCanStartVoiceCreation(service, user.id);
 
     const { data: profile, error: fetchError } = await supabase
       .from("voice_profiles")
@@ -54,20 +89,33 @@ export async function POST(
       .single();
 
     if (fetchError || !profile) {
-      return NextResponse.json({ error: "Voice profile not found" }, { status: 404 });
+      return withRequestId(
+        NextResponse.json({ error: "Voice profile not found" }, { status: 404 }),
+        requestId
+      );
     }
 
-    console.log("[voice-profiles/start] profile", voiceProfileId, "status:", profile.status);
+    logEvent({
+      event: "voice_create_start",
+      requestId,
+      userId: user.id,
+      voiceProfileId,
+      outcome: "success",
+      meta: { currentStatus: profile.status, attemptCount: profile.attempt_count },
+    });
 
     // Idempotent: already ready
     if (profile.status === "ready") {
-      return NextResponse.json({ status: "ready", next: "continue" });
+      return withRequestId(
+        NextResponse.json({ status: "ready", next: "continue" }),
+        requestId
+      );
     }
 
-    // Stuck "processing" (request timed out or crashed): allow recovery so user sees an error and can retry
+    // Stuck "processing" (request timed out or crashed): allow recovery
     if (profile.status === "processing") {
       const lastAttempt = profile.last_attempt_at ? new Date(profile.last_attempt_at).getTime() : 0;
-      const elapsed = lastAttempt ? Date.now() - lastAttempt : STALE_PROCESSING_MS + 1; // null/missing => treat as stale
+      const elapsed = lastAttempt ? Date.now() - lastAttempt : STALE_PROCESSING_MS + 1;
       if (elapsed > STALE_PROCESSING_MS) {
         await supabase
           .from("voice_profiles")
@@ -78,30 +126,36 @@ export async function POST(
             last_error_at: new Date().toISOString(),
           })
           .eq("id", voiceProfileId)
-          .eq("user_id", user.id);
-        return NextResponse.json({
-          status: "failed",
-          error: "Previous attempt timed out. You can try again.",
-          retry_available: true,
-        });
+          .eq("user_id", user.id)
+          .eq("status", "processing"); // monotonic guard
+        return withRequestId(
+          NextResponse.json({
+            status: "failed",
+            error: "Previous attempt timed out. You can try again.",
+            retry_available: true,
+          }),
+          requestId
+        );
       }
     }
 
     // No duplicate start while in progress (and not stale)
     if (profile.status === "queued" || profile.status === "processing") {
-      return NextResponse.json({ status: profile.status });
+      return withRequestId(
+        NextResponse.json({ status: profile.status }),
+        requestId
+      );
     }
 
     // Failed: enforce backoff and max attempts
     if (profile.status === "failed") {
       if (!isRetryAllowed(profile.attempt_count ?? 0, profile.last_attempt_at)) {
-        return NextResponse.json(
-          {
-            error: "Retry not available yet",
-            retry_available: false,
-            status: "failed",
-          },
-          { status: 429 }
+        return withRequestId(
+          NextResponse.json(
+            { error: "Retry not available yet", retry_available: false, status: "failed" },
+            { status: 429 }
+          ),
+          requestId
         );
       }
     }
@@ -112,28 +166,43 @@ export async function POST(
       profile.status === "created" ||
       profile.status === "failed";
     if (!canStart) {
-      return NextResponse.json({ status: profile.status });
+      return withRequestId(
+        NextResponse.json({ status: profile.status }),
+        requestId
+      );
     }
 
+    // Record usage event
+    await recordUsageEvent(service, {
+      userId: user.id,
+      action: "voice_create",
+      requestId,
+      outcome: "started",
+      meta: { voiceProfileId, attemptCount: (profile.attempt_count ?? 0) + 1 },
+    });
+
     // DB trigger allows created -> collecting and failed -> collecting.
-    // Move to collecting first so the lock update (collecting -> processing) succeeds.
     if (profile.status === "created" || profile.status === "failed") {
       const { error: collectError } = await supabase
         .from("voice_profiles")
         .update({ status: "collecting" })
         .eq("id", voiceProfileId)
         .eq("user_id", user.id)
-        .eq("status", profile.status);
+        .eq("status", profile.status); // monotonic guard
       if (collectError) {
-        console.error(`[voice-profiles/start] ${profile.status}->collecting failed:`, collectError.message);
-        return NextResponse.json(
-          { error: "Could not start voice creation.", detail: collectError.message, code: "LOCK_FAILED" },
-          { status: 500 }
+        logError({ event: "voice_create_collect_failed", requestId, userId: user.id, voiceProfileId, error: collectError });
+        await updateUsageEventOutcome(service, requestId, "error");
+        return withRequestId(
+          NextResponse.json(
+            { error: "Could not start voice creation.", detail: collectError.message, code: "LOCK_FAILED" },
+            { status: 500 }
+          ),
+          requestId
         );
       }
     }
 
-    // Minimum clip validation (count and total audio length)
+    // Minimum clip validation
     const { data: clipRows, count: clipCount } = await supabase
       .from("training_clips")
       .select("id, bytes", { count: "exact" })
@@ -141,31 +210,34 @@ export async function POST(
       .eq("status", "uploaded");
 
     if ((clipCount ?? 0) < MIN_CLIP_COUNT) {
-      return NextResponse.json(
-        {
-          error: "Not enough clips",
-          code: "INSUFFICIENT_CLIPS",
-          required: MIN_CLIP_COUNT,
-          actual: clipCount ?? 0,
-        },
-        { status: 400 }
+      await updateUsageEventOutcome(service, requestId, "rejected");
+      return withRequestId(
+        NextResponse.json(
+          { error: "Not enough clips", code: "INSUFFICIENT_CLIPS", required: MIN_CLIP_COUNT, actual: clipCount ?? 0 },
+          { status: 400 }
+        ),
+        requestId
       );
     }
 
     const totalBytesFromDb = clipRows?.reduce((sum, r) => sum + (r.bytes ?? 0), 0) ?? 0;
     if (totalBytesFromDb < MIN_TOTAL_BYTES) {
-      return NextResponse.json(
-        {
-          error: "Clips are too short. Record at least about 1 minute of audio in total (longer clips work better).",
-          code: "CLIPS_TOO_SHORT",
-          required_bytes: MIN_TOTAL_BYTES,
-          actual_bytes: totalBytesFromDb,
-        },
-        { status: 400 }
+      await updateUsageEventOutcome(service, requestId, "rejected");
+      return withRequestId(
+        NextResponse.json(
+          {
+            error: "Clips are too short. Record at least about 1 minute of audio in total (longer clips work better).",
+            code: "CLIPS_TOO_SHORT",
+            required_bytes: MIN_TOTAL_BYTES,
+            actual_bytes: totalBytesFromDb,
+          },
+          { status: 400 }
+        ),
+        requestId
       );
     }
 
-    // Lock: transition to processing in one step so UI never sees "queued" during the long download/call
+    // Lock: transition to processing
     const { data: updated, error: updateError } = await supabase
       .from("voice_profiles")
       .update({
@@ -181,8 +253,8 @@ export async function POST(
       .single();
 
     if (updateError || !updated) {
-      const dbMessage = updateError?.message ?? (updated ? "" : "no rows updated (status may not be collecting/created/failed)");
-      console.error("[voice-profiles/start] lock update failed:", dbMessage, updateError?.code ?? "");
+      const dbMessage = updateError?.message ?? "no rows updated";
+      logError({ event: "voice_create_lock_failed", requestId, userId: user.id, voiceProfileId, error: updateError });
       const { data: current } = await supabase
         .from("voice_profiles")
         .select("status")
@@ -190,21 +262,36 @@ export async function POST(
         .single();
       const status = current?.status ?? "collecting";
       if (status === "created" || status === "collecting") {
-        return NextResponse.json(
-          {
-            error: "Could not start voice creation. Ensure database migrations are applied (attempt_count, last_attempt_at, source_clip_count on voice_profiles).",
-            code: "LOCK_FAILED",
-            status,
-            detail: dbMessage ? String(dbMessage).slice(0, 200) : undefined,
-          },
-          { status: 500 }
+        await updateUsageEventOutcome(service, requestId, "error");
+        return withRequestId(
+          NextResponse.json(
+            {
+              error: "Could not start voice creation. Ensure database migrations are applied.",
+              code: "LOCK_FAILED",
+              status,
+              detail: String(dbMessage).slice(0, 200),
+            },
+            { status: 500 }
+          ),
+          requestId
         );
       }
-      return NextResponse.json({ status });
+      return withRequestId(
+        NextResponse.json({ status }),
+        requestId
+      );
     }
 
-    console.log("[voice-profiles/start] lock taken, downloading clips…");
-    // Load clips (storage paths)
+    logEvent({
+      event: "voice_create_processing",
+      requestId,
+      userId: user.id,
+      voiceProfileId,
+      outcome: "success",
+      meta: { clipCount: clipCount ?? 0, totalBytes: totalBytesFromDb },
+    });
+
+    // Download clips from storage
     const { data: clips, error: clipsError } = await supabase
       .from("training_clips")
       .select("id, storage_bucket, storage_path")
@@ -222,21 +309,22 @@ export async function POST(
           last_error_at: new Date().toISOString(),
         })
         .eq("id", voiceProfileId)
-        .eq("user_id", user.id);
-      return NextResponse.json(
-        { status: "failed", error: "No valid clips found" },
-        { status: 500 }
+        .eq("user_id", user.id)
+        .eq("status", "processing"); // monotonic guard
+      await updateUsageEventOutcome(service, requestId, "error");
+      return withRequestId(
+        NextResponse.json({ status: "failed", error: "No valid clips found" }, { status: 500 }),
+        requestId
       );
     }
 
-    const service = createSupabaseServiceClient();
     const audioBlobs: Blob[] = [];
     for (const clip of clips) {
       const { data: blob, error: dlError } = await service.storage
         .from(clip.storage_bucket)
         .download(clip.storage_path);
       if (dlError || !blob) {
-        console.error("[start] clip download failed:", clip.id, dlError?.message);
+        logError({ event: "voice_create_clip_download_failed", requestId, userId: user.id, voiceProfileId, error: dlError, meta: { clipId: clip.id } });
         continue;
       }
       audioBlobs.push(blob);
@@ -252,10 +340,12 @@ export async function POST(
           last_error_at: new Date().toISOString(),
         })
         .eq("id", voiceProfileId)
-        .eq("user_id", user.id);
-      return NextResponse.json(
-        { status: "failed", error: "Could not load enough clips" },
-        { status: 500 }
+        .eq("user_id", user.id)
+        .eq("status", "processing"); // monotonic guard
+      await updateUsageEventOutcome(service, requestId, "error");
+      return withRequestId(
+        NextResponse.json({ status: "failed", error: "Could not load enough clips" }, { status: 500 }),
+        requestId
       );
     }
 
@@ -266,32 +356,45 @@ export async function POST(
         .update({
           status: "failed",
           last_error_code: "CLIPS_TOO_SHORT",
-          last_error_message: `Total audio is too short. Need at least ~1 minute of audio (${Math.round(MIN_TOTAL_BYTES / 1024)} KB total). Record longer clips.`,
+          last_error_message: `Total audio too short (${Math.round(totalBytes / 1024)} KB).`,
           last_error_at: new Date().toISOString(),
         })
         .eq("id", voiceProfileId)
-        .eq("user_id", user.id);
-      return NextResponse.json(
-        {
-          status: "failed",
-          error: "Clips are too short. Record at least about 1 minute of audio in total (longer clips work better).",
-          code: "CLIPS_TOO_SHORT",
-          required_bytes: MIN_TOTAL_BYTES,
-          actual_bytes: totalBytes,
-        },
-        { status: 400 }
+        .eq("user_id", user.id)
+        .eq("status", "processing"); // monotonic guard
+      await updateUsageEventOutcome(service, requestId, "error");
+      return withRequestId(
+        NextResponse.json(
+          {
+            status: "failed",
+            error: "Clips are too short. Record at least about 1 minute of audio in total.",
+            code: "CLIPS_TOO_SHORT",
+          },
+          { status: 400 }
+        ),
+        requestId
       );
     }
 
-    console.log("[voice-profiles/start] calling ElevenLabs…");
+    // --- Call ElevenLabs ---
+    // NEVER retry within the same request. If this times out or fails, mark failed and return.
+    logEvent({
+      event: "voice_create_elevenlabs_call",
+      requestId,
+      userId: user.id,
+      voiceProfileId,
+      outcome: "success",
+      meta: { blobCount: audioBlobs.length, totalBytes },
+    });
+
     const result = await createVoiceFromClips({
       name: profile.label || "My voice",
       audioBlobs,
     });
 
     if (result.ok) {
-      console.log("[voice-profiles/start] ElevenLabs success");
       const now = new Date().toISOString();
+      // Monotonic: only update if still "processing"
       await supabase
         .from("voice_profiles")
         .update({
@@ -304,12 +407,41 @@ export async function POST(
           last_error_at: null,
         })
         .eq("id", voiceProfileId)
-        .eq("user_id", user.id);
-      return NextResponse.json({ status: "ready", next: "continue" });
+        .eq("user_id", user.id)
+        .eq("status", "processing"); // monotonic guard
+
+      const totalDurationMs = durationSince(startMs);
+      logEvent({
+        event: "voice_create_complete",
+        requestId,
+        userId: user.id,
+        voiceProfileId,
+        outcome: "success",
+        durationMs: totalDurationMs,
+      });
+      await updateUsageEventOutcome(service, requestId, "success", totalDurationMs);
+
+      return withRequestId(
+        NextResponse.json({ status: "ready", next: "continue" }),
+        requestId
+      );
     }
 
-    console.error("[voice-profiles/start] ElevenLabs failed:", result.status, result.message);
+    // ElevenLabs failed
+    const isTimeout = result.status === 504;
     const safeMessage = sanitizeErrorMessage(result.message);
+    logEvent({
+      event: "voice_create_elevenlabs_failed",
+      requestId,
+      userId: user.id,
+      voiceProfileId,
+      outcome: "error",
+      errorCode: isTimeout ? "TTS_TIMEOUT" : "TTS_FAILED",
+      durationMs: durationSince(startMs),
+      meta: { ttsStatus: result.status },
+    });
+
+    // Monotonic guard
     await supabase
       .from("voice_profiles")
       .update({
@@ -319,19 +451,20 @@ export async function POST(
         last_error_at: new Date().toISOString(),
       })
       .eq("id", voiceProfileId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("status", "processing"); // monotonic guard
 
+    await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
     const retryAllowed = (profile.attempt_count ?? 0) + 1 < MAX_ATTEMPTS;
-    return NextResponse.json(
-      {
-        status: "failed",
-        error: safeMessage,
-        retry_available: retryAllowed,
-      },
-      { status: result.status >= 500 ? 502 : 400 }
+    return withRequestId(
+      NextResponse.json(
+        { status: "failed", error: safeMessage, retry_available: retryAllowed },
+        { status: result.status >= 500 ? 502 : 400 }
+      ),
+      requestId
     );
   } catch (err) {
-    console.error("[voice-profiles start]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    const { body, status } = handleRouteError(err, requestId);
+    return withRequestId(NextResponse.json(body, { status }), requestId);
   }
 }
