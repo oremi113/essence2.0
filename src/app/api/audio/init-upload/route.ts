@@ -3,6 +3,8 @@
  * Client will PUT to the URL then call POST /api/audio/commit.
  *
  * Phase 8: clip cap guard, body size check, structured logging.
+ * V2 Script: sequential prompt enforcement (1..25), upper-bound cap,
+ *            optional resolved_variant_keys for debugging.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -12,6 +14,7 @@ import { assertBodySize, handleRouteError } from "@/lib/errors";
 import { logEvent, logError, generateRequestId, withRequestId } from "@/lib/logger";
 import { assertCanUploadClip } from "@/lib/guards";
 import { recordUsageEvent } from "@/lib/rate-limit";
+import { TOTAL_PROMPT_COUNT } from "@/lib/voice-training/script";
 
 const UPLOAD_URL_EXPIRY_SEC = 60 * 10; // 10 min
 
@@ -38,6 +41,11 @@ export async function POST(request: Request) {
     const voiceProfileId = body?.voiceProfileId;
     const promptId = body?.promptId ?? body?.prompt_index;
     const mime = body?.mime ?? "audio/webm";
+    // Optional: resolved variant keys for debugging (client-provided, not authoritative)
+    const resolvedVariantKeys =
+      body?.resolvedVariantKeys && typeof body.resolvedVariantKeys === "object"
+        ? body.resolvedVariantKeys
+        : null;
 
     if (kind !== "training_clip") {
       return withRequestId(
@@ -59,8 +67,46 @@ export async function POST(request: Request) {
       );
     }
 
+    // --- Upper bound: V2 script has exactly 25 prompts ---
+    if (promptIndex > TOTAL_PROMPT_COUNT) {
+      return withRequestId(
+        NextResponse.json(
+          { error: "PROMPT_OUT_OF_RANGE", detail: `promptId must be between 1 and ${TOTAL_PROMPT_COUNT}` },
+          { status: 400 }
+        ),
+        requestId
+      );
+    }
+
     // --- Centralized guard: ownership + clip cap ---
     await assertCanUploadClip(supabaseAuth, user.id, voiceProfileId);
+
+    // --- Sequential prompt enforcement ---
+    // Query the highest committed prompt_index for this voice profile.
+    // Only "uploaded" clips count as committed.
+    const { data: maxRow } = await supabaseAuth
+      .from("training_clips")
+      .select("prompt_index")
+      .eq("voice_profile_id", voiceProfileId)
+      .eq("status", "uploaded")
+      .order("prompt_index", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const expectedNext = (maxRow?.prompt_index ?? 0) + 1;
+    if (promptIndex !== expectedNext) {
+      return withRequestId(
+        NextResponse.json(
+          {
+            error: "PROMPT_OUT_OF_ORDER",
+            detail: `Expected prompt ${expectedNext}, got ${promptIndex}`,
+            expectedNext,
+          },
+          { status: 400 }
+        ),
+        requestId
+      );
+    }
 
     // --- Record usage event ---
     const service = createSupabaseServiceClient();
@@ -91,6 +137,7 @@ export async function POST(request: Request) {
         status: "uploading",
         storage_bucket: AUDIO_BUCKET,
         storage_path: "pending",
+        ...(resolvedVariantKeys ? { resolved_variant_keys: resolvedVariantKeys } : {}),
       })
       .select("id")
       .single();

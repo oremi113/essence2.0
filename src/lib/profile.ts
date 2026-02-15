@@ -7,6 +7,10 @@ export type Profile = {
   display_name: string | null;
   onboarding_state: string;
   last_active_at: string | null;
+  /** User's city — used for {city} placeholder in V2 training script. */
+  city: string | null;
+  /** User's birth year — used for generation variant in V2 training script. */
+  birth_year: number | null;
 };
 
 export async function getOrCreateProfile(): Promise<Profile> {
