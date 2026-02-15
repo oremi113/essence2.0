@@ -37,10 +37,13 @@ function getPreferredMime(): string {
 export function RecordingUpload({
   voiceProfileId,
   promptIndex,
+  resolvedVariantKeys,
   onReady,
 }: {
   voiceProfileId: string;
   promptIndex: number;
+  /** Optional resolved variant keys for server-side debugging storage. */
+  resolvedVariantKeys?: Record<string, string | undefined>;
   onReady?: (clipId: string) => void;
 }) {
   const [status, setStatus] = useState<Status>("idle");
@@ -61,6 +64,21 @@ export function RecordingUpload({
   const playbackAudioRef = useRef<HTMLAudioElement | null>(null);
   const playingClipIdRef = useRef<string | null>(null);
   const playbackRetryUsedRef = useRef(false);
+
+  // Reset recording state when promptIndex changes (auto-advance)
+  const prevPromptRef = useRef(promptIndex);
+  if (prevPromptRef.current !== promptIndex) {
+    prevPromptRef.current = promptIndex;
+    if (status === "ready" || status === "error") {
+      setStatus("idle");
+      setClipId(null);
+      setPlaybackUrl(null);
+      setPlaybackUnavailable(false);
+      setError(null);
+      setRecordingSeconds(0);
+      playbackRetriedRef.current = false;
+    }
+  }
 
   useEffect(() => {
     if (!voiceProfileId) {
@@ -154,6 +172,7 @@ export function RecordingUpload({
           voiceProfileId,
           promptId: promptIndex,
           mime,
+          ...(resolvedVariantKeys ? { resolvedVariantKeys } : {}),
         }),
       });
       if (!initRes.ok) {
@@ -200,7 +219,7 @@ export function RecordingUpload({
       setError(err instanceof Error ? err.message : "Upload failed");
       setStatus("error");
     }
-  }, [status, voiceProfileId, promptIndex, onReady]);
+  }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady]);
 
   const loadPlaybackUrl = useCallback(async () => {
     if (!clipId) return;

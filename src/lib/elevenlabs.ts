@@ -5,7 +5,7 @@
 import "server-only";
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
-const REQUEST_TIMEOUT_MS = 90_000; // 90 s — fail fast so user sees error instead of hanging
+const REQUEST_TIMEOUT_MS = 60_000; // 60 s — fail fast so user sees error instead of hanging
 const TTS_MODEL_ID = "eleven_multilingual_v2";
 
 /** ElevenLabs /v1/voices/add expects multipart field "name" and "files" (one or more audio files). */

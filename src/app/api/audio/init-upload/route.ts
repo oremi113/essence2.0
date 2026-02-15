@@ -1,22 +1,39 @@
 /**
- * Step 1 of 3-step pipeline: create DB row (pending_upload), compute path, return signed upload URL.
+ * Step 1 of 3-step pipeline: create DB row (uploading), compute path, return signed upload URL.
  * Client will PUT to the URL then call POST /api/audio/commit.
+ *
+ * Phase 8: clip cap guard, body size check, structured logging.
+ * V2 Script: sequential prompt enforcement (1..25), upper-bound cap,
+ *            optional resolved_variant_keys for debugging.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AUDIO_BUCKET, trainingClipObjectPath } from "@/lib/audio/storage-paths";
 import { NextResponse } from "next/server";
+import { assertBodySize, handleRouteError } from "@/lib/errors";
+import { logEvent, logError, generateRequestId, withRequestId } from "@/lib/logger";
+import { assertCanUploadClip } from "@/lib/guards";
+import { recordUsageEvent } from "@/lib/rate-limit";
+import { TOTAL_PROMPT_COUNT } from "@/lib/voice-training/script";
 
 const UPLOAD_URL_EXPIRY_SEC = 60 * 10; // 10 min
 
 export async function POST(request: Request) {
+  const requestId = generateRequestId();
+
   try {
+    // --- Body size check ---
+    assertBodySize(request);
+
     const supabaseAuth = await createSupabaseServerClient();
     const {
       data: { user },
     } = await supabaseAuth.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withRequestId(
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        requestId
+      );
     }
 
     const body = await request.json();
@@ -24,19 +41,84 @@ export async function POST(request: Request) {
     const voiceProfileId = body?.voiceProfileId;
     const promptId = body?.promptId ?? body?.prompt_index;
     const mime = body?.mime ?? "audio/webm";
+    // Optional: resolved variant keys for debugging (client-provided, not authoritative)
+    const resolvedVariantKeys =
+      body?.resolvedVariantKeys && typeof body.resolvedVariantKeys === "object"
+        ? body.resolvedVariantKeys
+        : null;
 
     if (kind !== "training_clip") {
-      return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
+      return withRequestId(
+        NextResponse.json({ error: "Invalid kind" }, { status: 400 }),
+        requestId
+      );
     }
     if (!voiceProfileId || typeof voiceProfileId !== "string") {
-      return NextResponse.json({ error: "voiceProfileId required" }, { status: 400 });
+      return withRequestId(
+        NextResponse.json({ error: "voiceProfileId required" }, { status: 400 }),
+        requestId
+      );
     }
     const promptIndex = promptId != null ? Number(promptId) : undefined;
     if (promptIndex == null || !Number.isInteger(promptIndex) || promptIndex < 1) {
-      return NextResponse.json({ error: "promptId (prompt_index) required and must be >= 1" }, { status: 400 });
+      return withRequestId(
+        NextResponse.json({ error: "promptId (prompt_index) required and must be >= 1" }, { status: 400 }),
+        requestId
+      );
     }
 
-    // Clear any stale "uploading" row from a previous failed attempt (allows retry)
+    // --- Upper bound: V2 script has exactly 25 prompts ---
+    if (promptIndex > TOTAL_PROMPT_COUNT) {
+      return withRequestId(
+        NextResponse.json(
+          { error: "PROMPT_OUT_OF_RANGE", detail: `promptId must be between 1 and ${TOTAL_PROMPT_COUNT}` },
+          { status: 400 }
+        ),
+        requestId
+      );
+    }
+
+    // --- Centralized guard: ownership + clip cap ---
+    await assertCanUploadClip(supabaseAuth, user.id, voiceProfileId);
+
+    // --- Sequential prompt enforcement ---
+    // Query the highest committed prompt_index for this voice profile.
+    // Only "uploaded" clips count as committed.
+    const { data: maxRow } = await supabaseAuth
+      .from("training_clips")
+      .select("prompt_index")
+      .eq("voice_profile_id", voiceProfileId)
+      .eq("status", "uploaded")
+      .order("prompt_index", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const expectedNext = (maxRow?.prompt_index ?? 0) + 1;
+    if (promptIndex !== expectedNext) {
+      return withRequestId(
+        NextResponse.json(
+          {
+            error: "PROMPT_OUT_OF_ORDER",
+            detail: `Expected prompt ${expectedNext}, got ${promptIndex}`,
+            expectedNext,
+          },
+          { status: 400 }
+        ),
+        requestId
+      );
+    }
+
+    // --- Record usage event ---
+    const service = createSupabaseServiceClient();
+    await recordUsageEvent(service, {
+      userId: user.id,
+      action: "signed_url_upload",
+      requestId,
+      outcome: "success",
+      meta: { voiceProfileId, promptIndex },
+    });
+
+    // Clear any stale "uploading" row
     await supabaseAuth
       .from("training_clips")
       .delete()
@@ -45,7 +127,7 @@ export async function POST(request: Request) {
       .eq("prompt_index", promptIndex)
       .eq("status", "uploading");
 
-    // Insert row first so we have an id for the path (deterministic path includes id)
+    // Insert row
     const { data: row, error: insertError } = await supabaseAuth
       .from("training_clips")
       .insert({
@@ -54,16 +136,17 @@ export async function POST(request: Request) {
         prompt_index: promptIndex,
         status: "uploading",
         storage_bucket: AUDIO_BUCKET,
-        storage_path: "pending", // required NOT NULL; set to real path below
+        storage_path: "pending",
+        ...(resolvedVariantKeys ? { resolved_variant_keys: resolvedVariantKeys } : {}),
       })
       .select("id")
       .single();
 
     if (insertError) {
-      console.error("[init-upload] insert failed:", insertError.message, insertError);
-      return NextResponse.json(
-        { error: "Failed to create clip", detail: insertError.message },
-        { status: 500 }
+      logError({ event: "init_upload_insert_failed", requestId, userId: user.id, voiceProfileId, error: insertError });
+      return withRequestId(
+        NextResponse.json({ error: "Failed to create clip", detail: insertError.message }, { status: 500 }),
+        requestId
       );
     }
 
@@ -71,34 +154,47 @@ export async function POST(request: Request) {
     const ext = mime.includes("webm") ? "webm" : "webm";
     const objectPath = trainingClipObjectPath(user.id, voiceProfileId, clipId, ext);
 
-    // Update row with final storage_path
     await supabaseAuth
       .from("training_clips")
       .update({ storage_path: objectPath, mime_type: mime })
       .eq("id", clipId);
 
-    const service = createSupabaseServiceClient();
     const { data: signData, error: signError } = await service.storage
       .from(AUDIO_BUCKET)
       .createSignedUploadUrl(objectPath);
 
     if (signError) {
-      console.error("[init-upload] signed URL failed:", signError.message);
-      return NextResponse.json({ error: "Failed to create upload URL" }, { status: 500 });
+      logError({ event: "init_upload_sign_failed", requestId, userId: user.id, voiceProfileId, error: signError });
+      return withRequestId(
+        NextResponse.json({ error: "Failed to create upload URL" }, { status: 500 }),
+        requestId
+      );
     }
 
     const expiresAt = new Date(Date.now() + UPLOAD_URL_EXPIRY_SEC * 1000).toISOString();
 
-    return NextResponse.json({
-      id: clipId,
-      objectPath,
-      signedUploadUrl: signData.signedUrl,
-      uploadToken: signData.token,
-      requiredHeaders: { "Content-Type": mime },
-      expiresAt,
+    logEvent({
+      event: "init_upload_success",
+      requestId,
+      userId: user.id,
+      voiceProfileId,
+      outcome: "success",
+      meta: { clipId, promptIndex },
     });
+
+    return withRequestId(
+      NextResponse.json({
+        id: clipId,
+        objectPath,
+        signedUploadUrl: signData.signedUrl,
+        uploadToken: signData.token,
+        requiredHeaders: { "Content-Type": mime },
+        expiresAt,
+      }),
+      requestId
+    );
   } catch (err) {
-    console.error("[init-upload]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    const { body, status } = handleRouteError(err, requestId);
+    return withRequestId(NextResponse.json(body, { status }), requestId);
   }
 }
