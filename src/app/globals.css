@@ -1,26 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* ─── BACKGROUNDS ─────────────────────────────────── */
+  --color-bg-primary:     #FBF8F4;  /* cream — main app background */
+  --color-surface-card:   #F5F0EA;  /* oat — cards, elevated surfaces */
+  --color-surface-warm:   #EBE4DC;  /* soft sand — progress bars, disabled states */
+  --color-surface-honey:  #E8DCC8;  /* light honey — hover, celebration (use sparingly) */
+
+  /* ─── PRIMARY ACCENT ──────────────────────────────── */
+  --color-mineral:        #7A8088;  /* primary buttons, active states, recording */
+  --color-mineral-dark:   #656B73;  /* hover on primary buttons */
+
+  /* ─── TEXT ────────────────────────────────────────── */
+  --color-text-primary:   #1C1A18;  /* headlines, body — 17.8:1 contrast on bg-primary */
+  --color-text-secondary: #6B6B6B;  /* supporting text — 5.8:1 contrast */
+  --color-text-tertiary:  #ADA9A5;  /* disabled, subtle — large text only */
+
+  /* ─── STATUS ──────────────────────────────────────── */
+  --color-status-error:   #9C3528;  /* terracotta — 6.72:1 contrast */
+  --color-status-warning: #8A5A1E;  /* amber-umber — 5.57:1 contrast */
+  --color-status-success: #4A7A68;  /* sage — 4.64:1 contrast */
+
+  /* ─── BORDERS & SHADOWS ───────────────────────────── */
+  --color-border:         rgba(0, 0, 0, 0.06);
+  --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:            0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-mineral:       0 4px 12px rgba(122, 128, 136, 0.3); /* recording button */
+
+  /* ─── TYPOGRAPHY ──────────────────────────────────── */
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  /* ─── TYPE SCALE ──────────────────────────────────── */
+  --text-display: 48px;
+  --text-h1:      36px;
+  --text-h2:      28px;
+  --text-h3:      20px;
+  --text-body-lg: 18px;
+  --text-body:    16px;
+  --text-small:   14px;
+  --text-caption: 12px;
+
+  /* ─── SPACING (8px base unit) ─────────────────────── */
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   12px;
+  --space-lg:   16px;
+  --space-xl:   24px;
+  --space-2xl:  32px;
+  --space-3xl:  40px;
+  --space-4xl:  48px;
+
+  /* ─── BORDER RADIUS ───────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;  /* cards */
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  /* ─── EASING ──────────────────────────────────────── */
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-breath:  cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-press:   cubic-bezier(0.2, 0.0, 0.0, 1);
+
+  /* ─── TIMING ──────────────────────────────────────── */
+  --duration-micro:  200ms;
+  --duration-small:  400ms;
+  --duration-medium: 800ms;
+  --duration-large:  1200ms;
+  --duration-breath: 3000ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    background-color: #FBF8F4;
+    color: #1C1A18;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.6;
+  }
+
+  h1, h2 {
+    font-family: var(--font-display);
+    color: var(--color-text-primary);
+  }
+
+  /* Minimum touch targets — 45–70 demographic */
+  button, a, [role="button"] {
+    min-height: 44px;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Breath Stone — idle state */
+  @keyframes breath-idle {
+    0%, 100% {
+      transform: scale(1);
+      border-radius: 60% 40% 55% 45% / 45% 55% 40% 60%;
+    }
+    50% {
+      transform: scale(1.04);
+      border-radius: 55% 45% 60% 40% / 50% 50% 45% 55%;
+    }
+  }
+
+  /* Page transitions */
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes page-exit {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+
+  /* Recording pulse ring */
+  @keyframes breathe-pulse {
+    0%, 100% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0.3;
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1.2);
+      opacity: 0;
+    }
+  }
 }
