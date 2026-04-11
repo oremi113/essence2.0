@@ -15,11 +15,15 @@ export default async function HomePage() {
 
   const profile = await getOrCreateProfile();
 
+  // New users who haven't completed onboarding are sent to the wizard.
+  if (!profile.onboarding_completed_at) {
+    redirect("/onboarding");
+  }
+
   return (
     <>
       <h1>Home</h1>
       <p>Signed in as {user.email ?? "unknown"}.</p>
-      <p>Profile status: {profile.onboarding_state}</p>
       <p>
         <a href="/app/record">Record training clip</a> (Phase 4: init → upload → commit → playback)
       </p>

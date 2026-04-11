@@ -2,11 +2,11 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type Profile = {
-  id: string;
+  user_id: string;
   created_at: string;
   display_name: string | null;
-  onboarding_state: string;
-  last_active_at: string | null;
+  /** Null until the user finishes the onboarding wizard; timestamptz once set. */
+  onboarding_completed_at: string | null;
   /** User's city — used for {city} placeholder in V2 training script. */
   city: string | null;
   /** User's birth year — used for generation variant in V2 training script. */

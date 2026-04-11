@@ -40,6 +40,7 @@
   --text-h3:      20px;
   --text-body-lg: 18px;
   --text-body:    16px;
+  --text-ui:      15px;  /* semibold UI labels — between body and small */
   --text-small:   14px;
   --text-caption: 12px;
 
@@ -353,5 +354,262 @@
   .btn-secondary:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+
+  /* ─── ONBOARDING ─────────────────────────────────────────── */
+
+  .onboarding-step {
+    display: flex;
+    flex-direction: column;
+    padding-top: 40px;
+    gap: 0;
+    min-height: 100%;
+  }
+
+  /* Vertically centers content for screens without much copy */
+  .onboarding-step--centered {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding-block: 60px;
+  }
+
+  .onboarding-eyebrow {
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .onboarding-title {
+    font-family: var(--font-display);
+    font-size: var(--text-h1);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+    text-align: center;
+    margin: 0 0 12px;
+  }
+
+  .onboarding-subtitle {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    text-align: center;
+    margin: 0 0 32px;
+  }
+
+  .onboarding-stone {
+    display: flex;
+    justify-content: center;
+    margin-block: 32px;
+  }
+
+  .onboarding-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+
+  .onboarding-body p {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+    text-align: center;
+    margin: 0;
+  }
+
+  .onboarding-ctas {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 32px;
+  }
+
+  /* Hidden CTAs — used for animated reveal in Steps 4 and 5 */
+  .onboarding-ctas--hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-ctas--visible {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-microcopy {
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    color: var(--color-text-tertiary);
+    text-align: center;
+    margin-top: 24px;
+  }
+
+  /* ─── ONBOARDING SETTLING LINES (Step 4) ─────────────────── */
+
+  .onboarding-settling-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 300px;
+    margin-inline: auto;
+    margin-bottom: 8px;
+  }
+
+  .onboarding-settling-line {
+    font-family: var(--font-display);
+    font-size: var(--text-h3);          /* 20px */
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    text-align: center;
+    margin: 0;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 600ms cubic-bezier(0.4, 0.0, 0.2, 1),
+      transform 600ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-settling-line--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .onboarding-settling-line--italic {
+    font-style: italic;
+    color: var(--color-text-secondary);
+    font-size: var(--text-body-lg);     /* 18px */
+  }
+
+  /* ─── ONBOARDING CHECKLIST (Step 5) ─────────────────────── */
+
+  .onboarding-checklist-card {
+    background: var(--color-surface-card);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
+    padding: 24px;
+    margin-bottom: 8px;
+  }
+
+  .onboarding-checklist-header {
+    font-family: var(--font-body);
+    font-size: var(--text-ui);          /* 15px */
+    font-weight: 600;
+    color: var(--color-text-primary);
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: 0.03em;
+  }
+
+  .onboarding-checklist-item {
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1),
+      transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-checklist-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .onboarding-checklist-item--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .onboarding-checklist-label {
+    font-family: var(--font-body);
+    font-size: var(--text-ui);          /* 15px */
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+    letter-spacing: 0.01em;
+  }
+
+  .onboarding-checklist-body {
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ─── ONBOARDING ACCORDION (Step 3) ─────────────────────── */
+
+  .onboarding-accordions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+
+  .onboarding-accordion {
+    background: var(--color-surface-card);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+  }
+
+  .onboarding-accordion__trigger {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    text-align: left;
+    min-height: 52px;
+    transition: background 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-accordion__trigger:hover {
+    background: var(--color-surface-warm);
+  }
+
+  .onboarding-accordion__icon {
+    font-size: 20px;
+    line-height: 1;
+    color: var(--color-text-tertiary);
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+
+  /* max-height: 200px chosen to comfortably fit current copy (3-4 lines
+     at --text-small line-height 1.6). If copy expands beyond ~4 lines,
+     bump this or the body will clip. */
+  .onboarding-accordion__body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 300ms cubic-bezier(0.4, 0.0, 0.2, 1);
+    padding: 0 20px;
+  }
+
+  .onboarding-accordion__body--open {
+    max-height: 200px;
+    padding: 0 20px 16px;
+  }
+
+  .onboarding-accordion__body p {
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0;
   }
 }
