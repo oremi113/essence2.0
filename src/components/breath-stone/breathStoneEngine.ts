@@ -497,9 +497,11 @@ export class BreathStoneEngine {
     const currentRadius = baseRadius * breathScale;
 
     // ── 3. VOICE-REACTIVE SILHOUETTE ────────────────────────────────────
-    const voiceVolume = this.s.voiceReactive > 0.5
-      ? (Math.sin(timestamp * 0.003) * 0.5 + 0.5) * 0.15
-      : 0;
+    // No hard threshold — voiceReactive lerps smoothly 0→1 on state change
+    // and serves as its own gate via the multiplier on `reactiveRadius`.
+    // A `> 0.5` threshold used to live here, which caused a visible pop
+    // ~200ms into the idle→recording transition when the lerp crossed it.
+    const voiceVolume = (Math.sin(timestamp * 0.003) * 0.5 + 0.5) * 0.15;
     const reactiveRadius = currentRadius * (1 + voiceVolume * this.s.voiceReactive);
     const silhouette = this.generateSilhouette(reactiveRadius, 72, this.s.irregularity, timestamp);
 
@@ -623,7 +625,7 @@ export class BreathStoneEngine {
     ctx.beginPath();
     silhouette.forEach((p, i) => {
       const x = p.x * 1.1; const y = p.y * 1.1;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.closePath();
     ctx.fill();
@@ -654,8 +656,11 @@ export class BreathStoneEngine {
     // nothing. Intensity driven by the lerped colorTemp so the tint
     // fades in during state entry. Gated to infused only; the base
     // ceramic gradient is locked per doc and must not be modified.
-    if (resolvedState === 'infused' && this.s.colorTemp > 0.1) {
-      const tintStrength = Math.min(1, this.s.colorTemp / 0.6);
+    // No colorTemp threshold — tintStrength clamps to 0 naturally when
+    // colorTemp <= 0, so the effect fades in smoothly from state entry
+    // instead of snapping on when the lerp crosses a gate.
+    if (resolvedState === 'infused' && this.s.colorTemp > 0) {
+      const tintStrength = Math.min(1, Math.max(0, this.s.colorTemp / 0.6));
       const tintG = ctx.createRadialGradient(
         -currentRadius * 0.3, -currentRadius * 0.3, 0,
         -currentRadius * 0.3, -currentRadius * 0.3, currentRadius * 1.4
@@ -757,9 +762,9 @@ export class BreathStoneEngine {
     ctx.fill();
 
     // Artisan veining — blurred pigment clouds, not thin marble lines
-    ctx.shadowBlur = 2;
-    ctx.shadowColor = 'rgba(139, 126, 111, 0.3)';
-    ctx.globalAlpha = 0.12;
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = 'rgba(139, 126, 111, 0.35)';
+    ctx.globalAlpha = 0.11;
     ctx.fillStyle = 'rgba(139, 126, 111, 0.6)';
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2 + this.noise.get(i * 0.6, 0) * 3;
@@ -805,8 +810,11 @@ export class BreathStoneEngine {
     // Playback inner pulse — syllable-like speech cadence.
     // State-gated so the speech rhythm never leaks into guidance or
     // infused during a state crossfade (both have their own pulse
-    // personalities below).
-    if (resolvedState === 'playback' && this.s.innerPulse > 0.3) {
+    // personalities below). innerPulse is its own smooth gate via the
+    // `pulseOp` multiplier — no hard threshold, which used to snap the
+    // effect on ~100ms after entering playback (and flicker on entry
+    // from ready, whose innerPulse target sits at exactly 0.3).
+    if (resolvedState === 'playback' && this.s.innerPulse > 0.01) {
       const s1 = (timestamp * 0.0025) % (Math.PI * 2);
       const s2 = (timestamp * 0.0042) % (Math.PI * 2);
       const rhythm = (Math.sin(s1) * 0.5 + 0.5) * (Math.sin(s2) * 0.4 + 0.6);
