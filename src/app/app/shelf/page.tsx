@@ -12,13 +12,13 @@ export default async function ShelfPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 600 }}>
+    <>
       <nav style={{ marginBottom: 16, fontSize: 14 }}>
         <a href="/app/record">Record</a>
         <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
         <a href="/app/messages/new">New Message</a>
       </nav>
       <MemoryShelf />
-    </main>
+    </>
   );
 }

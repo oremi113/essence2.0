@@ -46,7 +46,7 @@ export default async function RecordPage({
       .maybeSingle();
 
     return (
-      <main style={{ padding: 24 }}>
+      <>
         <nav style={{ marginBottom: 16, fontSize: 14 }}>
           <a href="/app/shelf">Memory Shelf</a>
           <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
@@ -70,7 +70,7 @@ export default async function RecordPage({
               : undefined
           }
         />
-      </main>
+      </>
     );
   }
 
@@ -94,7 +94,7 @@ export default async function RecordPage({
     .eq("status", "uploaded");
 
   return (
-    <main style={{ padding: 24 }}>
+    <>
       <nav style={{ marginBottom: 16, fontSize: 14 }}>
         <a href="/app/shelf">Memory Shelf</a>
         <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
@@ -108,6 +108,6 @@ export default async function RecordPage({
         resolverContext={resolverContext}
         initialCompletedPrompts={completedCount ?? 0}
       />
-    </main>
+    </>
   );
 }

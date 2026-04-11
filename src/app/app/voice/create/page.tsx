@@ -12,8 +12,8 @@ export default async function VoiceCreatePage() {
   }
 
   return (
-    <main style={{ padding: 24 }}>
+    <>
       <VoiceCreationView />
-    </main>
+    </>
   );
 }

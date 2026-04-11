@@ -16,7 +16,7 @@ export default async function HomePage() {
   const profile = await getOrCreateProfile();
 
   return (
-    <main style={{ padding: 24 }}>
+    <>
       <h1>Home</h1>
       <p>Signed in as {user.email ?? "unknown"}.</p>
       <p>Profile status: {profile.onboarding_state}</p>
@@ -24,6 +24,6 @@ export default async function HomePage() {
         <a href="/app/record">Record training clip</a> (Phase 4: init → upload → commit → playback)
       </p>
       <SignOutButton />
-    </main>
+    </>
   );
 }
