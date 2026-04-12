@@ -6,7 +6,7 @@
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 
-type Status =
+export type Status =
   | "idle"
   | "recording"
   | "uploading"
@@ -39,12 +39,15 @@ export function RecordingUpload({
   promptIndex,
   resolvedVariantKeys,
   onReady,
+  onStatusChange,
 }: {
   voiceProfileId: string;
   promptIndex: number;
   /** Optional resolved variant keys for server-side debugging storage. */
   resolvedVariantKeys?: Record<string, string | undefined>;
   onReady?: (clipId: string) => void;
+  /** Optional callback fired whenever the internal status changes. */
+  onStatusChange?: (status: Status) => void;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,11 @@ export function RecordingUpload({
   const playbackAudioRef = useRef<HTMLAudioElement | null>(null);
   const playingClipIdRef = useRef<string | null>(null);
   const playbackRetryUsedRef = useRef(false);
+
+  // Notify parent of status changes
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [status, onStatusChange]);
 
   // Reset recording state when promptIndex changes (auto-advance)
   const prevPromptRef = useRef(promptIndex);

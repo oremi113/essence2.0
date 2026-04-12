@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { buildResolverContext } from "@/lib/voice-training/resolver";
-import { RecordingUploadWrapper } from "./RecordingUploadWrapper";
+import { RecordScreen } from "@/components/screens/RecordScreen";
+import type { RecordScreenData } from "@/components/screens/RecordScreen.types";
 import { RecordPageShell } from "./RecordPageShell";
 
 /**
@@ -74,17 +74,12 @@ export default async function RecordPage({
     );
   }
 
-  // --- Voice profile exists → build resolver context and show training flow ---
+  // --- Voice profile exists → build data shuttle for RecordScreen ---
   const { data: profile } = await supabase
     .from("profiles")
     .select("display_name, city, birth_year")
     .eq("user_id", user.id)
     .single();
-
-  const resolverContext = buildResolverContext(
-    profile ?? { display_name: null, city: null, birth_year: null },
-    { relationship: voiceProfile.relationship ?? null }
-  );
 
   // Fetch how many prompts are already committed for resume support
   const { count: completedCount } = await supabase
@@ -93,21 +88,20 @@ export default async function RecordPage({
     .eq("voice_profile_id", voiceProfile.id)
     .eq("status", "uploaded");
 
-  return (
-    <>
-      <nav style={{ marginBottom: 16, fontSize: 14 }}>
-        <a href="/app/shelf">Memory Shelf</a>
-        <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
-        <a href="/app/messages/new">New Message</a>
-        <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
-        <a href="/app/record?new=1">Start new voice profile</a>
-      </nav>
-      <RecordingUploadWrapper
-        voiceProfileId={voiceProfile.id}
-        voiceProfileStatus={voiceProfile.status}
-        resolverContext={resolverContext}
-        initialCompletedPrompts={completedCount ?? 0}
-      />
-    </>
-  );
+  // Already ready — skip training
+  if (voiceProfile.status === "ready") {
+    redirect("/app/voice/create");
+  }
+
+  const data: RecordScreenData = {
+    clipsRecorded: completedCount ?? 0,
+    voiceProfileStatus: voiceProfile.status,
+    displayName: profile?.display_name ?? null,
+    city: profile?.city ?? null,
+    birthYear: profile?.birth_year ?? null,
+    relationship: voiceProfile.relationship ?? null,
+    voiceProfileId: voiceProfile.id,
+  };
+
+  return <RecordScreen data={data} />;
 }
