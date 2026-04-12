@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BreathStone } from '@/components/breath-stone';
-import { PageTransition, PrimaryButton, SecondaryButton } from '@/components/ui';
+import { PageTransition, PrimaryButton, LinkButton } from '@/components/ui';
 import { RecordingUpload, type Status as UploadStatus } from '@/components/audio/RecordingUpload';
 import { voiceTrainingScript, TOTAL_PROMPT_COUNT } from '@/lib/voice-training/script';
 import { resolvePrompt } from '@/lib/voice-training/resolver';
@@ -111,12 +111,26 @@ export function RecordScreen({ data }: RecordScreenProps) {
     return () => clearInterval(interval);
   }, [view.type, router]);
 
-  // React to server-side status changes (from router.refresh)
+  // React to server-side status changes (from router.refresh).
+  // Functional update + guard avoids the setState-in-effect lint and
+  // also prevents a stale transition if view moved away before the
+  // server-ready propagated.
   useEffect(() => {
-    if (data.voiceProfileStatus === 'ready' && view.type === 'working') {
-      setView({ type: 'ready' });
-    }
-  }, [data.voiceProfileStatus, view.type]);
+    if (data.voiceProfileStatus !== 'ready') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setView((v) => (v.type === 'working' ? { type: 'ready' } : v));
+  }, [data.voiceProfileStatus]);
+
+  // Fallback: if backend doesn't flip status within 8s, advance anyway.
+  // Matches prototype's 6s auto-advance and prevents users from being
+  // stranded on the working screen if processing is slow or stubbed.
+  useEffect(() => {
+    if (view.type !== 'working') return;
+    const timeout = setTimeout(() => {
+      setView((v) => (v.type === 'working' ? { type: 'ready' } : v));
+    }, 8000);
+    return () => clearTimeout(timeout);
+  }, [view.type]);
 
   // ─── Navigation helpers ─────────────────────────────────────
 
@@ -222,8 +236,9 @@ export function RecordScreen({ data }: RecordScreenProps) {
   const resolved = prompt ? resolvePrompt(prompt, resolverContext) : null;
 
   return (
-    <PageTransition>
+    <PageTransition key={`prompt-${promptIndex}`}>
       <PromptView
+        key={promptIndex}
         promptIndex={promptIndex}
         promptText={resolved?.resolvedText ?? ''}
         instruction={prompt?.instruction ?? ''}
@@ -257,9 +272,9 @@ function EntryView({ onContinue }: { onContinue: () => void }) {
 
       <div className="record-ctas">
         <PrimaryButton onClick={onContinue}>Begin voice training</PrimaryButton>
-        <SecondaryButton onClick={() => window.history.back()}>
+        <LinkButton onClick={() => window.history.back()}>
           I&apos;ll do this later
-        </SecondaryButton>
+        </LinkButton>
       </div>
     </div>
   );
@@ -334,7 +349,7 @@ function MicPermissionView({
 
       <div className="record-ctas">
         <PrimaryButton onClick={handleAllow}>Allow microphone</PrimaryButton>
-        <SecondaryButton onClick={onSkip}>Not now</SecondaryButton>
+        <LinkButton onClick={onSkip}>Not now</LinkButton>
       </div>
     </div>
   );
@@ -403,7 +418,6 @@ function EnvironmentView({ onReady }: { onReady: () => void }) {
       <h1 className="record-title">Setting up your session</h1>
 
       <div className="record-stone">
-        <div className="record-working__sweep" />
         <BreathStone state="working" size={200} />
       </div>
 
@@ -416,7 +430,7 @@ function EnvironmentView({ onReady }: { onReady: () => void }) {
 
 const STAGE_INTRO_CONFIG = {
   1: {
-    title: 'We will begin with simple moments.',
+    title: 'Let\u2019s start with simple moments.',
     subtitle: 'These five prompts establish your natural speaking rhythm.',
     body: ['Speak naturally.', 'There are no wrong answers.'],
     cta: 'Begin Stage 1',
@@ -467,7 +481,7 @@ function StageIntroView({
       <div className="record-ctas">
         <PrimaryButton onClick={onContinue}>{config.cta}</PrimaryButton>
         {stage > 1 && (
-          <SecondaryButton onClick={onPause}>Pause for now</SecondaryButton>
+          <LinkButton onClick={onPause}>Pause for now</LinkButton>
         )}
       </div>
     </div>
@@ -495,11 +509,12 @@ function PromptView({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onAdvanceRef = useRef(onAdvance);
-  onAdvanceRef.current = onAdvance;
+  useEffect(() => {
+    onAdvanceRef.current = onAdvance;
+  }, [onAdvance]);
 
   const isFinal = promptIndex === TOTAL_PROMPT_COUNT - 1;
   const stage = getStageForPrompt(promptIndex);
-  const progressPct = Math.round(((promptIndex + 1) / TOTAL_PROMPT_COUNT) * 100);
 
   // Recording timer
   useEffect(() => {
@@ -507,6 +522,7 @@ function PromptView({
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecordingSeconds(0);
     timerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
     return () => {
@@ -555,16 +571,12 @@ function PromptView({
         {isFinal ? 'FINAL MOMENT' : `MOMENT ${promptIndex + 1} OF ${TOTAL_PROMPT_COUNT}`}
       </div>
 
+      {instruction && (
+        <p className="record-instruction">{instruction}</p>
+      )}
+
       <div className={`record-prompt-card record-prompt-card--stage-${stage}`}>
         <p className="record-prompt-card__text">{promptText}</p>
-        {instruction && (
-          <p className="record-prompt-card__guidance">{instruction}</p>
-        )}
-      </div>
-
-      <div className="record-timer">
-        {String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:
-        {String(recordingSeconds % 60).padStart(2, '0')}
       </div>
 
       <div className={`record-waveform ${isRecording ? 'record-waveform--active' : ''}`}>
@@ -581,11 +593,31 @@ function PromptView({
         className={buttonClass}
         onClick={handleRecordClick}
         aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-      />
+      >
+        {isRecording ? (
+          <svg className="record-button__icon" width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
+            <rect x="2" y="2" width="16" height="16" rx="3" />
+          </svg>
+        ) : (
+          <svg className="record-button__icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        )}
+      </button>
 
       <p className={`record-label ${isRecording ? 'record-label--recording' : ''} ${hasStopped ? 'record-label--saved' : ''}`}>
-        {hasStopped ? 'Saved' : isRecording ? 'Recording...' : 'Tap to begin'}
+        {hasStopped ? 'Saved' : isRecording ? 'Recording...' : 'Tap to record'}
       </p>
+
+      <div className={`record-timer ${isRecording || hasStopped ? 'record-timer--visible' : ''}`}>
+        {String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:
+        {String(recordingSeconds % 60).padStart(2, '0')}
+      </div>
+
+      <p className="record-rerecord-hint">You can re-record anytime</p>
 
       {/* Hidden RecordingUpload engine — handles actual audio pipeline */}
       <div ref={engineRef} className="record-upload-engine" aria-hidden="true">
@@ -597,11 +629,29 @@ function PromptView({
           />
         )}
       </div>
+
+      {/* Fixed progress bar at bottom of viewport */}
+      <div className="record-progress-bar" aria-hidden="true">
+        <div
+          className="record-progress-bar__fill"
+          style={{ width: `${((promptIndex + (hasStopped ? 1 : 0)) / TOTAL_PROMPT_COUNT) * 100}%` }}
+        />
+      </div>
     </div>
   );
 }
 
 // ─── Celebration ───────────────────────────────────────────────────────────
+
+function CelebrateStone() {
+  return (
+    <div className="record-stone record-stone--celebrate">
+      <span className="celebrate-shimmer" />
+      <span className="celebrate-specks" />
+      <BreathStone state="celebrate" size={200} />
+    </div>
+  );
+}
 
 // Celebration screens — matched 1:1 to prototype
 // Mini-celebrations (prompt 1, midpoint): light title, subtitle, stone, Continue
@@ -624,9 +674,7 @@ function CelebrationView({
         <h1 className="record-title" style={{ fontWeight: 400 }}>Beautiful</h1>
         <p className="record-subtitle">You opened the door. Your voice is here.</p>
 
-        <div className="record-stone">
-          <BreathStone state="celebrate" size={200} />
-        </div>
+        <CelebrateStone />
 
         <div className="record-ctas">
           <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
@@ -642,9 +690,7 @@ function CelebrationView({
         <h1 className="record-title" style={{ fontWeight: 400 }}>You&apos;re halfway there</h1>
         <p className="record-subtitle">Your voice is unfolding beautifully</p>
 
-        <div className="record-stone">
-          <BreathStone state="celebrate" size={200} />
-        </div>
+        <CelebrateStone />
 
         <div className="record-ctas">
           <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
@@ -665,13 +711,11 @@ function CelebrationView({
 
         <StageMap currentStage={2} />
 
-        <div className="record-stone">
-          <BreathStone state="celebrate" size={200} />
-        </div>
+        <CelebrateStone />
 
         <div className="record-ctas">
           <PrimaryButton onClick={onContinue}>Begin Stage 2</PrimaryButton>
-          <SecondaryButton onClick={onPause}>Pause for now</SecondaryButton>
+          <LinkButton onClick={onPause}>Pause for now</LinkButton>
         </div>
       </div>
     );
@@ -689,13 +733,11 @@ function CelebrationView({
 
         <StageMap currentStage={3} />
 
-        <div className="record-stone">
-          <BreathStone state="celebrate" size={200} />
-        </div>
+        <CelebrateStone />
 
         <div className="record-ctas">
           <PrimaryButton onClick={onContinue}>Begin Stage 3</PrimaryButton>
-          <SecondaryButton onClick={onPause}>Pause for now</SecondaryButton>
+          <LinkButton onClick={onPause}>Pause for now</LinkButton>
         </div>
       </div>
     );
@@ -713,9 +755,7 @@ function CelebrationView({
 
         <StageMap currentStage={3} />
 
-        <div className="record-stone">
-          <BreathStone state="celebrate" size={200} />
-        </div>
+        <CelebrateStone />
 
         <div className="record-ctas">
           <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
@@ -737,7 +777,6 @@ function WorkingView() {
       <h1 className="record-title">Creating your voice record</h1>
 
       <div className="record-stone">
-        <div className="record-working__sweep" />
         <BreathStone state="working" size={200} />
       </div>
 

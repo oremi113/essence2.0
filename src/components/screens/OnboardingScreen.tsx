@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BreathStone } from '@/components/breath-stone';
-import { PageTransition, PrimaryButton, SecondaryButton } from '@/components/ui';
+import { PageTransition, PrimaryButton, SecondaryButton, LinkButton } from '@/components/ui';
 
 interface OnboardingScreenProps {
   /**
@@ -206,7 +206,7 @@ function OnboardingStep3({
 
       <div className="onboarding-ctas">
         <PrimaryButton onClick={onBegin}>Begin shaping your voice</PrimaryButton>
-        <SecondaryButton onClick={onBack}>Back</SecondaryButton>
+        <LinkButton onClick={onBack}>Back</LinkButton>
       </div>
     </div>
   );
@@ -266,7 +266,7 @@ function OnboardingStep4({
         className={`onboarding-ctas ${ctaVisible ? 'onboarding-ctas--visible' : 'onboarding-ctas--hidden'}`}
       >
         <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
-        <SecondaryButton onClick={onBack}>Back</SecondaryButton>
+        <LinkButton onClick={onBack}>Back</LinkButton>
       </div>
     </div>
   );
@@ -329,9 +329,9 @@ function OnboardingStep5({
         <PrimaryButton onClick={onBegin} isLoading={isLoading}>
           Begin voice training
         </PrimaryButton>
-        <SecondaryButton onClick={onBack} disabled={isLoading}>
+        <LinkButton onClick={onBack} disabled={isLoading}>
           Back
-        </SecondaryButton>
+        </LinkButton>
       </div>
     </div>
   );

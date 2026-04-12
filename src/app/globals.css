@@ -252,13 +252,60 @@
      single flex item with its children stacking inside it as normal. */
   .page-transition {
     display: block;
+    height: 100%;
+  }
+
+  /* Staggered child reveal — matches prototype's cinematic fade-in.
+     Each primary section animates in with a slight delay so the eye
+     lands on them in sequence rather than everything appearing at once. */
+  .page-transition > * > .record-eyebrow,
+  .page-transition > * > .record-title,
+  .page-transition > * > .record-subtitle,
+  .page-transition > * > .record-instruction,
+  .page-transition > * > .record-prompt-card,
+  .page-transition > * > .record-stage-map,
+  .page-transition > * > .record-stone,
+  .page-transition > * > .record-ctas,
+  .page-transition > * > .record-waveform,
+  .page-transition > * > .record-button,
+  .page-transition > * > .record-label,
+  .page-transition > * > .record-timer,
+  .page-transition > * > .record-rerecord-hint,
+  .page-transition > * > .record-body,
+  .page-transition > * > .record-microcopy,
+  .page-transition > * > .record-checklist {
+    animation: cinematicFadeIn 800ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+  }
+
+  .page-transition > * > .record-eyebrow { animation-delay: 100ms; }
+  .page-transition > * > .record-title { animation-delay: 160ms; }
+  .page-transition > * > .record-subtitle { animation-delay: 200ms; }
+  .page-transition > * > .record-instruction { animation-delay: 220ms; }
+  .page-transition > * > .record-stage-map { animation-delay: 240ms; }
+  .page-transition > * > .record-stone { animation-delay: 260ms; }
+  .page-transition > * > .record-prompt-card { animation-delay: 240ms; }
+  .page-transition > * > .record-waveform { animation-delay: 300ms; }
+  .page-transition > * > .record-button { animation-delay: 320ms; }
+  .page-transition > * > .record-label { animation-delay: 340ms; }
+  .page-transition > * > .record-timer { animation-delay: 360ms; }
+  .page-transition > * > .record-rerecord-hint { animation-delay: 380ms; }
+  .page-transition > * > .record-body { animation-delay: 280ms; }
+  .page-transition > * > .record-microcopy { animation-delay: 320ms; }
+  .page-transition > * > .record-checklist { animation-delay: 280ms; }
+  .page-transition > * > .record-ctas { animation-delay: 380ms; }
+
+  @keyframes cinematicFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .page-transition {
+    .page-transition,
+    .page-transition > * > * {
       opacity: 1 !important;
       transform: none !important;
       transition: none !important;
+      animation: none !important;
     }
   }
 
@@ -273,14 +320,13 @@
     align-items: center;
     justify-content: center;
     min-height: 52px;
-    padding: 14px 32px;
+    padding: 16px 24px;
     background-color: var(--color-mineral);
     color: var(--color-bg-primary);
     font-family: var(--font-body);
-    font-size: var(--text-small);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: normal;
     border: none;
     border-radius: var(--radius-lg);
     cursor: pointer;
@@ -324,15 +370,14 @@
     align-items: center;
     justify-content: center;
     min-height: 52px;
-    padding: 14px 32px;
+    padding: 16px 24px;
     background-color: transparent;
-    color: var(--color-text-primary);
+    color: var(--color-text-secondary);
     font-family: var(--font-body);
-    font-size: var(--text-small);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    border: 1.5px solid var(--color-mineral);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: normal;
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: var(--radius-lg);
     cursor: pointer;
     transition:
@@ -342,8 +387,8 @@
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background-color: var(--color-surface-card);
-    border-color: var(--color-mineral-dark);
+    border-color: var(--color-text-tertiary);
+    color: var(--color-text-primary);
   }
 
   .btn-secondary:active:not(:disabled) {
@@ -352,6 +397,31 @@
   }
 
   .btn-secondary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: normal;
+    border: none;
+    padding: 12px;
+    cursor: pointer;
+    transition: color 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .btn-link:hover:not(:disabled) {
+    color: var(--color-text-primary);
+  }
+
+  .btn-link:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
@@ -431,6 +501,7 @@
     gap: 12px;
     margin-top: auto;
     padding-top: 32px;
+    width: 100%;
   }
 
   /* Hidden CTAs — used for animated reveal in Steps 4 and 5 */
@@ -693,7 +764,6 @@
     color: var(--color-text-tertiary);
     text-align: center;
     margin-top: var(--space-xl);
-    font-style: italic;
   }
 
   /* ─── Stone container ────────────────────────────────────── */
@@ -707,6 +777,108 @@
     position: relative;
   }
 
+  .record-stone::after {
+    content: '';
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 12px;
+    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.07), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* ─── Celebration — shimmer pulse + light specks ─────────── */
+  /* Two simultaneous effects layered over the canvas BreathStone.
+     Ported 1:1 from the prototype's .breath-stone.celebrate.shimmer-active.
+     Shimmer pulse (radial gradient) = double-pulse expanding outward.
+     Light specks (box-shadow halos) = five sparks blooming at diagonals. */
+
+  .record-stone--celebrate {
+    position: relative;
+  }
+
+  /* Shimmer is sized LARGER than the 200px canvas stone so its bloom is
+     visible around it. The radial gradient is a RING (transparent center,
+     bright mid, transparent edge) so the bright band sits at the stone's
+     perimeter rather than being hidden behind the canvas. */
+  .record-stone--celebrate .celebrate-shimmer {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 260px;
+    height: 260px;
+    transform: translate(-50%, -50%) scale(0.85);
+    border-radius: 50%;
+    opacity: 0;
+    background: radial-gradient(
+      circle,
+      transparent 35%,
+      rgba(232, 220, 200, 0.55) 52%,
+      rgba(232, 220, 200, 0.15) 68%,
+      transparent 80%
+    );
+    animation: shimmer-pulse-enhanced 2000ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    pointer-events: none;
+    filter: blur(4px);
+  }
+
+  @keyframes shimmer-pulse-enhanced {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.85);
+    }
+    22% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.12);
+    }
+    45% {
+      opacity: 0.15;
+      transform: translate(-50%, -50%) scale(1.3);
+    }
+    65% {
+      opacity: 0.85;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.45);
+    }
+  }
+
+  /* Specks sit OUTSIDE the 100px stone radius so they appear around it
+     as discrete sparks, not buried behind the canvas. */
+  .record-stone--celebrate .celebrate-specks {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    animation: light-specks 4s cubic-bezier(0.4, 0, 0.2, 1) both;
+    pointer-events: none;
+  }
+
+  @keyframes light-specks {
+    0% {
+      box-shadow: 0 0 0 0 rgba(232, 220, 200, 0);
+    }
+    45%, 60% {
+      box-shadow:
+        -95px -70px 6px 2px rgba(232, 220, 200, 0.65),
+         70px -95px 6px 2px rgba(232, 220, 200, 0.55),
+        -70px  95px 6px 2px rgba(232, 220, 200, 0.45),
+         95px  70px 6px 2px rgba(232, 220, 200, 0.55),
+          0px -115px 6px 2px rgba(232, 220, 200, 0.4);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(232, 220, 200, 0);
+    }
+  }
+
   /* ─── CTAs ───────────────────────────────────────────────── */
 
   .record-ctas {
@@ -715,6 +887,7 @@
     gap: var(--space-md);
     margin-top: auto;
     padding-top: var(--space-xl);
+    width: 100%;
   }
 
   .record-ctas--hidden {
@@ -733,7 +906,8 @@
     align-items: flex-start;
     justify-content: center;
     gap: 0;
-    padding: var(--space-xl) var(--space-2xl) var(--space-lg);
+    padding: var(--space-md) var(--space-2xl) var(--space-sm);
+    width: 100%;
   }
 
   .record-stage-map__segment {
@@ -775,7 +949,7 @@
 
   .record-stage-map__node--upcoming {
     background: var(--color-surface-warm);
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary); /* #6B6B6B — 5.8:1 contrast on sand */
   }
 
   .record-stage-map__node--current {
@@ -795,64 +969,54 @@
     color: var(--color-text-secondary);
     text-align: center;
     margin-top: var(--space-sm);
-    border-bottom: 1px solid transparent;
-    padding-bottom: 2px;
   }
 
   .record-stage-map__segment--current .record-stage-map__label {
-    border-bottom-color: var(--color-mineral);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    border-bottom: 2px solid var(--color-mineral);
+    padding-bottom: 2px;
   }
 
   /* ─── Prompt Card ────────────────────────────────────────── */
 
   .record-prompt-card {
-    background: linear-gradient(
-      135deg,
-      rgba(251, 248, 244, 0.6),
-      rgba(245, 240, 234, 0.8)
-    );
-    border-radius: var(--radius-2xl);
-    padding: var(--space-xl);
+    background: var(--color-surface-card); /* Stage 1: oat */
+    border-radius: 16px;
+    padding: 28px 24px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    margin-bottom: var(--space-xl);
+    margin: 0 0 40px;
     position: relative;
     overflow: hidden;
   }
 
   .record-prompt-card--stage-2 {
-    background: linear-gradient(
-      135deg,
-      rgba(235, 228, 220, 0.7),
-      rgba(232, 220, 200, 0.9)
-    );
+    background: var(--color-surface-warm); /* Stage 2: soft sand */
   }
 
   .record-prompt-card--stage-3 {
-    border: 1px solid transparent;
-    background-image:
-      linear-gradient(135deg, rgba(251, 248, 244, 0.6), rgba(245, 240, 234, 0.8)),
-      linear-gradient(135deg, rgba(122, 128, 136, 0.3), rgba(232, 220, 200, 0.3));
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
+    background: var(--color-surface-honey); /* Stage 3: light honey */
   }
 
   .record-prompt-card__text {
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 600;
     color: var(--color-text-primary);
     text-align: center;
-    line-height: 1.5;
+    line-height: 1.8;
     letter-spacing: -0.01em;
     margin: 0;
   }
 
-  .record-prompt-card__guidance {
+  .record-instruction {
     font-family: var(--font-body);
-    font-size: var(--text-caption);
-    color: var(--color-text-tertiary);
+    font-weight: 400;
+    font-size: 15px;
+    color: var(--color-text-secondary);
     text-align: center;
-    margin-top: var(--space-md);
+    margin-top: 0;
+    margin-bottom: 16px;
     font-style: italic;
   }
 
@@ -893,14 +1057,49 @@
   /* ─── Timer ──────────────────────────────────────────────── */
 
   .record-timer {
-    font-family: var(--font-body);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-size: var(--text-h2);
-    font-weight: 600;
-    color: var(--color-text-primary);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-tertiary);
     text-align: center;
-    margin: var(--space-md) 0;
-    letter-spacing: 0.04em;
+    margin-top: 12px;
+    letter-spacing: 0.05em;
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
+
+  .record-timer--visible {
+    opacity: 1;
+  }
+
+  .record-rerecord-hint {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  /* ─── Progress Bar (fixed, bottom of viewport) ───────────── */
+
+  .record-progress-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--color-surface-warm);
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .record-progress-bar__fill {
+    height: 100%;
+    background: var(--color-mineral);
+    transition: width 600ms cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 
   /* ─── Waveform ───────────────────────────────────────────── */
@@ -909,9 +1108,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    height: 40px;
-    margin: var(--space-sm) 0;
+    gap: 4px;
+    height: 24px;
+    width: 88px;
+    margin: 0 auto var(--space-lg);
     opacity: 0;
     transition: opacity var(--duration-small) var(--ease-essence);
   }
@@ -922,7 +1122,9 @@
 
   .record-waveform__bar {
     width: 3px;
-    height: 8px;
+    height: 6px;
+    flex: 1;
+    max-width: 4px;
     background: var(--color-surface-warm);
     border-radius: 2px;
     transform-origin: center;
@@ -935,72 +1137,97 @@
   }
 
   @keyframes record-waveform-bounce {
-    0%, 100% { height: 8px; }
-    50% { height: 28px; }
+    0%, 100% { height: 6px; }
+    50% { height: 22px; }
   }
 
   /* ─── Record Button ──────────────────────────────────────── */
 
   .record-button {
-    width: 72px;
-    height: 72px;
+    width: 88px;
+    height: 88px;
     border-radius: var(--radius-full);
-    background: var(--color-mineral);
-    border: 4px solid var(--color-bg-primary);
+    background: radial-gradient(
+      circle at 30% 28%,
+      #B0B4BA,
+      #9EA3AA 20%,
+      #8A8F96 40%,
+      #7A8088 60%,
+      #6B7078 80%,
+      #5E636A 100%
+    );
+    border: none;
     box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.15),
-      0 0 0 0 rgba(122, 128, 136, 0.2);
+      0 12px 28px rgba(122, 128, 136, 0.3),
+      inset 8px 8px 16px rgba(251, 248, 244, 0.2),
+      inset -8px -8px 16px rgba(28, 26, 24, 0.2);
     cursor: pointer;
     position: relative;
     transition: all 300ms var(--ease-breath);
-    display: block;
-    margin: var(--space-lg) auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: var(--space-md) auto var(--space-sm);
+  }
+
+  /* Ground shadow */
+  .record-button::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 10px;
+    background: radial-gradient(ellipse, rgba(122, 128, 136, 0.3), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
   }
 
   .record-button:hover {
     transform: scale(1.05);
     box-shadow:
-      0 6px 24px rgba(0, 0, 0, 0.2),
-      0 0 20px rgba(122, 128, 136, 0.25);
+      0 14px 32px rgba(122, 128, 136, 0.38),
+      inset 8px 8px 16px rgba(251, 248, 244, 0.2),
+      inset -8px -8px 16px rgba(28, 26, 24, 0.2);
   }
 
-  /* Inner dot */
-  .record-button::before {
-    content: '';
-    position: absolute;
-    inset: 50%;
-    transform: translate(-50%, -50%);
-    width: 24px;
-    height: 24px;
-    background: var(--color-bg-primary);
-    border-radius: var(--radius-full);
+  .record-button__icon {
+    color: #FFFFFF;
     transition: all 300ms ease;
+    display: block;
   }
 
   .record-button--recording {
-    background: linear-gradient(135deg, #C84545, #B83939);
+    background: radial-gradient(
+      circle at 30% 28%,
+      #E06060,
+      #D85A5A 20%,
+      #C84545 45%,
+      #B83939 70%,
+      #A03030 100%
+    );
     box-shadow:
-      0 4px 24px rgba(200, 69, 69, 0.4),
-      0 0 30px rgba(200, 69, 69, 0.3);
+      0 8px 16px rgba(200, 69, 69, 0.3),
+      inset 8px 8px 16px rgba(255, 140, 140, 0.15),
+      inset -8px -8px 16px rgba(120, 20, 20, 0.25);
     animation: record-pulse 2500ms ease-in-out infinite;
   }
 
-  .record-button--recording::before {
-    border-radius: 6px;
-    width: 18px;
-    height: 18px;
-  }
-
   .record-button--finished {
-    background: linear-gradient(135deg, #4A7A5B, #3E6A4D);
+    background: radial-gradient(
+      circle at 30% 28%,
+      #6EAA80,
+      #5E9A70 20%,
+      #4A7A5B 50%,
+      #3E6A4D 100%
+    );
     animation: none;
     pointer-events: none;
-  }
-
-  .record-button--finished::before {
-    border-radius: var(--radius-full);
-    width: 24px;
-    height: 24px;
+    box-shadow:
+      0 12px 28px rgba(74, 122, 91, 0.3),
+      inset 8px 8px 16px rgba(251, 248, 244, 0.15),
+      inset -8px -8px 16px rgba(28, 26, 24, 0.15);
   }
 
   .record-button--uploading {
@@ -1012,14 +1239,16 @@
     0%, 100% {
       transform: scale(1);
       box-shadow:
-        0 4px 24px rgba(200, 69, 69, 0.4),
-        0 0 30px rgba(200, 69, 69, 0.3);
+        0 8px 16px rgba(200, 69, 69, 0.3),
+        inset 8px 8px 16px rgba(255, 140, 140, 0.15),
+        inset -8px -8px 16px rgba(120, 20, 20, 0.25);
     }
     50% {
       transform: scale(1.04);
       box-shadow:
-        0 6px 28px rgba(200, 69, 69, 0.5),
-        0 0 40px rgba(200, 69, 69, 0.4);
+        0 10px 22px rgba(200, 69, 69, 0.4),
+        inset 8px 8px 16px rgba(255, 140, 140, 0.15),
+        inset -8px -8px 16px rgba(120, 20, 20, 0.25);
     }
   }
 
@@ -1027,16 +1256,17 @@
 
   .record-label {
     font-family: var(--font-body);
-    font-size: var(--text-small);
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 400;
     color: var(--color-text-tertiary);
     text-align: center;
     transition: color 300ms ease;
     letter-spacing: 0.02em;
+    margin-top: 16px;
   }
 
   .record-label--recording {
-    color: #C84545;
+    color: var(--color-status-error);
   }
 
   .record-label--saved {
@@ -1154,35 +1384,11 @@
     box-shadow: 0 0 30px rgba(232, 220, 200, 0.3);
   }
 
-  /* ─── Working / Processing ───────────────────────────────── */
-
-  .record-working__sweep {
-    position: absolute;
-    width: 120%;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(232, 220, 200, 0.6),
-      transparent
-    );
-    top: 50%;
-    left: -60%;
-    transform-origin: center;
-    animation: record-sweep 3s linear infinite;
-  }
-
-  @keyframes record-sweep {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
   /* ─── Reduced motion ─────────────────────────────────────── */
 
   @media (prefers-reduced-motion: reduce) {
     .record-waveform--active .record-waveform__bar,
-    .record-button--recording,
-    .record-working__sweep {
+    .record-button--recording {
       animation: none;
     }
   }

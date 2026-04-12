@@ -16,13 +16,10 @@ export function PageTransition({ children, className = '' }: PageTransitionProps
     if (!el) return;
 
     el.style.opacity = '0';
-    el.style.transform = 'translateY(8px)';
 
     const raf = requestAnimationFrame(() => {
-      el.style.transition =
-        'opacity 800ms cubic-bezier(0.4, 0.0, 0.2, 1), transform 800ms cubic-bezier(0.4, 0.0, 0.2, 1)';
+      el.style.transition = 'opacity 400ms cubic-bezier(0.25, 0.1, 0.25, 1)';
       el.style.opacity = '1';
-      el.style.transform = 'translateY(0)';
     });
 
     return () => cancelAnimationFrame(raf);
