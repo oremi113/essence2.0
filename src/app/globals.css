@@ -1083,6 +1083,16 @@
     font-style: italic;
   }
 
+  .record-mic-hint {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
   /* ─── Progress Bar (fixed, bottom of viewport) ───────────── */
 
   .record-progress-bar {

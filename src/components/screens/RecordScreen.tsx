@@ -39,6 +39,7 @@ type ViewMode =
   | { type: 'stage-intro'; stage: 1 | 2 | 3 }
   | { type: 'prompt'; promptIndex: number }
   | { type: 'celebration'; afterPromptIndex: number }
+  | { type: 'paused' }
   | { type: 'working' }
   | { type: 'ready' };
 
@@ -155,7 +156,10 @@ export function RecordScreen({ data }: RecordScreenProps) {
   if (view.type === 'entry')
     return (
       <PageTransition>
-        <EntryView onContinue={() => setView({ type: 'grounding' })} />
+        <EntryView
+          onContinue={() => setView({ type: 'grounding' })}
+          onDoLater={() => router.push('/home')}
+        />
       </PageTransition>
     );
 
@@ -171,7 +175,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
       <PageTransition>
         <MicPermissionView
           onGranted={() => setView({ type: 'checklist' })}
-          onSkip={() => setView({ type: 'checklist' })}
+          onSkip={() => router.push('/home')}
         />
       </PageTransition>
     );
@@ -200,7 +204,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
           onContinue={() =>
             setView({ type: 'prompt', promptIndex: getStageStartIndex(view.stage) })
           }
-          onPause={() => router.push('/home')}
+          onPause={() => setView({ type: 'paused' })}
         />
       </PageTransition>
     );
@@ -211,8 +215,15 @@ export function RecordScreen({ data }: RecordScreenProps) {
         <CelebrationView
           afterPromptIndex={view.afterPromptIndex}
           onContinue={() => advanceFromCelebration(view.afterPromptIndex)}
-          onPause={() => router.push('/home')}
+          onPause={() => setView({ type: 'paused' })}
         />
+      </PageTransition>
+    );
+
+  if (view.type === 'paused')
+    return (
+      <PageTransition>
+        <PausedView onReturnHome={() => router.push('/home')} />
       </PageTransition>
     );
 
@@ -257,7 +268,13 @@ export default RecordScreen;
 
 // ─── Entry ─────────────────────────────────────────────────────────────────
 
-function EntryView({ onContinue }: { onContinue: () => void }) {
+function EntryView({
+  onContinue,
+  onDoLater,
+}: {
+  onContinue: () => void;
+  onDoLater: () => void;
+}) {
   return (
     <div className="record-step">
       <div className="record-eyebrow">STEP 2</div>
@@ -272,7 +289,7 @@ function EntryView({ onContinue }: { onContinue: () => void }) {
 
       <div className="record-ctas">
         <PrimaryButton onClick={onContinue}>Begin voice training</PrimaryButton>
-        <LinkButton onClick={() => window.history.back()}>
+        <LinkButton onClick={onDoLater}>
           I&apos;ll do this later
         </LinkButton>
       </div>
@@ -350,6 +367,9 @@ function MicPermissionView({
       <div className="record-ctas">
         <PrimaryButton onClick={handleAllow}>Allow microphone</PrimaryButton>
         <LinkButton onClick={onSkip}>Not now</LinkButton>
+        <p className="record-mic-hint">
+          You&apos;ll need microphone access to record your voice.
+        </p>
       </div>
     </div>
   );
@@ -766,6 +786,34 @@ function CelebrationView({
 
   // Fallback (should not reach)
   return null;
+}
+
+// ─── Paused ────────────────────────────────────────────────────────────────
+
+function PausedView({ onReturnHome }: { onReturnHome: () => void }) {
+  // Auto-navigate home after 4 seconds, giving the user a beat to read the
+  // reassurance without imposing a visible countdown. The cleanup guard
+  // prevents double-navigation if they tap "Return home" first.
+  useEffect(() => {
+    const timer = setTimeout(onReturnHome, 4000);
+    return () => clearTimeout(timer);
+  }, [onReturnHome]);
+
+  return (
+    <div className="record-step record-step--centered">
+      <div className="record-eyebrow">PAUSED</div>
+      <h1 className="record-title">Your progress is saved.</h1>
+      <p className="record-subtitle">Continue whenever you&apos;re ready.</p>
+
+      <div className="record-stone">
+        <BreathStone state="idle" size={200} />
+      </div>
+
+      <div className="record-ctas">
+        <PrimaryButton onClick={onReturnHome}>Return home</PrimaryButton>
+      </div>
+    </div>
+  );
 }
 
 // ─── Working ───────────────────────────────────────────────────────────────
