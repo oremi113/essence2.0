@@ -78,7 +78,10 @@ interface StateParams {
   voiceReactive: number;     // Simulated voice volume affects thickness
   sheen: number;             // Moving surface sheen (ready/shimmer state)
   peakHold: number;          // Fraction of breath cycle spent at peak (default 0.07, guidance 0.19)
-  peakTremor: number;        // Sine amplitude of micro-tremble during peak hold (default 0.012)
+  /** Sine amplitude of micro-tremble during peak hold. Optional; defaults to 0.
+   *  The stone is a calm guardian — do not add tremor to new states unless
+   *  explicitly requested. Field kept for per-state override capability. */
+  peakTremor?: number;
   /** Fraction of cycle spent inhaling. Default 0.35 matches most states.
    *  Priming uses 0.5 so inhale and exhale are symmetric (3s up / 3s down).
    *  Optional to preserve backwards-compatibility with existing state defs. */
@@ -104,7 +107,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   ready: {
     // Awake / attentive — warm spark, subtle glow increase
@@ -120,7 +122,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0.8,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   recording: {
     // Presence / moment happening — strongest amplitude, warm bloom
@@ -136,7 +137,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 1,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   working: {
     // Patient processing — very slow, cooler, almost still
@@ -152,7 +152,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   celebrate: {
     // Single grand swell — longer, slower, bigger. Tremor disabled so the
@@ -169,7 +168,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 1,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   playback: {
     // Memory echo — rhythmic speech cadence, slight vignette
@@ -185,7 +183,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   shimmer: {
     // Ceremonial stillness — body barely moves, but two counter-rotating
@@ -204,7 +201,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 1.2,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   guidance: {
     // Waiting / orienting — slower, deeper breath with a long peak hold
@@ -222,7 +218,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.19,
-    peakTremor: 0,
   },
   priming: {
     // "Take a breath" priming screen — the stone is a literal breathing
@@ -242,7 +237,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0,              // no hold — continuous expand/contract
-    peakTremor: 0,
     inhaleRatio: 0.5,         // symmetric in/out
     breathNoiseScale: 0.15,   // near-silent ambient wobble
   },
@@ -263,7 +257,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0.3,
     peakHold: 0.07,
-    peakTremor: 0,
   },
   archive: {
     // Preserved, still — no animation
@@ -279,7 +272,6 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0,
   },
 };
 
@@ -495,7 +487,7 @@ export class BreathStoneEngine {
     this.s.voiceReactive   = lerp(this.s.voiceReactive,   target.voiceReactive,   0.04);
     this.s.sheen           = lerp(this.s.sheen,           target.sheen,           0.04);
     this.s.peakHold        = lerp(this.s.peakHold,        target.peakHold,        0.03);
-    this.s.peakTremor      = lerp(this.s.peakTremor,      target.peakTremor,      0.04);
+    this.s.peakTremor      = lerp(this.s.peakTremor ?? 0, target.peakTremor ?? 0, 0.04);
 
     // ── 2. BREATHING ────────────────────────────────────────────────────
     // Celebrate is a single gesture, not a breath cycle — it uses a
@@ -538,7 +530,7 @@ export class BreathStoneEngine {
         this.s.breathAmplitude,
         this.s.breathSpeed,
         this.s.peakHold,
-        this.s.peakTremor,
+        this.s.peakTremor ?? 0,
         this.s.inhaleRatio ?? 0.35,
         this.s.breathNoiseScale ?? 1.0
       );

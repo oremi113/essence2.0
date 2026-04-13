@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { PrimaryButton, LinkButton } from '@/components/ui';
+import { US_STATES } from '@/lib/us-states';
 import type {
   OnboardingScreenData,
   OnCompleteOnboarding,
@@ -49,49 +50,35 @@ type BgKey = 'neutral' | 'warm-phase' | 'warm-1' | 'warm-2' | 'gold' | 'rich';
  * orientation screens 1-6, warm for personal setup 7-12), re-assign the
  * values below — the CSS and wrapper plumbing already support all 5 tones.
  */
-// The stone is a continuous companion across the entire onboarding —
-// it never unmounts between screens. Its animation state is the only
-// thing that changes per screen.
-const STONE_STATE_BY_SCREEN: Record<number, BreathStoneState> = {
-  1: 'idle',
-  2: 'idle',
-  3: 'idle',
-  4: 'idle',
-  5: 'ready',
-  6: 'ready',
-  7: 'guidance',
-  8: 'idle',
-  9: 'idle',
-  10: 'idle',
-  11: 'priming',
-  12: 'ready',
+// Per-screen configuration. The stone is a continuous companion across
+// the entire onboarding — it never unmounts between screens; only its
+// animation state changes. Background phase shifts from cream (1–6) to
+// warm-phase oat (7–12) when setCurrentScreen flips to 7, choreographed
+// with the exit/enter animation. settleDelay is the ms delay before the
+// stone promotes to its non-idle target; screen 11's priming uses 600ms
+// to read as deliberate, others default to 500ms.
+interface ScreenConfig {
+  stone: BreathStoneState;
+  bg: BgKey;
+  settleDelay?: number;
+}
+
+const SCREEN_CONFIG: Record<number, ScreenConfig> = {
+  1:  { stone: 'idle',     bg: 'neutral' },
+  2:  { stone: 'idle',     bg: 'neutral' },
+  3:  { stone: 'idle',     bg: 'neutral' },
+  4:  { stone: 'idle',     bg: 'neutral' },
+  5:  { stone: 'ready',    bg: 'neutral' },
+  6:  { stone: 'ready',    bg: 'neutral' },
+  7:  { stone: 'guidance', bg: 'warm-phase' },
+  8:  { stone: 'idle',     bg: 'warm-phase' },
+  9:  { stone: 'idle',     bg: 'warm-phase' },
+  10: { stone: 'idle',     bg: 'warm-phase' },
+  11: { stone: 'priming',  bg: 'warm-phase', settleDelay: 600 },
+  12: { stone: 'ready',    bg: 'warm-phase' },
 };
 
-// Per-screen settle delay. Most screens promote the stone 500ms after
-// the new screen's state takes effect; screen 11's priming state uses
-// a slightly longer hold to read as deliberate.
-const STONE_SETTLE_DELAY_MS: Record<number, number> = {
-  11: 600,
-};
-
-const BG_BY_SCREEN: Record<number, BgKey> = {
-  1: 'neutral',
-  2: 'neutral',
-  3: 'neutral',
-  4: 'neutral',
-  5: 'neutral',
-  6: 'neutral',
-  // Phase shift — the warm-phase oat holds for the whole personal-setup
-  // stretch (7–12). The background transition from cream → warm-phase
-  // happens via the wrapper's 600ms bg transition the moment setCurrentScreen
-  // flips to 7, choreographed with the exit/enter animation below.
-  7: 'warm-phase',
-  8: 'warm-phase',
-  9: 'warm-phase',
-  10: 'warm-phase',
-  11: 'warm-phase',
-  12: 'warm-phase',
-};
+const DEFAULT_SETTLE_DELAY_MS = 500;
 
 interface OnboardingScreenProps {
   data: OnboardingScreenData;
@@ -154,7 +141,7 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
   }, [isSubmitting, onComplete, firstName, lastName, dob, city, stateCode, hasPhoto]);
 
   // ─── Render ────────────────────────────────────────────────
-  const bg = BG_BY_SCREEN[currentScreen] ?? 'neutral';
+  const bg = SCREEN_CONFIG[currentScreen]?.bg ?? 'neutral';
   const wrapperClass = `onboarding-wrapper onboarding-bg-${bg}`;
   // Screen 7 entering forward uses a bespoke enter animation (stone leads
   // headline by 80ms, softer 380ms ease-out) to pair with Screen 6's
@@ -320,8 +307,9 @@ function StoneSlot() {
 // reads as a rubberband — especially on first mount or when advancing
 // from idle-heavy early screens into ready/guidance/priming.
 function PersistentStone({ currentScreen }: { currentScreen: number }) {
-  const target = STONE_STATE_BY_SCREEN[currentScreen] ?? 'idle';
-  const delay = STONE_SETTLE_DELAY_MS[currentScreen] ?? 500;
+  const config = SCREEN_CONFIG[currentScreen];
+  const target = config?.stone ?? 'idle';
+  const delay = config?.settleDelay ?? DEFAULT_SETTLE_DELAY_MS;
   const [state, setState] = useState<BreathStoneState>('idle');
 
   useEffect(() => {
@@ -665,35 +653,6 @@ function Screen7({ onNext }: { onNext: () => void }) {
 //  Fields: first name, DOB (native <input type="date">), city.
 //  Continue enables when all three are valid.
 // ═══════════════════════════════════════════════════════════════════════════
-
-const US_STATES: readonly { code: string; name: string }[] = [
-  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' },
-  { code: 'AZ', name: 'Arizona' }, { code: 'AR', name: 'Arkansas' },
-  { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
-  { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' },
-  { code: 'DC', name: 'District of Columbia' }, { code: 'FL', name: 'Florida' },
-  { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' },
-  { code: 'ID', name: 'Idaho' }, { code: 'IL', name: 'Illinois' },
-  { code: 'IN', name: 'Indiana' }, { code: 'IA', name: 'Iowa' },
-  { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' },
-  { code: 'LA', name: 'Louisiana' }, { code: 'ME', name: 'Maine' },
-  { code: 'MD', name: 'Maryland' }, { code: 'MA', name: 'Massachusetts' },
-  { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' },
-  { code: 'MS', name: 'Mississippi' }, { code: 'MO', name: 'Missouri' },
-  { code: 'MT', name: 'Montana' }, { code: 'NE', name: 'Nebraska' },
-  { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' },
-  { code: 'NJ', name: 'New Jersey' }, { code: 'NM', name: 'New Mexico' },
-  { code: 'NY', name: 'New York' }, { code: 'NC', name: 'North Carolina' },
-  { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' },
-  { code: 'OK', name: 'Oklahoma' }, { code: 'OR', name: 'Oregon' },
-  { code: 'PA', name: 'Pennsylvania' }, { code: 'RI', name: 'Rhode Island' },
-  { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' },
-  { code: 'TN', name: 'Tennessee' }, { code: 'TX', name: 'Texas' },
-  { code: 'UT', name: 'Utah' }, { code: 'VT', name: 'Vermont' },
-  { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' },
-  { code: 'WV', name: 'West Virginia' }, { code: 'WI', name: 'Wisconsin' },
-  { code: 'WY', name: 'Wyoming' },
-] as const;
 
 function Screen8({
   firstName,
