@@ -964,33 +964,62 @@ function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
         </button>
 
         <div className="privacy-modal__content">
+          <svg
+            className="privacy-modal__shield"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
           <div className="privacy-modal__eyebrow">OUR PRIVACY PROMISE</div>
           <h2 id="privacy-title" className="privacy-modal__title">
             Your voice belongs to you. Full stop.
           </h2>
 
           <div className="privacy-modal__body">
-            <p>
+            <p className="privacy-modal__intro">
               Your recordings are encrypted the moment they leave your device.
-              We cannot hear them. Our team cannot access them. They exist only
-              for you and the people you choose.
-            </p>
-            <p>
-              We will never sell your voice data. Not to advertisers. Not to
-              researchers. Not to anyone.
-            </p>
-            <p>
-              We will never use your recordings to train AI models — ours or
-              anyone else&apos;s.
-            </p>
-            <p>
-              If you delete your account, your voice is gone from our servers
-              within 48 hours. Permanently.
+              They exist only for you and the people you choose. Not even our
+              team can access them.
             </p>
 
+            <ul className="privacy-modal__promises">
+              <li className="privacy-modal__promise">
+                <p className="privacy-modal__commitment">
+                  We will <span className="privacy-modal__emphasis">never</span> sell your voice data.
+                </p>
+                <p className="privacy-modal__proof">
+                  Not to advertisers. Not to researchers. Not to anyone.
+                </p>
+              </li>
+              <li className="privacy-modal__promise">
+                <p className="privacy-modal__commitment">
+                  We will <span className="privacy-modal__emphasis">never</span> use your recordings to train AI models.
+                </p>
+                <p className="privacy-modal__proof">
+                  Not ours. Not anyone else&apos;s.
+                </p>
+              </li>
+              <li className="privacy-modal__promise">
+                <p className="privacy-modal__commitment">
+                  If you delete your account, your voice is{' '}
+                  <span className="privacy-modal__emphasis">permanently gone</span>{' '}
+                  from our servers within 48 hours.
+                </p>
+              </li>
+            </ul>
+
             <p className="privacy-modal__signature">
-              ESSENCE was built by people who lost someone. We know what this
-              holds.
+              ESSENCE was built by people who lost someone.
+              <br />
+              We know what this holds.
             </p>
           </div>
         </div>

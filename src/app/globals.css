@@ -1139,8 +1139,9 @@
     position: relative;
     background: var(--color-bg-neutral);
     border-radius: 24px 24px 0 0;
-    padding: 14px 28px 48px;
-    max-height: 92vh;
+    padding: 14px 28px 40px;
+    max-height: 100vh;
+    min-height: 96vh;
     overflow-y: auto;
     width: 100%;
     max-width: 520px;
@@ -1157,7 +1158,7 @@
   .privacy-modal__handle {
     width: 44px;
     height: 4px;
-    margin: 0 auto 16px;
+    margin: 0 auto 10px;
     border-radius: 2px;
     background: var(--color-surface-warm);
   }
@@ -1186,9 +1187,15 @@
   }
 
   .privacy-modal__content {
-    padding-top: 8px;
+    padding-top: 2px;
     max-width: 440px;
     margin: 0 auto;
+  }
+
+  .privacy-modal__shield {
+    display: block;
+    margin: 0 auto 8px;
+    color: var(--color-mineral-blue-gray, #7b8a99);
   }
 
   .privacy-modal__eyebrow {
@@ -1209,13 +1216,13 @@
     color: var(--color-text-primary);
     line-height: var(--line-height-title);
     text-align: center;
-    margin: 0 0 28px;
+    margin: 0 0 32px;
   }
 
   .privacy-modal__body {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 28px;
   }
 
   .privacy-modal__body p {
@@ -1227,11 +1234,62 @@
     text-align: left;
   }
 
-  .privacy-modal__signature {
-    margin-top: 12px !important;
-    padding-top: 24px;
+  .privacy-modal__intro {
+    font-size: 16px;
+  }
+
+  .privacy-modal__promises {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .privacy-modal__promise {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .privacy-modal__promise + .privacy-modal__promise {
+    padding-top: 22px;
     border-top: 1px solid var(--color-surface-warm);
-    font-style: italic;
+  }
+
+  .privacy-modal__commitment {
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--color-text-primary) !important;
+    margin: 0;
+  }
+
+  .privacy-modal__emphasis {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .privacy-modal__proof {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-text-tertiary) !important;
+    margin: 0;
+  }
+
+  .privacy-modal__signature {
+    margin-top: auto !important;
+    padding-top: 32px;
+    border-top: 1px solid var(--color-surface-warm);
+    font-family: var(--font-display);
+    font-size: calc(var(--text-title) * 0.72);
+    font-weight: 400;
+    font-style: normal !important;
+    line-height: 1.5;
     color: var(--color-text-primary) !important;
     text-align: center !important;
   }
