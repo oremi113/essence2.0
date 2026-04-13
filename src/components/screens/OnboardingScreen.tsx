@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { BreathStone } from '@/components/breath-stone';
+import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { PrimaryButton, LinkButton } from '@/components/ui';
 import type {
   OnboardingScreenData,
@@ -49,6 +49,24 @@ type BgKey = 'neutral' | 'warm-1' | 'warm-2' | 'gold' | 'rich';
  * orientation screens 1-6, warm for personal setup 7-12), re-assign the
  * values below — the CSS and wrapper plumbing already support all 5 tones.
  */
+// The stone is a continuous companion across the entire onboarding —
+// it never unmounts between screens. Its animation state is the only
+// thing that changes per screen.
+const STONE_STATE_BY_SCREEN: Record<number, BreathStoneState> = {
+  1: 'idle',
+  2: 'idle',
+  3: 'idle',
+  4: 'idle',
+  5: 'ready',
+  6: 'ready',
+  7: 'idle',
+  8: 'idle',
+  9: 'idle',
+  10: 'idle',
+  11: 'priming',
+  12: 'ready',
+};
+
 const BG_BY_SCREEN: Record<number, BgKey> = {
   1: 'neutral',
   2: 'neutral',
@@ -135,6 +153,7 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
     <div className={wrapperClass}>
       <ProgressDots current={currentScreen} />
       <BackButton visible={currentScreen > 1} onBack={goBack} disabled={isSubmitting} />
+      <PersistentStone currentScreen={currentScreen} />
 
       {/* Keyed wrapper: force remount on screen change so the slide
           animation replays and sub-screen `useEffect` timers reset
@@ -266,6 +285,26 @@ function StepShell({
   );
 }
 
+// Empty layout slot that reserves the visual space the persistent
+// stone occupies over the top of each screen. The actual BreathStone
+// is rendered once at the wrapper level so it never remounts.
+function StoneSlot() {
+  return <div className="onboarding-stone-slot" aria-hidden="true" />;
+}
+
+// Single BreathStone instance, mounted once for the entire onboarding.
+// It never unmounts — only its `state` prop changes as screens advance,
+// so the engine transitions in place rather than restarting. The
+// cinematic intro (blur + scale-up) plays once on initial mount.
+function PersistentStone({ currentScreen }: { currentScreen: number }) {
+  const state = STONE_STATE_BY_SCREEN[currentScreen] ?? 'idle';
+  return (
+    <div className="onboarding-persistent-stone" aria-hidden="true">
+      <BreathStone state={state} size={120} />
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  SCREEN 1 — Welcome (cinematic intro)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -273,11 +312,7 @@ function StepShell({
 function Screen1({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <div className="onboarding-intro-stone">
-          <BreathStone state="idle" size={120} />
-        </div>
-      </div>
+      <StoneSlot />
 
       <div className="onboarding-eyebrow">Welcome to ESSENCE</div>
       <h1 className="onboarding-title">Your voice is yours alone.</h1>
@@ -299,9 +334,7 @@ function Screen1({ onNext }: { onNext: () => void }) {
 function Screen2({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Here&apos;s what ESSENCE does.</h1>
 
@@ -346,9 +379,7 @@ function Screen2({ onNext }: { onNext: () => void }) {
 function Screen3({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">This is for people who plan ahead.</h1>
 
@@ -380,9 +411,7 @@ function Screen4({
 }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Your voice stays private. Always.</h1>
 
@@ -421,9 +450,7 @@ function Screen4({
 function Screen5({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="ready" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">No one else sounds like you.</h1>
 
@@ -450,9 +477,7 @@ function Screen5({ onNext }: { onNext: () => void }) {
 function Screen6({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="ready" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Here&apos;s how this works.</h1>
 
@@ -513,9 +538,7 @@ function Screen6({ onNext }: { onNext: () => void }) {
 function Screen7({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">First, tell us a little about you.</h1>
       <p className="onboarding-subtitle">
@@ -606,9 +629,7 @@ function Screen8({
 
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Tell us about you.</h1>
       <p className="onboarding-subtitle">
@@ -744,9 +765,7 @@ function Screen9Review({
 
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Does this look right?</h1>
       <p className="onboarding-subtitle">
@@ -797,9 +816,7 @@ function Screen10Photo({
 }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Add a photo if you&apos;d like.</h1>
       <p className="onboarding-subtitle">
@@ -855,9 +872,7 @@ function Screen11Priming({ onNext }: { onNext: () => void }) {
 
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="priming" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Take a breath.</h1>
 
@@ -892,9 +907,7 @@ function Screen12Ready({
 }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="ready" size={120} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Ready to begin recording?</h1>
 

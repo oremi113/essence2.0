@@ -507,6 +507,40 @@
     margin: 0 0 24px;
   }
 
+  /* Empty layout reservation where the persistent stone visually sits.
+     The real BreathStone lives at the wrapper level (absolutely
+     positioned) so it never remounts between screens — this slot just
+     holds the flex space so everything below it stays in its normal
+     position. Dimensions match the stone size + bottom margin. */
+  .onboarding-stone-slot {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 24px;
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  /* The single persistent BreathStone — the emotional through-line of
+     the entire onboarding. Positioned absolutely in the wrapper at the
+     same coordinates the stone-slot occupies inside every step, so the
+     visual placement is identical but the element never unmounts.
+     The cinematic intro (blur + scale-up) plays exactly once on first
+     mount because there are no remounts to restart it. */
+  .onboarding-persistent-stone {
+    position: absolute;
+    top: calc(80px + 40px);  /* wrapper pad-top + step pad-top */
+    left: 50%;
+    transform: translateX(-50%) scale(0.88);
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    filter: blur(12px);
+    animation: onb-stone-reveal 1500ms cubic-bezier(0.22, 1, 0.36, 1) 100ms forwards;
+    /* Position/scale lerp reserved for future per-screen variants. */
+    transition:
+      top 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   .onboarding-body {
     display: flex;
     flex-direction: column;
@@ -767,26 +801,94 @@
     flex: 1;
   }
 
-  /* Direction-aware incoming slide. The outgoing screen
-     unmounts when state flips (React behavior). We animate
-     the new screen entering from the opposite side so the
-     user perceives forward/back motion. */
-  .onboarding-slide-forward {
-    animation: onb-slide-in-forward 320ms cubic-bezier(0.4, 0.0, 0.2, 1) both;
-  }
-
+  /* Frame transition — subtle, brief, intentional. The old slide
+     animated the whole screen in 320ms; under the new "environment
+     before content" principle, the screen container just crossfades
+     quickly so the background + progress settle first, then content
+     composes into that settled environment via the stagger rules
+     below. Direction class is retained for potential future use but
+     both directions currently crossfade the same way. */
+  .onboarding-slide-forward,
   .onboarding-slide-back {
-    animation: onb-slide-in-back 320ms cubic-bezier(0.4, 0.0, 0.2, 1) both;
+    animation: onb-frame-crossfade 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  @keyframes onb-slide-in-forward {
-    from { opacity: 0; transform: translateX(24px); }
-    to   { opacity: 1; transform: translateX(0); }
+  @keyframes onb-frame-crossfade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
-  @keyframes onb-slide-in-back {
-    from { opacity: 0; transform: translateX(-24px); }
-    to   { opacity: 1; transform: translateX(0); }
+  /* ─── ONBOARDING — STAGGERED CONTENT REVEAL ──────────────
+     "The room arrives before the furniture." Each direct child of
+     `.onboarding-step` composes in after the frame has settled,
+     staggered so the eye moves naturally from top to bottom. The
+     stone-slot is excluded — the persistent stone doesn't re-enter.
+
+     Body paragraphs stagger individually inside their parent slot
+     so the four body lines read one at a time, with the closer
+     landing last. Total compose time stays under ~1.8s on any
+     screen with ≤5 text elements. */
+
+  .onboarding-step > *:not(.onboarding-stone-slot) {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: onb-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Top-level stagger — base 320ms (after frame crossfade settles),
+     100ms between siblings. nth-child(1) is the stone-slot so skip it. */
+  .onboarding-step > *:nth-child(2) { animation-delay: 320ms; }
+  .onboarding-step > *:nth-child(3) { animation-delay: 420ms; }
+  .onboarding-step > *:nth-child(4) { animation-delay: 520ms; }
+  .onboarding-step > *:nth-child(5) { animation-delay: 620ms; }
+  .onboarding-step > *:nth-child(6) { animation-delay: 720ms; }
+  .onboarding-step > *:nth-child(7) { animation-delay: 820ms; }
+  .onboarding-step > *:nth-child(8) { animation-delay: 920ms; }
+
+  /* Body is animated per-paragraph, not as a block. */
+  .onboarding-step > .onboarding-body {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .onboarding-body > * {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: onb-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Paragraphs stagger from the body's natural slot start (≈520ms when
+     body is the 4th step child on Screen 5) with 110ms between lines. */
+  .onboarding-body > *:nth-child(1) { animation-delay: 520ms; }
+  .onboarding-body > *:nth-child(2) { animation-delay: 630ms; }
+  .onboarding-body > *:nth-child(3) { animation-delay: 740ms; }
+  .onboarding-body > *:nth-child(4) { animation-delay: 850ms; }
+  .onboarding-body > *:nth-child(5) { animation-delay: 980ms; }  /* closer gets extra beat */
+  .onboarding-body > *:nth-child(6) { animation-delay: 1090ms; }
+
+  @keyframes onb-reveal {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .onboarding-step > *:not(.onboarding-stone-slot),
+    .onboarding-body > * {
+      transform: none;
+      animation-duration: 400ms;
+      animation-timing-function: ease-out;
+    }
+    @keyframes onb-reveal {
+      to { opacity: 1; }
+    }
+    .onboarding-persistent-stone {
+      filter: none;
+      transform: translateX(-50%);
+      animation-duration: 600ms;
+    }
   }
 
   /* ─── ONBOARDING — CINEMATIC INTRO (Screen 1 only) ────────
@@ -794,18 +896,30 @@
      mount. We overlay a wrapper that begins hidden + blurred +
      scaled down and animates to full presence over 1500ms. */
 
+  /* Legacy per-screen cinematic intro — retained for back-compat but
+     no longer used; the persistent stone handles its own intro. */
   .onboarding-intro-stone {
     opacity: 0;
     filter: blur(12px);
     transform: scale(0.88);
-    animation: onb-stone-reveal 1500ms cubic-bezier(0.4, 0.0, 0.2, 1) 100ms forwards;
+    animation: onb-stone-reveal-legacy 1500ms cubic-bezier(0.4, 0.0, 0.2, 1) 100ms forwards;
   }
 
-  @keyframes onb-stone-reveal {
+  @keyframes onb-stone-reveal-legacy {
     to {
       opacity: 1;
       filter: blur(0);
       transform: scale(1);
+    }
+  }
+
+  /* Persistent stone's one-time cinematic entrance. The transform keeps
+     the translateX(-50%) centering — only the scale changes. */
+  @keyframes onb-stone-reveal {
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: translateX(-50%) scale(1);
     }
   }
 
