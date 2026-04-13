@@ -18,10 +18,10 @@ import type { RecordScreenData } from './RecordScreen.types';
 // No more parallel lookup table to keep in sync.
 
 /** Compute the progress-bar fill percent (0–100) for a given prompt.
- *  The current prompt contributes a full step only once it's been
- *  recorded (hasStopped), so the bar advances only on successful save. */
-function progressPercent(promptIndex: number, hasStopped: boolean): number {
-  const completed = promptIndex + (hasStopped ? 1 : 0);
+ *  The current prompt contributes a full step only once the upload has
+ *  actually committed, so the bar never runs ahead of the server. */
+function progressPercent(promptIndex: number, isUploaded: boolean): number {
+  const completed = promptIndex + (isUploaded ? 1 : 0);
   return (completed / TOTAL_PROMPT_COUNT) * 100;
 }
 
@@ -515,8 +515,7 @@ function PromptView({
   onAdvance: () => void;
 }) {
   const engineRef = useRef<RecordingUploadHandle>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [hasStopped, setHasStopped] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onAdvanceRef = useRef(onAdvance);
@@ -526,6 +525,15 @@ function PromptView({
 
   const isFinal = promptIndex === TOTAL_PROMPT_COUNT - 1;
   const stage = getStageForPrompt(promptIndex);
+
+  const isRecording = uploadStatus === 'recording';
+  const isSaving = uploadStatus === 'uploading' || uploadStatus === 'committing';
+  const isUploaded = uploadStatus === 'ready';
+  const hasError = uploadStatus === 'error' || uploadStatus === 'permission_denied';
+  // Anything after a successful stop blocks the button from re-starting
+  // recording (re-record happens via the engine's reset path). "Finished"
+  // here means "no longer in the initial idle/recording state".
+  const hasStopped = isSaving || isUploaded || hasError;
 
   // Recording timer
   useEffect(() => {
@@ -541,23 +549,17 @@ function PromptView({
     };
   }, [isRecording]);
 
-  // Auto-advance 2s after user stops recording — use ref to avoid dependency issues
+  // Auto-advance 2s after the upload has actually committed — not after
+  // the stop click. Advancing before commit unmounts RecordingUpload
+  // mid-flight and tends to race the /api/audio/commit request.
   useEffect(() => {
-    if (!hasStopped) return;
+    if (!isUploaded) return;
     const timer = setTimeout(() => onAdvanceRef.current(), TIMING.PROMPT_AUTO_ADVANCE_MS);
     return () => clearTimeout(timer);
-  }, [hasStopped]);
+  }, [isUploaded]);
 
   const handleStatusChange = useCallback((status: UploadStatus) => {
-    if (status === 'recording') {
-      setIsRecording(true);
-    } else if (status !== 'idle') {
-      // Any non-idle, non-recording status = user stopped recording
-      setIsRecording((prev) => {
-        if (prev) setHasStopped(true);
-        return false;
-      });
-    }
+    setUploadStatus(status);
   }, []);
 
   function handleRecordClick() {
@@ -610,8 +612,22 @@ function PromptView({
         )}
       </button>
 
-      <p className={`record-label ${isRecording ? 'record-label--recording' : ''} ${hasStopped ? 'record-label--saved' : ''}`}>
-        {hasStopped ? 'Saved' : isRecording ? 'Recording...' : 'Tap to record'}
+      <p
+        className={`record-label ${isRecording ? 'record-label--recording' : ''} ${
+          isSaving ? 'record-label--saving' : ''
+        } ${isUploaded ? 'record-label--saved' : ''} ${hasError ? 'record-label--error' : ''}`}
+      >
+        {hasError
+          ? uploadStatus === 'permission_denied'
+            ? 'Microphone blocked'
+            : 'Save failed — try again'
+          : isUploaded
+            ? 'Saved'
+            : isSaving
+              ? 'Saving…'
+              : isRecording
+                ? 'Recording...'
+                : 'Tap to record'}
       </p>
 
       <div className={`record-timer ${isRecording || hasStopped ? 'record-timer--visible' : ''}`}>
@@ -639,7 +655,7 @@ function PromptView({
       <div className="record-progress-bar" aria-hidden="true">
         <div
           className="record-progress-bar__fill"
-          style={{ width: `${progressPercent(promptIndex, hasStopped)}%` }}
+          style={{ width: `${progressPercent(promptIndex, isUploaded)}%` }}
         />
       </div>
     </div>

@@ -2253,8 +2253,16 @@
     color: var(--color-status-error);
   }
 
+  .record-label--saving {
+    color: var(--color-text-secondary);
+  }
+
   .record-label--saved {
     color: var(--color-status-success);
+  }
+
+  .record-label--error {
+    color: var(--color-status-error);
   }
 
   /* ─── Hidden upload engine ───────────────────────────────── */
