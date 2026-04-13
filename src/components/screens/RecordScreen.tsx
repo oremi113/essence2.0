@@ -464,7 +464,7 @@ function EnvironmentView({ onReady }: { onReady: () => void }) {
 
 const STAGE_INTRO_CONFIG = {
   1: {
-    title: 'Let\u2019s start with simple moments.',
+    title: 'Let’s start with simple moments.',
     subtitle: 'These five prompts establish your natural speaking rhythm.',
     body: ['Speak naturally.', 'There are no wrong answers.'],
     cta: 'Begin Stage 1',
