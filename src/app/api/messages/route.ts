@@ -35,13 +35,17 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Memory Shelf only displays saved messages; filter at the DB
+     // level so we don't ship failed/pending rows the client throws
+     // away. If a future caller needs other statuses, add a `?status=`
+     // query param rather than broadening the default.
     const { data: messages, error } = await supabase
       .from("messages")
       .select(
         "id, status, title, body_text, created_at, recipient_id, recipients(name)"
       )
       .eq("user_id", user.id)
-      .in("status", ["saved", "failed"])
+      .eq("status", "saved")
       .order("created_at", { ascending: false })
       .limit(LIST_LIMIT);
 

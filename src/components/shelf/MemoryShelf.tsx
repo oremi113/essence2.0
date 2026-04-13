@@ -203,9 +203,8 @@ export function MemoryShelf() {
   }
 
   // --- Empty state ---
-  const savedMessages = messages.filter((m) => m.status === "saved");
-
-  if (savedMessages.length === 0) {
+  // Backend now returns saved-only; no client filter needed.
+  if (messages.length === 0) {
     return (
       <div>
         <h2>Memory Shelf</h2>
@@ -272,7 +271,7 @@ export function MemoryShelf() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        {savedMessages.map((msg) => {
+        {messages.map((msg) => {
           const isPlaying = playingId === msg.id;
           const isLoading = isPlaying && audioLoading;
 
