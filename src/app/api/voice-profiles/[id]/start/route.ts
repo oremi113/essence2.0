@@ -13,26 +13,18 @@ import { handleRouteError } from "@/lib/errors";
 import { logEvent, logError, generateRequestId, durationSince, withRequestId } from "@/lib/logger";
 import { assertCanStartVoiceCreation } from "@/lib/guards";
 import { isDedupBlocked, recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
+import {
+  VOICE_PROFILE_MAX_ATTEMPTS,
+  isVoiceProfileRetryAllowed,
+} from "@/lib/voice-training/backoff";
 
 export const maxDuration = 300; // 5 min (allow ElevenLabs + download time)
 
 const MIN_CLIP_COUNT = 10;
 /** Minimum total audio size (~1 min at low bitrate). */
 const MIN_TOTAL_BYTES = 100 * 1024; // 100 KB
-const MAX_ATTEMPTS = 3;
-const BACKOFF_MS = [0, 5 * 60 * 1000, 30 * 60 * 1000, 2 * 60 * 60 * 1000] as const;
 /** If still "processing" after this, treat as timed out so user can retry. */
 const STALE_PROCESSING_MS = 3 * 60 * 1000; // 3 min
-
-function isRetryAllowed(
-  attemptCount: number,
-  lastAttemptAt: string | null
-): boolean {
-  if (attemptCount >= MAX_ATTEMPTS) return false;
-  if (!lastAttemptAt) return true;
-  const wait = BACKOFF_MS[Math.min(attemptCount, BACKOFF_MS.length - 1)];
-  return Date.now() - new Date(lastAttemptAt).getTime() >= wait;
-}
 
 function sanitizeErrorMessage(msg: string, maxLen = 500): string {
   const s = String(msg).replace(/\s+/g, " ").trim();
@@ -149,7 +141,7 @@ export async function POST(
 
     // Failed: enforce backoff and max attempts
     if (profile.status === "failed") {
-      if (!isRetryAllowed(profile.attempt_count ?? 0, profile.last_attempt_at)) {
+      if (!isVoiceProfileRetryAllowed(profile.attempt_count ?? 0, profile.last_attempt_at)) {
         return withRequestId(
           NextResponse.json(
             { error: "Retry not available yet", retry_available: false, status: "failed" },
@@ -455,7 +447,7 @@ export async function POST(
       .eq("status", "processing"); // monotonic guard
 
     await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
-    const retryAllowed = (profile.attempt_count ?? 0) + 1 < MAX_ATTEMPTS;
+    const retryAllowed = (profile.attempt_count ?? 0) + 1 < VOICE_PROFILE_MAX_ATTEMPTS;
     return withRequestId(
       NextResponse.json(
         { status: "failed", error: safeMessage, retry_available: retryAllowed },

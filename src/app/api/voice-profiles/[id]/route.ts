@@ -4,9 +4,7 @@
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-
-const MAX_ATTEMPTS = 3;
-const BACKOFF_MS = [0, 5 * 60 * 1000, 30 * 60 * 1000, 2 * 60 * 60 * 1000] as const; // 0, 5m, 30m, 2h
+import { isVoiceProfileRetryAllowed } from "@/lib/voice-training/backoff";
 
 function isRetryAvailable(
   status: string,
@@ -14,10 +12,7 @@ function isRetryAvailable(
   lastAttemptAt: string | null
 ): boolean {
   if (status !== "failed") return false;
-  if (attemptCount >= MAX_ATTEMPTS) return false;
-  if (!lastAttemptAt) return true;
-  const wait = BACKOFF_MS[Math.min(attemptCount, BACKOFF_MS.length - 1)];
-  return Date.now() - new Date(lastAttemptAt).getTime() >= wait;
+  return isVoiceProfileRetryAllowed(attemptCount, lastAttemptAt);
 }
 
 export async function GET(
