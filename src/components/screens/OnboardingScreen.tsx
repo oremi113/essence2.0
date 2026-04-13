@@ -373,10 +373,7 @@ function Screen2({ onNext }: { onNext: () => void }) {
           Letters for later.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--9">
-          A goodbye.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--10">
-          Whenever it comes.
+          A goodbye, whenever it comes.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final-top">
           Your voice.
