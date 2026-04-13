@@ -102,24 +102,26 @@ export function NewMessageView({
   // --- Fetch playback URL when saved ---
   useEffect(() => {
     if (viewState !== "saved" || !messageId) return;
-    let cancelled = false;
 
+    const controller = new AbortController();
     (async () => {
       try {
-        const res = await fetch(`/api/messages/${messageId}/play`);
-        if (!res.ok || cancelled) return;
+        const res = await fetch(`/api/messages/${messageId}/play`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data.url) {
+        if (data.url) {
           setPlaybackUrl(data.url);
         }
-      } catch {
-        /* playback URL fetch failed — not critical, user can retry */
+      } catch (err) {
+        // AbortError on unmount is expected; anything else just means
+        // the playback URL fetch failed and the user can retry.
+        if ((err as Error).name === "AbortError") return;
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [viewState, messageId]);
 
   // --- Reset to form ---
