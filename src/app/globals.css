@@ -2364,4 +2364,24 @@
       animation: none;
     }
   }
+
+  /* ─── TAB NAV (post-onboarding /app pages) ────────────────── */
+  .tab-nav {
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+
+  .tab-nav__item {
+    display: inline;
+  }
+
+  .tab-nav__sep {
+    margin: 0 8px;
+    color: #ccc;
+  }
+
+  .tab-nav__link--current {
+    color: var(--color-text-secondary);
+    cursor: default;
+  }
 }
