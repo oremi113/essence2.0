@@ -776,6 +776,12 @@ function Screen8({
         A few quick details so your messages feel personal.
       </p>
 
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (isValid) onNext();
+        }}
+      >
       <div className="onboarding-form-card">
         <div className="onboarding-field-row">
           <div className="onboarding-field">
@@ -865,10 +871,11 @@ function Screen8({
       </div>
 
       <div className="onboarding-ctas">
-        <PrimaryButton onClick={onNext} disabled={!isValid}>
+        <PrimaryButton type="submit" disabled={!isValid}>
           Continue
         </PrimaryButton>
       </div>
+      </form>
     </StepShell>
   );
 }
