@@ -1696,6 +1696,10 @@
     margin: 0 auto var(--space-xl);
   }
 
+  .record-title--weight-400 { font-weight: 400; }
+  .record-title--weight-500 { font-weight: 500; }
+  .record-subtitle--italic  { font-style: italic; }
+
   .record-body {
     display: flex;
     flex-direction: column;

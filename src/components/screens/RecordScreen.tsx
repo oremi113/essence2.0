@@ -673,22 +673,22 @@ function CelebrationView({
     ALL_PROMPTS[afterPromptIndex]?.celebration;
   if (!celebration) return null;
 
-  const titleStyle = celebration.titleWeight
-    ? { fontWeight: celebration.titleWeight }
-    : undefined;
-  const subtitleStyle = celebration.italicSubtitle
-    ? { fontStyle: 'italic' as const }
-    : undefined;
+  const titleClass = celebration.titleWeight
+    ? `record-title record-title--weight-${celebration.titleWeight}`
+    : 'record-title';
+  const subtitleClass = celebration.italicSubtitle
+    ? 'record-subtitle record-subtitle--italic'
+    : 'record-subtitle';
 
   return (
     <div className="record-step record-step--centered">
       {celebration.eyebrow && (
         <div className="record-eyebrow">{celebration.eyebrow}</div>
       )}
-      <h1 className="record-title" style={titleStyle}>
+      <h1 className={titleClass}>
         {celebration.title}
       </h1>
-      <p className="record-subtitle" style={subtitleStyle}>
+      <p className={subtitleClass}>
         {celebration.subtitle}
       </p>
 
