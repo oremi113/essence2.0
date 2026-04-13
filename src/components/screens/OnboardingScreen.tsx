@@ -39,7 +39,7 @@ import type {
 
 const TOTAL_SCREENS = 12;
 
-type BgKey = 'neutral' | 'warm-1' | 'warm-2' | 'gold' | 'rich';
+type BgKey = 'neutral' | 'warm-phase' | 'warm-1' | 'warm-2' | 'gold' | 'rich';
 
 /**
  * Single background across the entire onboarding. The BreathStone carries
@@ -59,12 +59,19 @@ const STONE_STATE_BY_SCREEN: Record<number, BreathStoneState> = {
   4: 'idle',
   5: 'ready',
   6: 'ready',
-  7: 'idle',
+  7: 'guidance',
   8: 'idle',
   9: 'idle',
   10: 'idle',
   11: 'priming',
   12: 'ready',
+};
+
+// Per-screen settle delay. Most screens promote the stone 500ms after
+// the new screen's state takes effect; screen 11's priming state uses
+// a slightly longer hold to read as deliberate.
+const STONE_SETTLE_DELAY_MS: Record<number, number> = {
+  11: 600,
 };
 
 const BG_BY_SCREEN: Record<number, BgKey> = {
@@ -74,12 +81,16 @@ const BG_BY_SCREEN: Record<number, BgKey> = {
   4: 'neutral',
   5: 'neutral',
   6: 'neutral',
-  7: 'neutral',
-  8: 'neutral',
-  9: 'neutral',
-  10: 'neutral',
-  11: 'neutral',
-  12: 'neutral',
+  // Phase shift — the warm-phase oat holds for the whole personal-setup
+  // stretch (7–12). The background transition from cream → warm-phase
+  // happens via the wrapper's 600ms bg transition the moment setCurrentScreen
+  // flips to 7, choreographed with the exit/enter animation below.
+  7: 'warm-phase',
+  8: 'warm-phase',
+  9: 'warm-phase',
+  10: 'warm-phase',
+  11: 'warm-phase',
+  12: 'warm-phase',
 };
 
 interface OnboardingScreenProps {
@@ -145,9 +156,15 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
   // ─── Render ────────────────────────────────────────────────
   const bg = BG_BY_SCREEN[currentScreen] ?? 'neutral';
   const wrapperClass = `onboarding-wrapper onboarding-bg-${bg}`;
-  const slideClass = direction === 'forward'
-    ? 'onboarding-slide-forward'
-    : 'onboarding-slide-back';
+  // Screen 7 entering forward uses a bespoke enter animation (stone leads
+  // headline by 80ms, softer 380ms ease-out) to pair with Screen 6's
+  // 250ms exit and the 600ms background warming — see DESIGN BRIEF 002.
+  const isPhaseEnter = direction === 'forward' && currentScreen === 7;
+  const slideClass = isPhaseEnter
+    ? 'onboarding-slide-phase-enter'
+    : direction === 'forward'
+      ? 'onboarding-slide-forward'
+      : 'onboarding-slide-back';
 
   return (
     <div className={wrapperClass}>
@@ -296,11 +313,29 @@ function StoneSlot() {
 // It never unmounts — only its `state` prop changes as screens advance,
 // so the engine transitions in place rather than restarting. The
 // cinematic intro (blur + scale-up) plays once on initial mount.
+//
+// Settle behavior: when a screen calls for a non-idle state, we pause
+// briefly before promoting. Without that pause the engine can interpolate
+// from its current params toward the new high-amplitude target, which
+// reads as a rubberband — especially on first mount or when advancing
+// from idle-heavy early screens into ready/guidance/priming.
 function PersistentStone({ currentScreen }: { currentScreen: number }) {
-  const state = STONE_STATE_BY_SCREEN[currentScreen] ?? 'idle';
+  const target = STONE_STATE_BY_SCREEN[currentScreen] ?? 'idle';
+  const delay = STONE_SETTLE_DELAY_MS[currentScreen] ?? 500;
+  const [state, setState] = useState<BreathStoneState>('idle');
+
+  useEffect(() => {
+    // Idle target applies immediately; non-idle waits for settle delay
+    // so the engine doesn't rubberband from its current params toward
+    // the new high-amplitude target on the first render of a new screen.
+    const effectiveDelay = target === 'idle' ? 0 : delay;
+    const t = window.setTimeout(() => setState(target), effectiveDelay);
+    return () => window.clearTimeout(t);
+  }, [target, delay]);
+
   return (
     <div className="onboarding-persistent-stone" aria-hidden="true">
-      <BreathStone state={state} size={120} />
+      <BreathStone state={state} size={144} />
     </div>
   );
 }
@@ -344,7 +379,7 @@ function Screen2({ onNext }: { onNext: () => void }) {
         <p>Then you use it to leave messages for the future.</p>
       </div>
 
-      {/* Cinematic conveyor — 10 transient phrases slide through,
+      {/* Cinematic conveyor — 12 transient phrases slide through,
           then the final pair ("Your voice." / "Their timeline.")
           lands stacked and stays as the quiet conclusion. */}
       <div className="onboarding-conveyor" aria-hidden="true">
@@ -460,11 +495,29 @@ function Screen4({
         </p>
       </div>
 
+      <button
+        type="button"
+        className="onboarding-secondary-link"
+        onClick={onReadPrivacy}
+      >
+        Read our privacy promise
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+
       <div className="onboarding-ctas">
         <PrimaryButton onClick={onNext}>I understand</PrimaryButton>
-        <LinkButton onClick={onReadPrivacy}>
-          Read our privacy promise
-        </LinkButton>
       </div>
     </StepShell>
   );
@@ -502,7 +555,31 @@ function Screen5({ onNext }: { onNext: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Screen6({ onNext }: { onNext: () => void }) {
+  // Phase-transition choreography to Screen 7 — see DESIGN BRIEF 002.
+  //   0ms   tap → haptic + button depress (scale 0.97)
+  //   80ms  release, begin step exit (fade to 85%, drift left 12px)
+  //   250ms call onNext → Screen 7 mounts with phase-enter animation
+  const [pressing, setPressing] = useState(false);
+  const [exiting, setExiting] = useState(false);
+
+  const handleBegin = useCallback(() => {
+    if (exiting) return;
+    // Light haptic — silently no-ops on desktop/iOS Safari.
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate?.(8);
+    }
+    setPressing(true);
+    window.setTimeout(() => {
+      setPressing(false);
+      setExiting(true);
+    }, 80);
+    window.setTimeout(() => {
+      onNext();
+    }, 250);
+  }, [exiting, onNext]);
+
   return (
+    <div className={exiting ? 'onboarding-screen--exiting-phase' : ''}>
     <StepShell>
       <StoneSlot />
 
@@ -512,21 +589,22 @@ function Screen6({ onNext }: { onNext: () => void }) {
         <li className="onboarding-journey__item">
           <span className="onboarding-journey__num">1</span>
           <span className="onboarding-journey__label">
-            Tell us about yourself
-            <span className="onboarding-journey__duration">(2 minutes)</span>
+            Make your profile
+            <span className="onboarding-journey__duration">(&lt; 1 minute)</span>
           </span>
         </li>
         <li className="onboarding-journey__item">
           <span className="onboarding-journey__num">2</span>
           <span className="onboarding-journey__label">
             Record your voice
-            <span className="onboarding-journey__duration">(10–13 minutes)</span>
+            <span className="onboarding-journey__duration">(10–12 minutes)</span>
           </span>
         </li>
         <li className="onboarding-journey__item">
           <span className="onboarding-journey__num">3</span>
           <span className="onboarding-journey__label">
             Create your first message
+            <span className="onboarding-journey__duration">(2 minutes)</span>
           </span>
         </li>
       </ol>
@@ -552,9 +630,16 @@ function Screen6({ onNext }: { onNext: () => void }) {
       </div>
 
       <div className="onboarding-ctas">
-        <PrimaryButton onClick={onNext}>Let&apos;s begin</PrimaryButton>
+        <PrimaryButton
+          onClick={handleBegin}
+          disabled={exiting}
+          className={pressing ? 'onboarding-btn-pressing' : ''}
+        >
+          Let&apos;s begin
+        </PrimaryButton>
       </div>
     </StepShell>
+    </div>
   );
 }
 
@@ -567,6 +652,7 @@ function Screen7({ onNext }: { onNext: () => void }) {
     <StepShell>
       <StoneSlot />
 
+      <div className="onboarding-phase-label">YOUR PROFILE</div>
       <h1 className="onboarding-title">First, tell us a little about you.</h1>
       <p className="onboarding-subtitle">
         This helps us personalize your experience.
@@ -660,8 +746,7 @@ function Screen8({
 
       <h1 className="onboarding-title">Tell us about you.</h1>
       <p className="onboarding-subtitle">
-        Your name, birthday, and where you live help make your messages feel
-        personal.
+        A few quick details so your messages feel personal.
       </p>
 
       <div className="onboarding-form-card">
@@ -712,7 +797,6 @@ function Screen8({
             max={new Date().toISOString().slice(0, 10)}
             min="1900-01-01"
           />
-          <p className="onboarding-field__helper">MM / DD / YYYY</p>
         </div>
 
         <div className="onboarding-field-row">
@@ -902,15 +986,14 @@ function Screen11Priming({ onNext }: { onNext: () => void }) {
       <StoneSlot />
 
       <h1 className="onboarding-title">Take a breath.</h1>
+      <p className="onboarding-priming-hint">
+        Breathe with the stone for a moment.
+      </p>
 
       <div className="onboarding-body">
         <p>In a moment, you&apos;ll start recording your voice.</p>
         <p>Think of it like leaving a voicemail for someone you love.</p>
       </div>
-
-      <p className="onboarding-priming-hint">
-        Breathe with the stone for a moment.
-      </p>
 
       <div
         className={`onboarding-ctas ${unlocked ? 'onboarding-ctas--unlocked' : 'onboarding-ctas--locked'}`}

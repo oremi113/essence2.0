@@ -8,6 +8,7 @@
      so the progression reads as richer/warmer, not as abrupt
      mode changes. Source: ESSENCE Session 4 handoff. */
   --color-bg-neutral:     #FBF8F4;  /* cream — base app background */
+  --color-bg-warm-phase:  #F2EDE4;  /* warmer oat — onboarding phase 2 (screens 7–12) */
   --color-bg-warm-1:      #F9F4ED;  /* very gentle warmth */
   --color-bg-warm-2:      #F6F0E5;  /* soft oat */
   --color-bg-gold:        #F2E8D6;  /* honey */
@@ -454,7 +455,7 @@
   .onboarding-step {
     display: flex;
     flex-direction: column;
-    padding-top: 40px;
+    padding-top: 28px;
     gap: 0;
     min-height: 100%;
   }
@@ -494,7 +495,7 @@
     color: var(--color-text-secondary);
     line-height: 1.6;
     text-align: center;
-    margin: 0 0 32px;
+    margin: 0 0 24px;
   }
 
   /* Stone is a recurring presence on every onboarding screen — one
@@ -504,7 +505,7 @@
   .onboarding-stone {
     display: flex;
     justify-content: center;
-    margin: 0 0 24px;
+    margin: 0 0 16px;
   }
 
   /* Empty layout reservation where the persistent stone visually sits.
@@ -587,7 +588,7 @@
   }
 
   /* ─── ONBOARDING — CONVEYOR (Screen 2) ───────────────────
-     Nine transient phrases pass through, each entering from the
+     Twelve transient phrases pass through, each entering from the
      right, holding, and exiting to the left as the next arrives.
      Then a two-line terminal pair ("Your voice." / "Their timeline.")
      lands stacked and stays on screen while the CTA fades in below.
@@ -701,6 +702,43 @@
     font-weight: 600;
   }
 
+  /* Secondary action used below body copy — kept visually subordinate
+     to the primary CTA so the bottom button stays the clear next step,
+     but set apart from body copy as its own tappable affordance. */
+  .onboarding-secondary-link {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 24px auto 0;
+    padding: 12px 6px;
+    min-height: auto;
+    background: none;
+    border: none;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--color-mineral);
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .onboarding-secondary-link:hover,
+  .onboarding-secondary-link:focus-visible {
+    color: var(--color-mineral-dark);
+  }
+
+  .onboarding-secondary-link svg {
+    transition: transform 200ms ease;
+  }
+
+  .onboarding-secondary-link:hover svg {
+    transform: translateX(2px);
+  }
+
   .onboarding-body__never {
     color: var(--color-mineral-dark);
     font-weight: 700;
@@ -722,7 +760,10 @@
        height. Inside AppShell (the real /onboarding route) the wrapper
        still fills via `flex: 1`; the min-height is just a floor. */
     min-height: 100dvh;
-    transition: background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* 600ms ease-in so the phase-shift from cream → warm oat at the
+       screen 6→7 boundary reads as warmth arriving, not a color swap.
+       Other screens share a color so duration is immaterial to them. */
+    transition: background-color 600ms cubic-bezier(0.32, 0.04, 0.66, 0.99);
     /* 80px top keeps the progress dots + back button clear of content;
        24px inline matches Session 5's .record-step so primary buttons
        get the same consistent side margin whether /onboarding is
@@ -730,8 +771,9 @@
     padding: 80px 24px 32px;
   }
 
-  .onboarding-bg-neutral  { background-color: var(--color-bg-neutral); }
-  .onboarding-bg-warm-1   { background-color: var(--color-bg-warm-1); }
+  .onboarding-bg-neutral     { background-color: var(--color-bg-neutral); }
+  .onboarding-bg-warm-phase  { background-color: var(--color-bg-warm-phase); }
+  .onboarding-bg-warm-1      { background-color: var(--color-bg-warm-1); }
   .onboarding-bg-warm-2   { background-color: var(--color-bg-warm-2); }
   .onboarding-bg-gold     { background-color: var(--color-bg-gold); }
   .onboarding-bg-rich     { background-color: var(--color-bg-rich); }
@@ -926,6 +968,77 @@
     }
   }
 
+  /* ─── ONBOARDING — PHASE TRANSITION (6 → 7) ─────────────
+     Screen 6 plays a short exit (fade to 85%, drift left 12px)
+     before it unmounts. Screen 7 enters from +20px with the
+     stone leading the headline by 80ms so the user feels the
+     environment shift before reading. This is the one place in
+     onboarding that gets bespoke choreography — everywhere else
+     the plain slide-forward animation handles the handoff. */
+
+  .onboarding-screen--exiting-phase {
+    animation: onb-phase-exit 250ms cubic-bezier(0.32, 0.04, 0.66, 0.99) both;
+  }
+
+  @keyframes onb-phase-exit {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0.85; transform: translateX(-12px); }
+  }
+
+  .onboarding-slide-phase-enter {
+    animation: onb-phase-enter 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes onb-phase-enter {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Stone leads by 80ms inside screen 7. */
+  .onboarding-slide-phase-enter .onboarding-stone {
+    animation: onb-phase-stone-enter 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: -80ms;
+  }
+
+  @keyframes onb-phase-stone-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* "Let's begin" press-depress — 80ms scale-down just before exit. */
+  .onboarding-btn-pressing {
+    animation: onb-btn-press 80ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  @keyframes onb-btn-press {
+    from { transform: scale(1); }
+    to   { transform: scale(0.97); }
+  }
+
+  /* Phase eyebrow label on Screen 7 — mirrors the small-caps treatment
+     from Screen 1's "WELCOME TO ESSENCE" but in mineral blue-gray so
+     the structural echo reads without stealing focus. */
+  .onboarding-phase-label {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #7b8a99;
+    opacity: 0.6;
+    text-align: center;
+    margin: 0 0 12px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .onboarding-screen--exiting-phase,
+    .onboarding-slide-phase-enter,
+    .onboarding-slide-phase-enter .onboarding-stone,
+    .onboarding-btn-pressing {
+      animation: none !important;
+    }
+  }
+
   /* ─── ONBOARDING — CINEMATIC INTRO (Screen 1 only) ────────
      The BreathStone canvas starts rendering immediately on
      mount. We overlay a wrapper that begins hidden + blurred +
@@ -963,18 +1076,20 @@
   .onboarding-form-card {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    background: var(--color-bg-warm-2);
+    gap: 14px;
+    /* Cream card lifts off the warm phase-2 bg (screens 7–12). */
+    background: var(--color-bg-neutral);
     border-radius: 16px;
-    padding: 24px;
-    margin: 0 0 24px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    padding: 18px 20px;
+    margin: 0 0 20px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
 
   .onboarding-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;   /* lets inputs shrink inside flex rows */
   }
 
@@ -1016,8 +1131,8 @@
 
   .onboarding-input {
     width: 100%;
-    min-height: 52px;
-    padding: 14px 16px;
+    min-height: 46px;
+    padding: 11px 14px;
     background: var(--color-bg-neutral);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -1195,7 +1310,7 @@
     color: var(--color-text-tertiary);
     font-style: italic;
     text-align: center;
-    margin-top: 16px;
+    margin: 4px 0 20px;
     opacity: 0;
     animation: onb-fade-up 800ms cubic-bezier(0.4, 0.0, 0.2, 1) 2500ms forwards;
   }
@@ -1204,11 +1319,15 @@
 
   .onboarding-review-card {
     position: relative;
-    background: var(--color-bg-warm-2);
+    /* Cream cards read as "elevated" against the warmer phase-2
+       oat background (screens 7–12). warm-2 was too close to the
+       phase bg and disappeared. */
+    background: var(--color-bg-neutral);
     border-radius: 16px;
     padding: 20px 24px;
     margin: 0 0 24px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     display: flex;
     flex-direction: column;
     gap: 12px;
