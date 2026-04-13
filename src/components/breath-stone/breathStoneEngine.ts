@@ -104,7 +104,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
   ready: {
     // Awake / attentive — warm spark, subtle glow increase
@@ -120,7 +120,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0.8,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
   recording: {
     // Presence / moment happening — strongest amplitude, warm bloom
@@ -136,7 +136,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 1,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
   working: {
     // Patient processing — very slow, cooler, almost still
@@ -152,7 +152,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
   celebrate: {
     // Single grand swell — longer, slower, bigger. Tremor disabled so the
@@ -185,7 +185,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
   shimmer: {
     // Ceremonial stillness — body barely moves, but two counter-rotating
@@ -204,7 +204,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 1.2,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
   guidance: {
     // Waiting / orienting — slower, deeper breath with a long peak hold
@@ -263,7 +263,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0.3,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
   archive: {
     // Preserved, still — no animation
@@ -279,7 +279,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,
-    peakTremor: 0.012,
+    peakTremor: 0,
   },
 };
 

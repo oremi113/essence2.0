@@ -367,6 +367,17 @@ function Screen1({ onNext }: { onNext: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Screen2({ onNext }: { onNext: () => void }) {
+  // "Their timeline." is mounted imperatively after 12900ms.
+  // CSS-only timing failed: the .onboarding-step > *:nth-child()
+  // stagger rules override any animation-delay on the tail element
+  // because they appear later in globals.css with equal specificity.
+  // Mounting late sidesteps that conflict entirely.
+  const [showTimeline, setShowTimeline] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setShowTimeline(true), 12900);
+    return () => window.clearTimeout(id);
+  }, []);
+
   return (
     <StepShell>
       <StoneSlot />
@@ -379,7 +390,7 @@ function Screen2({ onNext }: { onNext: () => void }) {
         <p>Then you use it to leave messages for the future.</p>
       </div>
 
-      {/* Cinematic conveyor — 12 transient phrases slide through,
+      {/* Cinematic conveyor — 6 transient phrases slide through,
           then the final pair ("Your voice." / "Their timeline.")
           lands stacked and stays as the quiet conclusion. */}
       <div className="onboarding-conveyor" aria-hidden="true">
@@ -387,45 +398,33 @@ function Screen2({ onNext }: { onNext: () => void }) {
           Birthday wishes.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--2">
-          Holiday greetings.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--3">
-          Just because moments.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
-          &ldquo;I&rsquo;m proud of you.&rdquo;
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--5">
           Love notes.
         </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--6">
-          Daily affirmations.
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--3">
+          &ldquo;I&rsquo;m proud of you.&rdquo;
         </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--7">
-          Words of comfort.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--8">
-          Bedtime stories.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--9">
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
           Life advice.
         </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--10">
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--5">
           Letters for later.
         </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--11">
-          Graduation messages.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--12">
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--6">
           A goodbye, whenever it comes.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">
           Your voice.
         </span>
       </div>
-      <div className="onboarding-conveyor-tail" aria-hidden="true">
-        Their timeline.
-      </div>
+      {showTimeline && (
+        <div
+          className="onboarding-conveyor-tail"
+          aria-hidden="true"
+          style={{ animationDelay: '0ms' }}
+        >
+          Their timeline.
+        </div>
+      )}
 
       <div className="onboarding-ctas onboarding-ctas--delayed">
         <PrimaryButton onClick={onNext}>Continue</PrimaryButton>
@@ -448,9 +447,8 @@ function Screen3({ onNext }: { onNext: () => void }) {
       <div className="onboarding-body">
         <p>Parents who want their grandchildren to hear their voice.</p>
         <p>Partners who want to leave love notes for special days.</p>
-        <p className="onboarding-body__emphasis">
-          You don&apos;t need to be sick. You just need to care.
-        </p>
+        <p>Whether you have all the time in the world, or not.</p>
+        <p className="onboarding-body__emphasis">Your voice deserves to last.</p>
       </div>
 
       <div className="onboarding-ctas">
@@ -586,46 +584,43 @@ function Screen6({ onNext }: { onNext: () => void }) {
       <h1 className="onboarding-title">Here&apos;s how this works.</h1>
 
       <ol className="onboarding-journey">
-        <li className="onboarding-journey__item">
-          <span className="onboarding-journey__num">1</span>
-          <span className="onboarding-journey__label">
-            Make your profile
-            <span className="onboarding-journey__duration">(&lt; 1 minute)</span>
+        <li className="onboarding-journey__item onboarding-journey__item--current">
+          <span className="onboarding-journey__num" aria-hidden="true">1</span>
+          <span className="onboarding-journey__text">
+            <span className="onboarding-journey__label">Make your profile</span>
+            <span className="onboarding-journey__duration">Less than 1 minute</span>
           </span>
         </li>
         <li className="onboarding-journey__item">
-          <span className="onboarding-journey__num">2</span>
-          <span className="onboarding-journey__label">
-            Record your voice
-            <span className="onboarding-journey__duration">(10–12 minutes)</span>
+          <span className="onboarding-journey__num" aria-hidden="true">2</span>
+          <span className="onboarding-journey__text">
+            <span className="onboarding-journey__label">Record your voice</span>
+            <span className="onboarding-journey__duration">10–12 minutes</span>
           </span>
         </li>
         <li className="onboarding-journey__item">
-          <span className="onboarding-journey__num">3</span>
-          <span className="onboarding-journey__label">
-            Create your first message
-            <span className="onboarding-journey__duration">(2 minutes)</span>
+          <span className="onboarding-journey__num" aria-hidden="true">3</span>
+          <span className="onboarding-journey__text">
+            <span className="onboarding-journey__label">Create your first message</span>
+            <span className="onboarding-journey__duration">About 2 minutes</span>
           </span>
         </li>
       </ol>
 
-      <div className="onboarding-time-badge-row">
-        <span className="onboarding-time-badge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div className="onboarding-total-time">
+        <span className="onboarding-total-time__left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          About 15 minutes total
+          Total time
         </span>
+        <span className="onboarding-total-time__value">About 15 minutes</span>
       </div>
 
       <div className="onboarding-body">
         <p className="onboarding-body__muted">
-          You can pause anytime and pick up where you left off.
-        </p>
-        <p className="onboarding-body__muted">
-          We&apos;ll guide you through every step. There&apos;s no wrong way
-          to do this.
+          We&apos;ll guide every step — pause anytime.
         </p>
       </div>
 
