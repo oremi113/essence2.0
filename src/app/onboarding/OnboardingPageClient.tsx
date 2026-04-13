@@ -2,27 +2,39 @@
 
 import { useRouter } from 'next/navigation';
 import { OnboardingScreen } from '@/components/screens/OnboardingScreen';
+import type {
+  OnboardingScreenData,
+  OnCompleteOnboarding,
+} from '@/components/screens/OnboardingScreen.types';
 
 /**
- * Thin client wrapper that holds the side-effects:
- *   1. POST /api/onboarding/complete to write onboarding_completed_at
- *   2. router.push('/app/record') after success
+ * Thin client wrapper. Holds the router (navigates to /app/record after
+ * the server action resolves).
  *
- * OnboardingScreen itself stays pure — it takes a Promise-returning
- * onComplete callback and never touches Supabase or /api/* directly.
- * This is the layer 2 / layer 3 boundary from the Session 3 contract.
+ * The server action itself is defined in page.tsx and passed as a prop.
+ * OnboardingScreen never imports Supabase, and this wrapper never touches
+ * /api/* — layers stay clean.
  */
-export function OnboardingPageClient() {
+export function OnboardingPageClient({
+  data,
+  onComplete,
+}: {
+  data: OnboardingScreenData;
+  onComplete: OnCompleteOnboarding;
+}) {
   const router = useRouter();
 
-  async function handleComplete() {
-    const res = await fetch('/api/onboarding/complete', { method: 'POST' });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error ?? `HTTP ${res.status}`);
-    }
+  async function handleComplete(
+    firstName: string,
+    lastName: string,
+    dateOfBirth: string,
+    city: string,
+    stateCode: string,
+    hasPhoto: boolean
+  ) {
+    await onComplete(firstName, lastName, dateOfBirth, city, stateCode, hasPhoto);
     router.push('/app/record');
   }
 
-  return <OnboardingScreen onComplete={handleComplete} />;
+  return <OnboardingScreen data={data} onComplete={handleComplete} />;
 }

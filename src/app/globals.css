@@ -2,11 +2,27 @@
 @import "tailwindcss";
 
 @theme {
-  /* ─── BACKGROUNDS ─────────────────────────────────── */
-  --color-bg-primary:     #FBF8F4;  /* cream — main app background */
-  --color-surface-card:   #F5F0EA;  /* oat — cards, elevated surfaces */
-  --color-surface-warm:   #EBE4DC;  /* soft sand — progress bars, disabled states */
-  --color-surface-honey:  #E8DCC8;  /* light honey — hover, celebration (use sparingly) */
+  /* ─── BACKGROUND GRADIENT RAMP (5 steps) ─────────────
+     Universal palette used by onboarding screens and Voice
+     Training prompt cards alike. Each step is a small jump
+     so the progression reads as richer/warmer, not as abrupt
+     mode changes. Source: ESSENCE Session 4 handoff. */
+  --color-bg-neutral:     #FBF8F4;  /* cream — base app background */
+  --color-bg-warm-1:      #F9F4ED;  /* very gentle warmth */
+  --color-bg-warm-2:      #F6F0E5;  /* soft oat */
+  --color-bg-gold:        #F2E8D6;  /* honey */
+  --color-bg-rich:        #EDE3D0;  /* richest; ceremonial */
+
+  /* Alias retained for components/pages that use the older
+     name. Points at the same cream so nothing visually moves. */
+  --color-bg-primary:     #FBF8F4;
+
+  /* Surface tokens — thin elements (tracks, lines, dots, card
+     hovers). Re-pointed at the new ramp so the whole palette
+     aligns without renaming usages across the codebase. */
+  --color-surface-card:   #F6F0E5;  /* warm-2 — cards, elevated surfaces */
+  --color-surface-warm:   #EDE3D0;  /* rich — progress tracks, disabled */
+  --color-surface-honey:  #F2E8D6;  /* gold — hover, celebration */
 
   /* ─── PRIMARY ACCENT ──────────────────────────────── */
   --color-mineral:        #7A8088;  /* primary buttons, active states, recording */
@@ -38,6 +54,13 @@
   --text-h1:      36px;
   --text-h2:      28px;
   --text-h3:      20px;
+
+  /* ─── SEMANTIC TYPE ROLES ─────────────────────────────
+     Canonical role-based tokens. Screens should reach for
+     these, not raw type-scale values, so future changes
+     propagate cleanly across sessions. */
+  --text-title:        28px;   /* screen headlines (Spectral 600 / line 1.4) */
+  --line-height-title: 1.4;
   --text-body-lg: 18px;
   --text-body:    16px;
   --text-ui:      15px;  /* semibold UI labels — between body and small */
@@ -457,10 +480,10 @@
 
   .onboarding-title {
     font-family: var(--font-display);
-    font-size: var(--text-h1);
+    font-size: var(--text-title);
     font-weight: 600;
     color: var(--color-text-primary);
-    line-height: 1.2;
+    line-height: var(--line-height-title);
     text-align: center;
     margin: 0 0 12px;
   }
@@ -474,17 +497,21 @@
     margin: 0 0 32px;
   }
 
+  /* Stone is a recurring presence on every onboarding screen — one
+     home, one size. Rendered as the FIRST child of every step so it
+     anchors the top of the content column, above the eyebrow/title.
+     The margin sets its breathing room; do not override per-screen. */
   .onboarding-stone {
     display: flex;
     justify-content: center;
-    margin-block: 32px;
+    margin: 0 0 24px;
   }
 
   .onboarding-body {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 32px;
+    gap: 12px;
+    margin-bottom: 24px;
   }
 
   .onboarding-body p {
@@ -525,162 +552,713 @@
     margin-top: 24px;
   }
 
-  /* ─── ONBOARDING SETTLING LINES (Step 4) ─────────────────── */
+  /* ─── ONBOARDING — CONVEYOR (Screen 2) ───────────────────
+     Phrases replace each other in the same slot. Four transient
+     phrases enter from the right, hold briefly, and exit to the
+     left. The fifth, "Their timeline.", is the terminal phrase
+     and does not exit — it lands and stays while the CTA fades
+     up below it. Timings are tuned so adjacent phrases briefly
+     cross-fade during the enter/exit overlap, avoiding a
+     perceptible gap of blank space. */
 
-  .onboarding-settling-lines {
+  .onboarding-conveyor {
+    position: relative;
+    height: 28px;                   /* matches body line-height */
+    margin: 8px auto 32px;
+    max-width: 340px;
+    pointer-events: none;
+  }
+
+  .onboarding-conveyor__phrase {
+    position: absolute;
+    inset: 0;
     display: flex;
-    flex-direction: column;
-    gap: 24px;
-    max-width: 300px;
-    margin-inline: auto;
-    margin-bottom: 8px;
-  }
-
-  .onboarding-settling-line {
-    font-family: var(--font-display);
-    font-size: var(--text-h3);          /* 20px */
-    line-height: 1.5;
-    color: var(--color-text-primary);
-    text-align: center;
-    margin: 0;
-    opacity: 0;
-    transform: translateY(8px);
-    transition:
-      opacity 600ms cubic-bezier(0.4, 0.0, 0.2, 1),
-      transform 600ms cubic-bezier(0.4, 0.0, 0.2, 1);
-  }
-
-  .onboarding-settling-line--visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .onboarding-settling-line--italic {
-    font-style: italic;
-    color: var(--color-text-secondary);
-    font-size: var(--text-body-lg);     /* 18px */
-  }
-
-  /* ─── ONBOARDING CHECKLIST (Step 5) ─────────────────────── */
-
-  .onboarding-checklist-card {
-    background: var(--color-surface-card);
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--color-border);
-    padding: 24px;
-    margin-bottom: 8px;
-  }
-
-  .onboarding-checklist-header {
-    font-family: var(--font-body);
-    font-size: var(--text-ui);          /* 15px */
-    font-weight: 600;
-    color: var(--color-text-primary);
-    text-align: center;
-    margin-bottom: 20px;
-    letter-spacing: 0.03em;
-  }
-
-  .onboarding-checklist-item {
-    margin-bottom: 20px;
-    opacity: 0;
-    transform: translateY(8px);
-    transition:
-      opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1),
-      transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1);
-  }
-
-  .onboarding-checklist-item:last-child {
-    margin-bottom: 0;
-  }
-
-  .onboarding-checklist-item--visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .onboarding-checklist-label {
-    font-family: var(--font-body);
-    font-size: var(--text-ui);          /* 15px */
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin-bottom: 4px;
-    letter-spacing: 0.01em;
-  }
-
-  .onboarding-checklist-body {
-    font-family: var(--font-body);
-    font-size: var(--text-small);
-    color: var(--color-text-secondary);
-    line-height: 1.5;
-  }
-
-  /* ─── ONBOARDING ACCORDION (Step 3) ─────────────────────── */
-
-  .onboarding-accordions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 32px;
-  }
-
-  .onboarding-accordion {
-    background: var(--color-surface-card);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    border: 1px solid var(--color-border);
-  }
-
-  .onboarding-accordion__trigger {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    background: none;
-    border: none;
-    cursor: pointer;
+    justify-content: center;
     font-family: var(--font-body);
     font-size: var(--text-body);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    text-align: left;
-    min-height: 52px;
-    transition: background 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+    font-style: italic;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    opacity: 0;
+    transform: translateX(16px);
+    white-space: nowrap;
   }
 
-  .onboarding-accordion__trigger:hover {
+  /* ---- transient phrases (1-4): in, hold, out ----
+     duration 1900ms = 400 in + 1100 hold + 400 out
+     stagger 1500ms between each so adjacent phrases
+     briefly cross-fade during the 400ms exit/entry overlap.
+     Tuned slower than a default UI pace to give 45-70 readers
+     enough time to absorb each phrase without rushing. */
+  .onboarding-conveyor__phrase--1 {
+    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 500ms both;
+  }
+  .onboarding-conveyor__phrase--2 {
+    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 2000ms both;
+  }
+  .onboarding-conveyor__phrase--3 {
+    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 3500ms both;
+  }
+  .onboarding-conveyor__phrase--4 {
+    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 5000ms both;
+  }
+
+  /* ---- terminal phrase: enters and stays ---- */
+  .onboarding-conveyor__phrase--final {
+    animation: onb-conveyor-land 650ms cubic-bezier(0.4, 0.0, 0.2, 1) 6500ms both;
+  }
+
+  @keyframes onb-conveyor-pass {
+    0%   { opacity: 0; transform: translateX(16px); }
+    21%  { opacity: 1; transform: translateX(0); }   /* 400ms of 1900 */
+    79%  { opacity: 1; transform: translateX(0); }   /* 1100ms hold complete */
+    100% { opacity: 0; transform: translateX(-16px); }
+  }
+
+  @keyframes onb-conveyor-land {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* The CTA waits until the terminal phrase has landed before
+     fading in. Delay ≈ conveyor finish time + a breath. */
+  .onboarding-ctas--delayed {
+    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 7300ms both;
+  }
+
+  /* ─── ONBOARDING — BODY EMPHASIS ──────────────────────────
+     Copy variants used across screens 2-5. Scoped to the
+     `.onboarding-body` paragraph so regular body text stays
+     unaffected. */
+
+  .onboarding-body p.onboarding-body__muted {
+    color: var(--color-text-tertiary);
+    font-style: italic;
+  }
+
+  .onboarding-body p.onboarding-body__emphasis {
+    color: var(--color-mineral-dark);
+    font-weight: 600;
+  }
+
+  .onboarding-body__never {
+    color: var(--color-mineral-dark);
+    font-weight: 700;
+  }
+
+  /* ─── ONBOARDING — PAGE WRAPPER & BACKGROUND RAMP ───────── */
+
+  /* The wrapper fills the app-main area, drives the background
+     color transition as `currentScreen` changes, and positions
+     fixed-position elements (back button, progress dots). */
+  .onboarding-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* `100dvh` (vs `100%`) lets the wrapper stretch to the viewport in
+       the dev sandbox where there's no AppShell flex parent providing
+       height. Inside AppShell (the real /onboarding route) the wrapper
+       still fills via `flex: 1`; the min-height is just a floor. */
+    min-height: 100dvh;
+    transition: background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* 80px top keeps the progress dots + back button clear of content;
+       24px inline matches Session 5's .record-step so primary buttons
+       get the same consistent side margin whether /onboarding is
+       wrapped in AppShell or rendered bare in /dev/onboarding. */
+    padding: 80px 24px 32px;
+  }
+
+  .onboarding-bg-neutral  { background-color: var(--color-bg-neutral); }
+  .onboarding-bg-warm-1   { background-color: var(--color-bg-warm-1); }
+  .onboarding-bg-warm-2   { background-color: var(--color-bg-warm-2); }
+  .onboarding-bg-gold     { background-color: var(--color-bg-gold); }
+  .onboarding-bg-rich     { background-color: var(--color-bg-rich); }
+
+  /* ─── ONBOARDING — PROGRESS DOTS ─────────────────────────
+     11 dots, always visible. The handoff places them at the
+     top of each screen; we keep them in the same absolute
+     position so they don't jitter when the screen copy re-flows. */
+
+  .onboarding-progress {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .onboarding-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease,
+      opacity 200ms ease;
+  }
+
+  .onboarding-dot--completed {
+    background-color: var(--color-mineral);
+    opacity: 0.6;
+  }
+
+  .onboarding-dot--active {
+    background-color: var(--color-mineral);
+    opacity: 1;
+  }
+
+  .onboarding-dot--pending {
+    background-color: transparent;
+    border: 1px solid var(--color-mineral);
+    opacity: 0.35;
+  }
+
+  /* ─── ONBOARDING — BACK BUTTON ──────────────────────────── */
+
+  .onboarding-back {
+    position: absolute;
+    top: 16px;
+    left: 12px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 0;
+    border-radius: var(--radius-full);
+    z-index: 3;
+    transition: opacity 200ms ease, color 200ms ease;
+  }
+
+  .onboarding-back:hover:not(:disabled) {
+    color: var(--color-text-primary);
+  }
+
+  .onboarding-back--hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ─── ONBOARDING — SLIDE TRANSITION ─────────────────────── */
+
+  /* The keyed `.onboarding-screen` wraps each screen instance and
+     needs to flex so its child `.onboarding-step` can stretch to
+     fill the viewport — otherwise `margin-top: auto` on .onboarding-ctas
+     has nothing to push the primary button to the bottom. */
+  .onboarding-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .onboarding-screen > .onboarding-step {
+    flex: 1;
+  }
+
+  /* Direction-aware incoming slide. The outgoing screen
+     unmounts when state flips (React behavior). We animate
+     the new screen entering from the opposite side so the
+     user perceives forward/back motion. */
+  .onboarding-slide-forward {
+    animation: onb-slide-in-forward 320ms cubic-bezier(0.4, 0.0, 0.2, 1) both;
+  }
+
+  .onboarding-slide-back {
+    animation: onb-slide-in-back 320ms cubic-bezier(0.4, 0.0, 0.2, 1) both;
+  }
+
+  @keyframes onb-slide-in-forward {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes onb-slide-in-back {
+    from { opacity: 0; transform: translateX(-24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ─── ONBOARDING — CINEMATIC INTRO (Screen 1 only) ────────
+     The BreathStone canvas starts rendering immediately on
+     mount. We overlay a wrapper that begins hidden + blurred +
+     scaled down and animates to full presence over 1500ms. */
+
+  .onboarding-intro-stone {
+    opacity: 0;
+    filter: blur(12px);
+    transform: scale(0.88);
+    animation: onb-stone-reveal 1500ms cubic-bezier(0.4, 0.0, 0.2, 1) 100ms forwards;
+  }
+
+  @keyframes onb-stone-reveal {
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: scale(1);
+    }
+  }
+
+  /* ─── ONBOARDING — COMBINED FORM CARD (Screen 8) ────────── */
+
+  .onboarding-form-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: var(--color-bg-warm-2);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 0 0 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .onboarding-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;   /* lets inputs shrink inside flex rows */
+  }
+
+  .onboarding-field-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .onboarding-field-row > .onboarding-field {
+    flex: 1;
+  }
+
+  .onboarding-field-row > .onboarding-field--grow {
+    flex: 1 1 auto;
+  }
+
+  .onboarding-field-row > .onboarding-field--fixed {
+    flex: 0 0 88px;
+  }
+
+  .onboarding-input--select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  .onboarding-field__label {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .onboarding-input {
+    width: 100%;
+    min-height: 52px;
+    padding: 14px 16px;
+    background: var(--color-bg-neutral);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--color-text-primary);
+    letter-spacing: normal;
+    transition: border-color 200ms ease, background-color 200ms ease;
+  }
+
+  .onboarding-input:focus {
+    outline: none;
+    border-color: var(--color-mineral);
+    background: #FFFFFF;
+  }
+
+  .onboarding-input::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  .onboarding-field__helper {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+    line-height: 1.5;
+  }
+
+  /* ─── ONBOARDING — PHOTO CIRCLE (Screen 9) ──────────────── */
+
+  .onboarding-photo {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--color-bg-neutral);
+    border: 2px dashed var(--color-surface-warm);
+    cursor: pointer;
+    color: var(--color-text-tertiary);
+    margin-inline: auto;
+    transition:
+      background 300ms cubic-bezier(0.4, 0.0, 0.2, 1),
+      border-color 300ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-photo:hover {
+    border-color: var(--color-mineral);
+  }
+
+  .onboarding-photo__label {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .onboarding-photo--filled {
+    background: radial-gradient(
+      circle at 30% 28%,
+      #E8DCC8,
+      #D4C6A8 60%,
+      #C4B8A0 100%
+    );
+    border: 2px solid transparent;
+    color: transparent;
+  }
+
+  .onboarding-photo-confirmation {
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-status-success);
+    margin-top: 12px;
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
+
+  .onboarding-photo-confirmation--visible {
+    opacity: 1;
+  }
+
+  /* ─── ONBOARDING — TIME BADGE (Screen 6) ────────────────── */
+
+  .onboarding-time-badge-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .onboarding-time-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--color-bg-warm-2);
+    border-radius: var(--radius-full);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    opacity: 0;
+    animation: onb-fade-up 600ms cubic-bezier(0.4, 0.0, 0.2, 1) 400ms forwards;
+  }
+
+  .onboarding-time-badge svg {
+    width: 14px;
+    height: 14px;
+    color: var(--color-text-tertiary);
+  }
+
+  @keyframes onb-fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── ONBOARDING — JOURNEY LIST (Screen 6) ──────────────── */
+
+  .onboarding-journey {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 4px 0 12px;
+    padding: 0 4px;
+    text-align: left;
+  }
+
+  .onboarding-journey__item {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  .onboarding-journey__num {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-mineral);
+    min-width: 16px;
+  }
+
+  .onboarding-journey__label {
+    font-family: var(--font-body);
+    font-size: 16px;
+    color: var(--color-text-primary);
+    line-height: 1.5;
+  }
+
+  .onboarding-journey__duration {
+    color: var(--color-text-tertiary);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
+  /* ─── ONBOARDING — PRIMING LOCK (Screen 10) ───────────────
+     Primary CTA starts at 40% opacity, locked, then unlocks
+     after 3500ms. Class toggled via React state. */
+
+  .onboarding-ctas--locked .btn-primary {
+    opacity: 0.4;
+    pointer-events: none;
+    transition: opacity 800ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-ctas--unlocked .btn-primary {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 800ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .onboarding-priming-hint {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-text-tertiary);
+    font-style: italic;
+    text-align: center;
+    margin-top: 16px;
+    opacity: 0;
+    animation: onb-fade-up 800ms cubic-bezier(0.4, 0.0, 0.2, 1) 2500ms forwards;
+  }
+
+  /* ─── ONBOARDING — REVIEW CARD (Screen 11) ──────────────── */
+
+  .onboarding-review-card {
+    position: relative;
+    background: var(--color-bg-warm-2);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin: 0 0 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .onboarding-review-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .onboarding-review-row__label {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .onboarding-review-row__value {
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--color-text-primary);
+    text-align: right;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .onboarding-review-card__edit {
+    align-self: flex-end;
+    background: none;
+    border: none;
+    padding: 6px 0 0;
+    margin-top: 4px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    min-height: auto;
+    transition: color 200ms ease;
+  }
+
+  .onboarding-review-card__edit:hover {
+    color: var(--color-text-primary);
+  }
+
+  /* ─── PRIVACY PROMISE — bottom-sheet modal ──────────────── */
+
+  .privacy-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    animation: onb-fade-up 280ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .privacy-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(28, 26, 24, 0.35);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .privacy-modal__sheet {
+    position: relative;
+    background: var(--color-bg-neutral);
+    border-radius: 24px 24px 0 0;
+    padding: 14px 28px 48px;
+    max-height: 92vh;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.18);
+    animation: privacy-slide-up 360ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+  }
+
+  @keyframes privacy-slide-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .privacy-modal__handle {
+    width: 44px;
+    height: 4px;
+    margin: 0 auto 16px;
+    border-radius: 2px;
     background: var(--color-surface-warm);
   }
 
-  .onboarding-accordion__icon {
-    font-size: 20px;
-    line-height: 1;
-    color: var(--color-text-tertiary);
-    flex-shrink: 0;
-    margin-left: 12px;
-  }
-
-  /* max-height: 200px chosen to comfortably fit current copy (3-4 lines
-     at --text-small line-height 1.6). If copy expands beyond ~4 lines,
-     bump this or the body will clip. */
-  .onboarding-accordion__body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 300ms cubic-bezier(0.4, 0.0, 0.2, 1);
-    padding: 0 20px;
-  }
-
-  .onboarding-accordion__body--open {
-    max-height: 200px;
-    padding: 0 20px 16px;
-  }
-
-  .onboarding-accordion__body p {
-    font-family: var(--font-body);
-    font-size: var(--text-small);
+  .privacy-modal__close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
     color: var(--color-text-secondary);
-    line-height: 1.6;
+    cursor: pointer;
+    border-radius: 50%;
+    min-height: auto;
+    transition: color 200ms ease, background-color 200ms ease;
+  }
+
+  .privacy-modal__close:hover {
+    color: var(--color-text-primary);
+    background: var(--color-surface-card);
+  }
+
+  .privacy-modal__content {
+    padding-top: 8px;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+
+  .privacy-modal__eyebrow {
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    margin-bottom: 14px;
+  }
+
+  .privacy-modal__title {
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: var(--line-height-title);
+    text-align: center;
+    margin: 0 0 28px;
+  }
+
+  .privacy-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .privacy-modal__body p {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+    margin: 0;
+    text-align: left;
+  }
+
+  .privacy-modal__signature {
+    margin-top: 12px !important;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-surface-warm);
+    font-style: italic;
+    color: var(--color-text-primary) !important;
+    text-align: center !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .privacy-modal,
+    .privacy-modal__sheet {
+      animation: none !important;
+    }
+  }
+
+  /* ─── ONBOARDING — READY LIST (Screen 11) ───────────────── */
+
+  .onboarding-ready-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 8px 0 24px;
+    padding: 0;
+  }
+
+  .onboarding-ready-list p {
+    font-family: var(--font-body);
+    font-size: 16px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    text-align: center;
     margin: 0;
   }
 
@@ -724,10 +1302,10 @@
 
   .record-title {
     font-family: var(--font-display);
-    font-size: var(--text-h2);
+    font-size: var(--text-title);
     font-weight: 600;
     color: var(--color-text-primary);
-    line-height: 1.4;
+    line-height: var(--line-height-title);
     text-align: center;
     letter-spacing: -0.01em;
     margin: 0 0 var(--space-md);
@@ -981,7 +1559,7 @@
   /* ─── Prompt Card ────────────────────────────────────────── */
 
   .record-prompt-card {
-    background: var(--color-surface-card); /* Stage 1: oat */
+    background: var(--color-bg-warm-2); /* Stage 1 — soft oat */
     border-radius: 16px;
     padding: 28px 24px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
@@ -991,11 +1569,11 @@
   }
 
   .record-prompt-card--stage-2 {
-    background: var(--color-surface-warm); /* Stage 2: soft sand */
+    background: var(--color-bg-gold); /* Stage 2 — honey */
   }
 
   .record-prompt-card--stage-3 {
-    background: var(--color-surface-honey); /* Stage 3: light honey */
+    background: var(--color-bg-rich); /* Stage 3 — richest */
   }
 
   .record-prompt-card__text {

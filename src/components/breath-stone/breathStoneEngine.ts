@@ -11,6 +11,7 @@ export type BreathStoneState =
   | 'playback'
   | 'shimmer'
   | 'guidance'
+  | 'priming'
   | 'infused'
   | 'archive';
 
@@ -78,6 +79,14 @@ interface StateParams {
   sheen: number;             // Moving surface sheen (ready/shimmer state)
   peakHold: number;          // Fraction of breath cycle spent at peak (default 0.07, guidance 0.19)
   peakTremor: number;        // Sine amplitude of micro-tremble during peak hold (default 0.012)
+  /** Fraction of cycle spent inhaling. Default 0.35 matches most states.
+   *  Priming uses 0.5 so inhale and exhale are symmetric (3s up / 3s down).
+   *  Optional to preserve backwards-compatibility with existing state defs. */
+  inhaleRatio?: number;
+  /** Multiplier on the global sinusoidal wobble that rides on top of the
+   *  breath cycle. Default 1.0. Priming uses 0.15 so the motion reads as
+   *  a clean, intentional breath cue rather than ambient stone life. */
+  breathNoiseScale?: number;
 }
 
 const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
@@ -215,6 +224,28 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     peakHold: 0.19,
     peakTremor: 0,
   },
+  priming: {
+    // "Take a breath" priming screen — the stone is a literal breathing
+    // cue. Tuned to a clean, symmetric 3s inhale / 3s exhale (6s cycle),
+    // with no peak hold so the motion is continuous rise-and-fall.
+    // Amplitude is deliberately large and the ambient wobble is damped
+    // so the breath reads as intentional, not ambient stone life.
+    glowIntensity: 0.12,
+    breathAmplitude: 0.22,    // ~22% expansion — unambiguously breathing
+    irregularity: 0.02,       // clean silhouette keeps scale obvious
+    colorTemp: 0.15,
+    backgroundBloom: 0,
+    spark: 0,
+    innerPulse: 0,            // no heartbeat — breath is the whole show
+    vignette: 0,
+    breathSpeed: 6000,        // 6s cycle → 3s up / 3s down with inhaleRatio 0.5
+    voiceReactive: 0,
+    sheen: 0,
+    peakHold: 0,              // no hold — continuous expand/contract
+    peakTremor: 0,
+    inhaleRatio: 0.5,         // symmetric in/out
+    breathNoiseScale: 0.15,   // near-silent ambient wobble
+  },
   infused: {
     // Voice preserved — the stone has been transformed. Warm body tint
     // layer, ember-pulsing glow (0.20–0.45 over ~6s), concentric ripple
@@ -279,10 +310,18 @@ export class BreathStoneEngine {
   }
 
   setState(state: BreathStoneState, onCelebrateEnd?: () => void) {
+    const prev = this.currentState;
     this.currentState = state;
     if (state === 'celebrate') {
       this.celebrateStartTime = null;
       this.onCelebrateEnd = onCelebrateEnd;
+    }
+    // Kill accumulated spring momentum on a real state change. Without
+    // this, switching to a state with much larger breathAmplitude (e.g.
+    // idle → priming) causes the velocity integrator to overshoot on
+    // first frame and the stone "bounces" before settling.
+    if (prev !== state) {
+      this.breathVelocity = 0;
     }
   }
 
@@ -317,7 +356,9 @@ export class BreathStoneEngine {
     amplitude: number,
     breathSpeed: number,
     peakHold: number,
-    peakTremor: number
+    peakTremor: number,
+    inhaleRatio: number,
+    breathNoiseScale: number
   ): number {
     if (amplitude < 0.001) return 1;
 
@@ -325,9 +366,11 @@ export class BreathStoneEngine {
     const variedCycle = breathSpeed * (1 + cycleVariance);
     const phase = (timestamp % variedCycle) / variedCycle;
 
-    // Inhale = first 35%, hold = next peakHold, exhale = remainder
-    const inhaleEnd = 0.35;
-    const holdEnd = inhaleEnd + peakHold;
+    // Inhale = first `inhaleRatio`, hold = next peakHold, exhale = remainder.
+    // Default inhaleRatio of 0.35 preserves legacy asymmetric breathing
+    // (used by idle/ready/recording/etc). Priming uses 0.5 for symmetric.
+    const inhaleEnd = Math.min(0.95, Math.max(0.05, inhaleRatio));
+    const holdEnd = Math.min(0.99, inhaleEnd + peakHold);
     const exhaleRange = Math.max(0.001, 1 - holdEnd);
 
     let breathCurve: number;
@@ -345,9 +388,13 @@ export class BreathStoneEngine {
     breathCurve = breathCurve * breathCurve * (3 - 2 * breathCurve);
 
     const tremor = isPeakHold ? Math.sin(timestamp * 0.018) * peakTremor : 0;
-    const amplitudeVariance = this.noise.get(timestamp * 0.00008, 100) * 0.05;
+    const amplitudeVariance =
+      this.noise.get(timestamp * 0.00008, 100) * 0.05 * breathNoiseScale;
     const variedAmplitude = amplitude * (1 + amplitudeVariance);
-    const microVariance = Math.sin(timestamp * 0.0003) * 0.10 + Math.sin(timestamp * 0.0007) * 0.05;
+    const microVariance =
+      (Math.sin(timestamp * 0.0003) * 0.10 +
+        Math.sin(timestamp * 0.0007) * 0.05) *
+      breathNoiseScale;
 
     const targetScale = 1 + breathCurve * variedAmplitude + microVariance + tremor;
 
@@ -491,7 +538,9 @@ export class BreathStoneEngine {
         this.s.breathAmplitude,
         this.s.breathSpeed,
         this.s.peakHold,
-        this.s.peakTremor
+        this.s.peakTremor,
+        this.s.inhaleRatio ?? 0.35,
+        this.s.breathNoiseScale ?? 1.0
       );
     }
     const currentRadius = baseRadius * breathScale;

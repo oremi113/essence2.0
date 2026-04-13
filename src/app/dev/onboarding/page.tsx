@@ -2,34 +2,62 @@
 
 import { useCallback, useState } from 'react';
 import { OnboardingScreen } from '@/components/screens/OnboardingScreen';
+import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen.types';
 
 /**
- * Onboarding dev sandbox — permanent gallery entry.
- * Lives at /dev/onboarding (top-level /dev/*), outside middleware
- * protection, so it never requires auth.
+ * Onboarding dev sandbox — permanent gallery entry, no auth required.
  *
- * onComplete is stubbed: it does NOT write to the database and does
- * NOT redirect. It logs, waits 1.5s so the user can see Step 6
- * animating, shows a mock alert, and then increments a key prop to
- * remount the screen — bouncing the user back to Step 1 for another
- * run. This makes the sandbox a natural re-run loop, no refresh needed.
+ * `onComplete` is stubbed: logs the captured data, waits briefly so
+ * the user can see the "loading" state, shows a confirmation alert, then
+ * bumps a key so the component re-mounts and the flow resets to screen 1.
  */
 export default function OnboardingDevPage() {
   const [runId, setRunId] = useState(0);
 
-  const mockComplete = useCallback(async () => {
-    console.log(
-      '[dev/onboarding] mock onComplete — would POST /api/onboarding/complete and redirect to /app/record'
-    );
-    // Let the user see Step 6 breathe for a moment before the alert.
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    alert(
-      'Mock complete.\n\nIn production this writes onboarding_completed_at and redirects to /app/record.\n\nRestarting the flow from Step 1.'
-    );
-    // Bumping the key remounts OnboardingScreen, resetting internal
-    // state (step, openAccordion, timers, etc.) back to Step 1.
-    setRunId((id) => id + 1);
-  }, []);
+  const mockComplete = useCallback(
+    async (
+      firstName: string,
+      lastName: string,
+      dob: string,
+      city: string,
+      stateCode: string,
+      hasPhoto: boolean
+    ) => {
+      console.log('[dev/onboarding] mock onComplete:', {
+        firstName,
+        lastName,
+        dob,
+        city,
+        stateCode,
+        hasPhoto,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      alert(
+        [
+          'Mock complete.',
+          '',
+          `name:  ${firstName} ${lastName}`,
+          `dob:   ${dob}`,
+          `city:  ${city}, ${stateCode}`,
+          `photo: ${hasPhoto ? 'added' : 'skipped'}`,
+          '',
+          'In production this writes to profiles and redirects to /app/record.',
+          'Restarting the flow from screen 1.',
+        ].join('\n')
+      );
+      setRunId((id) => id + 1);
+    },
+    []
+  );
 
-  return <OnboardingScreen key={runId} onComplete={mockComplete} />;
+  const data: OnboardingScreenData = {
+    firstName: null,
+    lastName: null,
+    dateOfBirth: null,
+    city: null,
+    state: null,
+    isCompleted: false,
+  };
+
+  return <OnboardingScreen key={runId} data={data} onComplete={mockComplete} />;
 }

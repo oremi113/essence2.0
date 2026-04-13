@@ -41,7 +41,7 @@ export default async function RecordPage({
   if (!voiceProfile || forceNewProfile) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("display_name, city, birth_year")
+      .select("first_name, display_name, city, birth_year")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -63,7 +63,12 @@ export default async function RecordPage({
           prefill={
             profile
               ? {
-                  displayName: profile.display_name ?? undefined,
+                  // Prefer first_name as the warm, personal {userName}
+                  // value. Fall back to display_name for legacy profiles.
+                  displayName:
+                    profile.first_name ??
+                    profile.display_name ??
+                    undefined,
                   city: profile.city ?? undefined,
                   birthYear: profile.birth_year ?? undefined,
                 }
@@ -77,7 +82,7 @@ export default async function RecordPage({
   // --- Voice profile exists → build data shuttle for RecordScreen ---
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, city, birth_year")
+    .select("first_name, display_name, city, birth_year")
     .eq("user_id", user.id)
     .single();
 
@@ -96,7 +101,10 @@ export default async function RecordPage({
   const data: RecordScreenData = {
     clipsRecorded: completedCount ?? 0,
     voiceProfileStatus: voiceProfile.status,
-    displayName: profile?.display_name ?? null,
+    // first_name is the warm {userName} value used in prompts. For legacy
+    // profiles that were created before the column existed, fall back to
+    // display_name so the flow never sees a null name.
+    displayName: profile?.first_name ?? profile?.display_name ?? null,
     city: profile?.city ?? null,
     birthYear: profile?.birth_year ?? null,
     relationship: voiceProfile.relationship ?? null,

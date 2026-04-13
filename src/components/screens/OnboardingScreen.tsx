@@ -1,356 +1,1000 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { BreathStone } from '@/components/breath-stone';
-import { PageTransition, PrimaryButton, SecondaryButton, LinkButton } from '@/components/ui';
+import { PrimaryButton, LinkButton } from '@/components/ui';
+import type {
+  OnboardingScreenData,
+  OnCompleteOnboarding,
+} from './OnboardingScreen.types';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ESSENCE — Onboarding (11-screen wizard, Session 4 rebuild)
+//
+//  Flow:
+//    1  Welcome (cinematic intro)
+//    2  Purpose
+//    3  Who this is for
+//    4  Safety & trust
+//    5  Why your voice matters
+//    6  How this works (journey + time badge)
+//    7  Identity setup intro
+//    8  About you (name + DOB + city/state form card)
+//    9  Review (verify captured data; "Change" jumps back to 8)
+//   10  Photo upload (UI-only; hasPhoto boolean)
+//   11  Priming moment (3500ms button unlock)
+//   12  Ready to begin
+//
+//  On screen 12 we call `onComplete(...)` — the caller persists to
+//  Supabase and navigates to /app/record. This component never touches
+//  the network directly.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TOTAL_SCREENS = 12;
+
+type BgKey = 'neutral' | 'warm-1' | 'warm-2' | 'gold' | 'rich';
+
+/**
+ * Single background across the entire onboarding. The BreathStone carries
+ * all the visual warmth and emotional cue — the frame stays quiet so the
+ * content reads cleanly and the stone remains the sole source of movement
+ * and color. If we ever want a deliberate two-phase shift (cool for
+ * orientation screens 1-6, warm for personal setup 7-12), re-assign the
+ * values below — the CSS and wrapper plumbing already support all 5 tones.
+ */
+const BG_BY_SCREEN: Record<number, BgKey> = {
+  1: 'neutral',
+  2: 'neutral',
+  3: 'neutral',
+  4: 'neutral',
+  5: 'neutral',
+  6: 'neutral',
+  7: 'neutral',
+  8: 'neutral',
+  9: 'neutral',
+  10: 'neutral',
+  11: 'neutral',
+  12: 'neutral',
+};
 
 interface OnboardingScreenProps {
-  /**
-   * Called when the user taps "Begin voice training" on Step 5.
-   * The caller is responsible for persisting completion and navigating
-   * away (typically to /app/record). The screen itself never touches
-   * Supabase or /api/*.
-   */
-  onComplete: () => Promise<void>;
+  data: OnboardingScreenData;
+  onComplete: OnCompleteOnboarding;
 }
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6;
-
-export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
-  const [step, setStep] = useState<Step>(1);
+export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
+  // ─── Wizard state ──────────────────────────────────────────
+  const [currentScreen, setCurrentScreen] = useState<number>(1);
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [openAccordion, setOpenAccordion] = useState<number | null>(null);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
-  async function handleComplete() {
+  // ─── Collected data (prefilled if user resumes) ────────────
+  const [firstName, setFirstName] = useState(data.firstName ?? '');
+  const [lastName, setLastName] = useState(data.lastName ?? '');
+  const [dob, setDob] = useState(data.dateOfBirth ?? '');
+  const [city, setCity] = useState(data.city ?? '');
+  const [stateCode, setStateCode] = useState(data.state ?? '');
+  const [hasPhoto, setHasPhoto] = useState(false);
+
+  // ─── Navigation ────────────────────────────────────────────
+  const goNext = useCallback(() => {
+    setDirection('forward');
+    setCurrentScreen((s) => Math.min(TOTAL_SCREENS, s + 1));
+  }, []);
+
+  const goBack = useCallback(() => {
+    setDirection('back');
+    setCurrentScreen((s) => Math.max(1, s - 1));
+  }, []);
+
+  // Jump to a specific screen with correct directional animation.
+  // Used by the "Change" link on Screen 11 to return to Screen 8.
+  const goTo = useCallback((target: number) => {
+    setCurrentScreen((prev) => {
+      setDirection(target >= prev ? 'forward' : 'back');
+      return Math.min(TOTAL_SCREENS, Math.max(1, target));
+    });
+  }, []);
+
+  // ─── Completion ────────────────────────────────────────────
+  const handleComplete = useCallback(async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
-    setStep(6); // show preparing screen immediately
     try {
-      await onComplete();
-      // The caller is responsible for navigating away. If we're still
-      // mounted after it resolves, stay on Step 6 — navigation is imminent.
+      await onComplete(
+        firstName.trim(),
+        lastName.trim(),
+        dob,
+        city.trim(),
+        stateCode,
+        hasPhoto
+      );
+      // Caller navigates. If it doesn't, we stay on screen 11.
     } catch (err) {
-      // Log for the dev sandbox and real runs alike. Real callers should
-      // still navigate away (e.g. to /app/record) so the user isn't stuck.
       console.error('[OnboardingScreen] onComplete failed:', err);
+      setIsSubmitting(false);
     }
-  }
+  }, [isSubmitting, onComplete, firstName, lastName, dob, city, stateCode, hasPhoto]);
 
-  if (step === 1)
-    return (
-      <PageTransition>
-        <OnboardingStep1 onBegin={() => setStep(2)} onHowItWorks={() => setStep(3)} />
-      </PageTransition>
-    );
-
-  if (step === 2)
-    return (
-      <PageTransition>
-        <OnboardingStep2 onContinue={() => setStep(4)} />
-      </PageTransition>
-    );
-
-  if (step === 3)
-    return (
-      <PageTransition>
-        <OnboardingStep3
-          openAccordion={openAccordion}
-          onToggleAccordion={(i) =>
-            setOpenAccordion((prev) => (prev === i ? null : i))
-          }
-          onBegin={() => setStep(2)}
-          onBack={() => setStep(1)}
-        />
-      </PageTransition>
-    );
-
-  if (step === 4)
-    return (
-      <PageTransition>
-        <OnboardingStep4 onContinue={() => setStep(5)} onBack={() => setStep(2)} />
-      </PageTransition>
-    );
-
-  if (step === 5)
-    return (
-      <PageTransition>
-        <OnboardingStep5
-          onBegin={handleComplete}
-          onBack={() => setStep(4)}
-          isLoading={isSubmitting}
-        />
-      </PageTransition>
-    );
+  // ─── Render ────────────────────────────────────────────────
+  const bg = BG_BY_SCREEN[currentScreen] ?? 'neutral';
+  const wrapperClass = `onboarding-wrapper onboarding-bg-${bg}`;
+  const slideClass = direction === 'forward'
+    ? 'onboarding-slide-forward'
+    : 'onboarding-slide-back';
 
   return (
-    <PageTransition>
-      <OnboardingStep6 />
-    </PageTransition>
+    <div className={wrapperClass}>
+      <ProgressDots current={currentScreen} />
+      <BackButton visible={currentScreen > 1} onBack={goBack} disabled={isSubmitting} />
+
+      {/* Keyed wrapper: force remount on screen change so the slide
+          animation replays and sub-screen `useEffect` timers reset
+          (e.g. screen 10's 3500ms priming lock). */}
+      <div key={currentScreen} className={`onboarding-screen ${slideClass}`}>
+        {currentScreen === 1 && <Screen1 onNext={goNext} />}
+        {currentScreen === 2 && <Screen2 onNext={goNext} />}
+        {currentScreen === 3 && <Screen3 onNext={goNext} />}
+        {currentScreen === 4 && (
+          <Screen4
+            onNext={goNext}
+            onReadPrivacy={() => setPrivacyOpen(true)}
+          />
+        )}
+        {currentScreen === 5 && <Screen5 onNext={goNext} />}
+        {currentScreen === 6 && <Screen6 onNext={goNext} />}
+        {currentScreen === 7 && <Screen7 onNext={goNext} />}
+        {currentScreen === 8 && (
+          <Screen8
+            firstName={firstName}
+            lastName={lastName}
+            dob={dob}
+            city={city}
+            stateCode={stateCode}
+            onChangeFirstName={setFirstName}
+            onChangeLastName={setLastName}
+            onChangeDob={setDob}
+            onChangeCity={setCity}
+            onChangeState={setStateCode}
+            onNext={goNext}
+          />
+        )}
+        {currentScreen === 9 && (
+          <Screen9Review
+            firstName={firstName}
+            lastName={lastName}
+            dob={dob}
+            city={city}
+            stateCode={stateCode}
+            onEdit={() => goTo(8)}
+            onNext={goNext}
+          />
+        )}
+        {currentScreen === 10 && (
+          <Screen10Photo
+            hasPhoto={hasPhoto}
+            onToggle={() => setHasPhoto((p) => !p)}
+            onNext={goNext}
+          />
+        )}
+        {currentScreen === 11 && <Screen11Priming onNext={goNext} />}
+        {currentScreen === 12 && (
+          <Screen12Ready
+            onBegin={handleComplete}
+            isSubmitting={isSubmitting}
+          />
+        )}
+      </div>
+
+      {privacyOpen && (
+        <PrivacyPromiseModal onClose={() => setPrivacyOpen(false)} />
+      )}
+    </div>
   );
 }
 
 export default OnboardingScreen;
 
-// ─── STEP 1 ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+//  PROGRESS DOTS + BACK BUTTON
+// ═══════════════════════════════════════════════════════════════════════════
 
-function OnboardingStep1({
-  onBegin,
-  onHowItWorks,
-}: {
-  onBegin: () => void;
-  onHowItWorks: () => void;
-}) {
+function ProgressDots({ current }: { current: number }) {
+  const dots = useMemo(() => Array.from({ length: TOTAL_SCREENS }), []);
   return (
-    <div className="onboarding-step">
-      <div className="onboarding-eyebrow">ESSENCE</div>
-      <h1 className="onboarding-title">Your voice is something only you can give.</h1>
-      <p className="onboarding-subtitle">
-        ESSENCE helps you save it so it can stay with the people you love.
-      </p>
-
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={200} />
-      </div>
-
-      <div className="onboarding-ctas">
-        <PrimaryButton onClick={onBegin}>Begin</PrimaryButton>
-        <SecondaryButton onClick={onHowItWorks}>How it works</SecondaryButton>
-      </div>
+    <div className="onboarding-progress" aria-hidden="true">
+      {dots.map((_, i) => {
+        const index = i + 1;
+        let state = 'pending';
+        if (index < current) state = 'completed';
+        else if (index === current) state = 'active';
+        return (
+          <div key={i} className={`onboarding-dot onboarding-dot--${state}`} />
+        );
+      })}
     </div>
   );
 }
 
-// ─── STEP 2 ─────────────────────────────────────────────────
-
-function OnboardingStep2({ onContinue }: { onContinue: () => void }) {
+function BackButton({
+  visible,
+  onBack,
+  disabled,
+}: {
+  visible: boolean;
+  onBack: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <div className="onboarding-step">
-      <h1 className="onboarding-title">We will guide you through 25 moments.</h1>
+    <button
+      type="button"
+      className={`onboarding-back ${visible ? '' : 'onboarding-back--hidden'}`}
+      onClick={onBack}
+      aria-label="Go back"
+      disabled={disabled || !visible}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SHARED LAYOUT HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function StepShell({
+  children,
+  centered = false,
+}: {
+  children: ReactNode;
+  centered?: boolean;
+}) {
+  return (
+    <div className={`onboarding-step ${centered ? 'onboarding-step--centered' : ''}`}>
+      {children}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 1 — Welcome (cinematic intro)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen1({ onNext }: { onNext: () => void }) {
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <div className="onboarding-intro-stone">
+          <BreathStone state="idle" size={120} />
+        </div>
+      </div>
+
+      <div className="onboarding-eyebrow">Welcome to ESSENCE</div>
+      <h1 className="onboarding-title">Your voice is yours alone.</h1>
       <p className="onboarding-subtitle">
-        Each one captures a different part of your voice.
+        We help you keep it safe for the people who matter most.
       </p>
 
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onNext}>Continue</PrimaryButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 2 — Purpose
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen2({ onNext }: { onNext: () => void }) {
+  return (
+    <StepShell>
       <div className="onboarding-stone">
-        <BreathStone state="idle" size={200} />
+        <BreathStone state="idle" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Here&apos;s what ESSENCE does.</h1>
+
+      <div className="onboarding-body">
+        <p>You record a few minutes of natural speech.</p>
+        <p>We create a voice that sounds like you.</p>
+        <p>Then you use it to leave messages for the future.</p>
+      </div>
+
+      {/* Cinematic conveyor — each phrase slides in from the right,
+          holds, then slides out to the left as the next enters.
+          "Their timeline." is the terminal phrase: it lands and stays. */}
+      <div className="onboarding-conveyor" aria-hidden="true">
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--1">
+          Birthday wishes.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--2">
+          Life advice.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--3">
+          Love notes.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
+          Your voice.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">
+          Their timeline.
+        </span>
+      </div>
+
+      <div className="onboarding-ctas onboarding-ctas--delayed">
+        <PrimaryButton onClick={onNext}>Continue</PrimaryButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 3 — Who this is for
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen3({ onNext }: { onNext: () => void }) {
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="idle" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">This is for people who plan ahead.</h1>
+
+      <div className="onboarding-body">
+        <p>Parents who want their grandchildren to hear their voice.</p>
+        <p>Partners who want to leave love notes for special days.</p>
+        <p className="onboarding-body__emphasis">
+          You don&apos;t need to be sick. You just need to care.
+        </p>
+      </div>
+
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onNext}>That sounds like me</PrimaryButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 4 — Safety & trust
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen4({
+  onNext,
+  onReadPrivacy,
+}: {
+  onNext: () => void;
+  onReadPrivacy: () => void;
+}) {
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="idle" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Your voice stays private. Always.</h1>
+
+      <div className="onboarding-body">
+        <p>
+          We <span className="onboarding-body__never">never</span> sell your
+          recordings.
+        </p>
+        <p>
+          We <span className="onboarding-body__never">never</span> use them to
+          train other products.
+        </p>
+        <p>
+          We <span className="onboarding-body__never">never</span> share them
+          without your permission.
+        </p>
+        <p className="onboarding-body__muted">
+          Protected with end-to-end encryption.
+        </p>
+      </div>
+
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onNext}>I understand</PrimaryButton>
+        <LinkButton onClick={onReadPrivacy}>
+          Read our privacy promise
+        </LinkButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 5 — Why your voice matters
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen5({ onNext }: { onNext: () => void }) {
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="ready" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">No one else sounds like you.</h1>
+
+      <div className="onboarding-body">
+        <p>The way you say someone&apos;s name.</p>
+        <p>The rhythm of how you tell a story.</p>
+        <p>The warmth in your laugh.</p>
+        <p className="onboarding-body__emphasis">
+          These things can&apos;t be written down. But they can be preserved.
+        </p>
+      </div>
+
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onNext}>Continue</PrimaryButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 6 — How this works (journey + time badge)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen6({ onNext }: { onNext: () => void }) {
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="ready" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Here&apos;s how this works.</h1>
+
+      <ol className="onboarding-journey">
+        <li className="onboarding-journey__item">
+          <span className="onboarding-journey__num">1</span>
+          <span className="onboarding-journey__label">
+            Tell us about yourself
+            <span className="onboarding-journey__duration">(2 minutes)</span>
+          </span>
+        </li>
+        <li className="onboarding-journey__item">
+          <span className="onboarding-journey__num">2</span>
+          <span className="onboarding-journey__label">
+            Record your voice
+            <span className="onboarding-journey__duration">(10–13 minutes)</span>
+          </span>
+        </li>
+        <li className="onboarding-journey__item">
+          <span className="onboarding-journey__num">3</span>
+          <span className="onboarding-journey__label">
+            Create your first message
+          </span>
+        </li>
+      </ol>
+
+      <div className="onboarding-time-badge-row">
+        <span className="onboarding-time-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          About 15 minutes total
+        </span>
       </div>
 
       <div className="onboarding-body">
-        <p>This takes about 11 to 14 minutes.</p>
-        <p>You can pause and return anytime.</p>
+        <p className="onboarding-body__muted">
+          You can pause anytime and pick up where you left off.
+        </p>
+        <p className="onboarding-body__muted">
+          We&apos;ll guide you through every step. There&apos;s no wrong way
+          to do this.
+        </p>
       </div>
 
       <div className="onboarding-ctas">
-        <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
+        <PrimaryButton onClick={onNext}>Let&apos;s begin</PrimaryButton>
       </div>
-    </div>
+    </StepShell>
   );
 }
 
-// ─── STEP 3 ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 7 — Identity setup intro
+// ═══════════════════════════════════════════════════════════════════════════
 
-function OnboardingStep3({
-  openAccordion,
-  onToggleAccordion,
-  onBegin,
-  onBack,
-}: {
-  openAccordion: number | null;
-  onToggleAccordion: (i: number) => void;
-  onBegin: () => void;
-  onBack: () => void;
-}) {
-  const items = [
-    {
-      label: 'Capture your voice',
-      body: 'You will shape 25 voice moments. Each prompt captures a different quality of how you speak.',
-    },
-    {
-      label: 'Create messages',
-      body: 'Once complete, your preserved voice can speak new messages anytime you wish.',
-    },
-    {
-      label: 'Share with loved ones',
-      body: 'Send messages that sound like you, created for moments that matter.',
-    },
-  ];
-
+function Screen7({ onNext }: { onNext: () => void }) {
   return (
-    <div className="onboarding-step">
-      <h1 className="onboarding-title">How ESSENCE works</h1>
-
+    <StepShell>
       <div className="onboarding-stone">
-        <BreathStone state="idle" size={160} />
+        <BreathStone state="idle" size={120} />
       </div>
 
-      <div className="onboarding-accordions">
-        {items.map((item, i) => (
-          <div key={i} className="onboarding-accordion">
-            <button
-              className="onboarding-accordion__trigger"
-              onClick={() => onToggleAccordion(i)}
-              aria-expanded={openAccordion === i}
-              type="button"
-            >
-              <span>{item.label}</span>
-              <span className="onboarding-accordion__icon" aria-hidden="true">
-                {openAccordion === i ? '−' : '+'}
-              </span>
-            </button>
-            <div
-              className={`onboarding-accordion__body ${openAccordion === i ? 'onboarding-accordion__body--open' : ''}`}
-            >
-              <p>{item.body}</p>
-            </div>
+      <h1 className="onboarding-title">First, tell us a little about you.</h1>
+      <p className="onboarding-subtitle">
+        This helps us personalize your experience.
+      </p>
+
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onNext}>Get started</PrimaryButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 8 — Combined "About you" form
+//  Fields: first name, DOB (native <input type="date">), city.
+//  Continue enables when all three are valid.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const US_STATES: readonly { code: string; name: string }[] = [
+  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' },
+  { code: 'AZ', name: 'Arizona' }, { code: 'AR', name: 'Arkansas' },
+  { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' },
+  { code: 'DC', name: 'District of Columbia' }, { code: 'FL', name: 'Florida' },
+  { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' },
+  { code: 'ID', name: 'Idaho' }, { code: 'IL', name: 'Illinois' },
+  { code: 'IN', name: 'Indiana' }, { code: 'IA', name: 'Iowa' },
+  { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' },
+  { code: 'LA', name: 'Louisiana' }, { code: 'ME', name: 'Maine' },
+  { code: 'MD', name: 'Maryland' }, { code: 'MA', name: 'Massachusetts' },
+  { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' },
+  { code: 'MS', name: 'Mississippi' }, { code: 'MO', name: 'Missouri' },
+  { code: 'MT', name: 'Montana' }, { code: 'NE', name: 'Nebraska' },
+  { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' },
+  { code: 'NJ', name: 'New Jersey' }, { code: 'NM', name: 'New Mexico' },
+  { code: 'NY', name: 'New York' }, { code: 'NC', name: 'North Carolina' },
+  { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' },
+  { code: 'OK', name: 'Oklahoma' }, { code: 'OR', name: 'Oregon' },
+  { code: 'PA', name: 'Pennsylvania' }, { code: 'RI', name: 'Rhode Island' },
+  { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' },
+  { code: 'TN', name: 'Tennessee' }, { code: 'TX', name: 'Texas' },
+  { code: 'UT', name: 'Utah' }, { code: 'VT', name: 'Vermont' },
+  { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' },
+  { code: 'WV', name: 'West Virginia' }, { code: 'WI', name: 'Wisconsin' },
+  { code: 'WY', name: 'Wyoming' },
+] as const;
+
+function Screen8({
+  firstName,
+  lastName,
+  dob,
+  city,
+  stateCode,
+  onChangeFirstName,
+  onChangeLastName,
+  onChangeDob,
+  onChangeCity,
+  onChangeState,
+  onNext,
+}: {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  city: string;
+  stateCode: string;
+  onChangeFirstName: (v: string) => void;
+  onChangeLastName: (v: string) => void;
+  onChangeDob: (v: string) => void;
+  onChangeCity: (v: string) => void;
+  onChangeState: (v: string) => void;
+  onNext: () => void;
+}) {
+  const firstRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus the first empty field after the slide settles.
+  useEffect(() => {
+    const t = setTimeout(() => firstRef.current?.focus(), 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  const isValid =
+    firstName.trim().length >= 1 &&
+    lastName.trim().length >= 1 &&
+    dob.length === 10 && // YYYY-MM-DD
+    city.trim().length >= 2 &&
+    stateCode.length === 2;
+
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="idle" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Tell us about you.</h1>
+      <p className="onboarding-subtitle">
+        Your name, birthday, and where you live help make your messages feel
+        personal.
+      </p>
+
+      <div className="onboarding-form-card">
+        <div className="onboarding-field-row">
+          <div className="onboarding-field">
+            <label className="onboarding-field__label" htmlFor="onb-first-name">
+              First name
+            </label>
+            <input
+              ref={firstRef}
+              id="onb-first-name"
+              type="text"
+              className="onboarding-input"
+              value={firstName}
+              onChange={(e) => onChangeFirstName(e.target.value)}
+              placeholder="First"
+              autoComplete="given-name"
+              maxLength={50}
+            />
           </div>
-        ))}
+          <div className="onboarding-field">
+            <label className="onboarding-field__label" htmlFor="onb-last-name">
+              Last name
+            </label>
+            <input
+              id="onb-last-name"
+              type="text"
+              className="onboarding-input"
+              value={lastName}
+              onChange={(e) => onChangeLastName(e.target.value)}
+              placeholder="Last"
+              autoComplete="family-name"
+              maxLength={80}
+            />
+          </div>
+        </div>
+
+        <div className="onboarding-field">
+          <label className="onboarding-field__label" htmlFor="onb-dob">
+            Date of birth
+          </label>
+          <input
+            id="onb-dob"
+            type="date"
+            className="onboarding-input"
+            value={dob}
+            onChange={(e) => onChangeDob(e.target.value)}
+            max={new Date().toISOString().slice(0, 10)}
+            min="1900-01-01"
+          />
+          <p className="onboarding-field__helper">MM / DD / YYYY</p>
+        </div>
+
+        <div className="onboarding-field-row">
+          <div className="onboarding-field onboarding-field--grow">
+            <label className="onboarding-field__label" htmlFor="onb-city">
+              City
+            </label>
+            <input
+              id="onb-city"
+              type="text"
+              className="onboarding-input"
+              value={city}
+              onChange={(e) => onChangeCity(e.target.value)}
+              placeholder="Where you live"
+              autoComplete="address-level2"
+              maxLength={80}
+            />
+          </div>
+          <div className="onboarding-field onboarding-field--fixed">
+            <label className="onboarding-field__label" htmlFor="onb-state">
+              State
+            </label>
+            <select
+              id="onb-state"
+              className="onboarding-input onboarding-input--select"
+              value={stateCode}
+              onChange={(e) => onChangeState(e.target.value)}
+              autoComplete="address-level1"
+            >
+              <option value="">—</option>
+              {US_STATES.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.code}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="onboarding-ctas">
-        <PrimaryButton onClick={onBegin}>Begin shaping your voice</PrimaryButton>
-        <LinkButton onClick={onBack}>Back</LinkButton>
-      </div>
-    </div>
-  );
-}
-
-// ─── STEP 4 — SETTLING ──────────────────────────────────────
-
-function OnboardingStep4({
-  onContinue,
-  onBack,
-}: {
-  onContinue: () => void;
-  onBack: () => void;
-}) {
-  const [linesVisible, setLinesVisible] = useState([false, false, false]);
-  const [ctaVisible, setCtaVisible] = useState(false);
-
-  useEffect(() => {
-    const timers = [
-      setTimeout(() => setLinesVisible((p) => [true, p[1], p[2]]), 800),
-      setTimeout(() => setLinesVisible((p) => [p[0], true, p[2]]), 1600),
-      setTimeout(() => setLinesVisible((p) => [p[0], p[1], true]), 2400),
-      setTimeout(() => setCtaVisible(true), 3200),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
-
-  const lines = [
-    { text: 'Find a quiet place. Sit comfortably. Relax your shoulders.', italic: false },
-    { text: 'Take one slow breath in and let everything settle.', italic: false },
-    {
-      text: 'Speak in your natural tone, the way you would with someone you trust.',
-      italic: true,
-    },
-  ];
-
-  return (
-    <div className="onboarding-step onboarding-step--centered">
-      <div className="onboarding-eyebrow">VOICE PREPARATION</div>
-
-      <div className="onboarding-stone">
-        <BreathStone state="guidance" size={180} />
-      </div>
-
-      <div className="onboarding-settling-lines">
-        {lines.map((line, i) => (
-          <p
-            key={i}
-            className={`onboarding-settling-line ${linesVisible[i] ? 'onboarding-settling-line--visible' : ''} ${line.italic ? 'onboarding-settling-line--italic' : ''}`}
-          >
-            {line.text}
-          </p>
-        ))}
-      </div>
-
-      <div
-        className={`onboarding-ctas ${ctaVisible ? 'onboarding-ctas--visible' : 'onboarding-ctas--hidden'}`}
-      >
-        <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
-        <LinkButton onClick={onBack}>Back</LinkButton>
-      </div>
-    </div>
-  );
-}
-
-// ─── STEP 5 — CHECKLIST ─────────────────────────────────────
-
-function OnboardingStep5({
-  onBegin,
-  onBack,
-  isLoading,
-}: {
-  onBegin: () => void;
-  onBack: () => void;
-  isLoading: boolean;
-}) {
-  const [itemsVisible, setItemsVisible] = useState([false, false, false]);
-  const [ctaVisible, setCtaVisible] = useState(false);
-
-  useEffect(() => {
-    const timers = [
-      setTimeout(() => setItemsVisible((p) => [true, p[1], p[2]]), 300),
-      setTimeout(() => setItemsVisible((p) => [p[0], true, p[2]]), 540),
-      setTimeout(() => setItemsVisible((p) => [p[0], p[1], true]), 780),
-      setTimeout(() => setCtaVisible(true), 1000),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
-
-  const items = [
-    { label: 'Distance', body: 'Hold your phone or mic six to eight inches from your mouth.' },
-    { label: 'Environment', body: 'Pause if unexpected noise happens.' },
-    { label: 'Presence', body: 'Let your voice flow without pressure.' },
-  ];
-
-  return (
-    <div className="onboarding-step">
-      <div className="onboarding-eyebrow">VOICE PREPARATION</div>
-
-      <div className="onboarding-stone">
-        <BreathStone state="guidance" size={160} />
-      </div>
-
-      <div className="onboarding-checklist-card">
-        <div className="onboarding-checklist-header">Before you begin:</div>
-        {items.map((item, i) => (
-          <div
-            key={i}
-            className={`onboarding-checklist-item ${itemsVisible[i] ? 'onboarding-checklist-item--visible' : ''}`}
-          >
-            <div className="onboarding-checklist-label">{item.label}</div>
-            <div className="onboarding-checklist-body">{item.body}</div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        className={`onboarding-ctas ${ctaVisible ? 'onboarding-ctas--visible' : 'onboarding-ctas--hidden'}`}
-      >
-        <PrimaryButton onClick={onBegin} isLoading={isLoading}>
-          Begin voice training
+        <PrimaryButton onClick={onNext} disabled={!isValid}>
+          Continue
         </PrimaryButton>
-        <LinkButton onClick={onBack} disabled={isLoading}>
-          Back
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 9 — Review (verify captured data before proceeding)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen9Review({
+  firstName,
+  lastName,
+  dob,
+  city,
+  stateCode,
+  onEdit,
+  onNext,
+}: {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  city: string;
+  stateCode: string;
+  onEdit: () => void;
+  onNext: () => void;
+}) {
+  const dobDisplay = /^\d{4}-\d{2}-\d{2}$/.test(dob)
+    ? `${parseInt(dob.slice(5, 7), 10)}/${parseInt(dob.slice(8, 10), 10)}/${dob.slice(0, 4)}`
+    : '—';
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || '—';
+  const location =
+    city && stateCode ? `${city}, ${stateCode}` : city || stateCode || '—';
+
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="idle" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Does this look right?</h1>
+      <p className="onboarding-subtitle">
+        We&apos;ll use this to personalize your recording.
+      </p>
+
+      <div className="onboarding-review-card">
+        <div className="onboarding-review-row">
+          <div className="onboarding-review-row__label">Name</div>
+          <div className="onboarding-review-row__value">{fullName}</div>
+        </div>
+        <div className="onboarding-review-row">
+          <div className="onboarding-review-row__label">Date of birth</div>
+          <div className="onboarding-review-row__value">{dobDisplay}</div>
+        </div>
+        <div className="onboarding-review-row">
+          <div className="onboarding-review-row__label">Location</div>
+          <div className="onboarding-review-row__value">{location}</div>
+        </div>
+        <button
+          type="button"
+          className="onboarding-review-card__edit"
+          onClick={onEdit}
+        >
+          Change
+        </button>
+      </div>
+
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onNext}>Looks good</PrimaryButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 10 — Photo upload (UI-only)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen10Photo({
+  hasPhoto,
+  onToggle,
+  onNext,
+}: {
+  hasPhoto: boolean;
+  onToggle: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="idle" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Add a photo if you&apos;d like.</h1>
+      <p className="onboarding-subtitle">
+        It helps your messages feel more personal. Completely optional.
+      </p>
+
+      <button
+        type="button"
+        className={`onboarding-photo ${hasPhoto ? 'onboarding-photo--filled' : ''}`}
+        onClick={onToggle}
+        aria-label={hasPhoto ? 'Remove photo' : 'Add photo'}
+      >
+        {!hasPhoto && (
+          <>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <span className="onboarding-photo__label">Tap to add</span>
+          </>
+        )}
+      </button>
+
+      <p
+        className={`onboarding-photo-confirmation ${hasPhoto ? 'onboarding-photo-confirmation--visible' : ''}`}
+      >
+        Looking good ✓
+      </p>
+
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onNext}>
+          {hasPhoto ? 'Save photo' : 'Continue without photo'}
+        </PrimaryButton>
+        {hasPhoto && (
+          <LinkButton onClick={onNext}>Continue without photo</LinkButton>
+        )}
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 11 — Priming moment (3500ms button unlock)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen11Priming({ onNext }: { onNext: () => void }) {
+  const [unlocked, setUnlocked] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setUnlocked(true), 3500);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="priming" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Take a breath.</h1>
+
+      <div className="onboarding-body">
+        <p>In a moment, you&apos;ll start recording your voice.</p>
+        <p>Think of it like leaving a voicemail for someone you love.</p>
+      </div>
+
+      <p className="onboarding-priming-hint">
+        Breathe with the stone for a moment.
+      </p>
+
+      <div
+        className={`onboarding-ctas ${unlocked ? 'onboarding-ctas--unlocked' : 'onboarding-ctas--locked'}`}
+      >
+        <PrimaryButton onClick={onNext}>Begin setup</PrimaryButton>
+      </div>
+    </StepShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCREEN 12 — Ready to begin
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Screen12Ready({
+  onBegin,
+  isSubmitting,
+}: {
+  onBegin: () => void;
+  isSubmitting: boolean;
+}) {
+  return (
+    <StepShell>
+      <div className="onboarding-stone">
+        <BreathStone state="ready" size={120} />
+      </div>
+
+      <h1 className="onboarding-title">Ready to begin recording?</h1>
+
+      <div className="onboarding-ready-list">
+        <p>You&apos;ll need about 10–13 minutes in a quiet space.</p>
+        <p>We&apos;ll guide you through 25 short prompts.</p>
+        <p>Your microphone will need to be enabled.</p>
+      </div>
+
+      <div className="onboarding-ctas">
+        <PrimaryButton onClick={onBegin} isLoading={isSubmitting}>
+          Begin recording
+        </PrimaryButton>
+        <LinkButton onClick={() => { /* no-op — user stays on screen */ }}>
+          I need more time
         </LinkButton>
       </div>
-    </div>
+    </StepShell>
   );
 }
 
-// ─── STEP 6 — PREPARING ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+//  PRIVACY PROMISE — bottom sheet opened from Screen 4's "Read our
+//  privacy promise" link. Deliberately not a new route or a full screen:
+//  overlays onboarding so state is preserved. Structured as headline →
+//  plain-language commitments → founding story. No CTA inside; user
+//  returns to their place via the close affordance.
+// ═══════════════════════════════════════════════════════════════════════════
 
-function OnboardingStep6() {
+function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
+  // Close on Escape. Lock background scroll so the onboarding flow
+  // behind the sheet doesn't move while the user reads.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
   return (
-    <div className="onboarding-step onboarding-step--centered">
-      <div className="onboarding-eyebrow">PREPARING</div>
-      <h1 className="onboarding-title">Preparing your voice profile...</h1>
-      <p className="onboarding-subtitle">Capturing tone, clarity, and room sound.</p>
+    <div className="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+      <button
+        type="button"
+        className="privacy-modal__backdrop"
+        onClick={onClose}
+        aria-label="Close privacy promise"
+      />
+      <div className="privacy-modal__sheet">
+        <div className="privacy-modal__handle" aria-hidden="true" />
 
-      <div className="onboarding-stone">
-        <BreathStone state="working" size={200} />
+        <button
+          type="button"
+          className="privacy-modal__close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="privacy-modal__content">
+          <div className="privacy-modal__eyebrow">OUR PRIVACY PROMISE</div>
+          <h2 id="privacy-title" className="privacy-modal__title">
+            Your voice belongs to you. Full stop.
+          </h2>
+
+          <div className="privacy-modal__body">
+            <p>
+              Your recordings are encrypted the moment they leave your device.
+              We cannot hear them. Our team cannot access them. They exist only
+              for you and the people you choose.
+            </p>
+            <p>
+              We will never sell your voice data. Not to advertisers. Not to
+              researchers. Not to anyone.
+            </p>
+            <p>
+              We will never use your recordings to train AI models — ours or
+              anyone else&apos;s.
+            </p>
+            <p>
+              If you delete your account, your voice is gone from our servers
+              within 48 hours. Permanently.
+            </p>
+
+            <p className="privacy-modal__signature">
+              ESSENCE was built by people who lost someone. We know what this
+              holds.
+            </p>
+          </div>
+        </div>
       </div>
-
-      <p className="onboarding-microcopy">This only takes a moment.</p>
     </div>
   );
 }

@@ -14,10 +14,14 @@ type ColorToken = {
 };
 
 const BACKGROUND_COLORS: ColorToken[] = [
-  { name: "--color-bg-primary", hex: "#FBF8F4", note: "cream — main app bg" },
-  { name: "--color-surface-card", hex: "#F5F0EA", note: "oat — cards" },
-  { name: "--color-surface-warm", hex: "#EBE4DC", note: "soft sand" },
-  { name: "--color-surface-honey", hex: "#E8DCC8", note: "light honey" },
+  { name: "--color-bg-neutral", hex: "#FBF8F4", note: "cream — base bg" },
+  { name: "--color-bg-warm-1", hex: "#F9F4ED", note: "very gentle warmth" },
+  { name: "--color-bg-warm-2", hex: "#F6F0E5", note: "soft oat" },
+  { name: "--color-bg-gold",    hex: "#F2E8D6", note: "honey" },
+  { name: "--color-bg-rich",    hex: "#EDE3D0", note: "richest / ceremonial" },
+  { name: "--color-surface-card", hex: "#F6F0E5", note: "alias → warm-2" },
+  { name: "--color-surface-warm", hex: "#EDE3D0", note: "alias → rich" },
+  { name: "--color-surface-honey", hex: "#F2E8D6", note: "alias → gold" },
 ];
 
 const ACCENT_COLORS: ColorToken[] = [
