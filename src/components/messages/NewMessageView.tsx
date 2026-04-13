@@ -240,11 +240,6 @@ export function NewMessageView({
             ? "Taking a moment. Your message is still being created."
             : "Generating audio with your voice…"}
         </p>
-        <style
-          dangerouslySetInnerHTML={{
-            __html: "@keyframes spin { to { transform: rotate(360deg); } }",
-          }}
-        />
       </div>
     );
   }

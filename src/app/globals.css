@@ -2365,6 +2365,19 @@
     }
   }
 
+  /* ─── SHARED UTILITY ANIMATIONS ───────────────────────────
+     Used by loading spinners and pulse states across messages,
+     shelf, and any future async-busy UI. Keep generic — for
+     bespoke choreography use a scoped keyframe instead. */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.5; }
+  }
+
   /* ─── TAB NAV (post-onboarding /app pages) ────────────────── */
   .tab-nav {
     margin-bottom: 16px;
