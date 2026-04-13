@@ -801,16 +801,12 @@
     flex: 1;
   }
 
-  /* Frame transition — subtle, brief, intentional. The old slide
-     animated the whole screen in 320ms; under the new "environment
-     before content" principle, the screen container just crossfades
-     quickly so the background + progress settle first, then content
-     composes into that settled environment via the stagger rules
-     below. Direction class is retained for potential future use but
-     both directions currently crossfade the same way. */
+  /* Frame crossfade — the room arrives before the furniture. A longer
+     settle (400ms) lets the bg/progress/stone feel grounded before any
+     text begins to compose. */
   .onboarding-slide-forward,
   .onboarding-slide-back {
-    animation: onb-frame-crossfade 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: onb-frame-crossfade 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   @keyframes onb-frame-crossfade {
@@ -819,33 +815,37 @@
   }
 
   /* ─── ONBOARDING — STAGGERED CONTENT REVEAL ──────────────
-     "The room arrives before the furniture." Each direct child of
-     `.onboarding-step` composes in after the frame has settled,
-     staggered so the eye moves naturally from top to bottom. The
-     stone-slot is excluded — the persistent stone doesn't re-enter.
+     Pacing is deliberately unhurried — calibrated for readers who
+     prefer to take things in one section at a time. Each top-level
+     element fades up over 700ms with 500ms between sections so the
+     eye moves calmly top-to-bottom. Body paragraphs stagger more
+     tightly (180ms) since they read as a single section; the closer
+     (last body child) gets an extra beat so it lands as a conclusion.
 
-     Body paragraphs stagger individually inside their parent slot
-     so the four body lines read one at a time, with the closer
-     landing last. Total compose time stays under ~1.8s on any
-     screen with ≤5 text elements. */
+     Excluded from this compose pass:
+     • .onboarding-stone-slot — the persistent stone doesn't re-enter.
+     • .onboarding-conveyor   — has its own cinematic phrase sequence.
+     • .onboarding-ctas--delayed — waits for the conveyor to land. */
 
-  .onboarding-step > *:not(.onboarding-stone-slot) {
+  .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed) {
     opacity: 0;
-    transform: translateY(8px);
-    animation: onb-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform: translateY(10px);
+    animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  /* Top-level stagger — base 320ms (after frame crossfade settles),
-     100ms between siblings. nth-child(1) is the stone-slot so skip it. */
-  .onboarding-step > *:nth-child(2) { animation-delay: 320ms; }
-  .onboarding-step > *:nth-child(3) { animation-delay: 420ms; }
-  .onboarding-step > *:nth-child(4) { animation-delay: 520ms; }
-  .onboarding-step > *:nth-child(5) { animation-delay: 620ms; }
-  .onboarding-step > *:nth-child(6) { animation-delay: 720ms; }
-  .onboarding-step > *:nth-child(7) { animation-delay: 820ms; }
-  .onboarding-step > *:nth-child(8) { animation-delay: 920ms; }
+  /* Section-by-section stagger. nth-child(1) is the stone-slot, so
+     content begins at nth-child(2). 500ms between sections reads as
+     intentional, not sluggish — each element arrives, settles, and
+     the user has a beat to absorb it before the next appears. */
+  .onboarding-step > *:nth-child(2) { animation-delay: 500ms; }
+  .onboarding-step > *:nth-child(3) { animation-delay: 1000ms; }
+  .onboarding-step > *:nth-child(4) { animation-delay: 1500ms; }
+  .onboarding-step > *:nth-child(5) { animation-delay: 2000ms; }
+  .onboarding-step > *:nth-child(6) { animation-delay: 2500ms; }
+  .onboarding-step > *:nth-child(7) { animation-delay: 3000ms; }
+  .onboarding-step > *:nth-child(8) { animation-delay: 3500ms; }
 
-  /* Body is animated per-paragraph, not as a block. */
+  /* Body container animates per-paragraph, not as a block. */
   .onboarding-step > .onboarding-body {
     opacity: 1;
     transform: none;
@@ -854,18 +854,28 @@
 
   .onboarding-body > * {
     opacity: 0;
-    transform: translateY(8px);
-    animation: onb-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform: translateY(10px);
+    animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  /* Paragraphs stagger from the body's natural slot start (≈520ms when
-     body is the 4th step child on Screen 5) with 110ms between lines. */
-  .onboarding-body > *:nth-child(1) { animation-delay: 520ms; }
-  .onboarding-body > *:nth-child(2) { animation-delay: 630ms; }
-  .onboarding-body > *:nth-child(3) { animation-delay: 740ms; }
-  .onboarding-body > *:nth-child(4) { animation-delay: 850ms; }
-  .onboarding-body > *:nth-child(5) { animation-delay: 980ms; }  /* closer gets extra beat */
-  .onboarding-body > *:nth-child(6) { animation-delay: 1090ms; }
+  /* Body paragraphs are one section, so they stagger tightly (180ms).
+     The starting delay assumes the body is the 3rd step child (Screen
+     2, 3…). Body-as-4th-child screens (Screen 5 with its label) get a
+     scoped override further down. */
+  .onboarding-body > *:nth-child(1) { animation-delay: 1000ms; }
+  .onboarding-body > *:nth-child(2) { animation-delay: 1180ms; }
+  .onboarding-body > *:nth-child(3) { animation-delay: 1360ms; }
+  .onboarding-body > *:nth-child(4) { animation-delay: 1540ms; }
+  .onboarding-body > *:nth-child(5) { animation-delay: 1880ms; }  /* closer: +340ms beat */
+  .onboarding-body > *:nth-child(6) { animation-delay: 2060ms; }
+
+  /* Screen 5: body is the 4th step child (slot, label, title, body),
+     so shift its paragraph stagger +500ms to match its slot. */
+  .onboarding-body--screen5 > *:nth-child(1) { animation-delay: 1500ms; }
+  .onboarding-body--screen5 > *:nth-child(2) { animation-delay: 1680ms; }
+  .onboarding-body--screen5 > *:nth-child(3) { animation-delay: 1860ms; }
+  .onboarding-body--screen5 > *:nth-child(4) { animation-delay: 2040ms; }
+  .onboarding-body--screen5 > *:nth-child(5) { animation-delay: 2380ms; }  /* closer beat */
 
   @keyframes onb-reveal {
     to {
@@ -875,10 +885,10 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .onboarding-step > *:not(.onboarding-stone-slot),
+    .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed),
     .onboarding-body > * {
       transform: none;
-      animation-duration: 400ms;
+      animation-duration: 500ms;
       animation-timing-function: ease-out;
     }
     @keyframes onb-reveal {
