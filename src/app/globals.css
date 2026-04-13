@@ -600,17 +600,10 @@
 
   .onboarding-conveyor {
     position: relative;
-    height: 28px;                   /* single-line during transients */
-    margin: 8px auto 32px;
+    height: 28px;
+    margin: 8px auto 12px;          /* tight to the tail line below */
     max-width: 340px;
     pointer-events: none;
-    /* Grows to two lines when the terminal pair begins landing,
-       so phrases 10 + 11 stack vertically and stay on screen. */
-    animation: onb-conveyor-expand 500ms cubic-bezier(0.22, 1, 0.36, 1) 16000ms forwards;
-  }
-
-  @keyframes onb-conveyor-expand {
-    to { height: 60px; }
   }
 
   .onboarding-conveyor__phrase {
@@ -644,23 +637,29 @@
   .onboarding-conveyor__phrase--8 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 13000ms both; }
   .onboarding-conveyor__phrase--9 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 14500ms both; }
 
-  /* ---- terminal pair: both land and stay, stacked ----
-     Top phrase lands first as the container begins to expand.
-     Bottom phrase lands after the top has settled. */
-  .onboarding-conveyor__phrase--final-top,
-  .onboarding-conveyor__phrase--final-bottom {
-    inset: auto 0 auto 0;
-    height: 28px;
-  }
-
-  .onboarding-conveyor__phrase--final-top {
-    top: 0;
+  /* ---- terminal phrase: lands on the conveyor line and stays ----
+     Uses the default `.onboarding-conveyor__phrase` positioning
+     (inset: 0) so the text lands in the exact same place each
+     transient phrase was displayed — no vertical shift. */
+  .onboarding-conveyor__phrase--final {
     animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 16000ms both;
   }
 
-  .onboarding-conveyor__phrase--final-bottom {
-    top: 32px;
+  /* Their timeline — a separate element directly beneath the conveyor.
+     Fades/slides in after "Your voice." has settled. Styled to match
+     the conveyor phrases so both lines read as a single pair. */
+  .onboarding-conveyor-tail {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-style: italic;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    max-width: 340px;
+    margin: 0 auto 32px;
+    opacity: 0;
+    transform: translateX(16px);
     animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 16800ms both;
+    pointer-events: none;
   }
 
   @keyframes onb-conveyor-pass {
@@ -847,7 +846,7 @@
      • .onboarding-conveyor   — has its own cinematic phrase sequence.
      • .onboarding-ctas--delayed — waits for the conveyor to land. */
 
-  .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed) {
+  .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-conveyor-tail):not(.onboarding-ctas--delayed) {
     opacity: 0;
     transform: translateY(10px);
     animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;

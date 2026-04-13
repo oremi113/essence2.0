@@ -375,12 +375,12 @@ function Screen2({ onNext }: { onNext: () => void }) {
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--9">
           A goodbye, whenever it comes.
         </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final-top">
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">
           Your voice.
         </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final-bottom">
-          Their timeline.
-        </span>
+      </div>
+      <div className="onboarding-conveyor-tail" aria-hidden="true">
+        Their timeline.
       </div>
 
       <div className="onboarding-ctas onboarding-ctas--delayed">
