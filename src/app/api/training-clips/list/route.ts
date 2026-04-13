@@ -4,8 +4,10 @@
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { generateRequestId, logError } from "@/lib/logger";
 
 export async function GET(request: Request) {
+  const requestId = generateRequestId();
   try {
     const supabase = await createSupabaseServerClient();
     const {
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
       .limit(10);
 
     if (error) {
-      console.error("[training-clips/list]", error.message);
+      logError({ event: "training_clips_list_db_error", requestId, route: "/api/training-clips/list", userId: user.id, error });
       return NextResponse.json(
         { error: "Failed to list clips" },
         { status: 500 }
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(clips ?? []);
   } catch (err) {
-    console.error("[training-clips/list]", err);
+    logError({ event: "training_clips_list_error", requestId, route: "/api/training-clips/list", error: err });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

@@ -4,11 +4,13 @@
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { generateRequestId, logError } from "@/lib/logger";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const requestId = generateRequestId();
   try {
     const { id } = await params;
     const supabase = await createSupabaseServerClient();
@@ -48,7 +50,7 @@ export async function GET(
       completedAt: message.generation_completed_at ?? undefined,
     });
   } catch (err) {
-    console.error("[messages GET]", err);
+    logError({ event: "messages_get_error", requestId, route: "/api/messages/[id]", error: err });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

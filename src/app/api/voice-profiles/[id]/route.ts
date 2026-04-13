@@ -5,6 +5,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { isVoiceProfileRetryAllowed } from "@/lib/voice-training/backoff";
+import { generateRequestId, logError } from "@/lib/logger";
 
 function isRetryAvailable(
   status: string,
@@ -19,6 +20,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const requestId = generateRequestId();
   try {
     const { id } = await params;
     const supabase = await createSupabaseServerClient();
@@ -53,7 +55,7 @@ export async function GET(
       retry_available: profile.status === "failed" ? retry_available : undefined,
     });
   } catch (err) {
-    console.error("[voice-profiles GET]", err);
+    logError({ event: "voice_profile_get_error", requestId, route: "/api/voice-profiles/[id]", error: err });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

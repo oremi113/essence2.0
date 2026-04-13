@@ -10,7 +10,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
-import { logEvent, generateRequestId, withRequestId } from "@/lib/logger";
+import { logEvent, logError, generateRequestId, withRequestId } from "@/lib/logger";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -151,8 +151,7 @@ export async function DELETE(request: Request) {
       requestId
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[delete-my-data]", message, err);
+    logError({ event: "delete_my_data_error", requestId, route: "/api/me", error: err });
     return withRequestId(
       NextResponse.json({ error: "Delete failed. Check server logs." }, { status: 500 }),
       requestId

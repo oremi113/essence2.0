@@ -12,12 +12,14 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { VALID_RELATIONSHIPS } from "@/lib/voice-training/types";
+import { generateRequestId, logError } from "@/lib/logger";
 
 const MAX_TEXT_LEN = 200;
 const MIN_BIRTH_YEAR = 1900;
 const MAX_BIRTH_YEAR = 2025;
 
 export async function POST(request: Request) {
+  const requestId = generateRequestId();
   try {
     const supabase = await createSupabaseServerClient();
     const {
@@ -98,7 +100,13 @@ export async function POST(request: Request) {
       );
 
     if (profileError) {
-      console.error("[voice-profiles] profile upsert failed:", profileError.message);
+      logError({
+        event: "voice_profile_create_profile_upsert_failed",
+        requestId,
+        route: "/api/voice-profiles",
+        userId: user.id,
+        error: profileError,
+      });
       return NextResponse.json(
         { error: "Failed to update profile", detail: profileError.message },
         { status: 500 }
@@ -118,7 +126,13 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error("[voice-profiles] create failed:", error.message);
+      logError({
+        event: "voice_profile_create_insert_failed",
+        requestId,
+        route: "/api/voice-profiles",
+        userId: user.id,
+        error,
+      });
       return NextResponse.json(
         { error: "Failed to create voice profile", detail: error.message },
         { status: 500 }
@@ -130,7 +144,7 @@ export async function POST(request: Request) {
       status: row.status,
     });
   } catch (err) {
-    console.error("[voice-profiles]", err);
+    logError({ event: "voice_profile_create_error", requestId, route: "/api/voice-profiles", error: err });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
