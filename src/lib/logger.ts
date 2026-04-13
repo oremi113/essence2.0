@@ -42,20 +42,62 @@ export function logEvent(event: LogEvent): void {
 }
 
 /**
+ * Pull a useful message out of whatever `error` shape we're handed.
+ * Supabase's PostgrestError is a plain object with `.message / .code /
+ * .details / .hint` — not an Error instance — so the naive
+ * `instanceof Error` path was stringifying it to "[object Object]".
+ */
+function extractError(err: unknown): {
+  errorMessage: string;
+  errorCode?: string;
+  errorDetails?: string;
+  stack?: string;
+} {
+  if (err instanceof Error) {
+    return { errorMessage: err.message, stack: err.stack };
+  }
+  if (err && typeof err === "object") {
+    const e = err as {
+      message?: unknown;
+      code?: unknown;
+      details?: unknown;
+      hint?: unknown;
+    };
+    if (typeof e.message === "string") {
+      return {
+        errorMessage: e.message,
+        errorCode: typeof e.code === "string" ? e.code : undefined,
+        errorDetails:
+          typeof e.details === "string"
+            ? e.details
+            : typeof e.hint === "string"
+              ? e.hint
+              : undefined,
+      };
+    }
+    try {
+      return { errorMessage: JSON.stringify(err) };
+    } catch {
+      return { errorMessage: "[unserializable error]" };
+    }
+  }
+  return { errorMessage: String(err ?? "") };
+}
+
+/**
  * Emit a structured error log with optional stack trace.
  */
 export function logError(
   event: Omit<LogEvent, "outcome"> & { error?: unknown }
 ): void {
-  const stack =
-    event.error instanceof Error ? event.error.stack : undefined;
-  const message =
-    event.error instanceof Error ? event.error.message : String(event.error ?? "");
+  const { errorMessage, errorCode, errorDetails, stack } = extractError(event.error);
   console.error(
     JSON.stringify({
       ...event,
       outcome: "error",
-      errorMessage: message,
+      errorMessage,
+      errorCode: event.errorCode ?? errorCode,
+      errorDetails,
       stack,
       error: undefined, // strip the Error object from JSON
       ts: new Date().toISOString(),
