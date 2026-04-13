@@ -521,7 +521,7 @@
   .onboarding-stone-slot {
     width: 120px;
     height: 120px;
-    margin: 0 auto 24px;
+    margin: 0 auto 48px;
     pointer-events: none;
     flex-shrink: 0;
   }
@@ -545,6 +545,21 @@
     /* Position/scale lerp reserved for future per-screen variants. */
     transition:
       top 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Ground shadow — proportionally matched to the 144px stone
+     (Session 5 uses 80×12 on a 200px stone; 40% / 6% here). */
+  .onboarding-persistent-stone::after {
+    content: '';
+    position: absolute;
+    bottom: 7px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 58px;
+    height: 9px;
+    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.07), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
   }
 
   .onboarding-body {
@@ -1298,6 +1313,7 @@
     height: 36px;
     border-radius: var(--radius-full);
     background: var(--color-bg-warm-1);
+    border: 1px solid var(--color-mineral);
     font-family: var(--font-body);
     font-size: 16px;
     font-weight: 500;
@@ -1309,6 +1325,7 @@
     background: var(--color-mineral);
     color: #FFFFFF;
     font-weight: 600;
+    border-color: var(--color-mineral);
   }
 
   .onboarding-journey__text {

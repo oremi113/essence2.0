@@ -89,6 +89,52 @@ const SCREEN_CONFIG: Record<number, ScreenConfig> = {
 
 const DEFAULT_SETTLE_DELAY_MS = 500;
 
+// Draft persistence — bump the version suffix when the stored shape changes
+// so old drafts are ignored instead of deserializing into the wrong shape.
+const DRAFT_STORAGE_KEY = 'essence-onboarding-draft-v1';
+
+interface OnboardingDraft {
+  currentScreen: number;
+  form: ProfileFormState;
+}
+
+function loadDraft(): OnboardingDraft | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as OnboardingDraft;
+    if (
+      typeof parsed?.currentScreen !== 'number' ||
+      typeof parsed?.form !== 'object' ||
+      parsed.form === null
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(draft: OnboardingDraft) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Storage may be full or blocked (incognito) — silently accept the loss.
+  }
+}
+
+function clearDraft() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 interface OnboardingScreenProps {
   data: OnboardingScreenData;
   onComplete: OnCompleteOnboarding;
@@ -141,6 +187,31 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
     stateCode: data.state ?? '',
     hasPhoto: false,
   });
+
+  // Draft hydration — deferred to a post-mount effect so the first client
+  // render matches SSR (no hydration mismatch). Persistence is also gated
+  // on this flag so we don't overwrite the saved draft with the default
+  // state before we've had a chance to read it.
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      setCurrentScreen(draft.currentScreen);
+      (Object.keys(draft.form) as (keyof ProfileFormState)[]).forEach((key) => {
+        if (key === 'hasPhoto') {
+          if (draft.form.hasPhoto !== false) dispatch({ type: 'toggle-photo' });
+        } else {
+          dispatch({ type: 'set-field', field: key, value: draft.form[key] });
+        }
+      });
+    }
+    setDraftHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    saveDraft({ currentScreen, form });
+  }, [draftHydrated, currentScreen, form]);
   const setField = useCallback(
     (field: ProfileFormField, value: string) => {
       dispatch({ type: 'set-field', field, value });
@@ -182,6 +253,7 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
         form.stateCode,
         form.hasPhoto
       );
+      clearDraft();
       // Caller navigates. If it doesn't, we stay on screen 11.
     } catch (err) {
       console.error('[OnboardingScreen] onComplete failed:', err);
