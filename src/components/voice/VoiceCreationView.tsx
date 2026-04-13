@@ -142,7 +142,7 @@ export function VoiceCreationView() {
     if (!voiceProfileId || (viewState !== "processing" && viewState !== "taking_longer")) return;
 
     let cancelled = false;
-    let elapsed = 0;
+    const startTime = Date.now();
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const tick = async () => {
@@ -160,7 +160,7 @@ export function VoiceCreationView() {
         return;
       }
 
-      elapsed += POLL_INTERVAL_MS;
+      const elapsed = Date.now() - startTime;
       if (elapsed >= POLL_GIVE_UP_MS) {
         setErrorMessage("The request may have timed out. Click Retry to try again.");
         setRetryAvailable(true);
