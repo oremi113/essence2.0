@@ -8,8 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { BreathStone } from '@/components/breath-stone';
-import type { BreathStoneState } from '@/components/breath-stone';
+import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { PrimaryButton, LinkButton } from '@/components/ui';
 import type {
   OnboardingScreenData,
@@ -50,6 +49,31 @@ type BgKey = 'neutral' | 'warm-phase' | 'warm-1' | 'warm-2' | 'gold' | 'rich';
  * orientation screens 1-6, warm for personal setup 7-12), re-assign the
  * values below — the CSS and wrapper plumbing already support all 5 tones.
  */
+// The stone is a continuous companion across the entire onboarding —
+// it never unmounts between screens. Its animation state is the only
+// thing that changes per screen.
+const STONE_STATE_BY_SCREEN: Record<number, BreathStoneState> = {
+  1: 'idle',
+  2: 'idle',
+  3: 'idle',
+  4: 'idle',
+  5: 'ready',
+  6: 'ready',
+  7: 'guidance',
+  8: 'idle',
+  9: 'idle',
+  10: 'idle',
+  11: 'priming',
+  12: 'ready',
+};
+
+// Per-screen settle delay. Most screens promote the stone 500ms after
+// the new screen's state takes effect; screen 11's priming state uses
+// a slightly longer hold to read as deliberate.
+const STONE_SETTLE_DELAY_MS: Record<number, number> = {
+  11: 600,
+};
+
 const BG_BY_SCREEN: Record<number, BgKey> = {
   1: 'neutral',
   2: 'neutral',
@@ -146,6 +170,7 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
     <div className={wrapperClass}>
       <ProgressDots current={currentScreen} />
       <BackButton visible={currentScreen > 1} onBack={goBack} disabled={isSubmitting} />
+      <PersistentStone currentScreen={currentScreen} />
 
       {/* Keyed wrapper: force remount on screen change so the slide
           animation replays and sub-screen `useEffect` timers reset
@@ -263,25 +288,6 @@ function BackButton({
 //  SHARED LAYOUT HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Mounts the BreathStone in `idle` so the engine initializes at rest,
- * then promotes to the target state after `delay`. Without this, screens
- * that open in higher-amplitude states (ready / guidance / priming) read
- * as a rubberband as the engine interpolates toward the target params.
- */
-function useSettledStone(
-  target: BreathStoneState,
-  delay = 500,
-): BreathStoneState {
-  const [state, setState] = useState<BreathStoneState>('idle');
-  useEffect(() => {
-    if (target === 'idle') return;
-    const t = window.setTimeout(() => setState(target), delay);
-    return () => window.clearTimeout(t);
-  }, [target, delay]);
-  return target === 'idle' ? 'idle' : state;
-}
-
 function StepShell({
   children,
   centered = false,
@@ -296,6 +302,44 @@ function StepShell({
   );
 }
 
+// Empty layout slot that reserves the visual space the persistent
+// stone occupies over the top of each screen. The actual BreathStone
+// is rendered once at the wrapper level so it never remounts.
+function StoneSlot() {
+  return <div className="onboarding-stone-slot" aria-hidden="true" />;
+}
+
+// Single BreathStone instance, mounted once for the entire onboarding.
+// It never unmounts — only its `state` prop changes as screens advance,
+// so the engine transitions in place rather than restarting. The
+// cinematic intro (blur + scale-up) plays once on initial mount.
+//
+// Settle behavior: when a screen calls for a non-idle state, we pause
+// briefly before promoting. Without that pause the engine can interpolate
+// from its current params toward the new high-amplitude target, which
+// reads as a rubberband — especially on first mount or when advancing
+// from idle-heavy early screens into ready/guidance/priming.
+function PersistentStone({ currentScreen }: { currentScreen: number }) {
+  const target = STONE_STATE_BY_SCREEN[currentScreen] ?? 'idle';
+  const delay = STONE_SETTLE_DELAY_MS[currentScreen] ?? 500;
+  const [state, setState] = useState<BreathStoneState>('idle');
+
+  useEffect(() => {
+    // Idle target applies immediately; non-idle waits for settle delay
+    // so the engine doesn't rubberband from its current params toward
+    // the new high-amplitude target on the first render of a new screen.
+    const effectiveDelay = target === 'idle' ? 0 : delay;
+    const t = window.setTimeout(() => setState(target), effectiveDelay);
+    return () => window.clearTimeout(t);
+  }, [target, delay]);
+
+  return (
+    <div className="onboarding-persistent-stone" aria-hidden="true">
+      <BreathStone state={state} size={144} />
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  SCREEN 1 — Welcome (cinematic intro)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -303,11 +347,7 @@ function StepShell({
 function Screen1({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <div className="onboarding-intro-stone">
-          <BreathStone state="idle" size={144} />
-        </div>
-      </div>
+      <StoneSlot />
 
       <div className="onboarding-eyebrow">Welcome to ESSENCE</div>
       <h1 className="onboarding-title">Your voice is yours alone.</h1>
@@ -329,9 +369,7 @@ function Screen1({ onNext }: { onNext: () => void }) {
 function Screen2({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Here&apos;s what ESSENCE does.</h1>
 
@@ -341,26 +379,53 @@ function Screen2({ onNext }: { onNext: () => void }) {
         <p>Then you use it to leave messages for the future.</p>
       </div>
 
-      {/* Stacked reveal — each phrase fades up in sequence and stays on
-          the page. The final line, "Their timeline.", is emphasized so
-          the stack reads as a list resolving into a declaration. */}
-      <ul className="onboarding-stack" aria-hidden="true">
-        <li className="onboarding-stack__item onboarding-stack__item--1">
+      {/* Cinematic conveyor — 12 transient phrases slide through,
+          then the final pair ("Your voice." / "Their timeline.")
+          lands stacked and stays as the quiet conclusion. */}
+      <div className="onboarding-conveyor" aria-hidden="true">
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--1">
           Birthday wishes.
-        </li>
-        <li className="onboarding-stack__item onboarding-stack__item--2">
-          Life advice.
-        </li>
-        <li className="onboarding-stack__item onboarding-stack__item--3">
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--2">
+          Holiday greetings.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--3">
+          Just because moments.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
+          &ldquo;I&rsquo;m proud of you.&rdquo;
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--5">
           Love notes.
-        </li>
-        <li className="onboarding-stack__item onboarding-stack__item--4">
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--6">
+          Daily affirmations.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--7">
+          Words of comfort.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--8">
+          Bedtime stories.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--9">
+          Life advice.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--10">
+          Letters for later.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--11">
+          Graduation messages.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--12">
+          A goodbye, whenever it comes.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">
           Your voice.
-        </li>
-        <li className="onboarding-stack__item onboarding-stack__item--final">
-          Their timeline.
-        </li>
-      </ul>
+        </span>
+      </div>
+      <div className="onboarding-conveyor-tail" aria-hidden="true">
+        Their timeline.
+      </div>
 
       <div className="onboarding-ctas onboarding-ctas--delayed">
         <PrimaryButton onClick={onNext}>Continue</PrimaryButton>
@@ -376,9 +441,7 @@ function Screen2({ onNext }: { onNext: () => void }) {
 function Screen3({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">This is for people who plan ahead.</h1>
 
@@ -410,9 +473,7 @@ function Screen4({
 }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Your voice stays private. Always.</h1>
 
@@ -467,12 +528,9 @@ function Screen4({
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Screen5({ onNext }: { onNext: () => void }) {
-  const stoneState = useSettledStone('ready');
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state={stoneState} size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">No one else sounds like you.</h1>
 
@@ -503,7 +561,6 @@ function Screen6({ onNext }: { onNext: () => void }) {
   //   250ms call onNext → Screen 7 mounts with phase-enter animation
   const [pressing, setPressing] = useState(false);
   const [exiting, setExiting] = useState(false);
-  const stoneState = useSettledStone('ready');
 
   const handleBegin = useCallback(() => {
     if (exiting) return;
@@ -524,9 +581,7 @@ function Screen6({ onNext }: { onNext: () => void }) {
   return (
     <div className={exiting ? 'onboarding-screen--exiting-phase' : ''}>
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state={stoneState} size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Here&apos;s how this works.</h1>
 
@@ -593,17 +648,9 @@ function Screen6({ onNext }: { onNext: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Screen7({ onNext }: { onNext: () => void }) {
-  // Stone opens in idle (matching the Screen 6 handoff) and promotes to
-  // guidance 500ms after mount so the 110% size + quicker 4.2s cycle +
-  // shimmer emerge just as the phase-enter animation settles.
-  // See DESIGN BRIEF 002 for the full choreography.
-  const stoneState = useSettledStone('guidance', 500);
-
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state={stoneState} size={144} />
-      </div>
+      <StoneSlot />
 
       <div className="onboarding-phase-label">YOUR PROFILE</div>
       <h1 className="onboarding-title">First, tell us a little about you.</h1>
@@ -695,9 +742,7 @@ function Screen8({
 
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Tell us about you.</h1>
       <p className="onboarding-subtitle">
@@ -831,9 +876,7 @@ function Screen9Review({
 
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Does this look right?</h1>
       <p className="onboarding-subtitle">
@@ -884,9 +927,7 @@ function Screen10Photo({
 }) {
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state="idle" size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Add a photo if you&apos;d like.</h1>
       <p className="onboarding-subtitle">
@@ -934,7 +975,6 @@ function Screen10Photo({
 
 function Screen11Priming({ onNext }: { onNext: () => void }) {
   const [unlocked, setUnlocked] = useState(false);
-  const stoneState = useSettledStone('priming', 600);
 
   useEffect(() => {
     const t = setTimeout(() => setUnlocked(true), 3500);
@@ -943,9 +983,7 @@ function Screen11Priming({ onNext }: { onNext: () => void }) {
 
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state={stoneState} size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Take a breath.</h1>
       <p className="onboarding-priming-hint">
@@ -977,12 +1015,9 @@ function Screen12Ready({
   onBegin: () => void;
   isSubmitting: boolean;
 }) {
-  const stoneState = useSettledStone('ready');
   return (
     <StepShell>
-      <div className="onboarding-stone">
-        <BreathStone state={stoneState} size={144} />
-      </div>
+      <StoneSlot />
 
       <h1 className="onboarding-title">Ready to begin recording?</h1>
 
