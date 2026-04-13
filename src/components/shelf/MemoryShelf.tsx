@@ -1,56 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type ShelfMessage = {
-  id: string;
-  status: string;
-  title: string | null;
-  bodyExcerpt: string | null;
-  recipientName: string | null;
-  createdAt: string;
-};
+import { useCallback, useEffect, useState } from "react";
+import type { ShelfMessage } from "./types";
+import { MessageList } from "./MessageList";
+import { usePlaybackController } from "./usePlaybackController";
 
 type LoadState = "loading" | "loaded" | "error";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
+/**
+ * Memory Shelf — lists the user's saved messages and lets them play
+ * each one back. State is split three ways:
+ *   - this component owns the list fetch (loadState, messages, listError);
+ *   - usePlaybackController owns the audio element + playback state;
+ *   - MessageList renders the rows as pure presentation.
+ */
 export function MemoryShelf() {
-  // --- List state ---
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [messages, setMessages] = useState<ShelfMessage[]>([]);
   const [listError, setListError] = useState<string | null>(null);
 
-  // --- Playback state ---
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const [audioLoading, setAudioLoading] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playback = usePlaybackController();
 
-  // --- Fetch messages ---
   const fetchMessages = useCallback(async () => {
     setLoadState("loading");
     setListError(null);
@@ -64,9 +34,7 @@ export function MemoryShelf() {
       setMessages(data.messages ?? []);
       setLoadState("loaded");
     } catch (err) {
-      setListError(
-        err instanceof Error ? err.message : "Something went wrong"
-      );
+      setListError(err instanceof Error ? err.message : "Something went wrong");
       setLoadState("error");
     }
   }, []);
@@ -74,91 +42,6 @@ export function MemoryShelf() {
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
-
-  // --- Play a message ---
-  const playMessage = useCallback(
-    async (messageId: string) => {
-      // If already playing this message, toggle pause/play
-      if (playingId === messageId && audioRef.current) {
-        if (audioRef.current.paused) {
-          audioRef.current.play().catch(() => {});
-          setIsPaused(false);
-        } else {
-          audioRef.current.pause();
-          setIsPaused(true);
-        }
-        return;
-      }
-
-      // Stop current playback
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      }
-
-      setPlayingId(messageId);
-      setIsPaused(false);
-      setAudioLoading(true);
-      setAudioError(null);
-
-      try {
-        const res = await fetch(`/api/messages/${messageId}/play`);
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? "Audio unavailable");
-        }
-        const data = await res.json();
-        if (!data.url) throw new Error("Audio unavailable");
-
-        if (!audioRef.current) {
-          audioRef.current = new Audio();
-          audioRef.current.addEventListener("ended", () => {
-            setPlayingId(null);
-          });
-          audioRef.current.addEventListener("error", () => {
-            // Ignore errors from deliberate src reset (empty string)
-            if (!audioRef.current?.src || audioRef.current.src === window.location.href) {
-              return;
-            }
-            setAudioError("Audio could not be played. Try again.");
-            setAudioLoading(false);
-          });
-        }
-
-        audioRef.current.src = data.url;
-        setAudioLoading(false);
-        await audioRef.current.play();
-      } catch (err) {
-        setAudioError(
-          err instanceof Error ? err.message : "Audio unavailable"
-        );
-        setAudioLoading(false);
-        setPlayingId(null);
-      }
-    },
-    [playingId]
-  );
-
-  const stopPlayback = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-    }
-    setPlayingId(null);
-    setIsPaused(false);
-    setAudioError(null);
-    setAudioLoading(false);
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      }
-    };
-  }, []);
 
   // --- Loading state ---
   if (loadState === "loading") {
@@ -203,7 +86,6 @@ export function MemoryShelf() {
   }
 
   // --- Empty state ---
-  // Backend now returns saved-only; no client filter needed.
   if (messages.length === 0) {
     return (
       <div>
@@ -235,7 +117,7 @@ export function MemoryShelf() {
       <h2>Memory Shelf</h2>
 
       {/* Audio error banner */}
-      {audioError && (
+      {playback.audioError && (
         <div
           style={{
             marginTop: 12,
@@ -248,12 +130,12 @@ export function MemoryShelf() {
             justifyContent: "space-between",
           }}
         >
-          <span style={{ fontSize: 14, color: "#a33" }}>{audioError}</span>
+          <span style={{ fontSize: 14, color: "#a33" }}>{playback.audioError}</span>
           <button
             type="button"
             onClick={() => {
-              setAudioError(null);
-              if (playingId) playMessage(playingId);
+              playback.clearError();
+              if (playback.playingId) playback.play(playback.playingId);
             }}
             style={{
               marginLeft: 12,
@@ -270,99 +152,19 @@ export function MemoryShelf() {
         </div>
       )}
 
-      <div style={{ marginTop: 16 }}>
-        {messages.map((msg) => {
-          const isPlaying = playingId === msg.id;
-          const isLoading = isPlaying && audioLoading;
+      <MessageList
+        messages={messages}
+        playingId={playback.playingId}
+        isPaused={playback.isPaused}
+        audioLoading={playback.audioLoading}
+        onPlay={playback.play}
+      />
 
-          return (
-            <button
-              key={msg.id}
-              type="button"
-              onClick={() => playMessage(msg.id)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "14px 16px",
-                marginBottom: 10,
-                border: isPlaying ? "2px solid #333" : "1px solid #ddd",
-                borderRadius: 8,
-                background: isPlaying ? "#fafafa" : "#fff",
-                cursor: "pointer",
-                transition: "border-color 0.15s, background 0.15s",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>
-                    {msg.recipientName ?? msg.title ?? "Message"}
-                  </div>
-                  {msg.bodyExcerpt && (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#666",
-                        marginTop: 2,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {msg.bodyExcerpt}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
-                    {formatDate(msg.createdAt)}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    marginLeft: 12,
-                    fontSize: 20,
-                    flexShrink: 0,
-                    width: 32,
-                    height: 32,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {isLoading ? (
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: 18,
-                        height: 18,
-                        border: "2px solid #999",
-                        borderTopColor: "transparent",
-                        borderRadius: "50%",
-                        animation: "spin 0.8s linear infinite",
-                      }}
-                    />
-                  ) : isPlaying && !isPaused ? (
-                    "⏸"
-                  ) : (
-                    "▶"
-                  )}
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {playingId && !audioLoading && (
+      {playback.playingId && !playback.audioLoading && (
         <div style={{ marginTop: 8, textAlign: "center" }}>
           <button
             type="button"
-            onClick={stopPlayback}
+            onClick={playback.stop}
             style={{
               padding: "6px 16px",
               fontSize: 13,
@@ -382,7 +184,6 @@ export function MemoryShelf() {
           + Create a new message
         </a>
       </div>
-
     </div>
   );
 }
