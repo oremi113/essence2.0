@@ -482,6 +482,10 @@ export const voiceTrainingScript: VoiceStage[] = [
   },
 ];
 
+// ─── FLAT PROMPT LIST ──────────────────────────────────────────────────────
+// Computed once at module load — avoids repeated flatMap on every import.
+export const ALL_PROMPTS = voiceTrainingScript.flatMap((stage) => stage.prompts);
+
 // ─── STAGE BOUNDARY HELPERS ────────────────────────────────────────────────
 // Derived from script metadata — no hardcoded index ranges in components.
 

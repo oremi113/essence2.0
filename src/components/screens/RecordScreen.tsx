@@ -6,14 +6,11 @@ import { BreathStone } from '@/components/breath-stone';
 import { PageTransition, PrimaryButton, LinkButton } from '@/components/ui';
 import { MicIcon, MicStopIcon } from '@/components/icons';
 import { RecordingUpload, type Status as UploadStatus } from '@/components/audio/RecordingUpload';
-import { voiceTrainingScript, TOTAL_PROMPT_COUNT, getStageForPrompt, getStageStartIndex } from '@/lib/voice-training/script';
+import { TOTAL_PROMPT_COUNT, ALL_PROMPTS, getStageForPrompt, getStageStartIndex } from '@/lib/voice-training/script';
 import { resolvePrompt } from '@/lib/voice-training/resolver';
 import type { ResolverContext, PromptCelebration } from '@/lib/voice-training/types';
 import { TIMING } from '@/lib/config/timing';
 import type { RecordScreenData } from './RecordScreen.types';
-
-// ─── FLAT PROMPT LIST ──────────────────────────────────────────────────────
-const ALL_PROMPTS = voiceTrainingScript.flatMap((stage) => stage.prompts);
 
 // Whether the prompt at this index has an attached celebration is now
 // driven by the script itself — see VoicePrompt.celebration. Adding a
