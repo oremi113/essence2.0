@@ -587,20 +587,30 @@
   }
 
   /* ─── ONBOARDING — CONVEYOR (Screen 2) ───────────────────
-     Phrases replace each other in the same slot. Four transient
-     phrases enter from the right, hold briefly, and exit to the
-     left. The fifth, "Their timeline.", is the terminal phrase
-     and does not exit — it lands and stays while the CTA fades
-     up below it. Timings are tuned so adjacent phrases briefly
-     cross-fade during the enter/exit overlap, avoiding a
-     perceptible gap of blank space. */
+     Ten transient phrases pass through, each entering from the
+     right, holding, and exiting to the left as the next arrives.
+     Then a two-line terminal pair ("Your voice." / "Their timeline.")
+     lands stacked and stays on screen while the CTA fades in below.
+
+     Duration 1900ms per phrase (400 in + 1100 hold + 400 out).
+     Stagger 900ms so adjacent phrases briefly cross-fade during
+     the 400ms exit/entry overlap — no perceptible blank space.
+     Tuned slower than a default UI pace so 45-70 readers have
+     enough time to absorb each phrase without rushing. */
 
   .onboarding-conveyor {
     position: relative;
-    height: 28px;                   /* matches body line-height */
+    height: 28px;                   /* single-line during transients */
     margin: 8px auto 32px;
     max-width: 340px;
     pointer-events: none;
+    /* Grows to two lines when the terminal pair begins landing,
+       so phrases 11 + 12 stack vertically and stay on screen. */
+    animation: onb-conveyor-expand 500ms cubic-bezier(0.22, 1, 0.36, 1) 9500ms forwards;
+  }
+
+  @keyframes onb-conveyor-expand {
+    to { height: 60px; }
   }
 
   .onboarding-conveyor__phrase {
@@ -619,28 +629,35 @@
     white-space: nowrap;
   }
 
-  /* ---- transient phrases (1-4): in, hold, out ----
-     duration 1900ms = 400 in + 1100 hold + 400 out
-     stagger 1500ms between each so adjacent phrases
-     briefly cross-fade during the 400ms exit/entry overlap.
-     Tuned slower than a default UI pace to give 45-70 readers
-     enough time to absorb each phrase without rushing. */
-  .onboarding-conveyor__phrase--1 {
-    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 500ms both;
-  }
-  .onboarding-conveyor__phrase--2 {
-    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 2000ms both;
-  }
-  .onboarding-conveyor__phrase--3 {
-    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 3500ms both;
-  }
-  .onboarding-conveyor__phrase--4 {
-    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 5000ms both;
+  /* ---- transient phrases (1-10): in, hold, out ---- */
+  .onboarding-conveyor__phrase--1  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)   500ms both; }
+  .onboarding-conveyor__phrase--2  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  1400ms both; }
+  .onboarding-conveyor__phrase--3  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  2300ms both; }
+  .onboarding-conveyor__phrase--4  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  3200ms both; }
+  .onboarding-conveyor__phrase--5  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  4100ms both; }
+  .onboarding-conveyor__phrase--6  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  5000ms both; }
+  .onboarding-conveyor__phrase--7  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  5900ms both; }
+  .onboarding-conveyor__phrase--8  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  6800ms both; }
+  .onboarding-conveyor__phrase--9  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  7700ms both; }
+  .onboarding-conveyor__phrase--10 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  8600ms both; }
+
+  /* ---- terminal pair: both land and stay, stacked ----
+     Top phrase lands first as the container begins to expand.
+     Bottom phrase lands ~900ms later, after the top has settled. */
+  .onboarding-conveyor__phrase--final-top,
+  .onboarding-conveyor__phrase--final-bottom {
+    inset: auto 0 auto 0;
+    height: 28px;
   }
 
-  /* ---- terminal phrase: enters and stays ---- */
-  .onboarding-conveyor__phrase--final {
-    animation: onb-conveyor-land 650ms cubic-bezier(0.4, 0.0, 0.2, 1) 6500ms both;
+  .onboarding-conveyor__phrase--final-top {
+    top: 0;
+    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 9500ms both;
+  }
+
+  .onboarding-conveyor__phrase--final-bottom {
+    top: 32px;
+    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 10400ms both;
   }
 
   @keyframes onb-conveyor-pass {
@@ -655,10 +672,10 @@
     to   { opacity: 1; transform: translateX(0); }
   }
 
-  /* The CTA waits until the terminal phrase has landed before
-     fading in. Delay ≈ conveyor finish time + a breath. */
+  /* The CTA waits until the bottom terminal line has landed
+     before fading in. Delay ≈ bottom-final finish + a breath. */
   .onboarding-ctas--delayed {
-    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 7300ms both;
+    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 11300ms both;
   }
 
   /* ─── ONBOARDING — BODY EMPHASIS ──────────────────────────

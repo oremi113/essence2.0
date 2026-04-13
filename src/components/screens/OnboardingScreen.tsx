@@ -344,23 +344,44 @@ function Screen2({ onNext }: { onNext: () => void }) {
         <p>Then you use it to leave messages for the future.</p>
       </div>
 
-      {/* Cinematic conveyor — each phrase slides in from the right,
-          holds, then slides out to the left as the next enters.
-          "Their timeline." is the terminal phrase: it lands and stays. */}
+      {/* Cinematic conveyor — 10 transient phrases slide through,
+          then the final pair ("Your voice." / "Their timeline.")
+          lands stacked and stays as the quiet conclusion. */}
       <div className="onboarding-conveyor" aria-hidden="true">
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--1">
-          Birthday wishes.
+          Bedtime stories.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--2">
-          Life advice.
+          Holiday greetings.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--3">
-          Love notes.
+          Words of comfort.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
+          Graduation messages.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--5">
+          Daily affirmations.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--6">
+          &ldquo;I&rsquo;m proud of you.&rdquo;
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--7">
+          Just because moments.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--8">
+          Letters for later.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--9">
+          A goodbye.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--10">
+          Whenever it comes.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final-top">
           Your voice.
         </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final-bottom">
           Their timeline.
         </span>
       </div>
