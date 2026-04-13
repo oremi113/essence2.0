@@ -623,17 +623,15 @@
     white-space: nowrap;
   }
 
-  /* ---- transient phrases (1-12): in, hold, out ----
-     First phrase holds until ~500ms after the final body line
-     ("Then you use it to leave messages for the future.") has
-     finished composing. Reads as top-to-bottom: title, body,
-     then the conveyor begins its sequence. */
-  .onboarding-conveyor__phrase--1  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  2500ms both; }
-  .onboarding-conveyor__phrase--2  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  4000ms both; }
-  .onboarding-conveyor__phrase--3  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  5500ms both; }
-  .onboarding-conveyor__phrase--4  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  7000ms both; }
-  .onboarding-conveyor__phrase--5  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  8500ms both; }
-  .onboarding-conveyor__phrase--6  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 10000ms both; }
+  /* ---- transient phrases: in, hold, out ----
+     Each phrase declares its position via the --phrase-index inline
+     style (1-based). Stagger is 1500ms; the first phrase fires at
+     2500ms (≈500ms after the final body line composes). Adding a
+     phrase = bumping --phrase-index, no new CSS rule. */
+  .onboarding-conveyor__phrase {
+    animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)
+      calc(1000ms + var(--phrase-index, 1) * 1500ms) both;
+  }
 
   /* ---- terminal phrase: lands on the conveyor line and stays ----
      Uses the default `.onboarding-conveyor__phrase` positioning
@@ -645,10 +643,12 @@
 
   /* Their timeline — a separate element directly beneath the conveyor.
      Fades/slides in after "Your voice." has settled. Styled to match
-     the conveyor phrases so both lines read as a single pair.
-     Selector scoped to `.onboarding-step >` so the animation-delay
-     beats the top-level nth-child stagger rules (same specificity,
-     later in the file wins). */
+     the conveyor phrases so both lines read as a single pair. The
+     animation-delay is set inline from JSX (CONVEYOR_TAIL_LAND_MS)
+     so phrase-count changes propagate without touching CSS. The base
+     reveal stagger is now --reveal-index based, so this rule is no
+     longer at risk of having its delay clobbered by an nth-child
+     rule (the original "Their timeline appears at page load" bug). */
   .onboarding-step > .onboarding-conveyor-tail {
     font-family: var(--font-body);
     font-size: var(--text-body);
@@ -892,19 +892,24 @@
     opacity: 0;
     transform: translateY(10px);
     animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--reveal-index, 0) * 500ms);
   }
 
-  /* Section-by-section stagger. nth-child(1) is the stone-slot, so
-     content begins at nth-child(2). 500ms between sections reads as
-     intentional, not sluggish — each element arrives, settles, and
-     the user has a beat to absorb it before the next appears. */
-  .onboarding-step > *:nth-child(2) { animation-delay: 500ms; }
-  .onboarding-step > *:nth-child(3) { animation-delay: 1000ms; }
-  .onboarding-step > *:nth-child(4) { animation-delay: 1500ms; }
-  .onboarding-step > *:nth-child(5) { animation-delay: 2000ms; }
-  .onboarding-step > *:nth-child(6) { animation-delay: 2500ms; }
-  .onboarding-step > *:nth-child(7) { animation-delay: 3000ms; }
-  .onboarding-step > *:nth-child(8) { animation-delay: 3500ms; }
+  /* Section-by-section stagger. nth-child(1) is the stone-slot;
+     content begins at nth-child(2). nth-child rules SET the custom
+     property --reveal-index (not animation-delay directly) so that
+     elements with their own animation rules — like .onboarding-
+     conveyor-tail — are unaffected. Earlier this CSS file set
+     animation-delay (longhand) here, which silently overrode any
+     animation shorthand on excluded children and caused the
+     "Their timeline" race regression. */
+  .onboarding-step > *:nth-child(2) { --reveal-index: 1; }
+  .onboarding-step > *:nth-child(3) { --reveal-index: 2; }
+  .onboarding-step > *:nth-child(4) { --reveal-index: 3; }
+  .onboarding-step > *:nth-child(5) { --reveal-index: 4; }
+  .onboarding-step > *:nth-child(6) { --reveal-index: 5; }
+  .onboarding-step > *:nth-child(7) { --reveal-index: 6; }
+  .onboarding-step > *:nth-child(8) { --reveal-index: 7; }
 
   /* Body container animates per-paragraph, not as a block. */
   .onboarding-step > .onboarding-body {
@@ -917,26 +922,26 @@
     opacity: 0;
     transform: translateY(10px);
     animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    /* Base offset is the body container's own delay (1000ms = body as
+       3rd child of step). --body-base lets per-screen overrides shift
+       this if the body sits at a different child position. Per-paragraph
+       offset is --body-index * 180ms with an extra 160ms beat before
+       the closer (5th paragraph). */
+    animation-delay: calc(
+      var(--body-base, 1000ms) + var(--body-index, 0) * 180ms
+        + var(--body-closer-beat, 0ms)
+    );
   }
 
-  /* Body paragraphs are one section, so they stagger tightly (180ms).
-     The starting delay assumes the body is the 3rd step child (Screen
-     2, 3…). Body-as-4th-child screens (Screen 5 with its label) get a
-     scoped override further down. */
-  .onboarding-body > *:nth-child(1) { animation-delay: 1000ms; }
-  .onboarding-body > *:nth-child(2) { animation-delay: 1180ms; }
-  .onboarding-body > *:nth-child(3) { animation-delay: 1360ms; }
-  .onboarding-body > *:nth-child(4) { animation-delay: 1540ms; }
-  .onboarding-body > *:nth-child(5) { animation-delay: 1880ms; }  /* closer: +340ms beat */
-  .onboarding-body > *:nth-child(6) { animation-delay: 2060ms; }
+  .onboarding-body > *:nth-child(1) { --body-index: 0; }
+  .onboarding-body > *:nth-child(2) { --body-index: 1; }
+  .onboarding-body > *:nth-child(3) { --body-index: 2; }
+  .onboarding-body > *:nth-child(4) { --body-index: 3; }
+  .onboarding-body > *:nth-child(5) { --body-index: 4; --body-closer-beat: 160ms; }
+  .onboarding-body > *:nth-child(6) { --body-index: 5; --body-closer-beat: 160ms; }
 
-  /* Screen 5: body is the 4th step child (slot, label, title, body),
-     so shift its paragraph stagger +500ms to match its slot. */
-  .onboarding-body--screen5 > *:nth-child(1) { animation-delay: 1500ms; }
-  .onboarding-body--screen5 > *:nth-child(2) { animation-delay: 1680ms; }
-  .onboarding-body--screen5 > *:nth-child(3) { animation-delay: 1860ms; }
-  .onboarding-body--screen5 > *:nth-child(4) { animation-delay: 2040ms; }
-  .onboarding-body--screen5 > *:nth-child(5) { animation-delay: 2380ms; }  /* closer beat */
+  /* Screen 5: body is the 4th step child, so shift its base +500ms. */
+  .onboarding-body--screen5 { --body-base: 1500ms; }
 
   @keyframes onb-reveal {
     to {

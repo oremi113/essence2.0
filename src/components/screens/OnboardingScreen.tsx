@@ -11,6 +11,14 @@ import {
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { PrimaryButton, LinkButton } from '@/components/ui';
 import { US_STATES } from '@/lib/us-states';
+import {
+  CameraIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  CloseIcon,
+  ShieldIcon,
+} from '@/components/icons';
 import type {
   OnboardingScreenData,
   OnCompleteOnboarding,
@@ -264,9 +272,7 @@ function BackButton({
       aria-label="Go back"
       disabled={disabled || !visible}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="15 18 9 12 15 6" />
-      </svg>
+      <ChevronLeftIcon size={20} />
     </button>
   );
 }
@@ -354,18 +360,27 @@ function Screen1({ onNext }: { onNext: () => void }) {
 //  SCREEN 2 — Purpose
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Screen2({ onNext }: { onNext: () => void }) {
-  // "Their timeline." is mounted imperatively after 12900ms.
-  // CSS-only timing failed: the .onboarding-step > *:nth-child()
-  // stagger rules override any animation-delay on the tail element
-  // because they appear later in globals.css with equal specificity.
-  // Mounting late sidesteps that conflict entirely.
-  const [showTimeline, setShowTimeline] = useState(false);
-  useEffect(() => {
-    const id = window.setTimeout(() => setShowTimeline(true), 12900);
-    return () => window.clearTimeout(id);
-  }, []);
+// Transient phrases that pass across the conveyor before "Your voice."
+// lands. Order matters — first phrase fires at 2500ms, then +1500ms each.
+// To add/remove: edit this list. CSS picks up --phrase-index automatically.
+const CONVEYOR_PHRASES: readonly string[] = [
+  'Birthday wishes.',
+  'Love notes.',
+  '\u201CI\u2019m proud of you.\u201D',
+  'Life advice.',
+  'Letters for later.',
+  'A goodbye, whenever it comes.',
+];
 
+// "Your voice." land delay, in ms. = 1000 + (N+1) * 1500
+// where N = CONVEYOR_PHRASES.length. The +1 puts it one slot after
+// the final transient phrase. Kept as a derived constant so adding
+// phrases doesn't require manual delay math.
+const CONVEYOR_FINAL_LAND_MS = 1000 + (CONVEYOR_PHRASES.length + 1) * 1500;
+// "Their timeline." enters 1400ms after "Your voice." finishes landing.
+const CONVEYOR_TAIL_LAND_MS = CONVEYOR_FINAL_LAND_MS + 1400;
+
+function Screen2({ onNext }: { onNext: () => void }) {
   return (
     <StepShell>
       <StoneSlot />
@@ -378,41 +393,32 @@ function Screen2({ onNext }: { onNext: () => void }) {
         <p>Then you use it to leave messages for the future.</p>
       </div>
 
-      {/* Cinematic conveyor — 6 transient phrases slide through,
-          then the final pair ("Your voice." / "Their timeline.")
-          lands stacked and stays as the quiet conclusion. */}
+      {/* Cinematic conveyor — transient phrases slide through, then the
+          final pair ("Your voice." / "Their timeline.") lands stacked
+          and stays as the quiet conclusion. Add/remove transient
+          entries by editing CONVEYOR_PHRASES; --phrase-index drives
+          per-phrase delay via CSS calc. */}
       <div className="onboarding-conveyor" aria-hidden="true">
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--1">
-          Birthday wishes.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--2">
-          Love notes.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--3">
-          &ldquo;I&rsquo;m proud of you.&rdquo;
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
-          Life advice.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--5">
-          Letters for later.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--6">
-          A goodbye, whenever it comes.
-        </span>
+        {CONVEYOR_PHRASES.map((phrase, i) => (
+          <span
+            key={phrase}
+            className="onboarding-conveyor__phrase"
+            style={{ ['--phrase-index' as string]: i + 1 }}
+          >
+            {phrase}
+          </span>
+        ))}
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">
           Your voice.
         </span>
       </div>
-      {showTimeline && (
-        <div
-          className="onboarding-conveyor-tail"
-          aria-hidden="true"
-          style={{ animationDelay: '0ms' }}
-        >
-          Their timeline.
-        </div>
-      )}
+      <div
+        className="onboarding-conveyor-tail"
+        aria-hidden="true"
+        style={{ animationDelay: `${CONVEYOR_TAIL_LAND_MS}ms` }}
+      >
+        Their timeline.
+      </div>
 
       <div className="onboarding-ctas onboarding-ctas--delayed">
         <PrimaryButton onClick={onNext}>Continue</PrimaryButton>
@@ -487,19 +493,7 @@ function Screen4({
         onClick={onReadPrivacy}
       >
         Read our privacy promise
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
+        <ChevronRightIcon size={14} />
       </button>
 
       <div className="onboarding-ctas">
@@ -597,10 +591,7 @@ function Screen6({ onNext }: { onNext: () => void }) {
 
       <div className="onboarding-total-time">
         <span className="onboarding-total-time__left">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
+          <ClockIcon />
           Total time
         </span>
         <span className="onboarding-total-time__value">About 15 minutes</span>
@@ -896,10 +887,7 @@ function Screen10Photo({
       >
         {!hasPhoto && (
           <>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-              <circle cx="12" cy="13" r="4" />
-            </svg>
+            <CameraIcon size={32} />
             <span className="onboarding-photo__label">Tap to add</span>
           </>
         )}
@@ -1034,27 +1022,11 @@ function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           aria-label="Close"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <CloseIcon size={18} />
         </button>
 
         <div className="privacy-modal__content">
-          <svg
-            className="privacy-modal__shield"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
+          <ShieldIcon className="privacy-modal__shield" size={16} />
           <div className="privacy-modal__eyebrow">OUR PRIVACY PROMISE</div>
           <h2 id="privacy-title" className="privacy-modal__title">
             Your voice belongs to you. Full stop.
