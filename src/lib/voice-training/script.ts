@@ -40,6 +40,13 @@ export const voiceTrainingScript: VoiceStage[] = [
           lateNight:
             "Hi! I\u2019m {userName} from {city}. I know, I know, it\u2019s late. But I\u2019m a night owl, and this felt like the perfect time to do this. So here we are. Let\u2019s get started.",
         },
+        celebration: {
+          title: "Beautiful",
+          titleWeight: 400,
+          subtitle: "You opened the door. Your voice is here.",
+          cta: "Continue",
+          next: { kind: "next-prompt" },
+        },
       },
       // ---------------------------------------------------------------
       // Prompt 2 — simple
@@ -84,6 +91,18 @@ export const voiceTrainingScript: VoiceStage[] = [
         emotionalTone: "encouraging/warm",
         lineType: "simple",
         line: "You know what? If you\u2019re listening to this, I just want you to know something. Whatever you\u2019re going through right now, you\u2019re doing better than you think. I mean that. Life\u2019s hard sometimes, and it\u2019s exhausting, but you\u2019re here. You\u2019re still showing up. And that counts for something. So give yourself some credit, okay? You\u2019ve earned it.",
+        celebration: {
+          eyebrow: "MILESTONE",
+          title: "Stage 1 Complete",
+          titleWeight: 500,
+          subtitle:
+            "You shaped the first five moments. Your voice record is beginning to form.",
+          showStageMap: true,
+          stageMapCurrent: 2,
+          showPauseLink: true,
+          cta: "Begin Stage 2",
+          next: { kind: "stage-intro", stage: 2 },
+        },
       },
     ],
     completionMessage: {
@@ -210,6 +229,13 @@ export const voiceTrainingScript: VoiceStage[] = [
         emotionalTone: "warm/teaching",
         lineType: "simple",
         line: "You want to know my secret for a great breakfast? Start with fresh scrambled eggs. Crack three into a bowl, splash in some milk, just a little. Whisk it up until it\u2019s smooth. Then get your skillet hot \u2014 not screaming hot, just sizzling. Drop in some butter, swirl it around, pour the eggs in, and stir them gently. Slowly. Don\u2019t rush it. That\u2019s the trick. Patience. Sprinkle a little salt, maybe some pepper, and you\u2019ve got something special. Simple, but special. Just like the best things in life.",
+        celebration: {
+          title: "You\u2019re halfway there",
+          titleWeight: 400,
+          subtitle: "Your voice is unfolding beautifully",
+          cta: "Continue",
+          next: { kind: "next-prompt" },
+        },
       },
       // ---------------------------------------------------------------
       // Prompt 13 — simple
@@ -265,6 +291,18 @@ export const voiceTrainingScript: VoiceStage[] = [
         emotionalTone: "wise/warm",
         lineType: "simple",
         line: "Here\u2019s what I\u2019ve learned about love over the years. It\u2019s not always fireworks and grand gestures. Most of the time, it\u2019s quiet. It\u2019s small, steady, and consistent. It\u2019s showing up. It\u2019s being there when it\u2019s hard. It\u2019s choosing each other, over and over again, even on the days when it\u2019s not easy. The movies got it all wrong. Real love is in the everyday moments, the little things. That\u2019s where the magic actually is.",
+        celebration: {
+          eyebrow: "MILESTONE",
+          title: "Stage 2 Complete",
+          titleWeight: 400,
+          subtitle:
+            "Your voice has gained depth and warmth. The final stage awaits.",
+          showStageMap: true,
+          stageMapCurrent: 3,
+          showPauseLink: true,
+          cta: "Begin Stage 3",
+          next: { kind: "stage-intro", stage: 3 },
+        },
       },
     ],
     completionMessage: {
@@ -415,6 +453,16 @@ export const voiceTrainingScript: VoiceStage[] = [
             "Okay, I think that\u2019s everything. I love you. Thank you for everything you\u2019ve done for me, everything you\u2019ve taught me, all the ways you\u2019ve shaped who I am. I hope I make you proud. Take care of yourself. I\u2019ll call you soon. Love you so much. Bye.",
           default:
             "Alright, that\u2019s a wrap. Thank you for listening to all of this. I hope this brings you joy whenever you hear it. Remember you\u2019re loved, you\u2019re valued, and you\u2019re doing better than you think. Take care of yourself. Love you. Bye for now!",
+        },
+        celebration: {
+          eyebrow: "YOUR JOURNEY",
+          title: "All 25 Moments Complete",
+          subtitle: "You have shaped something that will endure",
+          italicSubtitle: true,
+          showStageMap: true,
+          stageMapCurrent: 3,
+          cta: "Continue",
+          next: { kind: "working" },
         },
       },
     ],

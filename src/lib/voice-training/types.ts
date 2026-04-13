@@ -52,6 +52,43 @@ export const VALID_RELATIONSHIPS: readonly RelationshipKey[] = [
 // Script data types
 // ---------------------------------------------------------------------------
 
+/**
+ * What "Continue" on a celebration screen does.
+ *  - `next-prompt`   → advance to the next prompt in the flat list.
+ *  - `stage-intro`   → show the intro for the named stage (used between stages).
+ *  - `working`       → kick off voice-profile generation (final celebration).
+ */
+export type CelebrationNext =
+  | { kind: "next-prompt" }
+  | { kind: "stage-intro"; stage: 2 | 3 }
+  | { kind: "working" };
+
+/**
+ * Optional celebration triggered AFTER this prompt is recorded.
+ * Drives the full CelebrationView render — no per-index switch in
+ * the component. Add a celebration to a new prompt by attaching this
+ * object; remove a celebration by deleting it. No code changes needed.
+ */
+export type PromptCelebration = {
+  eyebrow?: string;
+  title: string;
+  subtitle: string;
+  /** Render the subtitle in italic (used by the final celebration only). */
+  italicSubtitle?: boolean;
+  /** Use the lighter Spectral weight (400 vs 500). Most celebrations use 400. */
+  titleWeight?: 400 | 500;
+  /** Show the three-dot stage progress map under the stone. */
+  showStageMap?: boolean;
+  /** When showStageMap is true, which stage is the active dot. */
+  stageMapCurrent?: 1 | 2 | 3;
+  /** Show the secondary "Pause for now" link below the primary CTA. */
+  showPauseLink?: boolean;
+  /** Primary CTA label. */
+  cta: string;
+  /** Where Continue navigates. */
+  next: CelebrationNext;
+};
+
 export type VoicePrompt = {
   id: number;
   instruction: string;
@@ -59,6 +96,8 @@ export type VoicePrompt = {
   lineType: LineType;
   /** A plain string for `simple`/`city` prompts, or a variant map for dynamic types. */
   line: string | Record<string, string>;
+  /** Optional celebration triggered after this prompt is recorded. */
+  celebration?: PromptCelebration;
 };
 
 export type CompletionMessage = {

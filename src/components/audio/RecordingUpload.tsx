@@ -5,6 +5,7 @@
  * State: idle | recording | uploading | committing | ready | error | permission_denied
  */
 import { useState, useRef, useCallback, useEffect } from "react";
+import { TIMING } from "@/lib/config/timing";
 
 export type Status =
   | "idle"
@@ -133,12 +134,12 @@ export function RecordingUpload({
         stream.getTracks().forEach((t) => t.stop());
       };
 
-      recorder.start(100);
+      recorder.start(TIMING.MEDIA_RECORDER_TIMESLICE_MS);
       setStatus("recording");
       setRecordingSeconds(0);
       recordingIntervalRef.current = setInterval(() => {
         setRecordingSeconds((s) => s + 1);
-      }, 1000);
+      }, TIMING.RECORDING_TIMER_TICK_MS);
     } catch (err) {
       const isPermissionDenied =
         err instanceof Error &&

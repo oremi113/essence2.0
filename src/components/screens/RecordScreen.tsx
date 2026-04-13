@@ -7,15 +7,17 @@ import { PageTransition, PrimaryButton, LinkButton } from '@/components/ui';
 import { RecordingUpload, type Status as UploadStatus } from '@/components/audio/RecordingUpload';
 import { voiceTrainingScript, TOTAL_PROMPT_COUNT } from '@/lib/voice-training/script';
 import { resolvePrompt } from '@/lib/voice-training/resolver';
-import type { ResolverContext } from '@/lib/voice-training/types';
+import type { ResolverContext, PromptCelebration } from '@/lib/voice-training/types';
+import { TIMING } from '@/lib/config/timing';
 import type { RecordScreenData } from './RecordScreen.types';
 
 // ─── FLAT PROMPT LIST ──────────────────────────────────────────────────────
 const ALL_PROMPTS = voiceTrainingScript.flatMap((stage) => stage.prompts);
 
-// ─── CONSTANTS ─────────────────────────────────────────────────────────────
-// Celebrations fire after completing these prompt indices (0-based)
-const CELEBRATION_INDICES = new Set([0, 4, 11, 16, 24]);
+// Whether the prompt at this index has an attached celebration is now
+// driven by the script itself — see VoicePrompt.celebration. Adding a
+// celebration = attach the metadata object; removing = delete it.
+// No more parallel lookup table to keep in sync.
 
 function getStageForPrompt(promptIndex: number): 1 | 2 | 3 {
   if (promptIndex <= 4) return 1;
@@ -108,7 +110,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
   // Poll for ready status when processing
   useEffect(() => {
     if (view.type !== 'working') return;
-    const interval = setInterval(() => router.refresh(), 3000);
+    const interval = setInterval(() => router.refresh(), TIMING.WORKING_REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [view.type, router]);
 
@@ -129,14 +131,14 @@ export function RecordScreen({ data }: RecordScreenProps) {
     if (view.type !== 'working') return;
     const timeout = setTimeout(() => {
       setView((v) => (v.type === 'working' ? { type: 'ready' } : v));
-    }, 8000);
+    }, TIMING.WORKING_FALLBACK_ADVANCE_MS);
     return () => clearTimeout(timeout);
   }, [view.type]);
 
   // ─── Navigation helpers ─────────────────────────────────────
 
   const advanceFromPrompt = useCallback((promptIndex: number) => {
-    if (CELEBRATION_INDICES.has(promptIndex)) {
+    if (ALL_PROMPTS[promptIndex]?.celebration) {
       setView({ type: 'celebration', afterPromptIndex: promptIndex });
     } else {
       setView({ type: 'prompt', promptIndex: promptIndex + 1 });
@@ -144,11 +146,19 @@ export function RecordScreen({ data }: RecordScreenProps) {
   }, []);
 
   const advanceFromCelebration = useCallback((afterPromptIndex: number) => {
-    if (afterPromptIndex === 0) setView({ type: 'prompt', promptIndex: 1 });
-    else if (afterPromptIndex === 4) setView({ type: 'stage-intro', stage: 2 });
-    else if (afterPromptIndex === 11) setView({ type: 'prompt', promptIndex: 12 });
-    else if (afterPromptIndex === 16) setView({ type: 'stage-intro', stage: 3 });
-    else if (afterPromptIndex === 24) setView({ type: 'working' });
+    const next = ALL_PROMPTS[afterPromptIndex]?.celebration?.next;
+    if (!next) return;
+    switch (next.kind) {
+      case 'next-prompt':
+        setView({ type: 'prompt', promptIndex: afterPromptIndex + 1 });
+        return;
+      case 'stage-intro':
+        setView({ type: 'stage-intro', stage: next.stage });
+        return;
+      case 'working':
+        setView({ type: 'working' });
+        return;
+    }
   }, []);
 
   // ─── Render ─────────────────────────────────────────────────
@@ -390,9 +400,17 @@ function ChecklistView({ onContinue }: { onContinue: () => void }) {
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     CHECKLIST_ITEMS.forEach((_, i) => {
-      timers.push(setTimeout(() => setVisibleCount((c) => Math.max(c, i + 1)), 300 + i * 400));
+      timers.push(setTimeout(
+        () => setVisibleCount((c) => Math.max(c, i + 1)),
+        TIMING.CHECKLIST_INITIAL_DELAY_MS + i * TIMING.CHECKLIST_ITEM_STAGGER_MS
+      ));
     });
-    timers.push(setTimeout(() => setCtaVisible(true), 300 + CHECKLIST_ITEMS.length * 400 + 600));
+    timers.push(setTimeout(
+      () => setCtaVisible(true),
+      TIMING.CHECKLIST_INITIAL_DELAY_MS
+        + CHECKLIST_ITEMS.length * TIMING.CHECKLIST_ITEM_STAGGER_MS
+        + TIMING.CHECKLIST_CTA_AFTER_ITEMS_MS
+    ));
     return () => timers.forEach(clearTimeout);
   }, []);
 
@@ -428,7 +446,7 @@ function ChecklistView({ onContinue }: { onContinue: () => void }) {
 
 function EnvironmentView({ onReady }: { onReady: () => void }) {
   useEffect(() => {
-    const timer = setTimeout(onReady, 2500);
+    const timer = setTimeout(onReady, TIMING.ENVIRONMENT_AUTO_READY_MS);
     return () => clearTimeout(timer);
   }, [onReady]);
 
@@ -544,7 +562,7 @@ function PromptView({
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecordingSeconds(0);
-    timerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    timerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), TIMING.RECORDING_TIMER_TICK_MS);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -553,7 +571,7 @@ function PromptView({
   // Auto-advance 2s after user stops recording — use ref to avoid dependency issues
   useEffect(() => {
     if (!hasStopped) return;
-    const timer = setTimeout(() => onAdvanceRef.current(), 2000);
+    const timer = setTimeout(() => onAdvanceRef.current(), TIMING.PROMPT_AUTO_ADVANCE_MS);
     return () => clearTimeout(timer);
   }, [hasStopped]);
 
@@ -673,11 +691,9 @@ function CelebrateStone() {
   );
 }
 
-// Celebration screens — matched 1:1 to prototype
-// Mini-celebrations (prompt 1, midpoint): light title, subtitle, stone, Continue
-// Stage completions (5, 17): MILESTONE eyebrow, stage map, stone, Begin Stage N + Pause
-// All complete (25): YOUR JOURNEY eyebrow, stage map (all done), stone, Continue
-
+// Single CelebrationView, fully data-driven from the script's
+// celebration metadata. Adding a new celebration = attach a
+// PromptCelebration to the script entry; nothing here changes.
 function CelebrationView({
   afterPromptIndex,
   onContinue,
@@ -687,105 +703,43 @@ function CelebrationView({
   onContinue: () => void;
   onPause: () => void;
 }) {
-  // ─── Prompt 1: "Beautiful" ─────────────────────────────────
-  if (afterPromptIndex === 0) {
-    return (
-      <div className="record-step record-step--centered">
-        <h1 className="record-title" style={{ fontWeight: 400 }}>Beautiful</h1>
-        <p className="record-subtitle">You opened the door. Your voice is here.</p>
+  const celebration: PromptCelebration | undefined =
+    ALL_PROMPTS[afterPromptIndex]?.celebration;
+  if (!celebration) return null;
 
-        <CelebrateStone />
+  const titleStyle = celebration.titleWeight
+    ? { fontWeight: celebration.titleWeight }
+    : undefined;
+  const subtitleStyle = celebration.italicSubtitle
+    ? { fontStyle: 'italic' as const }
+    : undefined;
 
-        <div className="record-ctas">
-          <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="record-step record-step--centered">
+      {celebration.eyebrow && (
+        <div className="record-eyebrow">{celebration.eyebrow}</div>
+      )}
+      <h1 className="record-title" style={titleStyle}>
+        {celebration.title}
+      </h1>
+      <p className="record-subtitle" style={subtitleStyle}>
+        {celebration.subtitle}
+      </p>
 
-  // ─── Midpoint: "You're halfway there" ──────────────────────
-  if (afterPromptIndex === 11) {
-    return (
-      <div className="record-step record-step--centered">
-        <h1 className="record-title" style={{ fontWeight: 400 }}>You&apos;re halfway there</h1>
-        <p className="record-subtitle">Your voice is unfolding beautifully</p>
+      {celebration.showStageMap && celebration.stageMapCurrent && (
+        <StageMap currentStage={celebration.stageMapCurrent} />
+      )}
 
-        <CelebrateStone />
+      <CelebrateStone />
 
-        <div className="record-ctas">
-          <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Stage 1 Complete ──────────────────────────────────────
-  if (afterPromptIndex === 4) {
-    return (
-      <div className="record-step record-step--centered">
-        <div className="record-eyebrow">MILESTONE</div>
-        <h1 className="record-title" style={{ fontWeight: 500 }}>Stage 1 Complete</h1>
-        <p className="record-subtitle">
-          You shaped the first five moments. Your voice record is beginning to form.
-        </p>
-
-        <StageMap currentStage={2} />
-
-        <CelebrateStone />
-
-        <div className="record-ctas">
-          <PrimaryButton onClick={onContinue}>Begin Stage 2</PrimaryButton>
+      <div className="record-ctas">
+        <PrimaryButton onClick={onContinue}>{celebration.cta}</PrimaryButton>
+        {celebration.showPauseLink && (
           <LinkButton onClick={onPause}>Pause for now</LinkButton>
-        </div>
+        )}
       </div>
-    );
-  }
-
-  // ─── Stage 2 Complete ──────────────────────────────────────
-  if (afterPromptIndex === 16) {
-    return (
-      <div className="record-step record-step--centered">
-        <div className="record-eyebrow">MILESTONE</div>
-        <h1 className="record-title" style={{ fontWeight: 400 }}>Stage 2 Complete</h1>
-        <p className="record-subtitle">
-          Your voice has gained depth and warmth. The final stage awaits.
-        </p>
-
-        <StageMap currentStage={3} />
-
-        <CelebrateStone />
-
-        <div className="record-ctas">
-          <PrimaryButton onClick={onContinue}>Begin Stage 3</PrimaryButton>
-          <LinkButton onClick={onPause}>Pause for now</LinkButton>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── All 25 Complete ───────────────────────────────────────
-  if (afterPromptIndex === 24) {
-    return (
-      <div className="record-step record-step--centered">
-        <div className="record-eyebrow">YOUR JOURNEY</div>
-        <h1 className="record-title">All 25 Moments Complete</h1>
-        <p className="record-subtitle" style={{ fontStyle: 'italic' }}>
-          You have shaped something that will endure
-        </p>
-
-        <StageMap currentStage={3} />
-
-        <CelebrateStone />
-
-        <div className="record-ctas">
-          <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
-        </div>
-      </div>
-    );
-  }
-
-  // Fallback (should not reach)
-  return null;
+    </div>
+  );
 }
 
 // ─── Paused ────────────────────────────────────────────────────────────────
@@ -795,7 +749,7 @@ function PausedView({ onReturnHome }: { onReturnHome: () => void }) {
   // reassurance without imposing a visible countdown. The cleanup guard
   // prevents double-navigation if they tap "Return home" first.
   useEffect(() => {
-    const timer = setTimeout(onReturnHome, 4000);
+    const timer = setTimeout(onReturnHome, TIMING.PAUSED_RETURN_HOME_MS);
     return () => clearTimeout(timer);
   }, [onReturnHome]);
 

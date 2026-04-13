@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { TIMING } from "@/lib/config/timing";
 
-const POLL_INTERVAL_MS = 2500;
-const POLL_TIMEOUT_MS = 90_000; // show "taking longer" after this
-const POLL_GIVE_UP_MS = 4 * 60 * 1000; // after this, show "timed out" and offer Retry
+const POLL_INTERVAL_MS = TIMING.VOICE_PROFILE_POLL_INTERVAL_MS;
+const POLL_TIMEOUT_MS = TIMING.VOICE_PROFILE_TAKING_LONGER_MS;
+const POLL_GIVE_UP_MS = TIMING.VOICE_PROFILE_GIVE_UP_MS;
 
 type ViewState = "starting" | "processing" | "taking_longer" | "success" | "failure";
 
