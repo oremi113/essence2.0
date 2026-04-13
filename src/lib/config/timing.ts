@@ -37,6 +37,9 @@ export const TIMING = {
   /** Paused screen auto-navigates home after this. */
   PAUSED_RETURN_HOME_MS: 4000,
 
+  /** New-message generation: switch UI to "taking a moment" after this. */
+  MESSAGE_GENERATION_DELAYED_MS: 15_000,
+
   /** Voice-profile creation polling cadence. */
   VOICE_PROFILE_POLL_INTERVAL_MS: 2500,
   /** Switch UI to "taking longer than usual" after this. */

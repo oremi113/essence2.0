@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { TIMING } from "@/lib/config/timing";
 
 type VoiceProfile = { id: string; label: string; status: string };
 
@@ -11,8 +12,6 @@ type ViewState =
   | "saving"
   | "saved"
   | "failure";
-
-const DELAYED_THRESHOLD_MS = 15_000; // show "taking a moment" after 15s
 
 export function NewMessageView({
   voiceProfiles,
@@ -46,7 +45,7 @@ export function NewMessageView({
       // Start "delayed" timer
       delayTimerRef.current = setTimeout(() => {
         setViewState((v) => (v === "generating" ? "delayed" : v));
-      }, DELAYED_THRESHOLD_MS);
+      }, TIMING.MESSAGE_GENERATION_DELAYED_MS);
 
       try {
         const res = await fetch("/api/messages", {
