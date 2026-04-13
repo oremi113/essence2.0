@@ -658,7 +658,7 @@
     margin: 0 auto 32px;
     opacity: 0;
     transform: translateX(16px);
-    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 16800ms both;
+    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 17400ms both;
     pointer-events: none;
   }
 
@@ -677,7 +677,7 @@
   /* The CTA waits until the bottom terminal line has landed
      before fading in. Delay ≈ bottom-final finish + a breath. */
   .onboarding-ctas--delayed {
-    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 18000ms both;
+    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 18800ms both;
   }
 
   /* ─── ONBOARDING — BODY EMPHASIS ──────────────────────────
