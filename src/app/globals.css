@@ -622,27 +622,30 @@
     white-space: nowrap;
   }
 
-  /* ---- transient phrases (1-9): in, hold, out ----
+  /* ---- transient phrases (1-12): in, hold, out ----
      First phrase holds until ~500ms after the final body line
      ("Then you use it to leave messages for the future.") has
      finished composing. Reads as top-to-bottom: title, body,
      then the conveyor begins its sequence. */
-  .onboarding-conveyor__phrase--1 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  2500ms both; }
-  .onboarding-conveyor__phrase--2 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  4000ms both; }
-  .onboarding-conveyor__phrase--3 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  5500ms both; }
-  .onboarding-conveyor__phrase--4 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  7000ms both; }
-  .onboarding-conveyor__phrase--5 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  8500ms both; }
-  .onboarding-conveyor__phrase--6 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 10000ms both; }
-  .onboarding-conveyor__phrase--7 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 11500ms both; }
-  .onboarding-conveyor__phrase--8 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 13000ms both; }
-  .onboarding-conveyor__phrase--9 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 14500ms both; }
+  .onboarding-conveyor__phrase--1  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  2500ms both; }
+  .onboarding-conveyor__phrase--2  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  4000ms both; }
+  .onboarding-conveyor__phrase--3  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  5500ms both; }
+  .onboarding-conveyor__phrase--4  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  7000ms both; }
+  .onboarding-conveyor__phrase--5  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)  8500ms both; }
+  .onboarding-conveyor__phrase--6  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 10000ms both; }
+  .onboarding-conveyor__phrase--7  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 11500ms both; }
+  .onboarding-conveyor__phrase--8  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 13000ms both; }
+  .onboarding-conveyor__phrase--9  { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 14500ms both; }
+  .onboarding-conveyor__phrase--10 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 16000ms both; }
+  .onboarding-conveyor__phrase--11 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 17500ms both; }
+  .onboarding-conveyor__phrase--12 { animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1) 19000ms both; }
 
   /* ---- terminal phrase: lands on the conveyor line and stays ----
      Uses the default `.onboarding-conveyor__phrase` positioning
      (inset: 0) so the text lands in the exact same place each
      transient phrase was displayed — no vertical shift. */
   .onboarding-conveyor__phrase--final {
-    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 16000ms both;
+    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 20500ms both;
   }
 
   /* Their timeline — a separate element directly beneath the conveyor.
@@ -658,7 +661,7 @@
     margin: 0 auto 32px;
     opacity: 0;
     transform: translateX(16px);
-    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 17400ms both;
+    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 21900ms both;
     pointer-events: none;
   }
 
@@ -677,7 +680,7 @@
   /* The CTA waits until the bottom terminal line has landed
      before fading in. Delay ≈ bottom-final finish + a breath. */
   .onboarding-ctas--delayed {
-    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 18800ms both;
+    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 23300ms both;
   }
 
   /* ─── ONBOARDING — BODY EMPHASIS ──────────────────────────

@@ -349,30 +349,39 @@ function Screen2({ onNext }: { onNext: () => void }) {
           lands stacked and stays as the quiet conclusion. */}
       <div className="onboarding-conveyor" aria-hidden="true">
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--1">
-          Bedtime stories.
+          Birthday wishes.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--2">
           Holiday greetings.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--3">
-          Words of comfort.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
-          Graduation messages.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--5">
-          Daily affirmations.
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--6">
-          &ldquo;I&rsquo;m proud of you.&rdquo;
-        </span>
-        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--7">
           Just because moments.
         </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--4">
+          &ldquo;I&rsquo;m proud of you.&rdquo;
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--5">
+          Love notes.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--6">
+          Daily affirmations.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--7">
+          Words of comfort.
+        </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--8">
-          Letters for later.
+          Bedtime stories.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--9">
+          Life advice.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--10">
+          Letters for later.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--11">
+          Graduation messages.
+        </span>
+        <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--12">
           A goodbye, whenever it comes.
         </span>
         <span className="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">
