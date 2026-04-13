@@ -4,7 +4,8 @@
  * 3-step pipeline: init-upload (server) -> direct PUT to signed URL (client) -> commit (server).
  * State: idle | recording | uploading | committing | ready | error | permission_denied
  */
-import { useState, useRef, useCallback, useEffect } from "react";
+import type { Ref } from "react";
+import { useState, useRef, useCallback, useEffect, useImperativeHandle } from "react";
 import { TIMING } from "@/lib/config/timing";
 
 export type Status =
@@ -15,6 +16,16 @@ export type Status =
   | "ready"
   | "error"
   | "permission_denied";
+
+/**
+ * Imperative handle exposed to parents that render a custom trigger
+ * button (e.g. PromptView). Lets them call the pipeline directly
+ * instead of reaching into the DOM for a hidden button.
+ */
+export interface RecordingUploadHandle {
+  startRecording: () => void;
+  stopAndUpload: () => void;
+}
 
 type ClipRow = {
   id: string;
@@ -41,6 +52,7 @@ export function RecordingUpload({
   resolvedVariantKeys,
   onReady,
   onStatusChange,
+  ref,
 }: {
   voiceProfileId: string;
   promptIndex: number;
@@ -49,6 +61,8 @@ export function RecordingUpload({
   onReady?: (clipId: string) => void;
   /** Optional callback fired whenever the internal status changes. */
   onStatusChange?: (status: Status) => void;
+  /** Imperative handle — see RecordingUploadHandle. Used by PromptView. */
+  ref?: Ref<RecordingUploadHandle>;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -229,6 +243,14 @@ export function RecordingUpload({
       setStatus("error");
     }
   }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady]);
+
+  // Expose imperative handle so a parent (e.g. PromptView) can drive
+  // recording from its own custom button without reaching into our DOM.
+  useImperativeHandle(
+    ref,
+    () => ({ startRecording, stopAndUpload }),
+    [startRecording, stopAndUpload]
+  );
 
   const loadPlaybackUrl = useCallback(async () => {
     if (!clipId) return;

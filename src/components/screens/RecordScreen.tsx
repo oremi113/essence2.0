@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BreathStone } from '@/components/breath-stone';
 import { PageTransition, PrimaryButton, LinkButton } from '@/components/ui';
 import { MicIcon, MicStopIcon } from '@/components/icons';
-import { RecordingUpload, type Status as UploadStatus } from '@/components/audio/RecordingUpload';
+import { RecordingUpload, type Status as UploadStatus, type RecordingUploadHandle } from '@/components/audio/RecordingUpload';
 import { TOTAL_PROMPT_COUNT, ALL_PROMPTS, getStageForPrompt, getStageStartIndex } from '@/lib/voice-training/script';
 import { resolvePrompt } from '@/lib/voice-training/resolver';
 import type { ResolverContext, PromptCelebration } from '@/lib/voice-training/types';
@@ -514,7 +514,7 @@ function PromptView({
   voiceProfileId: string | null;
   onAdvance: () => void;
 }) {
-  const engineRef = useRef<HTMLDivElement>(null);
+  const engineRef = useRef<RecordingUploadHandle>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [hasStopped, setHasStopped] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -562,12 +562,10 @@ function PromptView({
 
   function handleRecordClick() {
     if (hasStopped) return;
-
-    const container = engineRef.current;
-    if (!container) return;
-
-    const btn = container.querySelector('button');
-    btn?.click();
+    const engine = engineRef.current;
+    if (!engine) return;
+    if (isRecording) engine.stopAndUpload();
+    else engine.startRecording();
   }
 
   const buttonClass = hasStopped
@@ -623,10 +621,13 @@ function PromptView({
 
       <p className="record-rerecord-hint">You can re-record anytime</p>
 
-      {/* Hidden RecordingUpload engine — handles actual audio pipeline */}
-      <div ref={engineRef} className="record-upload-engine" aria-hidden="true">
+      {/* Hidden RecordingUpload engine — handles actual audio pipeline.
+          The visible record button above drives it via the imperative
+          ref handle (start/stop), no DOM peeking needed. */}
+      <div className="record-upload-engine" aria-hidden="true">
         {voiceProfileId && (
           <RecordingUpload
+            ref={engineRef}
             voiceProfileId={voiceProfileId}
             promptIndex={promptIndex + 1}
             onStatusChange={handleStatusChange}
