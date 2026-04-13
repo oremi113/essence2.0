@@ -7,6 +7,7 @@
  */
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { ensureProfile } from "@/lib/profile-ensure";
 
 // ---------------------------------------------------------------------------
 // Caps (env-overridable)
@@ -115,6 +116,12 @@ export async function recordUsageEvent(
     meta?: Record<string, unknown>;
   }
 ): Promise<void> {
+  // Belt-and-suspenders: ensure the profile row exists. The canonical guard
+  // is the on_auth_user_created trigger (see migration
+  // 20260413_auth_signup_profile_trigger.sql), but this upsert keeps the
+  // ledger working even in environments where the trigger has not yet been
+  // applied. Cheap (one round-trip) and idempotent.
+  await ensureProfile(serviceClient, params.userId);
   const { error } = await serviceClient.from("usage_events").insert({
     user_id: params.userId,
     action: params.action,
