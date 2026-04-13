@@ -650,8 +650,11 @@
 
   /* Their timeline — a separate element directly beneath the conveyor.
      Fades/slides in after "Your voice." has settled. Styled to match
-     the conveyor phrases so both lines read as a single pair. */
-  .onboarding-conveyor-tail {
+     the conveyor phrases so both lines read as a single pair.
+     Selector scoped to `.onboarding-step >` so the animation-delay
+     beats the top-level nth-child stagger rules (same specificity,
+     later in the file wins). */
+  .onboarding-step > .onboarding-conveyor-tail {
     font-family: var(--font-body);
     font-size: var(--text-body);
     font-style: italic;
