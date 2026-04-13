@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BreathStone } from '@/components/breath-stone';
 import { PageTransition, PrimaryButton, LinkButton } from '@/components/ui';
+import { MicIcon, MicStopIcon } from '@/components/icons';
 import { RecordingUpload, type Status as UploadStatus } from '@/components/audio/RecordingUpload';
 import { voiceTrainingScript, TOTAL_PROMPT_COUNT } from '@/lib/voice-training/script';
 import { resolvePrompt } from '@/lib/voice-training/resolver';
@@ -359,12 +360,7 @@ function MicPermissionView({
 
       <div className="record-stone">
         <div className="record-mic-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-mineral)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-            <line x1="12" y1="19" x2="12" y2="23" />
-            <line x1="8" y1="23" x2="16" y2="23" />
-          </svg>
+          <MicIcon size={28} stroke="var(--color-mineral)" />
         </div>
       </div>
 
@@ -633,16 +629,9 @@ function PromptView({
         aria-label={isRecording ? 'Stop recording' : 'Start recording'}
       >
         {isRecording ? (
-          <svg className="record-button__icon" width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
-            <rect x="2" y="2" width="16" height="16" rx="3" />
-          </svg>
+          <MicStopIcon className="record-button__icon" size={22} />
         ) : (
-          <svg className="record-button__icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-            <line x1="12" y1="19" x2="12" y2="23" />
-            <line x1="8" y1="23" x2="16" y2="23" />
-          </svg>
+          <MicIcon className="record-button__icon" size={26} />
         )}
       </button>
 
