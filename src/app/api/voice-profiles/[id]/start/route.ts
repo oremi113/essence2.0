@@ -17,12 +17,15 @@ import {
   VOICE_PROFILE_MAX_ATTEMPTS,
   isVoiceProfileRetryAllowed,
 } from "@/lib/voice-training/backoff";
+import { markVoiceProfileFailed } from "@/lib/voice-creation/mark-failed";
+import {
+  MIN_CLIP_COUNT,
+  MIN_TOTAL_BYTES,
+  downloadClipsForVoiceProfile,
+} from "@/lib/voice-creation/download-clips";
 
 export const maxDuration = 300; // 5 min (allow ElevenLabs + download time)
 
-const MIN_CLIP_COUNT = 10;
-/** Minimum total audio size (~1 min at low bitrate). */
-const MIN_TOTAL_BYTES = 100 * 1024; // 100 KB
 /** If still "processing" after this, treat as timed out so user can retry. */
 const STALE_PROCESSING_MS = 3 * 60 * 1000; // 3 min
 
@@ -109,17 +112,13 @@ export async function POST(
       const lastAttempt = profile.last_attempt_at ? new Date(profile.last_attempt_at).getTime() : 0;
       const elapsed = lastAttempt ? Date.now() - lastAttempt : STALE_PROCESSING_MS + 1;
       if (elapsed > STALE_PROCESSING_MS) {
-        await supabase
-          .from("voice_profiles")
-          .update({
-            status: "failed",
-            last_error_code: "TIMEOUT",
-            last_error_message: "Previous attempt timed out.",
-            last_error_at: new Date().toISOString(),
-          })
-          .eq("id", voiceProfileId)
-          .eq("user_id", user.id)
-          .eq("status", "processing"); // monotonic guard
+        await markVoiceProfileFailed(
+          supabase,
+          voiceProfileId,
+          user.id,
+          "TIMEOUT",
+          "Previous attempt timed out."
+        );
         return withRequestId(
           NextResponse.json({
             status: "failed",
@@ -283,26 +282,28 @@ export async function POST(
       meta: { clipCount: clipCount ?? 0, totalBytes: totalBytesFromDb },
     });
 
-    // Download clips from storage
-    const { data: clips, error: clipsError } = await supabase
-      .from("training_clips")
-      .select("id, storage_bucket, storage_path")
-      .eq("voice_profile_id", voiceProfileId)
-      .eq("status", "uploaded")
-      .order("created_at", { ascending: true });
+    // Download clips from storage and validate against the
+    // minimum-clip / minimum-bytes thresholds. The helper handles
+    // the loop + per-clip download error logging via callback;
+    // we map its discriminated result back into NextResponses here.
+    const downloadResult = await downloadClipsForVoiceProfile(
+      supabase,
+      service,
+      voiceProfileId,
+      (clipId, dlError) => {
+        logError({
+          event: "voice_create_clip_download_failed",
+          requestId,
+          userId: user.id,
+          voiceProfileId,
+          error: dlError,
+          meta: { clipId },
+        });
+      }
+    );
 
-    if (clipsError || !clips?.length) {
-      await supabase
-        .from("voice_profiles")
-        .update({
-          status: "failed",
-          last_error_code: "NO_CLIPS",
-          last_error_message: "No valid clips found",
-          last_error_at: new Date().toISOString(),
-        })
-        .eq("id", voiceProfileId)
-        .eq("user_id", user.id)
-        .eq("status", "processing"); // monotonic guard
+    if (downloadResult.kind === "no-clips") {
+      await markVoiceProfileFailed(supabase, voiceProfileId, user.id, "NO_CLIPS", "No valid clips found");
       await updateUsageEventOutcome(service, requestId, "error");
       return withRequestId(
         NextResponse.json({ status: "failed", error: "No valid clips found" }, { status: 500 }),
@@ -310,30 +311,14 @@ export async function POST(
       );
     }
 
-    const audioBlobs: Blob[] = [];
-    for (const clip of clips) {
-      const { data: blob, error: dlError } = await service.storage
-        .from(clip.storage_bucket)
-        .download(clip.storage_path);
-      if (dlError || !blob) {
-        logError({ event: "voice_create_clip_download_failed", requestId, userId: user.id, voiceProfileId, error: dlError, meta: { clipId: clip.id } });
-        continue;
-      }
-      audioBlobs.push(blob);
-    }
-
-    if (audioBlobs.length < MIN_CLIP_COUNT) {
-      await supabase
-        .from("voice_profiles")
-        .update({
-          status: "failed",
-          last_error_code: "DOWNLOAD_FAILED",
-          last_error_message: "Could not load enough clips from storage",
-          last_error_at: new Date().toISOString(),
-        })
-        .eq("id", voiceProfileId)
-        .eq("user_id", user.id)
-        .eq("status", "processing"); // monotonic guard
+    if (downloadResult.kind === "download-failed") {
+      await markVoiceProfileFailed(
+        supabase,
+        voiceProfileId,
+        user.id,
+        "DOWNLOAD_FAILED",
+        "Could not load enough clips from storage"
+      );
       await updateUsageEventOutcome(service, requestId, "error");
       return withRequestId(
         NextResponse.json({ status: "failed", error: "Could not load enough clips" }, { status: 500 }),
@@ -341,19 +326,14 @@ export async function POST(
       );
     }
 
-    const totalBytes = audioBlobs.reduce((sum, b) => sum + b.size, 0);
-    if (totalBytes < MIN_TOTAL_BYTES) {
-      await supabase
-        .from("voice_profiles")
-        .update({
-          status: "failed",
-          last_error_code: "CLIPS_TOO_SHORT",
-          last_error_message: `Total audio too short (${Math.round(totalBytes / 1024)} KB).`,
-          last_error_at: new Date().toISOString(),
-        })
-        .eq("id", voiceProfileId)
-        .eq("user_id", user.id)
-        .eq("status", "processing"); // monotonic guard
+    if (downloadResult.kind === "too-short") {
+      await markVoiceProfileFailed(
+        supabase,
+        voiceProfileId,
+        user.id,
+        "CLIPS_TOO_SHORT",
+        `Total audio too short (${Math.round(downloadResult.totalBytes / 1024)} KB).`
+      );
       await updateUsageEventOutcome(service, requestId, "error");
       return withRequestId(
         NextResponse.json(
@@ -367,6 +347,8 @@ export async function POST(
         requestId
       );
     }
+
+    const { blobs: audioBlobs, totalBytes } = downloadResult;
 
     // --- Call ElevenLabs ---
     // NEVER retry within the same request. If this times out or fails, mark failed and return.
@@ -433,18 +415,13 @@ export async function POST(
       meta: { ttsStatus: result.status },
     });
 
-    // Monotonic guard
-    await supabase
-      .from("voice_profiles")
-      .update({
-        status: "failed",
-        last_error_code: result.code ?? String(result.status),
-        last_error_message: safeMessage,
-        last_error_at: new Date().toISOString(),
-      })
-      .eq("id", voiceProfileId)
-      .eq("user_id", user.id)
-      .eq("status", "processing"); // monotonic guard
+    await markVoiceProfileFailed(
+      supabase,
+      voiceProfileId,
+      user.id,
+      result.code ?? String(result.status),
+      safeMessage
+    );
 
     await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
     const retryAllowed = (profile.attempt_count ?? 0) + 1 < VOICE_PROFILE_MAX_ATTEMPTS;
