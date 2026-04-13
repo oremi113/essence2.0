@@ -390,26 +390,6 @@ const CHECKLIST_ITEMS = [
 ];
 
 function ChecklistView({ onContinue }: { onContinue: () => void }) {
-  const [visibleCount, setVisibleCount] = useState(0);
-  const [ctaVisible, setCtaVisible] = useState(false);
-
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    CHECKLIST_ITEMS.forEach((_, i) => {
-      timers.push(setTimeout(
-        () => setVisibleCount((c) => Math.max(c, i + 1)),
-        TIMING.CHECKLIST_INITIAL_DELAY_MS + i * TIMING.CHECKLIST_ITEM_STAGGER_MS
-      ));
-    });
-    timers.push(setTimeout(
-      () => setCtaVisible(true),
-      TIMING.CHECKLIST_INITIAL_DELAY_MS
-        + CHECKLIST_ITEMS.length * TIMING.CHECKLIST_ITEM_STAGGER_MS
-        + TIMING.CHECKLIST_CTA_AFTER_ITEMS_MS
-    ));
-    return () => timers.forEach(clearTimeout);
-  }, []);
-
   return (
     <div className="record-step">
       <div className="record-eyebrow">QUICK CHECK</div>
@@ -421,17 +401,14 @@ function ChecklistView({ onContinue }: { onContinue: () => void }) {
 
       <div className="record-checklist">
         {CHECKLIST_ITEMS.map((text, i) => (
-          <div
-            key={i}
-            className={`record-checklist__item ${i < visibleCount ? 'record-checklist__item--visible' : ''}`}
-          >
+          <div key={i} className="record-checklist__item">
             <div className="record-checklist__icon">✓</div>
             <div className="record-checklist__text">{text}</div>
           </div>
         ))}
       </div>
 
-      <div className={`record-ctas ${ctaVisible ? 'record-ctas--visible' : 'record-ctas--hidden'}`}>
+      <div className="record-ctas">
         <PrimaryButton onClick={onContinue}>Begin</PrimaryButton>
       </div>
     </div>

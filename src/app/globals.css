@@ -317,6 +317,11 @@
   .page-transition > * > .record-microcopy { animation-delay: 320ms; }
   .page-transition > * > .record-checklist { animation-delay: 280ms; }
   .page-transition > * > .record-ctas { animation-delay: 380ms; }
+  /* Checklist view: CTA follows all items + extra beat. Higher specificity
+     than the generic rule above, so this wins only when .record-checklist
+     is present as a preceding sibling. Delay = initial(300) + 3×stagger(400)
+     + cta-beat(600) = 2100ms, matching the old setTimeout choreography. */
+  .page-transition > * > .record-checklist ~ .record-ctas { animation-delay: 2100ms; }
 
   @keyframes cinematicFadeIn {
     from { opacity: 0; transform: translateY(12px); }
@@ -2293,15 +2298,15 @@
     gap: var(--space-md);
     opacity: 0;
     transform: translateY(8px);
-    transition:
-      opacity var(--duration-small) var(--ease-essence),
-      transform 500ms var(--ease-essence);
+    animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(300ms + var(--checklist-index, 0) * 400ms);
   }
 
-  .record-checklist__item--visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  /* nth-child rules set --checklist-index (not animation-delay directly),
+     mirroring the onboarding --reveal-index pattern. */
+  .record-checklist__item:nth-child(1) { --checklist-index: 0; }
+  .record-checklist__item:nth-child(2) { --checklist-index: 1; }
+  .record-checklist__item:nth-child(3) { --checklist-index: 2; }
 
   .record-checklist__icon {
     width: 20px;
@@ -2347,6 +2352,11 @@
   @media (prefers-reduced-motion: reduce) {
     .record-waveform--active .record-waveform__bar,
     .record-button--recording {
+      animation: none;
+    }
+    .record-checklist__item {
+      opacity: 1;
+      transform: none;
       animation: none;
     }
   }
