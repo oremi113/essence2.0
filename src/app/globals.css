@@ -1566,12 +1566,16 @@
     border-top: 1px solid var(--color-surface-warm);
   }
 
-  .privacy-modal__commitment {
+  /* These overrides need higher specificity than `.privacy-modal__body p`
+     (0,1,1), so they're scoped under `.privacy-modal__body` to land at
+     (0,2,0). Without that, the body's `p` rule wins on color/text-align
+     and forces the use of !important. */
+  .privacy-modal__body .privacy-modal__commitment {
     font-family: var(--font-body);
     font-size: 16px;
     font-weight: 600;
     line-height: 1.5;
-    color: var(--color-text-primary) !important;
+    color: var(--color-text-primary);
     margin: 0;
   }
 
@@ -1581,25 +1585,25 @@
     text-underline-offset: 3px;
   }
 
-  .privacy-modal__proof {
+  .privacy-modal__body .privacy-modal__proof {
     font-family: var(--font-body);
     font-size: 14px;
     line-height: 1.6;
-    color: var(--color-text-tertiary) !important;
+    color: var(--color-text-tertiary);
     margin: 0;
   }
 
-  .privacy-modal__signature {
-    margin-top: auto !important;
+  .privacy-modal__body .privacy-modal__signature {
+    margin-top: auto;
     padding-top: 32px;
     border-top: 1px solid var(--color-surface-warm);
     font-family: var(--font-display);
     font-size: calc(var(--text-title) * 0.72);
     font-weight: 400;
-    font-style: normal !important;
+    font-style: normal;
     line-height: 1.5;
-    color: var(--color-text-primary) !important;
-    text-align: center !important;
+    color: var(--color-text-primary);
+    text-align: center;
   }
 
   @media (prefers-reduced-motion: reduce) {
