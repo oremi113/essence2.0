@@ -139,6 +139,11 @@ export type ResolverContext = {
   birthYear?: number;
   relationship?: string;
   now?: Date;
+  /** IANA time zone (e.g. "America/New_York"). When provided, the
+   *  timeOfDayName resolver reads the hour in this zone rather than the
+   *  caller's local zone — important because the resolver may run on a
+   *  server with a different clock than the user. */
+  timeZone?: string;
 };
 
 export type ResolvedPrompt = {

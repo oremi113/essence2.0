@@ -24,6 +24,25 @@ function getTimeOfDayKey(hour: number): TimeOfDayKey {
   return "lateNight"; // 21-4
 }
 
+/** Extract the hour (0-23) from `now` in the given IANA time zone, or the
+ *  caller's local zone if none is provided. Falls back to the local hour
+ *  if the time zone is invalid. */
+function getHourInZone(now: Date, timeZone: string | undefined): number {
+  if (!timeZone) return now.getHours();
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "numeric",
+      hour12: false,
+    }).formatToParts(now);
+    const hourPart = parts.find((p) => p.type === "hour")?.value;
+    const hour = hourPart ? parseInt(hourPart, 10) : NaN;
+    return Number.isFinite(hour) ? hour : now.getHours();
+  } catch {
+    return now.getHours();
+  }
+}
+
 /** Map a birth year to a generation decade key. */
 function getGenerationKey(birthYear: number | undefined): GenerationKey {
   if (birthYear == null) return "default";
@@ -108,7 +127,7 @@ export function resolvePrompt(
 
     switch (prompt.lineType) {
       case "timeOfDayName": {
-        const hour = (ctx.now ?? new Date()).getHours();
+        const hour = getHourInZone(ctx.now ?? new Date(), ctx.timeZone);
         const key = getTimeOfDayKey(hour);
         meta.timeOfDayKey = key;
         rawText = variantMap[key] ?? variantMap["morning"] ?? "";

@@ -17,6 +17,14 @@ import type { RecordScreenData } from './RecordScreen.types';
 // celebration = attach the metadata object; removing = delete it.
 // No more parallel lookup table to keep in sync.
 
+/** Compute the progress-bar fill percent (0–100) for a given prompt.
+ *  The current prompt contributes a full step only once it's been
+ *  recorded (hasStopped), so the bar advances only on successful save. */
+function progressPercent(promptIndex: number, hasStopped: boolean): number {
+  const completed = promptIndex + (hasStopped ? 1 : 0);
+  return (completed / TOTAL_PROMPT_COUNT) * 100;
+}
+
 // ─── VIEW MODE ─────────────────────────────────────────────────────────────
 type ViewMode =
   | { type: 'entry' }
@@ -82,23 +90,30 @@ export function RecordScreen({ data }: RecordScreenProps) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>(() => deriveInitialView(data));
 
-  // Build resolver context client-side
+  // Build resolver context client-side. timeZone is the user's IANA
+  // zone so the timeOfDayName resolver picks morning/afternoon/etc.
+  // from the user's wall-clock rather than the server's.
   const resolverContext: ResolverContext = useMemo(
     () => ({
       userName: data.displayName ?? undefined,
       city: data.city ?? undefined,
       birthYear: data.birthYear ?? undefined,
       relationship: data.relationship ?? undefined,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
     [data.displayName, data.city, data.birthYear, data.relationship]
   );
 
-  // Poll for ready status when processing
+  // Poll for ready status while we're on the working screen AND the
+  // server hasn't yet flagged the profile as ready. Including
+  // voiceProfileStatus in the deps ensures the interval tears down
+  // the moment the server flips, rather than running one more tick.
   useEffect(() => {
     if (view.type !== 'working') return;
+    if (data.voiceProfileStatus === 'ready') return;
     const interval = setInterval(() => router.refresh(), TIMING.WORKING_REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [view.type, router]);
+  }, [view.type, router, data.voiceProfileStatus]);
 
   // React to server-side status changes (from router.refresh).
   // Functional update + guard avoids the setState-in-effect lint and
@@ -623,7 +638,7 @@ function PromptView({
       <div className="record-progress-bar" aria-hidden="true">
         <div
           className="record-progress-bar__fill"
-          style={{ width: `${((promptIndex + (hasStopped ? 1 : 0)) / TOTAL_PROMPT_COUNT) * 100}%` }}
+          style={{ width: `${progressPercent(promptIndex, hasStopped)}%` }}
         />
       </div>
     </div>
