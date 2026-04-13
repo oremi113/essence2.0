@@ -29,6 +29,8 @@ export interface PlaybackController {
   stop: () => void;
   /** Clear the error banner without changing playback state. */
   clearError: () => void;
+  /** Re-attempt the last message the user tried to play. No-op if there isn't one. */
+  retry: () => void;
 }
 
 export function usePlaybackController(): PlaybackController {
@@ -37,6 +39,9 @@ export function usePlaybackController(): PlaybackController {
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Remember the last id we tried to play so the Retry button can
+  // replay it after a failure (which clears playingId in the catch).
+  const lastAttemptedIdRef = useRef<string | null>(null);
 
   const ensureAudioElement = useCallback((): HTMLAudioElement => {
     if (audioRef.current) return audioRef.current;
@@ -75,6 +80,7 @@ export function usePlaybackController(): PlaybackController {
         audioRef.current.src = "";
       }
 
+      lastAttemptedIdRef.current = messageId;
       setPlayingId(messageId);
       setIsPaused(false);
       setAudioLoading(true);
@@ -115,6 +121,13 @@ export function usePlaybackController(): PlaybackController {
 
   const clearError = useCallback(() => setAudioError(null), []);
 
+  const retry = useCallback(() => {
+    const id = lastAttemptedIdRef.current;
+    if (!id) return;
+    setAudioError(null);
+    play(id);
+  }, [play]);
+
   // Stop and detach on unmount so audio doesn't keep playing after nav.
   useEffect(() => {
     return () => {
@@ -125,5 +138,5 @@ export function usePlaybackController(): PlaybackController {
     };
   }, []);
 
-  return { playingId, isPaused, audioLoading, audioError, play, stop, clearError };
+  return { playingId, isPaused, audioLoading, audioError, play, stop, clearError, retry };
 }

@@ -133,10 +133,7 @@ export function MemoryShelf() {
           <span style={{ fontSize: 14, color: "#a33" }}>{playback.audioError}</span>
           <button
             type="button"
-            onClick={() => {
-              playback.clearError();
-              if (playback.playingId) playback.play(playback.playingId);
-            }}
+            onClick={playback.retry}
             style={{
               marginLeft: 12,
               padding: "4px 12px",
