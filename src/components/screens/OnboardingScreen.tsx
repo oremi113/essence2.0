@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
   type ReactNode,
@@ -93,6 +94,37 @@ interface OnboardingScreenProps {
   onComplete: OnCompleteOnboarding;
 }
 
+// ─── Profile form state ───────────────────────────────────────────
+// Single source of truth for the data the user enters across screens
+// 8–10. Reducer-based to avoid the prior pattern of six independent
+// useState hooks + ten onChange* callbacks drilled into Screen8.
+type ProfileFormField = 'firstName' | 'lastName' | 'dob' | 'city' | 'stateCode';
+
+interface ProfileFormState {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  city: string;
+  stateCode: string;
+  hasPhoto: boolean;
+}
+
+type ProfileFormAction =
+  | { type: 'set-field'; field: ProfileFormField; value: string }
+  | { type: 'toggle-photo' };
+
+function profileFormReducer(
+  state: ProfileFormState,
+  action: ProfileFormAction
+): ProfileFormState {
+  switch (action.type) {
+    case 'set-field':
+      return { ...state, [action.field]: action.value };
+    case 'toggle-photo':
+      return { ...state, hasPhoto: !state.hasPhoto };
+  }
+}
+
 export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
   // ─── Wizard state ──────────────────────────────────────────
   const [currentScreen, setCurrentScreen] = useState<number>(1);
@@ -101,12 +133,21 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
   // ─── Collected data (prefilled if user resumes) ────────────
-  const [firstName, setFirstName] = useState(data.firstName ?? '');
-  const [lastName, setLastName] = useState(data.lastName ?? '');
-  const [dob, setDob] = useState(data.dateOfBirth ?? '');
-  const [city, setCity] = useState(data.city ?? '');
-  const [stateCode, setStateCode] = useState(data.state ?? '');
-  const [hasPhoto, setHasPhoto] = useState(false);
+  const [form, dispatch] = useReducer(profileFormReducer, {
+    firstName: data.firstName ?? '',
+    lastName: data.lastName ?? '',
+    dob: data.dateOfBirth ?? '',
+    city: data.city ?? '',
+    stateCode: data.state ?? '',
+    hasPhoto: false,
+  });
+  const setField = useCallback(
+    (field: ProfileFormField, value: string) => {
+      dispatch({ type: 'set-field', field, value });
+    },
+    []
+  );
+  const togglePhoto = useCallback(() => dispatch({ type: 'toggle-photo' }), []);
 
   // ─── Navigation ────────────────────────────────────────────
   const goNext = useCallback(() => {
@@ -134,19 +175,19 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
     setIsSubmitting(true);
     try {
       await onComplete(
-        firstName.trim(),
-        lastName.trim(),
-        dob,
-        city.trim(),
-        stateCode,
-        hasPhoto
+        form.firstName.trim(),
+        form.lastName.trim(),
+        form.dob,
+        form.city.trim(),
+        form.stateCode,
+        form.hasPhoto
       );
       // Caller navigates. If it doesn't, we stay on screen 11.
     } catch (err) {
       console.error('[OnboardingScreen] onComplete failed:', err);
       setIsSubmitting(false);
     }
-  }, [isSubmitting, onComplete, firstName, lastName, dob, city, stateCode, hasPhoto]);
+  }, [isSubmitting, onComplete, form]);
 
   // ─── Render ────────────────────────────────────────────────
   const bg = SCREEN_CONFIG[currentScreen]?.bg ?? 'neutral';
@@ -184,35 +225,19 @@ export function OnboardingScreen({ data, onComplete }: OnboardingScreenProps) {
         {currentScreen === 6 && <Screen6 onNext={goNext} />}
         {currentScreen === 7 && <Screen7 onNext={goNext} />}
         {currentScreen === 8 && (
-          <Screen8
-            firstName={firstName}
-            lastName={lastName}
-            dob={dob}
-            city={city}
-            stateCode={stateCode}
-            onChangeFirstName={setFirstName}
-            onChangeLastName={setLastName}
-            onChangeDob={setDob}
-            onChangeCity={setCity}
-            onChangeState={setStateCode}
-            onNext={goNext}
-          />
+          <Screen8 form={form} onChange={setField} onNext={goNext} />
         )}
         {currentScreen === 9 && (
           <Screen9Review
-            firstName={firstName}
-            lastName={lastName}
-            dob={dob}
-            city={city}
-            stateCode={stateCode}
+            form={form}
             onEdit={() => goTo(8)}
             onNext={goNext}
           />
         )}
         {currentScreen === 10 && (
           <Screen10Photo
-            hasPhoto={hasPhoto}
-            onToggle={() => setHasPhoto((p) => !p)}
+            hasPhoto={form.hasPhoto}
+            onToggle={togglePhoto}
             onNext={goNext}
           />
         )}
@@ -646,28 +671,12 @@ function Screen7({ onNext }: { onNext: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Screen8({
-  firstName,
-  lastName,
-  dob,
-  city,
-  stateCode,
-  onChangeFirstName,
-  onChangeLastName,
-  onChangeDob,
-  onChangeCity,
-  onChangeState,
+  form,
+  onChange,
   onNext,
 }: {
-  firstName: string;
-  lastName: string;
-  dob: string;
-  city: string;
-  stateCode: string;
-  onChangeFirstName: (v: string) => void;
-  onChangeLastName: (v: string) => void;
-  onChangeDob: (v: string) => void;
-  onChangeCity: (v: string) => void;
-  onChangeState: (v: string) => void;
+  form: ProfileFormState;
+  onChange: (field: ProfileFormField, value: string) => void;
   onNext: () => void;
 }) {
   const firstRef = useRef<HTMLInputElement>(null);
@@ -678,6 +687,7 @@ function Screen8({
     return () => clearTimeout(t);
   }, []);
 
+  const { firstName, lastName, dob, city, stateCode } = form;
   const isValid =
     firstName.trim().length >= 1 &&
     lastName.trim().length >= 1 &&
@@ -706,7 +716,7 @@ function Screen8({
               type="text"
               className="onboarding-input"
               value={firstName}
-              onChange={(e) => onChangeFirstName(e.target.value)}
+              onChange={(e) => onChange('firstName', e.target.value)}
               placeholder="First"
               autoComplete="given-name"
               maxLength={50}
@@ -721,7 +731,7 @@ function Screen8({
               type="text"
               className="onboarding-input"
               value={lastName}
-              onChange={(e) => onChangeLastName(e.target.value)}
+              onChange={(e) => onChange('lastName', e.target.value)}
               placeholder="Last"
               autoComplete="family-name"
               maxLength={80}
@@ -738,7 +748,7 @@ function Screen8({
             type="date"
             className="onboarding-input"
             value={dob}
-            onChange={(e) => onChangeDob(e.target.value)}
+            onChange={(e) => onChange('dob', e.target.value)}
             max={new Date().toISOString().slice(0, 10)}
             min="1900-01-01"
           />
@@ -754,7 +764,7 @@ function Screen8({
               type="text"
               className="onboarding-input"
               value={city}
-              onChange={(e) => onChangeCity(e.target.value)}
+              onChange={(e) => onChange('city', e.target.value)}
               placeholder="Where you live"
               autoComplete="address-level2"
               maxLength={80}
@@ -768,7 +778,7 @@ function Screen8({
               id="onb-state"
               className="onboarding-input onboarding-input--select"
               value={stateCode}
-              onChange={(e) => onChangeState(e.target.value)}
+              onChange={(e) => onChange('stateCode', e.target.value)}
               autoComplete="address-level1"
             >
               <option value="">—</option>
@@ -796,22 +806,15 @@ function Screen8({
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Screen9Review({
-  firstName,
-  lastName,
-  dob,
-  city,
-  stateCode,
+  form,
   onEdit,
   onNext,
 }: {
-  firstName: string;
-  lastName: string;
-  dob: string;
-  city: string;
-  stateCode: string;
+  form: ProfileFormState;
   onEdit: () => void;
   onNext: () => void;
 }) {
+  const { firstName, lastName, dob, city, stateCode } = form;
   const dobDisplay = /^\d{4}-\d{2}-\d{2}$/.test(dob)
     ? `${parseInt(dob.slice(5, 7), 10)}/${parseInt(dob.slice(8, 10), 10)}/${dob.slice(0, 4)}`
     : '—';
