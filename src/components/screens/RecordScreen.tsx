@@ -6,7 +6,7 @@ import { BreathStone } from '@/components/breath-stone';
 import { PageTransition, PrimaryButton, LinkButton } from '@/components/ui';
 import { MicIcon, MicStopIcon } from '@/components/icons';
 import { RecordingUpload, type Status as UploadStatus } from '@/components/audio/RecordingUpload';
-import { voiceTrainingScript, TOTAL_PROMPT_COUNT } from '@/lib/voice-training/script';
+import { voiceTrainingScript, TOTAL_PROMPT_COUNT, getStageForPrompt, getStageStartIndex } from '@/lib/voice-training/script';
 import { resolvePrompt } from '@/lib/voice-training/resolver';
 import type { ResolverContext, PromptCelebration } from '@/lib/voice-training/types';
 import { TIMING } from '@/lib/config/timing';
@@ -19,18 +19,6 @@ const ALL_PROMPTS = voiceTrainingScript.flatMap((stage) => stage.prompts);
 // driven by the script itself — see VoicePrompt.celebration. Adding a
 // celebration = attach the metadata object; removing = delete it.
 // No more parallel lookup table to keep in sync.
-
-function getStageForPrompt(promptIndex: number): 1 | 2 | 3 {
-  if (promptIndex <= 4) return 1;
-  if (promptIndex <= 16) return 2;
-  return 3;
-}
-
-function getStageStartIndex(stage: 1 | 2 | 3): number {
-  if (stage === 1) return 0;
-  if (stage === 2) return 5;
-  return 17;
-}
 
 // ─── VIEW MODE ─────────────────────────────────────────────────────────────
 type ViewMode =

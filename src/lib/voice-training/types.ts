@@ -110,7 +110,11 @@ export type CompletionMessage = {
 };
 
 export type VoiceStage = {
-  stage: number;
+  stage: 1 | 2 | 3;
+  /** Zero-based index of the first prompt in this stage within the flat ALL_PROMPTS list. */
+  startIndex: number;
+  /** Zero-based index of the last prompt in this stage within the flat ALL_PROMPTS list. */
+  endIndex: number;
   title: string;
   description: string;
   estimatedTime: string;

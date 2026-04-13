@@ -13,10 +13,12 @@ export const TOTAL_PROMPT_COUNT = 25;
 
 export const voiceTrainingScript: VoiceStage[] = [
   // ===================================================================
-  // STAGE 1 — Quick Start: Let's Meet Your Voice (prompts 1-5)
+  // STAGE 1 — Quick Start: Let’s Meet Your Voice (prompts 1-5)
   // ===================================================================
   {
     stage: 1,
+    startIndex: 0,
+    endIndex: 4,
     title: "Quick Start - Let’s Meet Your Voice",
     description: "Record 5 warm greetings to start training your voice",
     estimatedTime: "3-4 minutes",
@@ -119,6 +121,8 @@ export const voiceTrainingScript: VoiceStage[] = [
   // ===================================================================
   {
     stage: 2,
+    startIndex: 5,
+    endIndex: 16,
     title: "Build Emotion - Capture Your Range",
     description: "Record 12 prompts with different emotions and stories",
     estimatedTime: "5-6 minutes",
@@ -319,6 +323,8 @@ export const voiceTrainingScript: VoiceStage[] = [
   // ===================================================================
   {
     stage: 3,
+    startIndex: 17,
+    endIndex: 24,
     title: "Final Touch - Complete Your Voice",
     description: "Record the final 8 prompts to finish your voice training",
     estimatedTime: "3-4 minutes",
@@ -475,3 +481,23 @@ export const voiceTrainingScript: VoiceStage[] = [
     },
   },
 ];
+
+// ─── STAGE BOUNDARY HELPERS ────────────────────────────────────────────────
+// Derived from script metadata — no hardcoded index ranges in components.
+
+/** Returns the stage number (1 | 2 | 3) for a zero-based prompt index. */
+export function getStageForPrompt(promptIndex: number): 1 | 2 | 3 {
+  for (const stage of voiceTrainingScript) {
+    if (promptIndex >= stage.startIndex && promptIndex <= stage.endIndex) {
+      return stage.stage;
+    }
+  }
+  // Fallback — should not happen with a well-formed script.
+  return 3;
+}
+
+/** Returns the zero-based start index of the given stage. */
+export function getStageStartIndex(stage: 1 | 2 | 3): number {
+  const found = voiceTrainingScript.find((s) => s.stage === stage);
+  return found?.startIndex ?? 0;
+}
