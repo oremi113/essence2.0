@@ -24,6 +24,19 @@ const LIST_LIMIT = 50;
 // GET — List messages (Memory Shelf)
 // ---------------------------------------------------------------------------
 
+/**
+ * Supabase relation joins return either an object or an array depending on
+ * the FK shape, and TS can't always infer them. This helper handles both
+ * shapes so the GET handler doesn't need an `as unknown as` cast.
+ */
+function extractRecipientName(rel: unknown): string | null {
+  if (!rel || typeof rel !== "object") return null;
+  const obj = Array.isArray(rel) ? rel[0] : rel;
+  if (!obj || typeof obj !== "object") return null;
+  const name = (obj as Record<string, unknown>).name;
+  return typeof name === "string" ? name : null;
+}
+
 export async function GET() {
   const requestId = generateRequestId();
   try {
@@ -66,8 +79,7 @@ export async function GET() {
           ? m.body_text.slice(0, 80) + "…"
           : m.body_text
         : null,
-      recipientName:
-        (m.recipients as unknown as { name: string } | null)?.name ?? null,
+      recipientName: extractRecipientName(m.recipients),
       createdAt: m.created_at,
     }));
 
@@ -84,6 +96,49 @@ export async function GET() {
 
 function sanitize(msg: string, max = 500): string {
   return String(msg).replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+// ---------------------------------------------------------------------------
+// Body parser — typed, throws AppError on invalid input. Centralized so the
+// POST handler doesn't need an unsafe `as` cast and downstream code gets
+// real types.
+// ---------------------------------------------------------------------------
+
+interface CreateMessageBody {
+  voiceProfileId: string;
+  promptText: string;
+  title?: string;
+  recipientId?: string;
+}
+
+function parseCreateMessageBody(raw: unknown): CreateMessageBody {
+  if (raw === null || typeof raw !== "object") {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid JSON body", 400, false);
+  }
+  const r = raw as Record<string, unknown>;
+
+  const voiceProfileId = typeof r.voiceProfileId === "string" ? r.voiceProfileId.trim() : "";
+  if (!voiceProfileId) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "voiceProfileId is required", 400, false);
+  }
+
+  const promptText = typeof r.promptText === "string" ? r.promptText : "";
+  if (!promptText.trim()) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "promptText is required", 400, false);
+  }
+  if (promptText.length > MAX_PROMPT_LENGTH) {
+    throw new AppError(
+      ErrorCode.VALIDATION_ERROR,
+      `promptText must be ${MAX_PROMPT_LENGTH} characters or fewer`,
+      400,
+      false
+    );
+  }
+
+  const title = typeof r.title === "string" ? r.title : undefined;
+  const recipientId = typeof r.recipientId === "string" ? r.recipientId : undefined;
+
+  return { voiceProfileId, promptText, title, recipientId };
 }
 
 export async function POST(request: Request) {
@@ -124,39 +179,9 @@ export async function POST(request: Request) {
     }
 
     // --- Parse + validate input ---
-    const body = await request.json().catch(() => null);
-    if (!body) {
-      return withRequestId(
-        NextResponse.json({ error: "Invalid JSON body", code: ErrorCode.VALIDATION_ERROR, retryable: false }, { status: 400 }),
-        requestId
-      );
-    }
-    const {
-      voiceProfileId,
-      promptText,
-      title,
-      recipientId,
-    } = body as {
-      voiceProfileId?: string;
-      promptText?: string;
-      title?: string;
-      recipientId?: string;
-    };
-
-    if (!voiceProfileId?.trim()) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, "voiceProfileId is required", 400, false);
-    }
-    if (!promptText?.trim()) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, "promptText is required", 400, false);
-    }
-    if (promptText.length > MAX_PROMPT_LENGTH) {
-      throw new AppError(
-        ErrorCode.VALIDATION_ERROR,
-        `promptText must be ${MAX_PROMPT_LENGTH} characters or fewer`,
-        400,
-        false
-      );
-    }
+    const rawBody = await request.json().catch(() => null);
+    const { voiceProfileId, promptText, title, recipientId } =
+      parseCreateMessageBody(rawBody);
 
     // --- Centralized guard: ownership + ready + vendor_voice_id + daily cap ---
     const service = createSupabaseServiceClient();
