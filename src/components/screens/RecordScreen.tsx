@@ -46,9 +46,9 @@ function deriveInitialView(data: RecordScreenData): ViewMode {
     return { type: 'ready' };
   if (data.clipsRecorded === 0)
     return { type: 'entry' };
-  if (data.clipsRecorded === 5)
+  if (data.clipsRecorded === getStageStartIndex(2))
     return { type: 'stage-intro', stage: 2 };
-  if (data.clipsRecorded === 17)
+  if (data.clipsRecorded === getStageStartIndex(3))
     return { type: 'stage-intro', stage: 3 };
   return { type: 'prompt', promptIndex: Math.min(data.clipsRecorded, TOTAL_PROMPT_COUNT - 1) };
 }
@@ -443,19 +443,19 @@ const STAGE_INTRO_CONFIG = {
   1: {
     title: 'Let’s start with simple moments.',
     subtitle: 'These five prompts establish your natural speaking rhythm.',
-    body: ['Speak naturally.', 'There are no wrong answers.'],
+    body: ['Take a breath. We’ll start here.'],
     cta: 'Begin Stage 1',
   },
   2: {
     title: 'Now we will explore deeper moments.',
     subtitle: 'These twelve prompts capture emotional range and personal stories.',
-    body: ['Take your time with each response.', 'These moments hold more of who you are.'],
+    body: ['Read at your own pace. Let the words land how they feel.'],
     cta: 'Continue',
   },
   3: {
     title: 'These final moments add richness.',
     subtitle: 'Eight prompts that capture expression, care, and continuity.',
-    body: ['These are the moments that give your voice its character.'],
+    body: ['Read like you mean it. You’re almost there.'],
     cta: 'Continue',
   },
 } as const;
@@ -577,7 +577,7 @@ function PromptView({
       : 'record-button';
 
   return (
-    <div className="record-step">
+    <div className={`record-step record-step--prompt-stage-${stage}`}>
       <div className="record-eyebrow">
         {isFinal ? 'FINAL MOMENT' : `MOMENT ${promptIndex + 1} OF ${TOTAL_PROMPT_COUNT}`}
       </div>

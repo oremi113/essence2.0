@@ -1,11 +1,8 @@
 /**
- * ESSENCE Voice Training Script — V2 (Phonetic Hardening Pass 1)
+ * ESSENCE Voice Training Script
  *
- * 25 prompts · 3 stages · all dynamic variants included.
- * Placeholders: {userName}, {city}
- *
- * Source of truth: ESSENCE_voice_training_script_V2.md
- * Do NOT edit prompt text here without updating the doc.
+ * Source of truth for the 25-prompt, 3-stage voice training flow.
+ * Placeholders: {userName}, {city}. Dynamic variants included.
  */
 import type { VoiceStage } from "./types";
 
@@ -29,7 +26,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 1,
         instruction:
-          "Start with a warm, natural greeting. Talk like you’re meeting a friend.",
+          "Speak naturally.",
         emotionalTone: "warm/welcoming",
         lineType: "timeOfDayName",
         line: {
@@ -56,7 +53,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 2,
         instruction:
-          "Talk about something simple that makes you happy. Keep it light and genuine.",
+          "Speak naturally.",
         emotionalTone: "content/happy",
         lineType: "simple",
         line: "You know what I secretly love? A big thunderstorm. When the sky goes dark in the middle of the afternoon and the wind picks up and you can just feel it coming. That first crack of thunder, the flash of lightning through the trees. Then the rain hits — just crashes down, all at once. I love sitting by the window and watching it. The streaks of water on the glass, the way everything outside looks blurred and strange. There’s something about a storm that makes you feel small, but in a good way. Like the world’s reminding you it’s bigger than your problems. I find that really comforting, actually.",
@@ -67,7 +64,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 3,
         instruction:
-          "Share a quick story about your day or week. Be casual and natural.",
+          "Speak naturally.",
         emotionalTone: "conversational",
         lineType: "city",
         line: "So this week has been pretty good, actually. I got out for a walk around {city}, which was nice. The weather’s been surprisingly nice, and it felt good to get some fresh air and stretch my legs. Nothing too exciting, just life. But sometimes those quiet, normal days are exactly what you need, you know?",
@@ -78,7 +75,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 4,
         instruction:
-          "Talk about a place you love. Let yourself get a little nostalgic.",
+          "Speak naturally.",
         emotionalTone: "reflective/warm",
         lineType: "city",
         line: "There’s this spot in {city} that I really love. It’s nothing fancy, just a quiet place where I can sit and think. Maybe it’s a shady park bench, maybe it’s a quiet coffee shop corner with a scratched-up table, doesn’t really matter. But when I’m there, everything just feels peaceful. Everyone needs a place like that, you know? Somewhere you can just breathe and be yourself.",
@@ -89,7 +86,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 5,
         instruction:
-          "End this first stage with encouragement. Sound warm and supportive.",
+          "Speak naturally.",
         emotionalTone: "encouraging/warm",
         lineType: "simple",
         line: "You know what? If you’re listening to this, I just want you to know something. Whatever you’re going through right now, you’re doing better than you think. I mean that. Life’s hard sometimes, and it’s exhausting, but you’re here. You’re still showing up. And that counts for something. So give yourself some credit, okay? You’ve earned it.",
@@ -133,7 +130,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 6,
         instruction:
-          "Share a childhood memory. Let yourself get nostalgic.",
+          "Let it feel real.",
         emotionalTone: "nostalgic/reflective",
         lineType: "generation",
         line: {
@@ -159,7 +156,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 7,
         instruction:
-          "Talk about someone who’s always been there for you. Get a little emotional.",
+          "Let it feel real.",
         emotionalTone: "grateful/emotional",
         lineType: "simple",
         line: "There’s this person in my life who’s always been there for me. Through the good times and the bad times, they never wavered. Never gave up on me, even when I probably gave them plenty of reasons to. They taught me what real loyalty looks like, what friendship actually means. I don’t know where I’d be without them. Honestly, I don’t even want to think about it.",
@@ -170,7 +167,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 8,
         instruction:
-          "Give advice to your younger self. Be honest and real.",
+          "Let it feel real.",
         emotionalTone: "wise/reflective",
         lineType: "generation",
         line: {
@@ -196,7 +193,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 9,
         instruction:
-          "Share a moment when you felt really proud of yourself.",
+          "Let it feel real.",
         emotionalTone: "proud/accomplished",
         lineType: "simple",
         line: "I remember this one time when I finally did something I’d been scared to do for years. And when it was done, when I’d actually pulled it off, I just stood there, struck silent, thinking, ‘I did it. I really did it.’ That feeling of realizing you’re stronger than you thought? Braver than you gave yourself credit for? That’s something you don’t forget. That stays with you.",
@@ -207,7 +204,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 10,
         instruction:
-          "Talk about what a perfect day looks like for you. Sound content and happy.",
+          "Let it feel real.",
         emotionalTone: "content/happy",
         lineType: "city",
         line: "My perfect day? It’s actually pretty simple. I’d wake up without an alarm, make a really good cup of coffee, and just take my time with breakfast. No rush, no stress. Then maybe take a walk around {city}, enjoy the weather, clear my head. Later, I’d spend time with people I love. Maybe cook a nice dinner together, nothing fancy. Just good food, good company, good conversation. That’s it. That’s my perfect day. What about you — what does yours look like?",
@@ -218,7 +215,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 11,
         instruction:
-          "Share something you’re genuinely grateful for. Mean it.",
+          "Let it feel real.",
         emotionalTone: "grateful/warm",
         lineType: "simple",
         line: "You know what I’m really grateful for? The people in my life who’ve stuck around. The ones who’ve seen me at my worst and didn’t run away. The ones who celebrate with me when things are good and stay close when things get strange and hard. That’s real. That’s what matters. And I don’t say it enough, but I’m grateful for every single one of them.",
@@ -229,7 +226,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 12,
         instruction:
-          "Share your secret for making something simple and delicious. Talk like you’re teaching someone you love.",
+          "Let it feel real.",
         emotionalTone: "warm/teaching",
         lineType: "simple",
         line: "You want to know my secret for a great breakfast? Start with fresh scrambled eggs. Crack three into a bowl, splash in some milk, just a little. Whisk it up until it’s smooth. Then get your skillet hot — not screaming hot, just sizzling. Drop in some butter, swirl it around, pour the eggs in, and stir them gently. Slowly. Don’t rush it. That’s the trick. Patience. Sprinkle a little salt, maybe some pepper, and you’ve got something special. Simple, but special. Just like the best things in life.",
@@ -247,7 +244,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 13,
         instruction:
-          "Talk about a time you were scared but did it anyway.",
+          "Let it feel real.",
         emotionalTone: "vulnerable/brave",
         lineType: "simple",
         line: "I remember being absolutely terrified before doing something I’d never done before. My hands were shaking, my chest was tight, my heart was pounding, and I kept thinking, ‘What if I fail? What if this goes horribly wrong?’ But I did it anyway. And you know what? It turned out okay. Not perfect, but okay. And I learned something important that day: Being scared doesn’t mean you can’t do it. It just means it matters.",
@@ -258,7 +255,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 14,
         instruction:
-          "Tell us about a time you got news that made you incredibly happy. Let the joy come through.",
+          "Let it feel real.",
         emotionalTone: "excited/joyful",
         lineType: "simple",
         line: "I’ll never forget getting news that completely knocked me sideways — in the best possible way. I just stood there for a second, trying to process it, and then this wave of joy hit me all at once. I grabbed the phone, started calling people, tripping over my words, laughing before I could even finish the sentence. That kind of happiness — the kind that just floods through you before you can even think — that’s the good stuff. That’s what life’s really about.",
@@ -269,7 +266,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 15,
         instruction:
-          "Share what you’ve learned about what really matters in life.",
+          "Let it feel real.",
         emotionalTone: "reflective/wise",
         lineType: "simple",
         line: "Here’s what I’ve figured out after all these years. What really matters isn’t the big stuff. It’s not the job title or the house or the car. It’s the people. It’s the moments. It’s the late-night conversations, the shared meals, the inside jokes. That’s what you remember. That’s what makes life worth living. The rest is just noise.",
@@ -280,7 +277,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 16,
         instruction:
-          "Tell someone you believe in them. Sound confident and warm.",
+          "Let it feel real.",
         emotionalTone: "encouraging/confident",
         lineType: "simple",
         line: "Hey, I want you to know something. I believe in you. I know you’re doubting yourself right now, wondering if you can do this, but I’ve seen what you’re capable of. You’re stronger than you think. You’ve got this. Even when it feels impossible, even when you want to give up, keep going. You’re going to make it. I know you are.",
@@ -291,7 +288,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 17,
         instruction:
-          "Share what you’ve learned about love over the years.",
+          "Let it feel real.",
         emotionalTone: "wise/warm",
         lineType: "simple",
         line: "Here’s what I’ve learned about love over the years. It’s not always fireworks and grand gestures. Most of the time, it’s quiet. It’s small, steady, and consistent. It’s showing up. It’s being there when it’s hard. It’s choosing each other, over and over again, even on the days when it’s not easy. The movies got it all wrong. Real love is in the everyday moments, the little things. That’s where the magic actually is.",
@@ -335,7 +332,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 18,
         instruction:
-          "Speak directly to the person you’re recording for. Be genuine and loving.",
+          "Read it the way you’d want it remembered.",
         emotionalTone: "loving/intimate",
         lineType: "relationship",
         line: {
@@ -361,7 +358,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 19,
         instruction:
-          "Say goodnight to the person you’re recording for. Speak softly, like they’re falling asleep.",
+          "Read it the way you’d want it remembered.",
         emotionalTone: "tender/intimate",
         lineType: "relationship",
         line: {
@@ -386,7 +383,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       // ---------------------------------------------------------------
       {
         id: 20,
-        instruction: "Talk about what home means to you.",
+        instruction: "Read it the way you’d want it remembered.",
         emotionalTone: "reflective/warm",
         lineType: "city",
         line: "When I think about home, it’s not really about a place. I mean, sure, I love {city}, but home is more than that. Home is where the people are. It’s that feeling when you walk in and everything just feels right. It’s where you can be yourself, completely, without any masks or pretending. That’s home. And I’m really lucky to have that.",
@@ -397,7 +394,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 21,
         instruction:
-          "Share a piece of simple wisdom. Keep it real.",
+          "Read it the way you’d want it remembered.",
         emotionalTone: "wise/warm",
         lineType: "simple",
         line: "Here’s something I wish someone had told me when I was younger. Be kind. To others, yes, but also to yourself. We’re all doing the best we can with what we have. Nobody’s perfect. We all mess up. And that’s okay. So be patient with yourself. Give yourself the same grace you’d give to someone you love. You deserve that too.",
@@ -408,7 +405,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 22,
         instruction:
-          "For voice quality: Count clearly and warmly, like teaching someone.",
+          "Read it the way you’d want it remembered.",
         emotionalTone: "teaching/warm",
         lineType: "simple",
         line: "Okay, let’s count together. Ready? One, two, three, four, five, six, seven, eight, nine, ten. Good! Now let’s go backwards. Ten, nine, eight, seven, six, five, four, three, two, one. Perfect! See? You’re really good at this. Want to try it one more time?",
@@ -419,7 +416,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 23,
         instruction:
-          "For voice quality: Say numbers, dates, and contact info clearly.",
+          "Read it the way you’d want it remembered.",
         emotionalTone: "clear/neutral",
         lineType: "city",
         line: "Just so you have my information: You can reach me at five-five-five, two-one-two, three-four-five-six. My address is four-twenty-seven Oak Street, apartment two-B, {city}. And today’s date is March fifteenth, two thousand twenty-five, around three-thirty in the afternoon.",
@@ -430,7 +427,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 24,
         instruction:
-          "Add a light moment of humor. Keep it natural.",
+          "Read it the way you’d want it remembered.",
         emotionalTone: "playful/light",
         lineType: "simple",
         line: "You know what always makes me laugh? When everything goes wrong at once. Like, you spill your coffee, and then you slip on it, and then your phone rings and you grab it with your wet hand and it flies across the room, and the dog thinks it’s a toy so now he’s running off with it, and you’re chasing the dog in your socks on a wet floor. And somehow nobody’s around to see any of it. Or worse — everyone is. What do you even do at that point? You just have to stand there and laugh. Because life is ridiculous, and so are we.",
@@ -441,7 +438,7 @@ export const voiceTrainingScript: VoiceStage[] = [
       {
         id: 25,
         instruction:
-          "End with a heartfelt, personalized goodbye. Make it count.",
+          "Read it the way you’d want it remembered.",
         emotionalTone: "loving/warm",
         lineType: "relationshipGoodbye",
         line: {

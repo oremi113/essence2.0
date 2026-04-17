@@ -1682,6 +1682,14 @@
     text-align: center;
   }
 
+  /* Prompt-screen stage backgrounds — the recording stage is 75% of the
+     user's session, so the page itself (not just the card) needs to
+     participate in the warmth ramp. Each stage nudges the screen one
+     step up; the card always sits one stop warmer than its screen. */
+  .record-step--prompt-stage-1 { background-color: var(--color-bg-warm-1); }
+  .record-step--prompt-stage-2 { background-color: var(--color-bg-warm-2); }
+  .record-step--prompt-stage-3 { background-color: var(--color-bg-warm-phase); }
+
   /* ─── Typography ──────────────────────────────────────────── */
 
   .record-eyebrow {
@@ -2134,19 +2142,21 @@
     width: 88px;
     height: 88px;
     border-radius: var(--radius-full);
+    /* Warm-mineral resting state — the hero action earns its place on a
+       warm page. Highlight carries blue-warmth so the sphere reads as
+       "attentive, waiting" instead of "inactive." The resting →
+       recording tap becomes mineral → terracotta (a meaningful hue
+       shift), not just a value change. */
     background: radial-gradient(
       circle at 30% 28%,
-      #B0B4BA,
-      #9EA3AA 20%,
-      #8A8F96 40%,
-      #7A8088 60%,
-      #6B7078 80%,
-      #5E636A 100%
+      var(--color-mineral-light, #6B8A9B),
+      var(--color-mineral) 60%,
+      var(--color-mineral-dark, #334B5A) 100%
     );
     border: none;
     box-shadow:
-      0 12px 28px rgba(122, 128, 136, 0.3),
-      inset 8px 8px 16px rgba(251, 248, 244, 0.2),
+      0 12px 28px rgba(74, 107, 126, 0.28),
+      inset 8px 8px 16px rgba(251, 248, 244, 0.18),
       inset -8px -8px 16px rgba(28, 26, 24, 0.2);
     cursor: pointer;
     position: relative;
