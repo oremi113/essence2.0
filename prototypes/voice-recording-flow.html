@@ -1,0 +1,2513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Voice Recording Flow — Essence prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Session 5 design conventions — locked-in rules this file captures:
+
+   • PrimaryButton — one committed forward action per screen (mineral fill,
+     sentence case, 17px/600, full-width). Never all-caps.
+   • LinkButton — opt-out / skip / back / pause / dismiss (graphite, 15px/500).
+     Default for any non-forward action.
+   • Copy tone — sentence case everywhere except eyebrow labels ("STEP 2",
+     "MOMENT 5 OF 25"). Warm, inviting phrasing.
+   • Italic is reserved for human asides / coaching notes (instruction,
+     rerecord-hint). Functional microcopy like "11–14 minutes" is non-italic.
+   • Red = var(--color-status-error) (#9C3528). Never raw #C84545.
+   • Inactive text uses var(--color-text-secondary) (#6B6B6B) — not tertiary
+     (#ADA9A5, which fails contrast for small elements).
+   • Screen titles use var(--text-title) = 28px (Spectral 600 / line 1.4) —
+     NOT --text-h1 (36px).
+   • Floating elements (stone, record button) need a ground shadow below.
+   • Stone gradients use a top-left light source at 28% offset.
+   • Button container (.record-ctas) must have width: 100% — otherwise
+     buttons collapse under align-items: center.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Design tokens — verbatim from src/app/globals.css @theme ─────────────── */
+:root {
+  --color-bg-neutral:     #FBF8F4;
+  --color-bg-warm-phase:  #F2EDE4;
+  --color-bg-warm-1:      #F9F4ED;
+  --color-bg-warm-2:      #F6F0E5;
+  --color-bg-gold:        #F2E8D6;
+  --color-bg-rich:        #EDE3D0;
+  --color-bg-primary:     #FBF8F4;
+  --color-surface-card:   #F6F0E5;
+  --color-surface-warm:   #EDE3D0;
+  --color-surface-honey:  #F2E8D6;
+
+  --color-mineral:        #7A8088;
+  --color-mineral-dark:   #656B73;
+
+  --color-text-primary:   #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary:  #ADA9A5;
+
+  --color-status-error:   #9C3528;
+  --color-status-warning: #8A5A1E;
+  --color-status-success: #4A7A68;
+
+  --color-border:         rgba(0, 0, 0, 0.06);
+  --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:            0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-mineral:       0 4px 12px rgba(122, 128, 136, 0.3);
+  --shadow-terracotta:    0 4px 12px rgba(156, 53, 40, 0.3);  /* anchored on --color-status-error */
+
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-display: 48px;
+  --text-h1:      36px;
+  --text-h2:      28px;
+  --text-h3:      20px;
+  --text-title:        28px;
+  --line-height-title: 1.4;
+  --text-body-lg: 18px;
+  --text-body:    16px;
+  --text-ui:      15px;
+  --text-small:   14px;
+  --text-caption: 12px;
+
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   12px;
+  --space-lg:   16px;
+  --space-xl:   24px;
+  --space-2xl:  32px;
+  --space-3xl:  40px;
+  --space-4xl:  48px;
+
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-breath:  cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-press:   cubic-bezier(0.2, 0.0, 0.0, 1);
+  /* Cinematic screen entrance — earns its own curve because every page
+     and every staggered child on a page uses it. Distinct from ease-essence
+     (which is the universal state-transition curve). Not yet in the repo;
+     propose upstreaming alongside --duration-page. */
+  --ease-page:    cubic-bezier(0.22, 1, 0.36, 1);
+
+  --duration-micro:  200ms;
+  --duration-small:  400ms;
+  --duration-medium: 800ms;
+  --duration-large:  1200ms;
+  --duration-breath: 3000ms;
+  /* Page-level transitions — 700ms is the signature screen-entrance length
+     the whole flow is composed on top of. Propose upstreaming. */
+  --duration-page:       700ms;
+  /* Ceremonial one-shots — shimmer pulse, celebration swells. Long enough
+     to feel ritual, short enough not to drag. Propose upstreaming. */
+  --duration-ceremonial: 2000ms;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
+html {
+  background-color: #FBF8F4;
+  color: #1C1A18;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  /* PROTOTYPE-ONLY — phone-bezel simulation so the phone frame reads as a
+     device against dev chrome. DO NOT carry this into React. In the real
+     app, body must be var(--color-bg-neutral) — the page fills the viewport
+     and any dark background here causes flash-of-dark on first paint. */
+  background: #1E1B18;
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  padding: 24px 12px 64px;
+}
+button, a, [role="button"] { min-height: 44px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dev chrome — stage navigator (sits outside the phone frame)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.chrome {
+  max-width: 520px;
+  margin: 0 auto 18px;
+  color: rgba(255,255,255,0.85);
+}
+.chrome__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-surface-card);
+  margin: 0 0 4px;
+}
+.chrome__hint { color: rgba(255,255,255,0.5); font-size: 12px; margin: 0 0 14px; }
+.stage-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+}
+.stage-nav__btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.stage-nav__btn:hover { background: rgba(255,255,255,0.08); }
+.stage-nav__label {
+  flex: 1; text-align: center; font-weight: 600;
+  color: var(--color-surface-card); font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.stage-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.stage-pill {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 28px;
+}
+.stage-pill--active { background: #F5F0EA; color: #1C1A18; border-color: #F5F0EA; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Phone frame
+   ═══════════════════════════════════════════════════════════════════════════ */
+.phone {
+  max-width: 390px;
+  height: 812px;
+  margin: 0 auto;
+  background: var(--color-bg-primary);
+  border-radius: 40px;
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 24px 56px rgba(0,0,0,0.45),
+    0 0 0 6px #14110F,
+    0 0 0 7px rgba(255,255,255,0.04);
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--color-bg-primary);
+}
+.screen--active { display: flex; }
+.screen--warm   { background: var(--color-bg-warm-phase); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PageTransition + cinematic staggered reveal
+   ═══════════════════════════════════════════════════════════════════════════ */
+.page-transition {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  animation: pt-fade var(--duration-page) var(--ease-essence) both;
+}
+@keyframes pt-fade {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.page-transition > * > .record-eyebrow,
+.page-transition > * > .record-title,
+.page-transition > * > .record-subtitle,
+.page-transition > * > .record-instruction,
+.page-transition > * > .record-prompt-card,
+.page-transition > * > .record-stage-map,
+.page-transition > * > .record-stone,
+.page-transition > * > .record-ctas,
+.page-transition > * > .record-waveform,
+.page-transition > * > .record-button,
+.page-transition > * > .record-label,
+.page-transition > * > .record-timer,
+.page-transition > * > .record-rerecord-hint,
+.page-transition > * > .record-body,
+.page-transition > * > .record-microcopy,
+.page-transition > * > .record-stage-badge,
+.page-transition > * > .record-celebration-body,
+.page-transition > * > .record-checklist {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: cinematicFadeIn var(--duration-page) var(--ease-page) both;
+}
+.page-transition > * > .record-eyebrow       { animation-delay: 100ms; }
+.page-transition > * > .record-stage-badge   { animation-delay: 120ms; }
+.page-transition > * > .record-title         { animation-delay: 160ms; }
+.page-transition > * > .record-subtitle      { animation-delay: 200ms; }
+.page-transition > * > .record-instruction   { animation-delay: 220ms; }
+.page-transition > * > .record-prompt-card   { animation-delay: 260ms; }
+.page-transition > * > .record-stage-map     { animation-delay: 280ms; }
+.page-transition > * > .record-stone         { animation-delay: 340ms; }
+.page-transition > * > .record-waveform      { animation-delay: 400ms; }
+.page-transition > * > .record-button        { animation-delay: 440ms; }
+.page-transition > * > .record-label         { animation-delay: 500ms; }
+.page-transition > * > .record-timer         { animation-delay: 540ms; }
+.page-transition > * > .record-rerecord-hint { animation-delay: 580ms; }
+.page-transition > * > .record-body          { animation-delay: 300ms; }
+.page-transition > * > .record-microcopy     { animation-delay: 340ms; }
+.page-transition > * > .record-celebration-body { animation-delay: 300ms; }
+.page-transition > * > .record-checklist     { animation-delay: 260ms; }
+.page-transition > * > .record-ctas          { animation-delay: 620ms; }
+@keyframes cinematicFadeIn {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Record screen — verbatim from src/app/globals.css .record-* block
+   ═══════════════════════════════════════════════════════════════════════════ */
+.record-step {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2xl) var(--space-xl) var(--space-2xl);
+  min-height: 100%;
+}
+.record-step--centered {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding-block: 60px;
+}
+.record-step--celebration { align-items: center; text-align: center; }
+
+.record-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-bottom: var(--space-md);
+}
+.record-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: var(--line-height-title);
+  text-align: center;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--space-md);
+}
+.record-title--weight-400 { font-weight: 400; }
+.record-title--weight-500 { font-weight: 500; }
+.record-subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  text-align: center;
+  max-width: 280px;
+  margin: 0 auto var(--space-xl);
+}
+.record-subtitle--italic { font-style: italic; }
+
+.record-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+.record-body p {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: 0;
+}
+.record-microcopy {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-top: var(--space-xl);
+}
+
+.record-celebration-body {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: 0 0 var(--space-xs);
+}
+.record-stage-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-lg);
+  background: var(--color-surface-warm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: var(--radius-pill);
+  margin-bottom: var(--space-lg);
+  align-self: center;
+}
+
+/* ─── Stone container (hosts the canvas BreathStone) ─────────────────────── */
+.record-stone {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  margin-block: var(--space-xl);
+  position: relative;
+}
+.record-stone::after {
+  content: '';
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 12px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.07), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+canvas.breath-stone {
+  display: block;
+  -webkit-mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
+          mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
+}
+
+/* Celebrate overlays */
+.record-stone--celebrate { position: relative; }
+.record-stone--celebrate .celebrate-shimmer {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 260px; height: 260px;
+  transform: translate(-50%, -50%) scale(0.85);
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(
+    circle,
+    transparent 35%,
+    rgba(232, 220, 200, 0.55) 52%,
+    rgba(232, 220, 200, 0.15) 68%,
+    transparent 80%
+  );
+  animation: shimmer-pulse-enhanced var(--duration-ceremonial) var(--ease-essence) both;
+  pointer-events: none;
+  filter: blur(4px);
+}
+@keyframes shimmer-pulse-enhanced {
+  0%   { opacity: 0;    transform: translate(-50%, -50%) scale(0.85); }
+  22%  { opacity: 1;    transform: translate(-50%, -50%) scale(1.12); }
+  45%  { opacity: 0.15; transform: translate(-50%, -50%) scale(1.30); }
+  65%  { opacity: 0.85; transform: translate(-50%, -50%) scale(1.20); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.45); }
+}
+.record-stone--celebrate .celebrate-specks {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 6px; height: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  /* 4s is the designed duration for this ceremonial one-shot overlay — the
+     five diagonal specks fade in, hold, and fade out over the full celebration
+     moment. Off-token intentionally: no duration token matches, and the value
+     is composed with shimmer-pulse-enhanced (2s) to produce the layered
+     celebration timing. */
+  animation: light-specks 4s var(--ease-essence) both;
+  pointer-events: none;
+}
+@keyframes light-specks {
+  0%   { box-shadow: 0 0 0 0 rgba(232, 220, 200, 0); }
+  45%, 60% {
+    box-shadow:
+      -95px -70px 6px 2px rgba(232, 220, 200, 0.65),
+       70px -95px 6px 2px rgba(232, 220, 200, 0.55),
+      -70px  95px 6px 2px rgba(232, 220, 200, 0.45),
+       95px  70px 6px 2px rgba(232, 220, 200, 0.55),
+        0px -115px 6px 2px rgba(232, 220, 200, 0.4);
+  }
+  100% { box-shadow: 0 0 0 0 rgba(232, 220, 200, 0); }
+}
+
+/* ─── CTAs ───────────────────────────────────────────────────────────────── */
+.record-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: auto;
+  padding-top: var(--space-xl);
+  width: 100%;
+}
+
+/* ─── Stage Map ──────────────────────────────────────────────────────────── */
+.record-stage-map {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  padding: var(--space-md) var(--space-2xl) var(--space-sm);
+  width: 100%;
+}
+.record-stage-map__segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+.record-stage-map__segment:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-surface-warm);
+  z-index: 0;
+}
+.record-stage-map__segment--completed:not(:last-child)::after {
+  background: var(--color-mineral);
+}
+.record-stage-map__node {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  font-weight: 600;
+  z-index: 1;
+  transition: all var(--duration-small) var(--ease-essence);
+}
+.record-stage-map__node--upcoming {
+  background: var(--color-surface-warm);
+  color: var(--color-text-secondary);
+}
+.record-stage-map__node--current {
+  background: var(--color-mineral-dark);
+  color: var(--color-bg-primary);
+  transform: scale(1.15);
+}
+.record-stage-map__node--completed {
+  background: var(--color-mineral);
+  color: var(--color-bg-primary);
+}
+.record-stage-map__label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: var(--space-sm);
+}
+.record-stage-map__segment--current .record-stage-map__label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 2px solid var(--color-mineral);
+  padding-bottom: 2px;
+}
+
+/* ─── Prompt card ────────────────────────────────────────────────────────── */
+.record-prompt-card {
+  background: var(--color-bg-warm-2);
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  margin: 0 0 40px;
+  position: relative;
+  overflow: hidden;
+}
+.record-prompt-card--stage-2 { background: var(--color-bg-gold); }
+.record-prompt-card--stage-3 { background: var(--color-bg-rich); }
+.record-prompt-card__text {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.record-instruction {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+/* ─── Timer + hints ──────────────────────────────────────────────────────── */
+.record-timer {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-top: 12px;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transition: opacity var(--duration-micro) var(--ease-essence);
+}
+.record-timer--visible { opacity: 1; }
+.record-rerecord-hint {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-top: 8px;
+  font-style: italic;
+}
+.record-mic-hint {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* ─── Progress bar (fixed to bottom of phone frame) ──────────────────────── */
+.record-progress-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--color-surface-warm);
+  z-index: 100;
+  pointer-events: none;
+}
+.record-progress-bar__fill {
+  height: 100%;
+  background: var(--color-mineral);
+  transition: width var(--duration-small) var(--ease-essence);
+}
+
+/* ─── Waveform ───────────────────────────────────────────────────────────── */
+.record-waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 24px;
+  width: 88px;
+  margin: 0 auto var(--space-lg);
+  opacity: 0;
+  transition: opacity var(--duration-small) var(--ease-essence);
+}
+.record-waveform--active { opacity: 1; }
+.record-waveform__bar {
+  width: 3px;
+  height: 6px;
+  flex: 1;
+  max-width: 4px;
+  background: var(--color-surface-warm);
+  border-radius: 2px;
+  transform-origin: center;
+  /* 100ms is real-time audio response, deliberately below --duration-micro
+     (200ms). Each bar snaps to the volume envelope of the live waveform —
+     tokenizing would introduce perceptible lag between voice and bar. */
+  transition: height 100ms ease-out;
+}
+.record-waveform--active .record-waveform__bar {
+  background: var(--color-mineral);
+  /* Ambient infinite loop — off-token intentionally. Loops aren't
+     state transitions, and the bar bounce cadence (1.2s peak-to-peak)
+     is tuned to sit just above a resting breath pulse. */
+  animation: record-waveform-bounce 1.2s ease-in-out infinite;
+}
+@keyframes record-waveform-bounce {
+  0%, 100% { height: 6px; }
+  50%      { height: 22px; }
+}
+
+/* ─── Record button ──────────────────────────────────────────────────────── */
+.record-button {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle at 30% 28%,
+    #B0B4BA,
+    #9EA3AA 20%,
+    #8A8F96 40%,
+    #7A8088 60%,
+    #6B7078 80%,
+    #5E636A 100%
+  );
+  border: none;
+  box-shadow:
+    0 12px 28px rgba(122, 128, 136, 0.3),
+    inset 8px 8px 16px rgba(251, 248, 244, 0.2),
+    inset -8px -8px 16px rgba(28, 26, 24, 0.2);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--duration-micro) var(--ease-breath);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--space-md) auto var(--space-sm);
+}
+.record-button::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 10px;
+  background: radial-gradient(ellipse, rgba(122, 128, 136, 0.3), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.record-button:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 14px 32px rgba(122, 128, 136, 0.38),
+    inset 8px 8px 16px rgba(251, 248, 244, 0.2),
+    inset -8px -8px 16px rgba(28, 26, 24, 0.2);
+}
+.record-button__icon { color: #FFFFFF; transition: all var(--duration-micro) var(--ease-essence); display: block; }
+
+.record-button--recording {
+  /* Terracotta scale derived from --color-status-error (#9C3528).
+     Middle stop IS the token value. Lighter stops = brighter terracotta,
+     darker stops = deeper terracotta — one hue family anchored on the token. */
+  background: radial-gradient(
+    circle at 28% 28%,
+    #C85A4D,
+    #B8493D 20%,
+    #9C3528 45%,
+    #823024 70%,
+    #6A2820 100%
+  );
+  box-shadow:
+    var(--shadow-terracotta),
+    inset 8px 8px 16px rgba(210, 130, 110, 0.15),
+    inset -8px -8px 16px rgba(80, 28, 20, 0.25);
+  /* Ambient infinite loop while recording — off-token intentionally.
+     2.5s peak-to-peak reads as a deliberate, slow pulse; any faster feels
+     anxious, any slower feels dead. Loops are not state transitions. */
+  animation: record-pulse 2500ms ease-in-out infinite;
+}
+@keyframes record-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      var(--shadow-terracotta),
+      inset 8px 8px 16px rgba(210, 130, 110, 0.15),
+      inset -8px -8px 16px rgba(80, 28, 20, 0.25);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow:
+      0 6px 16px rgba(156, 53, 40, 0.4),
+      inset 8px 8px 16px rgba(210, 130, 110, 0.15),
+      inset -8px -8px 16px rgba(80, 28, 20, 0.25);
+  }
+}
+
+.record-button--finished {
+  background: radial-gradient(
+    circle at 30% 28%,
+    #6EAA80,
+    #5E9A70 20%,
+    #4A7A5B 50%,
+    #3E6A4D 100%
+  );
+  animation: none;
+  pointer-events: none;
+  box-shadow:
+    0 12px 28px rgba(74, 122, 91, 0.3),
+    inset 8px 8px 16px rgba(251, 248, 244, 0.15),
+    inset -8px -8px 16px rgba(28, 26, 24, 0.15);
+}
+.record-button--uploading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ─── Record label ───────────────────────────────────────────────────────── */
+.record-label {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  transition: color var(--duration-micro) var(--ease-essence);
+  letter-spacing: 0.02em;
+  margin-top: 16px;
+}
+.record-label--recording { color: var(--color-status-error); }
+.record-label--saving    { color: var(--color-text-secondary); }
+.record-label--saved     { color: var(--color-status-success); }
+.record-label--error     { color: var(--color-status-error); }
+
+/* ─── Checklist ──────────────────────────────────────────────────────────── */
+.record-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 248, 244, 0.5),
+    rgba(245, 240, 234, 0.7)
+  );
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-2xl);
+  margin: 0 var(--space-lg);
+}
+.record-checklist__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  opacity: 0;
+  transform: translateY(8px);
+  animation: onb-reveal var(--duration-page) var(--ease-page) both;
+  animation-delay: calc(300ms + var(--checklist-index, 0) * 400ms);
+}
+@keyframes onb-reveal {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.record-checklist__item:nth-child(1) { --checklist-index: 0; }
+.record-checklist__item:nth-child(2) { --checklist-index: 1; }
+.record-checklist__item:nth-child(3) { --checklist-index: 2; }
+.record-checklist__icon {
+  width: 20px; height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-mineral);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+  color: var(--color-bg-primary);
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+.record-checklist__text {
+  font-family: var(--font-body);
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.record-mic-icon {
+  width: 64px; height: 64px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    135deg,
+    rgba(122, 128, 136, 0.1),
+    rgba(232, 220, 200, 0.2)
+  );
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 30px rgba(232, 220, 200, 0.3);
+  color: var(--color-mineral);
+  /* Ambient loop — reads as "waiting, listening for you." Glow and scale
+     breathe on the shared --duration-breath (3s) cadence so the icon sits
+     in the same rhythm as the stone elsewhere in the flow. Off-token on
+     the animation duration-keyword because ambient loops are exempt. */
+  animation: mic-icon-breath 3s ease-in-out infinite;
+}
+@keyframes mic-icon-breath {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 28px rgba(232, 220, 200, 0.22);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 42px rgba(232, 220, 200, 0.40);
+  }
+}
+
+/* ─── Reduced motion — accessibility rule, mirrors @layer base ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .record-waveform--active .record-waveform__bar { height: 12px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Buttons — verbatim from .btn-primary / .btn-link / .btn-secondary
+   ═══════════════════════════════════════════════════════════════════════════ */
+.btn--full { width: 100%; }
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 16px 24px;
+  background-color: var(--color-mineral);
+  color: var(--color-bg-primary);
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: normal;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-micro) var(--ease-essence),
+    transform        var(--duration-micro) var(--ease-essence),
+    box-shadow       var(--duration-micro) var(--ease-essence);
+}
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-mineral-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 16px 24px;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-micro) var(--ease-essence);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
+}
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  border: none;
+  padding: 12px;
+  cursor: pointer;
+  transition: color var(--duration-micro) var(--ease-essence);
+}
+.btn-link:hover:not(:disabled) { color: var(--color-text-primary); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Design system reference — sits below the phone frame.
+   Captures every state/variant referenced by this flow, so re-opening
+   this HTML is sufficient to reconstruct the design system.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.ds-ref {
+  max-width: 920px;
+  margin: 56px auto 24px;
+  color: var(--color-surface-card);
+  font-family: var(--font-body);
+}
+.ds-ref h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--color-surface-card);
+}
+.ds-ref__lede {
+  color: rgba(255,255,255,0.55);
+  font-size: 13px;
+  margin: 0 0 28px;
+  max-width: 56ch;
+}
+.ds-ref h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 32px 0 12px;
+  color: rgba(255,255,255,0.92);
+}
+.ds-ref p.ds-note {
+  color: rgba(255,255,255,0.55);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: -6px 0 14px;
+  max-width: 56ch;
+}
+.ds-card {
+  background: var(--color-bg-primary);
+  border-radius: 16px;
+  padding: 24px;
+  color: var(--color-text-primary);
+}
+.ds-card--warm { background: var(--color-bg-warm-phase); }
+.ds-card--dark {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--color-surface-card);
+}
+
+/* Stone grid */
+.ds-stone-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.ds-stone-cell {
+  background: var(--color-bg-primary);
+  border-radius: 14px;
+  padding: 16px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ds-stone-cell__label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.ds-stone-cell__name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+.ds-stone-cell__desc {
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: 0;
+  max-width: 22ch;
+}
+
+/* Button + label rows */
+.ds-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.ds-record-btn-cell {
+  background: var(--color-bg-primary);
+  border-radius: 14px;
+  padding: 28px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ds-record-btn-cell__label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-top: 8px;
+}
+.ds-label-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--color-bg-primary);
+  padding: 18px 20px;
+  border-radius: 14px;
+}
+.ds-label-row__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 6px 0;
+}
+.ds-label-row__item + .ds-label-row__item { border-top: 1px dashed var(--color-border); padding-top: 12px; }
+.ds-label-row__name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* Prompt card stack */
+.ds-prompt-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.ds-prompt-stack .record-prompt-card { margin: 0; }
+
+/* Typography + palette */
+.ds-type {
+  background: var(--color-bg-primary);
+  padding: 24px;
+  border-radius: 14px;
+}
+.ds-type__row { display: flex; align-items: baseline; gap: 16px; padding: 10px 0; border-top: 1px dashed var(--color-border); }
+.ds-type__row:first-child { border-top: none; }
+.ds-type__role {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  min-width: 130px;
+}
+.ds-palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+.ds-swatch {
+  background: var(--color-bg-primary);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.ds-swatch__chip { height: 56px; }
+.ds-swatch__meta { padding: 10px 12px 12px; }
+.ds-swatch__name {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+.ds-swatch__hex {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin: 2px 0 0;
+}
+
+/* ─── Pass 2 omissions block ─────────────────────────────────────────────── */
+.ds-gaps {
+  max-width: 920px;
+  margin: 48px auto 32px;
+  color: var(--color-surface-card);
+  font-family: var(--font-body);
+  background: rgba(156, 53, 40, 0.06);
+  border: 1px solid rgba(156, 53, 40, 0.25);
+  border-radius: 16px;
+  padding: 28px 32px 24px;
+}
+.ds-gaps h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--color-surface-card);
+}
+.ds-gaps h3 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 28px 0 10px;
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 0.01em;
+}
+.ds-gaps__lede,
+.ds-gaps__footer {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.72);
+  margin: 0 0 16px;
+  max-width: 64ch;
+}
+.ds-gaps__footer {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(255,255,255,0.12);
+  font-style: italic;
+  color: rgba(255,200,190,0.9);
+}
+.ds-gaps__list {
+  list-style: decimal;
+  padding-left: 20px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ds-gaps__list li {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.85);
+}
+.ds-gaps__list li strong {
+  color: var(--color-surface-card);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 2px;
+}
+.ds-gaps__list li .ds-gaps__why,
+.ds-gaps__list li .ds-gaps__need {
+  display: block;
+  color: rgba(255,255,255,0.62);
+}
+.ds-gaps__list li .ds-gaps__need {
+  color: rgba(255,210,190,0.85);
+  margin-top: 2px;
+}
+.ds-gaps__list li code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(255,255,255,0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: rgba(255,220,210,0.95);
+}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <h1 class="chrome__title">Voice Recording Flow — prototype</h1>
+  <p class="chrome__hint">← / → to step through. Real BreathStoneEngine on canvas. Design system reference below the frame.</p>
+  <div class="stage-nav">
+    <button class="stage-nav__btn" id="prevBtn" aria-label="Previous view">←</button>
+    <div class="stage-nav__label" id="stageLabel">1 / 15</div>
+    <button class="stage-nav__btn" id="nextBtn" aria-label="Next view">→</button>
+  </div>
+  <div class="stage-picker" id="stagePicker"></div>
+</div>
+
+<div class="phone" id="phone">
+
+  <!-- 1. Entry -->
+  <section class="screen" data-view="entry" data-label="1. Entry">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">VOICE TRAINING</div>
+      <h1 class="record-title">Your voice journey</h1>
+      <p class="record-subtitle">25 moments that capture your full range</p>
+      <!--
+        PREVIEW-current pattern (not Live-current).
+        Stage 1 is rendered with --current here to signal "this is where you
+        begin." The user has not entered Stage 1 yet — they haven't tapped
+        Begin. On the Stage 1 intro screen (view 5) the same --current class
+        is used, but there it's a Live-state indicator.
+        Session 5: the distinction matters if you ever need divergent visual
+        treatment. Both usages share the same CSS today; if that changes,
+        keep the Preview use here and the Live use on the intro.
+      -->
+      <div class="record-stage-map">
+        <div class="record-stage-map__segment record-stage-map__segment--current">
+          <div class="record-stage-map__node record-stage-map__node--current">1</div>
+          <div class="record-stage-map__label">Everyday</div>
+        </div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">2</div>
+          <div class="record-stage-map__label">Emotional</div>
+        </div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">3</div>
+          <div class="record-stage-map__label">Personal</div>
+        </div>
+      </div>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
+      </div>
+      <p class="record-microcopy" style="margin-top: 0">11–14 minutes</p>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Begin voice training</button>
+        <button class="btn-link btn--full">I&rsquo;ll do this later</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 2. Grounding -->
+  <section class="screen" data-view="grounding" data-label="2. Grounding">
+    <div class="page-transition"><div class="record-step record-step--centered">
+      <div class="record-eyebrow">VOICE TRAINING</div>
+      <h1 class="record-title">25 moments</h1>
+      <p class="record-subtitle">Speak as you would to someone who knows you.</p>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="idle" data-size="200"></canvas>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">I&rsquo;m ready</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 3. Mic Permission -->
+  <section class="screen" data-view="mic" data-label="3. Mic permission">
+    <div class="page-transition"><div class="record-step record-step--centered">
+      <div class="record-eyebrow">VOICE TRAINING &middot; SETUP</div>
+      <h1 class="record-title">Your phone needs to hear you.</h1>
+      <p class="record-subtitle">Allow access and we&rsquo;ll go from there.</p>
+      <div class="record-stone" style="min-height: 120px">
+        <div class="record-mic-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
+            <rect x="9" y="3" width="6" height="12" rx="3"/>
+            <path d="M5 11a7 7 0 0 0 14 0"/>
+            <line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="8" y1="22" x2="16" y2="22"/>
+          </svg>
+        </div>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Allow microphone</button>
+        <button class="btn-link btn--full">Not now</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 4. Checklist -->
+  <section class="screen" data-view="checklist" data-label="4. Checklist">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">VOICE TRAINING &middot; SETUP</div>
+      <h1 class="record-title">You&rsquo;re all set</h1>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="guidance" data-size="200"></canvas>
+      </div>
+      <div class="record-checklist">
+        <div class="record-checklist__item">
+          <div class="record-checklist__icon">✓</div>
+          <div class="record-checklist__text">Quiet environment</div>
+        </div>
+        <div class="record-checklist__item">
+          <div class="record-checklist__icon">✓</div>
+          <div class="record-checklist__text">Phone at comfortable distance</div>
+        </div>
+        <div class="record-checklist__item">
+          <div class="record-checklist__icon">✓</div>
+          <div class="record-checklist__text">Speak naturally, like telling a story</div>
+        </div>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Start Stage 1</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 5. Stage 1 intro -->
+  <section class="screen screen--warm" data-view="stage-1-intro" data-label="5. Stage 1 intro">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">VOICE TRAINING &middot; STAGE 1 OF 3</div>
+      <h1 class="record-title">Let&rsquo;s start with simple moments.</h1>
+      <p class="record-subtitle">These five prompts establish your natural speaking rhythm.</p>
+      <div class="record-stage-map">
+        <div class="record-stage-map__segment record-stage-map__segment--current">
+          <div class="record-stage-map__node record-stage-map__node--current">1</div>
+          <div class="record-stage-map__label">Everyday</div>
+        </div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">2</div>
+          <div class="record-stage-map__label">Emotional</div>
+        </div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">3</div>
+          <div class="record-stage-map__label">Personal</div>
+        </div>
+      </div>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
+      </div>
+      <div class="record-body">
+        <p>Speak naturally.</p>
+        <p>There are no wrong answers.</p>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Begin Stage 1</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 6. Prompt — Stage 1 (warm oat) -->
+  <section class="screen" data-view="prompt-1" data-label="6. Prompt · Stage 1">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">MOMENT 2 OF 25</div>
+      <p class="record-instruction">Speak naturally.</p>
+      <div class="record-prompt-card">
+        <p class="record-prompt-card__text">Describe your typical morning &mdash; the first thing you do, what the light looks like, a sound you always hear.</p>
+      </div>
+      <div class="record-waveform">
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+      </div>
+      <button class="record-button" aria-label="Start recording">
+        <svg class="record-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+          <rect x="9" y="3" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </button>
+      <p class="record-label">Tap to record</p>
+      <div class="record-timer">00:00</div>
+      <p class="record-rerecord-hint">You can re-record anytime</p>
+    </div></div>
+    <div class="record-progress-bar" aria-hidden="true">
+      <div class="record-progress-bar__fill" style="width: 8%"></div>
+    </div>
+  </section>
+
+  <!-- 7. Celebration — after Stage 1 -->
+  <section class="screen screen--warm" data-view="celebration-1" data-label="7. Celebration · S1→S2">
+    <div class="page-transition"><div class="record-step record-step--centered record-step--celebration">
+      <div class="record-eyebrow">STAGE 1 COMPLETE</div>
+      <h1 class="record-title record-title--weight-500">You&rsquo;ve settled in.</h1>
+      <p class="record-subtitle record-subtitle--italic">Your voice is beginning to take shape.</p>
+      <div class="record-stage-map">
+        <div class="record-stage-map__segment record-stage-map__segment--completed">
+          <div class="record-stage-map__node record-stage-map__node--completed">1</div>
+          <div class="record-stage-map__label">Everyday</div>
+        </div>
+        <div class="record-stage-map__segment record-stage-map__segment--current">
+          <div class="record-stage-map__node record-stage-map__node--current">2</div>
+          <div class="record-stage-map__label">Emotional</div>
+        </div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">3</div>
+          <div class="record-stage-map__label">Personal</div>
+        </div>
+      </div>
+      <div class="record-stone record-stone--celebrate">
+        <span class="celebrate-shimmer"></span>
+        <span class="celebrate-specks"></span>
+        <canvas class="breath-stone" data-state="celebrate" data-size="200"></canvas>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Move to Stage 2</button>
+        <button class="btn-link btn--full">Pause for now</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 8. Stage 2 intro -->
+  <section class="screen screen--warm" data-view="stage-2-intro" data-label="8. Stage 2 intro">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">STAGE 2 OF 3</div>
+      <h1 class="record-title">Now let&rsquo;s go a little deeper.</h1>
+      <p class="record-subtitle">These twelve prompts capture emotional range and personal stories.</p>
+      <div class="record-stage-map">
+        <div class="record-stage-map__segment record-stage-map__segment--completed">
+          <div class="record-stage-map__node record-stage-map__node--completed">1</div>
+          <div class="record-stage-map__label">Everyday</div>
+        </div>
+        <div class="record-stage-map__segment record-stage-map__segment--current">
+          <div class="record-stage-map__node record-stage-map__node--current">2</div>
+          <div class="record-stage-map__label">Emotional</div>
+        </div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">3</div>
+          <div class="record-stage-map__label">Personal</div>
+        </div>
+      </div>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
+      </div>
+      <div class="record-body">
+        <p>Take your time with each response.</p>
+        <p>These moments hold more of who you are.</p>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Begin Stage 2</button>
+        <button class="btn-link btn--full">Pause for now</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 9. Prompt — Stage 2 (honey) -->
+  <section class="screen" data-view="prompt-2" data-label="9. Prompt · Stage 2">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">MOMENT 10 OF 25</div>
+      <p class="record-instruction">Speak from memory.</p>
+      <div class="record-prompt-card record-prompt-card--stage-2">
+        <p class="record-prompt-card__text">Tell me about a meal you&rsquo;ll never forget &mdash; who was there, what you tasted, why it stayed with you.</p>
+      </div>
+      <div class="record-waveform">
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+      </div>
+      <button class="record-button" aria-label="Start recording">
+        <svg class="record-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+          <rect x="9" y="3" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </button>
+      <p class="record-label">Tap to record</p>
+      <div class="record-timer">00:00</div>
+      <p class="record-rerecord-hint">You can re-record anytime</p>
+    </div></div>
+    <div class="record-progress-bar" aria-hidden="true">
+      <div class="record-progress-bar__fill" style="width: 40%"></div>
+    </div>
+  </section>
+
+  <!-- 10. Celebration — after Stage 2 -->
+  <section class="screen screen--warm" data-view="celebration-2" data-label="10. Celebration · S2→S3">
+    <div class="page-transition"><div class="record-step record-step--centered record-step--celebration">
+      <div class="record-stage-badge">HALFWAY THERE</div>
+      <h1 class="record-title">A fuller picture.</h1>
+      <p class="record-subtitle">The emotional moments gave your voice its depth.</p>
+      <div class="record-stage-map">
+        <div class="record-stage-map__segment record-stage-map__segment--completed">
+          <div class="record-stage-map__node record-stage-map__node--completed">1</div>
+          <div class="record-stage-map__label">Everyday</div>
+        </div>
+        <div class="record-stage-map__segment record-stage-map__segment--completed">
+          <div class="record-stage-map__node record-stage-map__node--completed">2</div>
+          <div class="record-stage-map__label">Emotional</div>
+        </div>
+        <div class="record-stage-map__segment record-stage-map__segment--current">
+          <div class="record-stage-map__node record-stage-map__node--current">3</div>
+          <div class="record-stage-map__label">Personal</div>
+        </div>
+      </div>
+      <div class="record-stone record-stone--celebrate">
+        <span class="celebrate-shimmer"></span>
+        <span class="celebrate-specks"></span>
+        <canvas class="breath-stone" data-state="celebrate" data-size="200"></canvas>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Continue to Stage 3</button>
+        <button class="btn-link btn--full">Pause for now</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 11. Stage 3 intro -->
+  <section class="screen screen--warm" data-view="stage-3-intro" data-label="11. Stage 3 intro">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">STAGE 3 OF 3</div>
+      <h1 class="record-title">These final moments add richness.</h1>
+      <p class="record-subtitle">Eight prompts that capture expression, care, and continuity.</p>
+      <div class="record-stage-map">
+        <div class="record-stage-map__segment record-stage-map__segment--completed">
+          <div class="record-stage-map__node record-stage-map__node--completed">1</div>
+          <div class="record-stage-map__label">Everyday</div>
+        </div>
+        <div class="record-stage-map__segment record-stage-map__segment--completed">
+          <div class="record-stage-map__node record-stage-map__node--completed">2</div>
+          <div class="record-stage-map__label">Emotional</div>
+        </div>
+        <div class="record-stage-map__segment record-stage-map__segment--current">
+          <div class="record-stage-map__node record-stage-map__node--current">3</div>
+          <div class="record-stage-map__label">Personal</div>
+        </div>
+      </div>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
+      </div>
+      <div class="record-body">
+        <p>These are the moments that give your voice its character.</p>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Begin Stage 3</button>
+        <button class="btn-link btn--full">Pause for now</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 12. Prompt — Stage 3 (rich) -->
+  <section class="screen" data-view="prompt-3" data-label="12. Prompt · Stage 3">
+    <div class="page-transition"><div class="record-step">
+      <div class="record-eyebrow">MOMENT 21 OF 25</div>
+      <p class="record-instruction">Take your time.</p>
+      <div class="record-prompt-card record-prompt-card--stage-3">
+        <p class="record-prompt-card__text">A piece of advice you want someone important to you to remember.</p>
+      </div>
+      <div class="record-waveform">
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+        <div class="record-waveform__bar"></div>
+      </div>
+      <button class="record-button" aria-label="Start recording">
+        <svg class="record-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+          <rect x="9" y="3" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </button>
+      <p class="record-label">Tap to record</p>
+      <div class="record-timer">00:00</div>
+      <p class="record-rerecord-hint">You can re-record anytime</p>
+    </div></div>
+    <div class="record-progress-bar" aria-hidden="true">
+      <div class="record-progress-bar__fill" style="width: 84%"></div>
+    </div>
+  </section>
+
+  <!-- 13. Paused -->
+  <section class="screen" data-view="paused" data-label="13. Paused">
+    <div class="page-transition"><div class="record-step record-step--centered">
+      <div class="record-eyebrow">PAUSED</div>
+      <h1 class="record-title">Your progress is saved.</h1>
+      <p class="record-subtitle">Continue whenever you&rsquo;re ready.</p>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="idle" data-size="200"></canvas>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Return home</button>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 14. Working -->
+  <section class="screen screen--warm" data-view="working" data-label="14. Working">
+    <div class="page-transition"><div class="record-step record-step--centered">
+      <div class="record-eyebrow">SHAPING YOUR VOICE</div>
+      <h1 class="record-title">Your voice is being preserved.</h1>
+      <p class="record-subtitle">A moment while we listen.</p>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="working" data-size="200"></canvas>
+      </div>
+      <p class="record-microcopy" style="margin: 0">This will take about 6 seconds</p>
+    </div></div>
+  </section>
+
+  <!-- 15. Ready -->
+  <section class="screen" data-view="ready" data-label="15. Ready">
+    <div class="page-transition"><div class="record-step record-step--centered">
+      <div class="record-eyebrow">YOUR VOICE</div>
+      <h1 class="record-title">Your voice is ready</h1>
+      <p class="record-subtitle">Listen to what you have created</p>
+      <div class="record-stone">
+        <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
+      </div>
+      <div class="record-ctas">
+        <button class="btn-primary btn--full">Hear your voice</button>
+      </div>
+    </div></div>
+  </section>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Design system reference — captures every primitive & state-variant the
+     flow above relies on. Re-openable as a canonical reference.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="ds-ref">
+  <h2>Design system reference</h2>
+  <p class="ds-ref__lede">
+    Every primitive the flow above depends on. Open this HTML in 6 months
+    and the complete system rebuilds from this section alone.
+  </p>
+
+  <h3>BreathStone — all 11 engine states</h3>
+  <p class="ds-note">
+    Each canvas runs the real engine (ported 1:1 from breathStoneEngine.ts). Same
+    Perlin-driven silhouette, same asymmetric breath physics, same per-state
+    lerp targets.
+  </p>
+  <div class="ds-stone-grid" id="stoneGrid">
+    <!-- Populated by JS so we don't repeat 11 near-identical HTML blocks -->
+  </div>
+
+  <h3>Record button — all 4 states</h3>
+  <p class="ds-note">
+    idle → recording → uploading → saved. The `--finished` green state is the
+    calm post-success rest; `--uploading` holds at 60% opacity during commit.
+  </p>
+  <div class="ds-row">
+    <div class="ds-record-btn-cell">
+      <button class="record-button">
+        <svg class="record-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+          <rect x="9" y="3" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </button>
+      <div class="ds-record-btn-cell__label">IDLE</div>
+    </div>
+    <div class="ds-record-btn-cell">
+      <button class="record-button record-button--recording">
+        <svg class="record-button__icon" viewBox="0 0 24 24" width="22" height="22">
+          <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>
+        </svg>
+      </button>
+      <div class="ds-record-btn-cell__label">RECORDING</div>
+    </div>
+    <div class="ds-record-btn-cell">
+      <button class="record-button record-button--uploading">
+        <svg class="record-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+          <rect x="9" y="3" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </button>
+      <div class="ds-record-btn-cell__label">UPLOADING (0.6α)</div>
+    </div>
+    <div class="ds-record-btn-cell">
+      <button class="record-button record-button--finished">
+        <svg class="record-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </button>
+      <div class="ds-record-btn-cell__label">FINISHED (post-commit)</div>
+    </div>
+  </div>
+
+  <h3>Record label — every state</h3>
+  <p class="ds-note">
+    Label color tracks the upload state machine in RecordingUpload. Each
+    transition triggers on a single `onStatusChange` callback.
+  </p>
+  <div class="ds-label-row">
+    <div class="ds-label-row__item">
+      <p class="record-label" style="margin: 0">Tap to record</p>
+      <span class="ds-label-row__name">idle</span>
+    </div>
+    <div class="ds-label-row__item">
+      <p class="record-label record-label--recording" style="margin: 0">Recording...</p>
+      <span class="ds-label-row__name">recording · terracotta #9C3528</span>
+    </div>
+    <div class="ds-label-row__item">
+      <p class="record-label record-label--saving" style="margin: 0">Saving…</p>
+      <span class="ds-label-row__name">uploading | committing · graphite #6B6B6B</span>
+    </div>
+    <div class="ds-label-row__item">
+      <p class="record-label record-label--saved" style="margin: 0">Saved</p>
+      <span class="ds-label-row__name">ready · sage #4A7A68</span>
+    </div>
+    <div class="ds-label-row__item">
+      <p class="record-label record-label--error" style="margin: 0">Save failed — try again</p>
+      <span class="ds-label-row__name">error · terracotta #9C3528</span>
+    </div>
+    <div class="ds-label-row__item">
+      <p class="record-label record-label--error" style="margin: 0">Microphone blocked</p>
+      <span class="ds-label-row__name">permission_denied · terracotta #9C3528</span>
+    </div>
+  </div>
+
+  <h3>Prompt card — three stage surfaces</h3>
+  <p class="ds-note">
+    Card backgrounds step up through the warm ramp as stages deepen. Copy font
+    and weight are identical across all three (Spectral 600 / 20px / line 1.8).
+  </p>
+  <div class="ds-prompt-stack">
+    <div class="record-prompt-card">
+      <p class="record-prompt-card__text">Describe your typical morning &mdash; the first thing you do, what the light looks like, a sound you always hear.</p>
+    </div>
+    <div class="record-prompt-card record-prompt-card--stage-2">
+      <p class="record-prompt-card__text">Tell me about a meal you&rsquo;ll never forget &mdash; who was there, what you tasted, why it stayed with you.</p>
+    </div>
+    <div class="record-prompt-card record-prompt-card--stage-3">
+      <p class="record-prompt-card__text">A piece of advice you want someone important to you to remember.</p>
+    </div>
+  </div>
+
+  <h3>Typography — semantic role tokens</h3>
+  <p class="ds-note">
+    Reach for these tokens, not raw <code>--text-h1</code> values. Titles use
+    <code>--text-title</code> (28px) so future size tweaks propagate cleanly.
+  </p>
+  <div class="ds-type">
+    <div class="ds-type__row">
+      <span class="ds-type__role">--text-title / h1</span>
+      <span class="record-title" style="margin: 0">The stone holds your breath.</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">--text-title w-500</span>
+      <span class="record-title record-title--weight-500" style="margin: 0">A gentler celebration.</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">--text-title w-400</span>
+      <span class="record-title record-title--weight-400" style="margin: 0">Lightest heading.</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">subtitle</span>
+      <span class="record-subtitle" style="margin: 0">Supporting line for a headline.</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">subtitle italic</span>
+      <span class="record-subtitle record-subtitle--italic" style="margin: 0">Your voice is beginning to take shape.</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">instruction</span>
+      <span class="record-instruction" style="margin: 0">Speak from memory.</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">eyebrow</span>
+      <span class="record-eyebrow" style="margin: 0">STEP 2</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">stage-badge</span>
+      <span class="record-stage-badge" style="margin: 0">HALFWAY THERE</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">microcopy</span>
+      <span class="record-microcopy" style="margin: 0">11–14 minutes</span>
+    </div>
+    <div class="ds-type__row">
+      <span class="ds-type__role">rerecord-hint</span>
+      <span class="record-rerecord-hint" style="margin: 0">You can re-record anytime</span>
+    </div>
+  </div>
+
+  <h3>Color palette — warm ramp + functional tokens</h3>
+  <div class="ds-palette" id="palette">
+    <!-- Populated by JS from a single source of truth -->
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Pass 2 — known state-coverage omissions.
+     These must land in the prototype BEFORE this flow goes to code.
+     Flagged by audit 2026-04-17; scope to Pass 2 (Recording-group round).
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="ds-gaps">
+  <h2>Pass 2 — required before code</h2>
+  <p class="ds-gaps__lede">
+    Pass 1 covered the happy path. These six state-coverage gaps are where
+    users break, not where they succeed — add them in Pass 2 before Session 5
+    lifts any of this into React. Each is a screen (or screen-variant) this
+    prototype does not yet render.
+  </p>
+  <ol class="ds-gaps__list">
+    <li>
+      <strong>Mic permission denied.</strong>
+      <span class="ds-gaps__why">Screen 3 has no state for when the user taps "Not now." Flow dead-ends silently.</span>
+      <span class="ds-gaps__need">Needs: recovery screen with OS-agnostic instruction + "Open settings" / "Try again" CTAs.</span>
+    </li>
+    <li>
+      <strong>Upload failed / network drop.</strong>
+      <span class="ds-gaps__why">Recording succeeds, upload fails, no view exists for it. <code>--color-status-error</code> and <code>record-label--error</code> are defined but never surface in the flow.</span>
+      <span class="ds-gaps__need">Needs: prompt-screen variant showing error label + retry CTA, preserving the user's recording locally.</span>
+    </li>
+    <li>
+      <strong>Mid-recording OS interrupt.</strong>
+      <span class="ds-gaps__why">Paused screen is scoped to user-initiated pause. Phone call / backgrounded app is a different UX with a clearer recovery path.</span>
+      <span class="ds-gaps__need">Needs: "We paused for you — your last moment is safe" with a single "Tap to resume" primary.</span>
+    </li>
+    <li>
+      <strong>Resume-training entry (returning user).</strong>
+      <span class="ds-gaps__why">Screen 1 (Entry) assumes a brand-new user. Returning users mid-journey need concrete progress framing, not "Begin voice training." Paused screen semantically mismatches — it's labelled "Paused," not "Resume."</span>
+      <span class="ds-gaps__need">Needs: entry variant with "12 of 25 moments complete · Stage 2 next" + populated stage map + "Continue Stage 2" primary.</span>
+    </li>
+    <li>
+      <strong>Mic hardware failure.</strong>
+      <span class="ds-gaps__why">Distinct from permission denied. Permission granted, but no mic detected or audio levels flatline. No recovery path in the flow.</span>
+      <span class="ds-gaps__need">Needs: diagnostic screen "We can't hear you" with "Test microphone" retry + "Skip for now" link.</span>
+    </li>
+    <li>
+      <strong>Re-record / edit flow.</strong>
+      <span class="ds-gaps__why">The "You can re-record anytime" hint implies an entry point the prototype does not render. From where? List view? In-flow scrubber? Post-training review?</span>
+      <span class="ds-gaps__need">Needs a design call in Pass 2 before building. Three candidate directions: (a) "Your recordings" list view, (b) collapsed scrubber above the active prompt, (c) one-at-a-time review during a post-training listen-back.</span>
+    </li>
+  </ol>
+  <h3>Decisions pending (Pass 2 — celebration-group round)</h3>
+  <ol class="ds-gaps__list" start="7">
+    <li>
+      <strong>Celebration screens ignore the <code>onCelebrateEnd</code> callback.</strong>
+      <span class="ds-gaps__why">
+        Screens 8 and 11 use <code>data-state="celebrate"</code>. The engine emits
+        <code>onCelebrateEnd</code> after the 2200ms gesture and the stone
+        auto-returns to idle — the prototype wires none of this. User has to
+        tap Continue while the gesture is playing or sit afterward waiting.
+      </span>
+      <span class="ds-gaps__need">
+        Pass 2 decision: <em>(A)</em> keep tap-to-continue (slower, more reverent; risk of momentum loss),
+        or <em>(B)</em> use the callback — Continue stays dim/disabled for 2200ms, then fades in when the
+        gesture completes (celebration is honored, momentum preserved).
+        Recommended split: <strong>B for S1→S2</strong> (early, momentum matters), <strong>A for S2→S3</strong>
+        (deeper emotional beat, let them dwell).
+      </span>
+    </li>
+  </ol>
+  <p class="ds-gaps__footer">
+    Do not ship React without these screens + decisions resolved in this prototype first.
+  </p>
+</section>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   BreathStoneEngine — vanilla-JS port of
+   src/components/breath-stone/breathStoneEngine.ts
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+class PerlinNoise {
+  constructor() { this.gradients = {}; }
+  randVect() {
+    const t = Math.random() * 2 * Math.PI;
+    return { x: Math.cos(t), y: Math.sin(t) };
+  }
+  dotProdGrid(x, y, vx, vy) {
+    const key = vx + ',' + vy;
+    const g = this.gradients[key] || (this.gradients[key] = this.randVect());
+    return (x - vx) * g.x + (y - vy) * g.y;
+  }
+  smootherstep(x) { return 6 * x ** 5 - 15 * x ** 4 + 10 * x ** 3; }
+  interp(x, a, b) { return a + this.smootherstep(x) * (b - a); }
+  get(x, y) {
+    const xf = Math.floor(x), yf = Math.floor(y);
+    return this.interp(
+      y - yf,
+      this.interp(x - xf, this.dotProdGrid(x, y, xf, yf),     this.dotProdGrid(x, y, xf + 1, yf)),
+      this.interp(x - xf, this.dotProdGrid(x, y, xf, yf + 1), this.dotProdGrid(x, y, xf + 1, yf + 1))
+    );
+  }
+}
+
+const STATE_TARGETS = {
+  idle:      { glowIntensity: 0.06, breathAmplitude: 0.04, irregularity: 0.04, colorTemp: 0,    backgroundBloom: 0, spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 4500,  voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+  ready:     { glowIntensity: 0.14, breathAmplitude: 0.06, irregularity: 0.05, colorTemp: 0.4,  backgroundBloom: 0, spark: 1,   innerPulse: 0.3,  vignette: 0, breathSpeed: 4000,  voiceReactive: 0, sheen: 0.8, peakHold: 0.07 },
+  recording: { glowIntensity: 0.40, breathAmplitude: 0.25, irregularity: 0.08, colorTemp: 1,    backgroundBloom: 1, spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 3500,  voiceReactive: 1, sheen: 0,   peakHold: 0.07 },
+  working:   { glowIntensity: 0.04, breathAmplitude: 0.02, irregularity: 0.03, colorTemp: -0.2, backgroundBloom: 0, spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 6000,  voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+  celebrate: { glowIntensity: 0.55, breathAmplitude: 0.35, irregularity: 0.06, colorTemp: 1,    backgroundBloom: 1, spark: 1,   innerPulse: 0,    vignette: 0, breathSpeed: 1800,  voiceReactive: 0, sheen: 1,   peakHold: 0.07 },
+  playback:  { glowIntensity: 0.12, breathAmplitude: 0.05, irregularity: 0.06, colorTemp: 0.3,  backgroundBloom: 0, spark: 0,   innerPulse: 1,    vignette: 1, breathSpeed: 4000,  voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+  shimmer:   { glowIntensity: 0.15, breathAmplitude: 0.03, irregularity: 0.04, colorTemp: 0.2,  backgroundBloom: 0, spark: 0.5, innerPulse: 0,    vignette: 0, breathSpeed: 5000,  voiceReactive: 0, sheen: 1.2, peakHold: 0.07 },
+  guidance:  { glowIntensity: 0.07, breathAmplitude: 0.035,irregularity: 0.04, colorTemp: 0.1,  backgroundBloom: 0, spark: 0,   innerPulse: 0.18, vignette: 0, breathSpeed: 6200,  voiceReactive: 0, sheen: 0,   peakHold: 0.19 },
+  priming:   { glowIntensity: 0.12, breathAmplitude: 0.22, irregularity: 0.02, colorTemp: 0.15, backgroundBloom: 0, spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 6000,  voiceReactive: 0, sheen: 0,   peakHold: 0,    inhaleRatio: 0.5, breathNoiseScale: 0.15 },
+  infused:   { glowIntensity: 0.325,breathAmplitude: 0.10, irregularity: 0.06, colorTemp: 0.6,  backgroundBloom: 0.4, spark: 0, innerPulse: 0.5,  vignette: 0, breathSpeed: 5000,  voiceReactive: 0, sheen: 0.3, peakHold: 0.07 },
+  archive:   { glowIntensity: 0.02, breathAmplitude: 0,    irregularity: 0.03, colorTemp: -0.1, backgroundBloom: 0, spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 99999, voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+};
+
+const STATE_BLURBS = {
+  idle:      'Resting heartbeat — lightest, slowest, coolest.',
+  ready:     'Awake and attentive — warm spark, subtle glow.',
+  recording: 'Presence / moment happening — warm bloom radiates out.',
+  working:   'Patient processing — very slow, almost still.',
+  celebrate: 'Single grand swell — 2.2s one-shot gesture.',
+  playback:  'Memory echo — rhythmic speech cadence + vignette.',
+  shimmer:   'Ceremonial stillness — two counter-rotating sheens.',
+  guidance:  'Waiting / orienting — long peak hold, single heartbeat.',
+  priming:   '"Take a breath" cue — symmetric 3s in / 3s out.',
+  infused:   'Voice preserved — ember pulse + concentric ripple.',
+  archive:   'Preserved, still — no animation.',
+};
+
+class BreathStoneEngine {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.noise = new PerlinNoise();
+    this.animationId = null;
+    this.currentState = 'idle';
+    this.s = Object.assign({}, STATE_TARGETS.idle);
+    this.breathVelocity = 0;
+    this.lastBreathTarget = 1;
+    this.isExhaleStart = false;
+    this.celebrateStartTime = null;
+  }
+  setState(state) {
+    const prev = this.currentState;
+    this.currentState = state;
+    if (state === 'celebrate') this.celebrateStartTime = null;
+    if (prev !== state) this.breathVelocity = 0;
+  }
+  start() { this.animationId = requestAnimationFrame(this.draw); }
+  stop()  { if (this.animationId !== null) { cancelAnimationFrame(this.animationId); this.animationId = null; } }
+  resize(width, height) {
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width  = width  * dpr;
+    this.canvas.height = height * dpr;
+    this.canvas.style.width  = width  + 'px';
+    this.canvas.style.height = height + 'px';
+    this.ctx.scale(dpr, dpr);
+  }
+  getBreathScale(timestamp, amplitude, breathSpeed, peakHold, peakTremor, inhaleRatio, breathNoiseScale) {
+    if (amplitude < 0.001) return 1;
+    const cycleVariance = this.noise.get(timestamp * 0.00001, 0) * 0.02;
+    const variedCycle = breathSpeed * (1 + cycleVariance);
+    const phase = (timestamp % variedCycle) / variedCycle;
+    const inhaleEnd = Math.min(0.95, Math.max(0.05, inhaleRatio));
+    const holdEnd = Math.min(0.99, inhaleEnd + peakHold);
+    const exhaleRange = Math.max(0.001, 1 - holdEnd);
+    let breathCurve, isPeakHold = false;
+    if (phase < inhaleEnd)   { breathCurve = phase / inhaleEnd; }
+    else if (phase < holdEnd){ breathCurve = 1; isPeakHold = true; }
+    else                     { breathCurve = 1 - (phase - holdEnd) / exhaleRange; }
+    breathCurve = breathCurve * breathCurve * (3 - 2 * breathCurve);
+    const tremor = isPeakHold ? Math.sin(timestamp * 0.018) * peakTremor : 0;
+    const amplitudeVariance = this.noise.get(timestamp * 0.00008, 100) * 0.05 * breathNoiseScale;
+    const variedAmplitude = amplitude * (1 + amplitudeVariance);
+    const microVariance = (Math.sin(timestamp * 0.0003) * 0.10 + Math.sin(timestamp * 0.0007) * 0.05) * breathNoiseScale;
+    const targetScale = 1 + breathCurve * variedAmplitude + microVariance + tremor;
+    const accel = (targetScale - this.lastBreathTarget) * 0.025;
+    this.breathVelocity += accel;
+    this.breathVelocity *= 0.90;
+    const scale = this.lastBreathTarget + this.breathVelocity;
+    this.lastBreathTarget = scale;
+    this.isExhaleStart = phase > holdEnd && phase < holdEnd + 0.03;
+    return Math.max(0.90, Math.min(1.30, scale));
+  }
+  generateSilhouette(baseRadius, segments, irregularity, timestamp) {
+    const points = [];
+    const noiseScale = 0.15;
+    for (let i = 0; i < segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const noiseVal = this.noise.get(
+        Math.cos(angle) * noiseScale + timestamp * 0.0001,
+        Math.sin(angle) * noiseScale + timestamp * 0.0001
+      );
+      const clusterNoise = this.noise.get(Math.cos(angle * 3) * 0.08, Math.sin(angle * 3) * 0.08);
+      const irr = 1 + noiseVal * irregularity + clusterNoise * irregularity * 0.5;
+      const r = baseRadius * irr;
+      points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+    }
+    return points;
+  }
+  draw = (timestamp) => {
+    const ctx = this.ctx;
+    const dpr = window.devicePixelRatio || 1;
+    const W = this.canvas.width / dpr;
+    const H = this.canvas.height / dpr;
+    const cx = W / 2, cy = H / 2;
+    const baseRadius = Math.min(W, H) * 0.28;
+    ctx.clearRect(0, 0, W, H);
+
+    let resolvedState = this.currentState;
+    if (this.currentState === 'celebrate') {
+      if (this.celebrateStartTime === null) this.celebrateStartTime = timestamp;
+      if (timestamp - this.celebrateStartTime > 2200) {
+        this.currentState = 'idle';
+        this.celebrateStartTime = null;
+        resolvedState = 'idle';
+      }
+    }
+
+    const target = Object.assign({}, STATE_TARGETS[resolvedState]);
+    if (resolvedState === 'shimmer') target.glowIntensity = 0.15 + Math.sin(timestamp * 0.0008) * 0.07;
+    else if (resolvedState === 'infused') target.glowIntensity = 0.325 + Math.sin(timestamp * 0.00105) * 0.125;
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+    this.s.glowIntensity   = lerp(this.s.glowIntensity,   target.glowIntensity,   0.04);
+    this.s.breathAmplitude = lerp(this.s.breathAmplitude, target.breathAmplitude, 0.03);
+    this.s.irregularity    = lerp(this.s.irregularity,    target.irregularity,    0.03);
+    this.s.colorTemp       = lerp(this.s.colorTemp,       target.colorTemp,       0.04);
+    this.s.backgroundBloom = lerp(this.s.backgroundBloom, target.backgroundBloom, 0.03);
+    this.s.spark           = lerp(this.s.spark,           target.spark,           0.05);
+    this.s.innerPulse      = lerp(this.s.innerPulse,      target.innerPulse,      0.06);
+    this.s.vignette        = lerp(this.s.vignette,        target.vignette,        0.04);
+    this.s.breathSpeed     = lerp(this.s.breathSpeed,     target.breathSpeed,     0.02);
+    this.s.voiceReactive   = lerp(this.s.voiceReactive,   target.voiceReactive,   0.04);
+    this.s.sheen           = lerp(this.s.sheen,           target.sheen,           0.04);
+    this.s.peakHold        = lerp(this.s.peakHold,        target.peakHold,        0.03);
+    this.s.peakTremor      = lerp(this.s.peakTremor || 0, target.peakTremor || 0, 0.04);
+    this.s.inhaleRatio     = target.inhaleRatio     !== undefined ? target.inhaleRatio     : 0.35;
+    this.s.breathNoiseScale= target.breathNoiseScale!== undefined ? target.breathNoiseScale: 1.0;
+
+    let breathScale;
+    if (this.currentState === 'celebrate' && this.celebrateStartTime !== null) {
+      const elapsed = timestamp - this.celebrateStartTime;
+      const duration = 2200;
+      const t = Math.min(1, elapsed / duration);
+      const celebrateAmplitude = STATE_TARGETS.celebrate.breathAmplitude;
+      let curve;
+      if (t < 0.3)       { const r = t / 0.3;         curve = r * r * (3 - 2 * r); }
+      else if (t < 0.6)  { curve = 1; }
+      else               { const r = (t - 0.6) / 0.4; curve = 1 - r * r * (3 - 2 * r); }
+      breathScale = 1 + curve * celebrateAmplitude;
+      this.lastBreathTarget = breathScale;
+      this.breathVelocity = 0;
+      this.isExhaleStart = false;
+    } else {
+      breathScale = this.getBreathScale(
+        timestamp, this.s.breathAmplitude, this.s.breathSpeed, this.s.peakHold,
+        this.s.peakTremor || 0, this.s.inhaleRatio, this.s.breathNoiseScale
+      );
+    }
+    const currentRadius = baseRadius * breathScale;
+
+    const voiceVolume = (Math.sin(timestamp * 0.003) * 0.5 + 0.5) * 0.15;
+    const reactiveRadius = currentRadius * (1 + voiceVolume * this.s.voiceReactive);
+    const silhouette = this.generateSilhouette(reactiveRadius, 72, this.s.irregularity, timestamp);
+
+    const ambientG = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.6);
+    ambientG.addColorStop(0,   'rgba(235, 224, 200, 0.02)');
+    ambientG.addColorStop(0.5, 'rgba(251, 248, 244, 0.01)');
+    ambientG.addColorStop(1,   'rgba(251, 248, 244, 0)');
+    ctx.fillStyle = ambientG; ctx.fillRect(0, 0, W, H);
+
+    const dirG = ctx.createLinearGradient(0, 0, W, H);
+    dirG.addColorStop(0, 'rgba(251, 248, 244, 0.005)');
+    dirG.addColorStop(1, 'rgba(28, 26, 24, 0.012)');
+    ctx.fillStyle = dirG; ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(cx, cy + currentRadius * 0.85);
+    ctx.scale(1, 0.3);
+    const shadowG = ctx.createRadialGradient(0, 0, 0, 0, 0, currentRadius * 0.9);
+    shadowG.addColorStop(0,   'rgba(28, 26, 24, 0.08)');
+    shadowG.addColorStop(0.5, 'rgba(28, 26, 24, 0.04)');
+    shadowG.addColorStop(1,   'rgba(28, 26, 24, 0)');
+    ctx.fillStyle = shadowG;
+    ctx.beginPath(); ctx.arc(0, 0, currentRadius * 0.9, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    if (this.s.vignette > 0.01) {
+      const vigG = ctx.createRadialGradient(cx, cy, currentRadius * 1.5, cx, cy, Math.max(W, H) * 0.7);
+      vigG.addColorStop(0, 'rgba(28, 26, 24, 0)');
+      vigG.addColorStop(1, 'rgba(28, 26, 24, ' + (this.s.vignette * 0.08) + ')');
+      ctx.fillStyle = vigG; ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.globalAlpha = 0.012;
+    for (let i = 0; i < 25; i++) {
+      const px = (this.noise.get(i * 0.2, timestamp * 0.00004) * 0.5 + 0.5) * W;
+      const py = (this.noise.get(i * 0.2 + 100, timestamp * 0.00004) * 0.5 + 0.5) * H;
+      ctx.fillStyle = '#E8DCC8';
+      ctx.fillRect(px, py, 1.5, 1.5);
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    if (this.s.backgroundBloom > 0.01) {
+      const bloomSize = Math.max(W, H) * 0.4;
+      const bgBloom = ctx.createRadialGradient(0, 0, currentRadius, 0, 0, bloomSize);
+      bgBloom.addColorStop(0,   'rgba(235, 220, 200, ' + (this.s.backgroundBloom * 0.08) + ')');
+      bgBloom.addColorStop(0.4, 'rgba(232, 220, 200, ' + (this.s.backgroundBloom * 0.04) + ')');
+      bgBloom.addColorStop(0.7, 'rgba(235, 228, 220, ' + (this.s.backgroundBloom * 0.02) + ')');
+      bgBloom.addColorStop(1,   'rgba(235, 228, 220, 0)');
+      ctx.fillStyle = bgBloom;
+      ctx.beginPath(); ctx.arc(0, 0, bloomSize, 0, Math.PI * 2); ctx.fill();
+    }
+
+    const flickerMult = this.isExhaleStart ? 1.02 : 1;
+    const glow = this.s.glowIntensity * flickerMult;
+
+    const bloomR = currentRadius * 3.5;
+    const warmR = Math.round(229 + this.s.colorTemp * 12);
+    const warmG = Math.round(212 + this.s.colorTemp * 18);
+    const warmB = Math.round(191 + this.s.colorTemp * 9);
+    const hdrBloom = ctx.createRadialGradient(-currentRadius * 0.2, -currentRadius * 0.2, 0, 0, 0, bloomR);
+    hdrBloom.addColorStop(0,   'rgba(' + warmR + ', ' + warmG + ', ' + warmB + ', ' + (glow * 0.06) + ')');
+    hdrBloom.addColorStop(0.3, 'rgba(' + warmR + ', ' + warmG + ', ' + warmB + ', ' + (glow * 0.03) + ')');
+    hdrBloom.addColorStop(0.6, 'rgba(235, 228, 220, ' + (glow * 0.015) + ')');
+    hdrBloom.addColorStop(1,   'rgba(235, 228, 220, 0)');
+    ctx.fillStyle = hdrBloom;
+    ctx.beginPath(); ctx.arc(0, 0, bloomR, 0, Math.PI * 2); ctx.fill();
+
+    const hazeG = ctx.createRadialGradient(-currentRadius * 0.15, -currentRadius * 0.15, currentRadius * 0.5, 0, 0, currentRadius * 2);
+    hazeG.addColorStop(0,   'rgba(232, 220, 200, ' + (this.s.glowIntensity * 0.12) + ')');
+    hazeG.addColorStop(0.5, 'rgba(235, 228, 220, ' + (this.s.glowIntensity * 0.06) + ')');
+    hazeG.addColorStop(1,   'rgba(235, 228, 220, 0)');
+    ctx.fillStyle = hazeG;
+    ctx.beginPath(); ctx.arc(0, 0, currentRadius * 2, 0, Math.PI * 2); ctx.fill();
+
+    ctx.globalAlpha = 0.12;
+    const envShadow = ctx.createRadialGradient(currentRadius * 0.15, currentRadius * 0.15, 0, currentRadius * 0.15, currentRadius * 0.15, currentRadius * 1.4);
+    envShadow.addColorStop(0,   'rgba(28, 26, 24, 0.25)');
+    envShadow.addColorStop(0.6, 'rgba(28, 26, 24, 0.10)');
+    envShadow.addColorStop(1,   'rgba(28, 26, 24, 0)');
+    ctx.fillStyle = envShadow;
+    ctx.beginPath();
+    silhouette.forEach((p, i) => {
+      const x = p.x * 1.1, y = p.y * 1.1;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    const bodyG = ctx.createRadialGradient(-currentRadius * 0.28, -currentRadius * 0.28, 0, 0, 0, currentRadius * 1.35);
+    bodyG.addColorStop(0.00, '#F8F0DC');
+    bodyG.addColorStop(0.12, '#EFE6D0');
+    bodyG.addColorStop(0.28, '#E5D8C0');
+    bodyG.addColorStop(0.45, '#D8CAB0');
+    bodyG.addColorStop(0.62, '#C4B8A0');
+    bodyG.addColorStop(0.78, '#AEA090');
+    bodyG.addColorStop(0.90, '#938A7D');
+    bodyG.addColorStop(1.00, '#7D827E');
+    ctx.fillStyle = bodyG;
+    ctx.beginPath();
+    silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+    ctx.closePath(); ctx.fill();
+
+    if (resolvedState === 'infused' && this.s.colorTemp > 0) {
+      const tintStrength = Math.min(1, Math.max(0, this.s.colorTemp / 0.6));
+      const tintG = ctx.createRadialGradient(-currentRadius * 0.3, -currentRadius * 0.3, 0, -currentRadius * 0.3, -currentRadius * 0.3, currentRadius * 1.4);
+      tintG.addColorStop(0.00, 'rgba(168, 108, 52, ' + (0.28 * tintStrength) + ')');
+      tintG.addColorStop(0.35, 'rgba(148, 92, 48, ' + (0.18 * tintStrength) + ')');
+      tintG.addColorStop(0.70, 'rgba(110, 78, 52, ' + (0.08 * tintStrength) + ')');
+      tintG.addColorStop(1.00, 'rgba(80, 70, 55, 0)');
+      ctx.fillStyle = tintG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    if (this.s.sheen > 0.01 && resolvedState !== 'shimmer') {
+      const sheenPhase = (timestamp * 0.0004) % (Math.PI * 2);
+      const sx = Math.cos(sheenPhase) * currentRadius * 0.4;
+      const sy = Math.sin(sheenPhase) * currentRadius * 0.4;
+      const sheenG = ctx.createRadialGradient(sx, sy, 0, sx, sy, currentRadius * 0.6);
+      sheenG.addColorStop(0.0, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.15) + ')');
+      sheenG.addColorStop(0.4, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.10) + ')');
+      sheenG.addColorStop(0.8, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.04) + ')');
+      sheenG.addColorStop(1.0, 'rgba(251, 248, 244, 0)');
+      ctx.fillStyle = sheenG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    if (resolvedState === 'shimmer' && this.s.sheen > 0.01) {
+      const phaseA = (timestamp * 0.0010) % (Math.PI * 2);
+      const axA = Math.cos(phaseA) * currentRadius * 0.4;
+      const ayA = Math.sin(phaseA) * currentRadius * 0.4;
+      const sheenA = ctx.createRadialGradient(axA, ayA, 0, axA, ayA, currentRadius * 1.1);
+      sheenA.addColorStop(0.0, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.22) + ')');
+      sheenA.addColorStop(0.5, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.10) + ')');
+      sheenA.addColorStop(1.0, 'rgba(251, 248, 244, 0)');
+      ctx.fillStyle = sheenA;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+
+      const phaseB = (-timestamp * 0.0007) % (Math.PI * 2);
+      const axB = Math.cos(phaseB) * currentRadius * 0.4;
+      const ayB = Math.sin(phaseB) * currentRadius * 0.4;
+      const sheenB = ctx.createRadialGradient(axB, ayB, 0, axB, ayB, currentRadius * 1.1);
+      sheenB.addColorStop(0.0, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.11) + ')');
+      sheenB.addColorStop(0.5, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.05) + ')');
+      sheenB.addColorStop(1.0, 'rgba(251, 248, 244, 0)');
+      ctx.fillStyle = sheenB;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    const innerShadow = ctx.createRadialGradient(currentRadius * 0.35, currentRadius * 0.35, 0, 0, 0, currentRadius);
+    innerShadow.addColorStop(0,   'rgba(28, 26, 24, 0.20)');
+    innerShadow.addColorStop(0.5, 'rgba(28, 26, 24, 0.08)');
+    innerShadow.addColorStop(1,   'rgba(28, 26, 24, 0)');
+    ctx.fillStyle = innerShadow;
+    ctx.beginPath();
+    silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+    ctx.closePath(); ctx.fill();
+
+    const hlG = ctx.createRadialGradient(-currentRadius * 0.32, -currentRadius * 0.38, 0, -currentRadius * 0.32, -currentRadius * 0.38, currentRadius * 0.28);
+    hlG.addColorStop(0,   'rgba(251, 248, 244, 0.50)');
+    hlG.addColorStop(0.5, 'rgba(251, 248, 244, 0.18)');
+    hlG.addColorStop(1,   'rgba(251, 248, 244, 0)');
+    ctx.fillStyle = hlG;
+    ctx.save();
+    ctx.beginPath();
+    ctx.scale(1, 0.65);
+    ctx.arc(-currentRadius * 0.32, -currentRadius * 0.58, currentRadius * 0.28, 0, Math.PI * 2);
+    ctx.restore();
+    ctx.fill();
+
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = 'rgba(139, 126, 111, 0.35)';
+    ctx.globalAlpha = 0.11;
+    ctx.fillStyle = 'rgba(139, 126, 111, 0.6)';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + this.noise.get(i * 0.6, 0) * 3;
+      const px = Math.cos(angle) * currentRadius * (0.3 + this.noise.get(i, 1) * 0.4);
+      const py = Math.sin(angle) * currentRadius * (0.3 + this.noise.get(i, 2) * 0.4);
+      const ps = currentRadius * (0.15 + this.noise.get(i, 3) * 0.1);
+      ctx.beginPath();
+      ctx.ellipse(px, py, ps, ps * (0.6 + this.noise.get(i, 4) * 0.4), angle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    ctx.globalAlpha = 0.035;
+    for (let i = 0; i < 500; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.random() * currentRadius;
+      const x = Math.cos(a) * d, y = Math.sin(a) * d;
+      const rn = this.noise.get(x * 0.04, y * 0.04);
+      ctx.fillStyle = rn > 0 ? 'rgba(28, 26, 24, 0.5)' : 'rgba(245, 240, 234, 0.5)';
+      ctx.fillRect(x, y, Math.random() < 0.8 ? 1 : 2, Math.random() < 0.8 ? 1 : 2);
+    }
+    ctx.globalAlpha = 1;
+
+    if (this.s.spark > 0.01) {
+      const sparkPhase = (timestamp * 0.0006) % (Math.PI * 2);
+      const spx = Math.cos(sparkPhase) * currentRadius * 0.35;
+      const spy = Math.sin(sparkPhase) * currentRadius * 0.35;
+      const sparkG = ctx.createRadialGradient(spx, spy, 0, spx, spy, currentRadius * 0.4);
+      sparkG.addColorStop(0,   'rgba(255, 250, 240, ' + (this.s.spark * 0.35) + ')');
+      sparkG.addColorStop(0.4, 'rgba(245, 235, 220, ' + (this.s.spark * 0.18) + ')');
+      sparkG.addColorStop(1,   'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = sparkG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    if (resolvedState === 'playback' && this.s.innerPulse > 0.01) {
+      const s1 = (timestamp * 0.0025) % (Math.PI * 2);
+      const s2 = (timestamp * 0.0042) % (Math.PI * 2);
+      const rhythm = (Math.sin(s1) * 0.5 + 0.5) * (Math.sin(s2) * 0.4 + 0.6);
+      const pulseOp = rhythm * 0.22 * this.s.innerPulse;
+      const pulseG = ctx.createRadialGradient(0, 0, currentRadius * 0.25, 0, 0, currentRadius * 0.7);
+      pulseG.addColorStop(0,   'rgba(235, 224, 200, ' + pulseOp + ')');
+      pulseG.addColorStop(0.6, 'rgba(235, 224, 200, ' + (pulseOp * 0.4) + ')');
+      pulseG.addColorStop(1,   'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = pulseG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    if (resolvedState === 'guidance' && this.s.innerPulse > 0.05) {
+      const heartbeat = Math.sin(timestamp * 0.0015) * 0.5 + 0.5;
+      const pulseOp = heartbeat * 0.08 * this.s.innerPulse;
+      const pulseG = ctx.createRadialGradient(0, 0, currentRadius * 0.3, 0, 0, currentRadius * 0.65);
+      pulseG.addColorStop(0, 'rgba(235, 224, 200, ' + pulseOp + ')');
+      pulseG.addColorStop(1, 'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = pulseG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    if (resolvedState === 'infused' && this.s.innerPulse > 0.05) {
+      const ripplePhase = (timestamp % 6000) / 6000;
+      const rippleRadius = currentRadius * (0.1 + ripplePhase * 0.8);
+      const rippleOp = (1 - ripplePhase) * 0.22 * this.s.innerPulse;
+      const rippleG = ctx.createRadialGradient(0, 0, rippleRadius * 0.25, 0, 0, rippleRadius);
+      rippleG.addColorStop(0.0, 'rgba(235, 224, 200, ' + (rippleOp * 0.3) + ')');
+      rippleG.addColorStop(0.7, 'rgba(235, 224, 200, ' + rippleOp + ')');
+      rippleG.addColorStop(1.0, 'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = rippleG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    ctx.restore();
+    this.animationId = requestAnimationFrame(this.draw);
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Build design-system reference grids, mount engines, wire up flow
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+
+  // ── Stone state grid (all 11 engine states) ──────────────────────────────
+  const stoneGrid = document.getElementById('stoneGrid');
+  const STATE_NAMES = ['idle','ready','recording','working','celebrate','playback','shimmer','guidance','priming','infused','archive'];
+  STATE_NAMES.forEach(state => {
+    const cell = document.createElement('div');
+    cell.className = 'ds-stone-cell';
+    cell.innerHTML =
+      '<canvas class="breath-stone" data-state="' + state + '" data-size="120"></canvas>' +
+      '<p class="ds-stone-cell__name">' + state + '</p>' +
+      '<p class="ds-stone-cell__desc">' + STATE_BLURBS[state] + '</p>';
+    stoneGrid.appendChild(cell);
+  });
+
+  // ── Palette swatches ─────────────────────────────────────────────────────
+  const palette = document.getElementById('palette');
+  const SWATCHES = [
+    ['Cream',        '#FBF8F4', '--color-bg-neutral / primary'],
+    ['Oat 1',        '#F9F4ED', '--color-bg-warm-1'],
+    ['Oat 2',        '#F6F0E5', '--color-bg-warm-2 · stage 1 card'],
+    ['Warm phase',   '#F2EDE4', '--color-bg-warm-phase'],
+    ['Honey',        '#F2E8D6', '--color-bg-gold · stage 2 card'],
+    ['Rich',         '#EDE3D0', '--color-bg-rich · stage 3 card'],
+    ['Mineral',      '#7A8088', '--color-mineral · primary fill'],
+    ['Mineral dark', '#656B73', '--color-mineral-dark · hover'],
+    ['Charcoal',     '#1C1A18', '--color-text-primary'],
+    ['Graphite',     '#6B6B6B', '--color-text-secondary'],
+    ['Ghost',        '#ADA9A5', '--color-text-tertiary (large only)'],
+    ['Terracotta',   '#9C3528', '--color-status-error'],
+    ['Sage',         '#4A7A68', '--color-status-success'],
+    ['Amber-umber',  '#8A5A1E', '--color-status-warning'],
+  ];
+  SWATCHES.forEach(([name, hex, note]) => {
+    const card = document.createElement('div');
+    card.className = 'ds-swatch';
+    card.innerHTML =
+      '<div class="ds-swatch__chip" style="background:' + hex + '"></div>' +
+      '<div class="ds-swatch__meta">' +
+        '<p class="ds-swatch__name">' + name + '</p>' +
+        '<p class="ds-swatch__hex">' + hex + ' — ' + note + '</p>' +
+      '</div>';
+    palette.appendChild(card);
+  });
+
+  // ── Mount engines on every canvas ─────────────────────────────────────────
+  const engines = [];
+  document.querySelectorAll('canvas.breath-stone').forEach(canvas => {
+    const size = parseInt(canvas.dataset.size || '200', 10);
+    const state = canvas.dataset.state || 'idle';
+    const engine = new BreathStoneEngine(canvas);
+    engine.resize(size, size);
+    engine.setState(state);
+    engine.start();
+    engines.push({ engine, canvas, state });
+  });
+
+  // ── Flow navigator ───────────────────────────────────────────────────────
+  const screens = Array.from(document.querySelectorAll('.screen'));
+  const stageLabel = document.getElementById('stageLabel');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const picker = document.getElementById('stagePicker');
+  let idx = 0;
+
+  function render() {
+    screens.forEach((s, i) => s.classList.toggle('screen--active', i === idx));
+    stageLabel.textContent = (idx + 1) + ' / ' + screens.length + ' — ' + screens[idx].dataset.label;
+    Array.from(picker.children).forEach((pill, i) =>
+      pill.classList.toggle('stage-pill--active', i === idx)
+    );
+    // Replay celebrate when re-entering a celebration view
+    const view = screens[idx].dataset.view || '';
+    if (view.startsWith('celebration')) {
+      engines.forEach(({ engine, canvas }) => {
+        if (canvas.dataset.state === 'celebrate' && screens[idx].contains(canvas)) {
+          engine.setState('celebrate');
+        }
+      });
+      ['.celebrate-shimmer', '.celebrate-specks'].forEach(sel => {
+        const el = screens[idx].querySelector(sel);
+        if (!el) return;
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+      });
+    }
+  }
+  function go(delta) { idx = (idx + delta + screens.length) % screens.length; render(); }
+  prevBtn.addEventListener('click', () => go(-1));
+  nextBtn.addEventListener('click', () => go(1));
+  screens.forEach((s, i) => {
+    const pill = document.createElement('button');
+    pill.className = 'stage-pill';
+    pill.textContent = s.dataset.label;
+    pill.addEventListener('click', () => { idx = i; render(); });
+    picker.appendChild(pill);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') go(-1);
+    else if (e.key === 'ArrowRight') go(1);
+  });
+
+  // ── Record button state cycle (per prompt view, self-contained) ───────────
+  // Tap cycles: idle → recording → (tap) → saving → (auto) saved/finished → idle
+  // Uses setTimeout chain so the user sees every label/button state.
+  document.querySelectorAll('.screen[data-view^="prompt"]').forEach(screen => {
+    const btn    = screen.querySelector('.record-button');
+    const icon   = screen.querySelector('.record-button__icon');
+    const label  = screen.querySelector('.record-label');
+    const timer  = screen.querySelector('.record-timer');
+    const wave   = screen.querySelector('.record-waveform');
+    if (!btn) return;
+
+    let phase = 'idle';
+    let seconds = 0, timerId = null;
+    const fmt = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+    const ICON_MIC = '<rect x="9" y="3" width="6" height="12" rx="3"/>'
+                   + '<path d="M5 11a7 7 0 0 0 14 0"/>'
+                   + '<line x1="12" y1="18" x2="12" y2="22"/>'
+                   + '<line x1="8" y1="22" x2="16" y2="22"/>';
+    const ICON_STOP  = '<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>';
+    const ICON_CHECK = '<polyline points="20 6 9 17 4 12" stroke-width="2.5"/>';
+
+    function clearClasses() {
+      btn.classList.remove('record-button--recording','record-button--uploading','record-button--finished');
+      label.classList.remove('record-label--recording','record-label--saving','record-label--saved','record-label--error');
+    }
+    function setPhase(p) {
+      phase = p;
+      clearClasses();
+      switch (p) {
+        case 'idle':
+          btn.setAttribute('aria-label','Start recording');
+          label.textContent = 'Tap to record';
+          icon.innerHTML = ICON_MIC;
+          wave.classList.remove('record-waveform--active');
+          timer.classList.remove('record-timer--visible');
+          if (timerId) { clearInterval(timerId); timerId = null; }
+          break;
+        case 'recording':
+          btn.classList.add('record-button--recording');
+          btn.setAttribute('aria-label','Stop recording');
+          label.classList.add('record-label--recording');
+          label.textContent = 'Recording...';
+          icon.innerHTML = ICON_STOP;
+          wave.classList.add('record-waveform--active');
+          timer.classList.add('record-timer--visible');
+          seconds = 0;
+          timer.textContent = fmt(0);
+          timerId = setInterval(() => { seconds++; timer.textContent = fmt(seconds); }, 1000);
+          break;
+        case 'saving':
+          btn.classList.add('record-button--uploading');
+          label.classList.add('record-label--saving');
+          label.textContent = 'Saving…';
+          wave.classList.remove('record-waveform--active');
+          if (timerId) { clearInterval(timerId); timerId = null; }
+          setTimeout(() => setPhase('saved'), 900);
+          break;
+        case 'saved':
+          btn.classList.remove('record-button--uploading');
+          btn.classList.add('record-button--finished');
+          label.classList.add('record-label--saved');
+          label.textContent = 'Saved';
+          icon.innerHTML = ICON_CHECK;
+          setTimeout(() => setPhase('idle'), 2200);
+          break;
+      }
+    }
+    btn.addEventListener('click', () => {
+      if (phase === 'idle') setPhase('recording');
+      else if (phase === 'recording') setPhase('saving');
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
