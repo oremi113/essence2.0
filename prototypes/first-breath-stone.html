@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>First Breath Stone Moment — Essence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --text-warm: #F5F0EA;
+    --text-warm-secondary: rgba(245,240,234,0.75);
+    --text-warm-muted: rgba(245,240,234,0.55);
+    /* 3-stop gradient with hue shift — cooler + darker at top, warm mid,
+       warmer + deeper at bottom. Produces a color journey that reads as
+       a volumetric space rather than a flat dark surface. */
+    --bg-dark: linear-gradient(180deg, #15120F 0%, #1E1915 50%, #2A241E 100%);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text-warm);
+    background: #15120F;
+    overflow: hidden;
+  }
+  main.root {
+    min-height: 100vh;
+    background: var(--bg-dark);
+    color: var(--text-warm);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+  }
+
+  .vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.10) 70%, rgba(0,0,0,0.22) 100%);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .sanctuary-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(210,160,110,0.14) 0%, rgba(180,130,90,0.06) 35%, transparent 72%);
+    pointer-events: none;
+    z-index: 1;
+    transform-origin: 50% 30%;
+    will-change: opacity, transform;
+    animation: sanctuaryBreath 13s ease-in-out infinite;
+  }
+  @keyframes sanctuaryBreath {
+    0%, 100% { opacity: 0.80; transform: scale(0.97); }
+    50%      { opacity: 1.00; transform: scale(1.03); }
+  }
+
+  /* Preserved entrance — stone scales + opacity, bloom overlay supplies
+     the brightness spike, gold ring fires at peak */
+  .stone-wrap { transform-origin: center; will-change: transform, opacity; }
+  .stone-wrap.entering {
+    animation: stoneEntrance 2500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes stoneEntrance {
+    0%   { opacity: 0.60; transform: scale(0.80); }
+    100% { opacity: 1.00; transform: scale(1.00); }
+  }
+  /* Bloom overlay — sibling to the stone. Opacity-only animation + screen
+     blend mode so the stone reads as emitting light on arrival. GPU-only,
+     no repaint. */
+  .stone-bloom {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    /* Inner color aligned to the sanctuary amber family (245,210,160) so
+       bloom, sanctuary-glow, and halo all sing in the same key. */
+    background: radial-gradient(circle,
+      rgba(245, 210, 160, 0.55) 0%,
+      rgba(232, 195, 140, 0.28) 30%,
+      rgba(232, 195, 140, 0.10) 55%,
+      transparent 75%);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    mix-blend-mode: screen;
+    will-change: opacity, transform;
+  }
+  .stone-bloom.playing {
+    animation: stoneBloom 2500ms ease-in-out both;
+  }
+  @keyframes stoneBloom {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.60); }
+    50%  { opacity: 1; transform: translate(-50%, -50%) scale(1.00); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stone-bloom.playing { animation: none; opacity: 0; }
+  }
+
+  /* Detail-phase light drift — slow warm band sweeping across the stone
+     surface on a 6s loop. Clipped to a circle + mix-blend screen so it
+     reads as grazing light on the stone, not a rectangle over it.
+     Opacity gates at the edges so the loop wraps without a snap-back. */
+  .stone-glimmer {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 220px;
+    height: 220px;
+    margin: -110px 0 0 -110px;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    z-index: 6;
+    display: none;
+  }
+  .stone-glimmer.in { display: block; }
+  .stone-glimmer-band {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg,
+      transparent 35%,
+      rgba(255, 235, 200, 0.18) 48%,
+      rgba(255, 245, 220, 0.28) 52%,
+      rgba(255, 235, 200, 0.18) 56%,
+      transparent 70%);
+    animation: lightDrift 6s ease-in-out infinite;
+    will-change: transform;
+  }
+  @keyframes lightDrift {
+    0%   { transform: translateX(-120%); opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateX(120%); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stone-glimmer-band { animation: none; opacity: 0; }
+  }
+
+  .gold-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: none;
+    background: radial-gradient(circle,
+      rgba(232, 180, 110, 0.35) 0%,
+      rgba(232, 180, 110, 0.15) 40%,
+      transparent 65%);
+    box-shadow: 0 0 60px rgba(232, 180, 110, 0.25);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55);
+    z-index: 4;
+    /* delay 1000ms + 12% of 2200ms (264ms) ≈ 1264ms → lands on the bloom peak */
+    animation: goldRing 2200ms ease-out 1000ms both;
+  }
+  @keyframes goldRing {
+    0%   { opacity: 0;    transform: translate(-50%, -50%) scale(0.55); }
+    12%  { opacity: 0.65; transform: translate(-50%, -50%) scale(0.85); }
+    100% { opacity: 0;    transform: translate(-50%, -50%) scale(3.20); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sanctuary-glow { animation: none; opacity: 0.9; transform: none; }
+    .stone-wrap.entering { animation: none; }
+    .gold-ring { animation: none; opacity: 0; }
+  }
+  .stage {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .halo {
+    /* Fixed size — scaling via transform avoids the layout reflow that
+       transitioning width/height would trigger on phone hardware. */
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,220,200,0.12) 0%, rgba(232,220,200,0.06) 40%, transparent 70%);
+    pointer-events: none;
+    transform-origin: center;
+    opacity: 1;
+    /* transform transition eases the halo back to rest when .pulsing is removed */
+    transition: opacity 1200ms ease, transform 800ms ease;
+  }
+  /* Beat 1: halo pulses warm — 4.5s, ~7% scale range */
+  .halo.pulsing {
+    animation: haloPulse 4500ms ease-in-out infinite;
+  }
+  /* Beats 2 + 3: halo keeps breathing on a slower, gentler rhythm —
+     7s loop sits in the middle harmonic between the stone (~5s) and
+     the sanctuary glow (13s). Three breathing bodies at three tempos
+     keeps the scene from going visually silent once forming ends. */
+  .halo.pulsing-calm {
+    animation: haloPulseCalm 7000ms ease-in-out infinite;
+  }
+  /* Beat 4 settling: no spotlight boundary — stone sits in atmosphere */
+  .halo.hidden-detail { opacity: 0; }
+  @keyframes haloPulse {
+    0%, 100% { opacity: 0.78; transform: scale(0.97); }
+    50%      { opacity: 1.00; transform: scale(1.04); }
+  }
+  @keyframes haloPulseCalm {
+    0%, 100% { opacity: 0.92; transform: scale(0.99); }
+    50%      { opacity: 1.00; transform: scale(1.01); }
+  }
+
+  /* Fragments — converging motes during crystallize. Always in the DOM;
+     opacity toggles so forming → crystallize is a true crossfade. */
+  .fragments {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 500ms ease;
+  }
+  .fragments.in { opacity: 1; }
+  .fragment {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 50%;
+    background: rgba(232, 200, 150, 0.9);
+    box-shadow: 0 0 8px rgba(232, 200, 150, 0.55);
+    opacity: 0;
+    animation: fragmentConverge linear infinite;
+  }
+  @keyframes fragmentConverge {
+    0%   { opacity: 0;    transform: translate(var(--fx), var(--fy)) scale(1); }
+    12%  { opacity: 0.95; }
+    85%  { opacity: 0.55; }
+    100% { opacity: 0;    transform: translate(0, 0) scale(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .halo.pulsing, .halo.pulsing-calm { animation: none; }
+    .fragment { animation: none; opacity: 0; }
+  }
+  /* No width/height transition — that animates layout on every phase
+     change, which reflows on phone hardware. engine.resize() is called
+     once per phase and the canvas snaps to its new size instantly.
+     If a smooth resize is ever needed, scale the wrapper with transform,
+     not the canvas with layout.
+
+     The radial mask hides the canvas's rectangular corners. The engine
+     paints an ambient gradient + dust motes across the whole canvas rect
+     for depth, which otherwise reads as a visible "box" on a dark bg.
+     Fully visible through 80% of radius (past the stone's max breath
+     scale 1.30), fades to transparent by 98%. */
+  canvas#stone {
+    display: block;
+    mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
+    -webkit-mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
+  }
+
+  .copy {
+    max-width: 420px;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 10;
+    min-height: 100px;
+  }
+  h1.headline {
+    font-family: 'Spectral', Georgia, "Times New Roman", serif;
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.35;
+    color: var(--text-warm);
+    margin: 0;
+  }
+  h1.headline.small-italic {
+    font-size: 22px;
+    font-style: italic;
+  }
+
+  /* Copy crossfade. Entry and exit mirror each other: old text drifts up
+     4px while fading out, new text drifts up from 6px while fading in.
+     Reads as one thought giving way to the next, not ghost-then-replace. */
+  .copy-slot {
+    display: block;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 700ms ease, transform 700ms ease;
+  }
+  .copy-slot.in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .copy-slot.exiting {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    pointer-events: none;
+    animation: copyFadeOut 400ms ease forwards;
+  }
+  @keyframes copyFadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-4px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .copy-slot { transition: none; opacity: 1; transform: none; }
+    .copy-slot.exiting { animation: none; opacity: 0; }
+  }
+  /* Subtitle is serif italic (Spectral) at 15px — the editorial-book
+     move. Italic-serif headline + italic-serif subtitle reads as one
+     continuous thought in two weights, rather than "literary" title
+     above "functional" caption. */
+  p.subtext {
+    font-family: 'Spectral', Georgia, serif;
+    font-size: 15px;
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+    color: var(--text-warm-secondary);
+    margin-top: 12px;
+  }
+  /* End-state line — italicized Spectral, in character with the ceremony */
+  p.subtext.end-line {
+    font-family: 'Spectral', Georgia, serif;
+    font-style: italic;
+    font-size: 20px;
+    margin-top: 0;
+    color: rgba(245, 240, 234, 0.75);
+    letter-spacing: 0.02em;
+  }
+  /* Dim the entire stage so atmosphere + line carry the final moment */
+  .root.ended .stage {
+    opacity: 0.35;
+    transition: opacity 1400ms ease;
+  }
+
+  .chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 10;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245,240,234,0.06);
+    border: 1px solid rgba(245,240,234,0.08);
+    border-radius: 24px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: var(--text-warm-secondary);
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  .chip svg { opacity: 0.6; }
+  /* Cascade chips in on detail phase — 0ms / 120ms / 240ms per-chip
+     stagger via inline animation-delay, so the row reads as three small
+     arrivals, not one block fade. */
+  .chips-row.in .chip {
+    animation: chipIn 600ms ease both;
+  }
+  @keyframes chipIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .cta-area {
+    width: 100%;
+    max-width: 360px;
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* matches button's measured height (font 16 × line-height 1 + 18+18 padding) */
+    min-height: 52px;
+  }
+  .honey-btn {
+    background: #E8DCC8;
+    color: #1C1A18;
+    border-radius: 16px;
+    padding: 18px 24px;
+    font-size: 16px;
+    line-height: 1;          /* predictable height — 16 + 18 + 18 = 52px */
+    font-weight: 600;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(232,220,200,0.20);
+    opacity: 0;
+    transition: opacity 500ms ease, filter 200ms ease;
+  }
+  .honey-btn.in { opacity: 1; }
+  .honey-btn:hover { filter: brightness(1.04); }
+  .honey-btn:active { filter: brightness(0.96); }
+
+  /* Skip — bottom-right, frame of escape. Top-right put it in the warmest
+     part of the sanctuary glow (centered ~50% × 30%) where it competed
+     with the stone. 40% opacity: findable but not present. */
+  .skip {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    color: var(--text-warm-muted);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    padding: 6px 10px;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 10;
+    transition: opacity 400ms ease;
+  }
+  .skip.in { opacity: 0.4; }
+  .skip:hover { opacity: 0.9; }
+
+  /* Particles — CSS-only, forming phase. Opacity-driven visibility
+     so the forming → crystallize handoff crossfades instead of cuts.
+     NOTE: class is `.faded` not `.hidden` because the global `.hidden`
+     utility sets `display: none !important`, which would short-circuit
+     the crossfade. */
+  .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 500ms ease;
+  }
+  .particles.faded { opacity: 0; }
+  .particle {
+    position: absolute;
+    bottom: -8px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(232,220,200,0.6);
+    animation: firstBreathParticle linear infinite;
+  }
+  @keyframes firstBreathParticle {
+    0%   { transform: translateY(0) scale(0.8); opacity: 0; }
+    10%  { opacity: 0.2; }
+    100% { transform: translateY(-320px) scale(1.1); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .particle { animation: none; opacity: 0; }
+    h1.headline, p.subtext, .chips-row, .honey-btn { transition: none; }
+  }
+
+  .hidden { display: none !important; }
+  /* Restart is dev chrome — hidden in the composition by default so it
+     doesn't break the fourth wall for screenshots / recordings / anyone
+     who isn't debugging. Appears only with `?dev=1` in the URL. */
+  .restart { display: none; }
+  body.dev-mode .restart {
+    display: inline-flex;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: rgba(245,240,234,0.06);
+    border: 1px solid rgba(245,240,234,0.12);
+    color: var(--text-warm-muted);
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  body.dev-mode .restart:hover { color: var(--text-warm); }
+</style>
+</head>
+<body>
+
+<main class="root" id="root">
+
+  <!-- ─── SOUND DESIGN SCAFFOLDING (TODO: assets) ─────────────────────
+       The three tracks below are placeholders documenting the intended
+       audio layering for this sequence. All src values are empty — drop
+       final assets in when sound design lands. Playback is gated behind
+       the first user interaction on the page (iOS autoplay policy).
+
+       1. Ambient breath-room (#audioAmbient, loop)
+          Purpose: underlays the entire sequence, sets "sanctuary" tone.
+          TODO: soft pad + sub-bass, 4:30 seamless loop, -24 LUFS,
+                sub rolloff < 40 Hz, fades out on route exit.
+          Trigger: page mount (after first gesture).
+
+       2. Crystallize harmonic swell (#audioCrystallize, one-shot)
+          Purpose: Beat 2 — accompanies fragment convergence.
+          TODO: harmonic cluster, 2.8s one-shot, 400ms fade-in /
+                600ms fade-out, -20 LUFS.
+          Trigger: entering crystallize (t = 5000ms from sequence start).
+
+       3. Stone reveal tone (#audioReveal, one-shot)
+          Purpose: the single cinematic moment — lands with the ring + bloom peak.
+          TODO: low resonant bell (Db2 or Eb2), soft mallet attack + 4.5s tail,
+                -18 LUFS; long reverb tail, no compression.
+          Trigger: 1000ms after entering preserved (coincides with bloom peak
+                   at t = 8500ms from sequence start).
+
+       Mix target: hold under -16 LUFS short-term so iOS doesn't auto-duck.
+  -->
+  <audio id="audioAmbient" preload="auto" loop aria-hidden="true"></audio>
+  <audio id="audioCrystallize" preload="auto" aria-hidden="true"></audio>
+  <audio id="audioReveal" preload="auto" aria-hidden="true"></audio>
+
+  <div class="sanctuary-glow" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <button class="restart" id="restart" title="Restart sequence">Restart</button>
+
+  <div class="stage" id="stage">
+    <div class="halo" id="halo" aria-hidden="true"></div>
+    <div class="particles" id="particles" aria-hidden="true"></div>
+    <div class="fragments" id="fragments" aria-hidden="true"></div>
+    <div class="gold-ring" id="goldRing" aria-hidden="true" style="display:none"></div>
+    <div class="stone-wrap" id="stoneWrap">
+      <canvas id="stone" aria-hidden="true"></canvas>
+    </div>
+    <div class="stone-bloom" id="stoneBloom" aria-hidden="true"></div>
+    <div class="stone-glimmer" id="stoneGlimmer" aria-hidden="true">
+      <div class="stone-glimmer-band"></div>
+    </div>
+  </div>
+
+  <div class="copy" id="copy"></div>
+
+  <div class="chips-row" id="chips">
+    <div class="chip" style="animation-delay: 0ms">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span>Born from your voice</span>
+    </div>
+    <div class="chip" style="animation-delay: 120ms">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <span>Shaped by what you felt</span>
+    </div>
+    <div class="chip" style="animation-delay: 240ms">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>Safeguarded for you</span>
+    </div>
+  </div>
+
+  <div class="cta-area" id="ctaArea"></div>
+
+  <button class="skip" id="skip" aria-label="Skip to Breath Stone reveal">Skip</button>
+</main>
+
+<script>
+/* ========================================================================
+   BreathStoneEngine — vanilla JS port of src/components/breath-stone/breathStoneEngine.ts
+   ======================================================================== */
+
+class PerlinNoise {
+  constructor() { this.gradients = {}; }
+  randVect() {
+    const theta = Math.random() * 2 * Math.PI;
+    return { x: Math.cos(theta), y: Math.sin(theta) };
+  }
+  dotProdGrid(x, y, vx, vy) {
+    const key = vx + ',' + vy;
+    const g = this.gradients[key] || (this.gradients[key] = this.randVect());
+    return (x - vx) * g.x + (y - vy) * g.y;
+  }
+  smootherstep(x) { return 6 * Math.pow(x,5) - 15 * Math.pow(x,4) + 10 * Math.pow(x,3); }
+  interp(x, a, b) { return a + this.smootherstep(x) * (b - a); }
+  get(x, y) {
+    const xf = Math.floor(x), yf = Math.floor(y);
+    return this.interp(
+      y - yf,
+      this.interp(x - xf, this.dotProdGrid(x, y, xf, yf), this.dotProdGrid(x, y, xf + 1, yf)),
+      this.interp(x - xf, this.dotProdGrid(x, y, xf, yf + 1), this.dotProdGrid(x, y, xf + 1, yf + 1))
+    );
+  }
+}
+
+const STATE_TARGETS = {
+  idle:       { glowIntensity: 0.06, breathAmplitude: 0.04, irregularity: 0.04, colorTemp: 0,    backgroundBloom: 0,   spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 4500, voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+  ready:      { glowIntensity: 0.14, breathAmplitude: 0.06, irregularity: 0.05, colorTemp: 0.4,  backgroundBloom: 0,   spark: 1,   innerPulse: 0.3,  vignette: 0, breathSpeed: 4000, voiceReactive: 0, sheen: 0.8, peakHold: 0.07 },
+  recording:  { glowIntensity: 0.40, breathAmplitude: 0.25, irregularity: 0.08, colorTemp: 1,    backgroundBloom: 1,   spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 3500, voiceReactive: 1, sheen: 0,   peakHold: 0.07 },
+  working:    { glowIntensity: 0.04, breathAmplitude: 0.02, irregularity: 0.03, colorTemp: -0.2, backgroundBloom: 0,   spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 6000, voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+  celebrate:  { glowIntensity: 0.55, breathAmplitude: 0.35, irregularity: 0.06, colorTemp: 1,    backgroundBloom: 1,   spark: 1,   innerPulse: 0,    vignette: 0, breathSpeed: 1800, voiceReactive: 0, sheen: 1,   peakHold: 0.07 },
+  playback:   { glowIntensity: 0.12, breathAmplitude: 0.05, irregularity: 0.06, colorTemp: 0.3,  backgroundBloom: 0,   spark: 0,   innerPulse: 1,    vignette: 1, breathSpeed: 4000, voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+  shimmer:    { glowIntensity: 0.15, breathAmplitude: 0.03, irregularity: 0.04, colorTemp: 0.2,  backgroundBloom: 0,   spark: 0.5, innerPulse: 0,    vignette: 0, breathSpeed: 5000, voiceReactive: 0, sheen: 1.2, peakHold: 0.07 },
+  guidance:   { glowIntensity: 0.07, breathAmplitude: 0.035,irregularity: 0.04, colorTemp: 0.1,  backgroundBloom: 0,   spark: 0,   innerPulse: 0.18, vignette: 0, breathSpeed: 6200, voiceReactive: 0, sheen: 0,   peakHold: 0.19 },
+  priming:    { glowIntensity: 0.12, breathAmplitude: 0.22, irregularity: 0.02, colorTemp: 0.15, backgroundBloom: 0,   spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 6000, voiceReactive: 0, sheen: 0,   peakHold: 0,    inhaleRatio: 0.5, breathNoiseScale: 0.15 },
+  infused:    { glowIntensity: 0.325,breathAmplitude: 0.10, irregularity: 0.06, colorTemp: 0.6,  backgroundBloom: 0.4, spark: 0,   innerPulse: 0.5,  vignette: 0, breathSpeed: 5000, voiceReactive: 0, sheen: 0.3, peakHold: 0.07 },
+  archive:    { glowIntensity: 0.02, breathAmplitude: 0,    irregularity: 0.03, colorTemp: -0.1, backgroundBloom: 0,   spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 99999,voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+};
+
+class BreathStoneEngine {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.noise = new PerlinNoise();
+    this.animationId = null;
+    this.currentState = 'idle';
+    this.s = Object.assign({}, STATE_TARGETS.idle);
+    this.breathVelocity = 0;
+    this.lastBreathTarget = 1;
+    this.isExhaleStart = false;
+    this.celebrateStartTime = null;
+    this.onCelebrateEnd = null;
+    this.draw = this.draw.bind(this);
+  }
+  setState(state, onCelebrateEnd) {
+    const prev = this.currentState;
+    this.currentState = state;
+    if (state === 'celebrate') {
+      this.celebrateStartTime = null;
+      this.onCelebrateEnd = onCelebrateEnd;
+    }
+    if (prev !== state) this.breathVelocity = 0;
+  }
+  start() { this.animationId = requestAnimationFrame(this.draw); }
+  stop() {
+    if (this.animationId !== null) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+  }
+  resize(width, height) {
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = width * dpr;
+    this.canvas.height = height * dpr;
+    this.canvas.style.width = width + 'px';
+    this.canvas.style.height = height + 'px';
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(dpr, dpr);
+  }
+  getBreathScale(timestamp, amplitude, breathSpeed, peakHold, peakTremor, inhaleRatio, breathNoiseScale) {
+    if (amplitude < 0.001) return 1;
+    const cycleVariance = this.noise.get(timestamp * 0.00001, 0) * 0.02;
+    const variedCycle = breathSpeed * (1 + cycleVariance);
+    const phase = (timestamp % variedCycle) / variedCycle;
+    const inhaleEnd = Math.min(0.95, Math.max(0.05, inhaleRatio));
+    const holdEnd = Math.min(0.99, inhaleEnd + peakHold);
+    const exhaleRange = Math.max(0.001, 1 - holdEnd);
+    let breathCurve, isPeakHold = false;
+    if (phase < inhaleEnd) breathCurve = phase / inhaleEnd;
+    else if (phase < holdEnd) { breathCurve = 1; isPeakHold = true; }
+    else breathCurve = 1 - (phase - holdEnd) / exhaleRange;
+    breathCurve = breathCurve * breathCurve * (3 - 2 * breathCurve);
+    const tremor = isPeakHold ? Math.sin(timestamp * 0.018) * peakTremor : 0;
+    const amplitudeVariance = this.noise.get(timestamp * 0.00008, 100) * 0.05 * breathNoiseScale;
+    const variedAmplitude = amplitude * (1 + amplitudeVariance);
+    const microVariance = (Math.sin(timestamp * 0.0003) * 0.10 + Math.sin(timestamp * 0.0007) * 0.05) * breathNoiseScale;
+    const targetScale = 1 + breathCurve * variedAmplitude + microVariance + tremor;
+    const accel = (targetScale - this.lastBreathTarget) * 0.025;
+    this.breathVelocity += accel;
+    this.breathVelocity *= 0.90;
+    const scale = this.lastBreathTarget + this.breathVelocity;
+    this.lastBreathTarget = scale;
+    this.isExhaleStart = phase > holdEnd && phase < holdEnd + 0.03;
+    return Math.max(0.90, Math.min(1.30, scale));
+  }
+  generateSilhouette(baseRadius, segments, irregularity, timestamp) {
+    const points = [];
+    const noiseScale = 0.15;
+    for (let i = 0; i < segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const noiseVal = this.noise.get(Math.cos(angle) * noiseScale + timestamp * 0.0001, Math.sin(angle) * noiseScale + timestamp * 0.0001);
+      const clusterNoise = this.noise.get(Math.cos(angle * 3) * 0.08, Math.sin(angle * 3) * 0.08);
+      const irr = 1 + noiseVal * irregularity + clusterNoise * irregularity * 0.5;
+      const r = baseRadius * irr;
+      points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+    }
+    return points;
+  }
+  draw(timestamp) {
+    const ctx = this.ctx;
+    const dpr = window.devicePixelRatio || 1;
+    const W = this.canvas.width / dpr;
+    const H = this.canvas.height / dpr;
+    const cx = W / 2;
+    const cy = H / 2;
+    const baseRadius = Math.min(W, H) * 0.28;
+
+    ctx.clearRect(0, 0, W, H);
+
+    let resolvedState = this.currentState;
+    if (this.currentState === 'celebrate') {
+      if (this.celebrateStartTime === null) this.celebrateStartTime = timestamp;
+      if (timestamp - this.celebrateStartTime > 2200) {
+        this.currentState = 'idle';
+        this.celebrateStartTime = null;
+        if (this.onCelebrateEnd) this.onCelebrateEnd();
+        resolvedState = 'idle';
+      }
+    }
+
+    const target = Object.assign({}, STATE_TARGETS[resolvedState]);
+    if (resolvedState === 'shimmer') {
+      target.glowIntensity = 0.15 + Math.sin(timestamp * 0.0008) * 0.07;
+    } else if (resolvedState === 'infused') {
+      target.glowIntensity = 0.325 + Math.sin(timestamp * 0.00105) * 0.125;
+    }
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+    this.s.glowIntensity   = lerp(this.s.glowIntensity,   target.glowIntensity,   0.04);
+    this.s.breathAmplitude = lerp(this.s.breathAmplitude, target.breathAmplitude, 0.03);
+    this.s.irregularity    = lerp(this.s.irregularity,    target.irregularity,    0.03);
+    this.s.colorTemp       = lerp(this.s.colorTemp,       target.colorTemp,       0.04);
+    this.s.backgroundBloom = lerp(this.s.backgroundBloom, target.backgroundBloom, 0.03);
+    this.s.spark           = lerp(this.s.spark,           target.spark,           0.05);
+    this.s.innerPulse      = lerp(this.s.innerPulse,      target.innerPulse,      0.06);
+    this.s.vignette        = lerp(this.s.vignette,        target.vignette,        0.04);
+    this.s.breathSpeed     = lerp(this.s.breathSpeed,     target.breathSpeed,     0.02);
+    this.s.voiceReactive   = lerp(this.s.voiceReactive,   target.voiceReactive,   0.04);
+    this.s.sheen           = lerp(this.s.sheen,           target.sheen,           0.04);
+    this.s.peakHold        = lerp(this.s.peakHold,        target.peakHold,        0.03);
+    this.s.peakTremor      = lerp(this.s.peakTremor || 0, target.peakTremor || 0, 0.04);
+
+    let breathScale;
+    if (this.currentState === 'celebrate' && this.celebrateStartTime !== null) {
+      const elapsed = timestamp - this.celebrateStartTime;
+      const duration = 2200;
+      const t = Math.min(1, elapsed / duration);
+      const celebrateAmplitude = STATE_TARGETS.celebrate.breathAmplitude;
+      let curve;
+      if (t < 0.3) { const r = t / 0.3; curve = r * r * (3 - 2 * r); }
+      else if (t < 0.6) { curve = 1; }
+      else { const r = (t - 0.6) / 0.4; curve = 1 - r * r * (3 - 2 * r); }
+      breathScale = 1 + curve * celebrateAmplitude;
+      this.lastBreathTarget = breathScale;
+      this.breathVelocity = 0;
+      this.isExhaleStart = false;
+    } else {
+      breathScale = this.getBreathScale(
+        timestamp,
+        this.s.breathAmplitude,
+        this.s.breathSpeed,
+        this.s.peakHold,
+        this.s.peakTremor || 0,
+        this.s.inhaleRatio || 0.35,
+        this.s.breathNoiseScale || 1.0
+      );
+    }
+    const currentRadius = baseRadius * breathScale;
+
+    const voiceVolume = (Math.sin(timestamp * 0.003) * 0.5 + 0.5) * 0.15;
+    const reactiveRadius = currentRadius * (1 + voiceVolume * this.s.voiceReactive);
+    const silhouette = this.generateSilhouette(reactiveRadius, 72, this.s.irregularity, timestamp);
+
+    const ambientG = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.6);
+    ambientG.addColorStop(0, 'rgba(235, 224, 200, 0.02)');
+    ambientG.addColorStop(0.5, 'rgba(251, 248, 244, 0.01)');
+    ambientG.addColorStop(1, 'rgba(251, 248, 244, 0)');
+    ctx.fillStyle = ambientG;
+    ctx.fillRect(0, 0, W, H);
+
+    const dirG = ctx.createLinearGradient(0, 0, W, H);
+    dirG.addColorStop(0, 'rgba(251, 248, 244, 0.005)');
+    dirG.addColorStop(1, 'rgba(28, 26, 24, 0.012)');
+    ctx.fillStyle = dirG;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(cx, cy + currentRadius * 0.85);
+    ctx.scale(1, 0.3);
+    const shadowG = ctx.createRadialGradient(0, 0, 0, 0, 0, currentRadius * 0.9);
+    shadowG.addColorStop(0, 'rgba(28, 26, 24, 0.08)');
+    shadowG.addColorStop(0.5, 'rgba(28, 26, 24, 0.04)');
+    shadowG.addColorStop(1, 'rgba(28, 26, 24, 0)');
+    ctx.fillStyle = shadowG;
+    ctx.beginPath();
+    ctx.arc(0, 0, currentRadius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    if (this.s.vignette > 0.01) {
+      const vigG = ctx.createRadialGradient(cx, cy, currentRadius * 1.5, cx, cy, Math.max(W, H) * 0.7);
+      vigG.addColorStop(0, 'rgba(28, 26, 24, 0)');
+      vigG.addColorStop(1, 'rgba(28, 26, 24, ' + (this.s.vignette * 0.08) + ')');
+      ctx.fillStyle = vigG;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.globalAlpha = 0.012;
+    for (let i = 0; i < 25; i++) {
+      const px = (this.noise.get(i * 0.2, timestamp * 0.00004) * 0.5 + 0.5) * W;
+      const py = (this.noise.get(i * 0.2 + 100, timestamp * 0.00004) * 0.5 + 0.5) * H;
+      ctx.fillStyle = '#E8DCC8';
+      ctx.fillRect(px, py, 1.5, 1.5);
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    if (this.s.backgroundBloom > 0.01) {
+      const bloomSize = Math.max(W, H) * 0.4;
+      const bgBloom = ctx.createRadialGradient(0, 0, currentRadius, 0, 0, bloomSize);
+      bgBloom.addColorStop(0, 'rgba(235, 220, 200, ' + (this.s.backgroundBloom * 0.08) + ')');
+      bgBloom.addColorStop(0.4, 'rgba(232, 220, 200, ' + (this.s.backgroundBloom * 0.04) + ')');
+      bgBloom.addColorStop(0.7, 'rgba(235, 228, 220, ' + (this.s.backgroundBloom * 0.02) + ')');
+      bgBloom.addColorStop(1, 'rgba(235, 228, 220, 0)');
+      ctx.fillStyle = bgBloom;
+      ctx.beginPath();
+      ctx.arc(0, 0, bloomSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const flickerMult = this.isExhaleStart ? 1.02 : 1;
+    const glow = this.s.glowIntensity * flickerMult;
+
+    const bloomR = currentRadius * 3.5;
+    const warmR = Math.round(229 + this.s.colorTemp * 12);
+    const warmG = Math.round(212 + this.s.colorTemp * 18);
+    const warmB = Math.round(191 + this.s.colorTemp * 9);
+
+    const hdrBloom = ctx.createRadialGradient(-currentRadius * 0.2, -currentRadius * 0.2, 0, 0, 0, bloomR);
+    hdrBloom.addColorStop(0, 'rgba(' + warmR + ', ' + warmG + ', ' + warmB + ', ' + (glow * 0.06) + ')');
+    hdrBloom.addColorStop(0.3, 'rgba(' + warmR + ', ' + warmG + ', ' + warmB + ', ' + (glow * 0.03) + ')');
+    hdrBloom.addColorStop(0.6, 'rgba(235, 228, 220, ' + (glow * 0.015) + ')');
+    hdrBloom.addColorStop(1, 'rgba(235, 228, 220, 0)');
+    ctx.fillStyle = hdrBloom;
+    ctx.beginPath();
+    ctx.arc(0, 0, bloomR, 0, Math.PI * 2);
+    ctx.fill();
+
+    const hazeG = ctx.createRadialGradient(-currentRadius * 0.15, -currentRadius * 0.15, currentRadius * 0.5, 0, 0, currentRadius * 2);
+    hazeG.addColorStop(0, 'rgba(232, 220, 200, ' + (this.s.glowIntensity * 0.12) + ')');
+    hazeG.addColorStop(0.5, 'rgba(235, 228, 220, ' + (this.s.glowIntensity * 0.06) + ')');
+    hazeG.addColorStop(1, 'rgba(235, 228, 220, 0)');
+    ctx.fillStyle = hazeG;
+    ctx.beginPath();
+    ctx.arc(0, 0, currentRadius * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.12;
+    const envShadow = ctx.createRadialGradient(currentRadius * 0.15, currentRadius * 0.15, 0, currentRadius * 0.15, currentRadius * 0.15, currentRadius * 1.4);
+    envShadow.addColorStop(0, 'rgba(28, 26, 24, 0.25)');
+    envShadow.addColorStop(0.6, 'rgba(28, 26, 24, 0.10)');
+    envShadow.addColorStop(1, 'rgba(28, 26, 24, 0)');
+    ctx.fillStyle = envShadow;
+    ctx.beginPath();
+    silhouette.forEach((p, i) => {
+      const x = p.x * 1.1, y = p.y * 1.1;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    const bodyG = ctx.createRadialGradient(-currentRadius * 0.28, -currentRadius * 0.28, 0, 0, 0, currentRadius * 1.35);
+    bodyG.addColorStop(0.00, '#F8F0DC');
+    bodyG.addColorStop(0.12, '#EFE6D0');
+    bodyG.addColorStop(0.28, '#E5D8C0');
+    bodyG.addColorStop(0.45, '#D8CAB0');
+    bodyG.addColorStop(0.62, '#C4B8A0');
+    bodyG.addColorStop(0.78, '#AEA090');
+    bodyG.addColorStop(0.90, '#938A7D');
+    bodyG.addColorStop(1.00, '#7D827E');
+    ctx.fillStyle = bodyG;
+    ctx.beginPath();
+    silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.fill();
+
+    if (resolvedState === 'infused' && this.s.colorTemp > 0) {
+      const tintStrength = Math.min(1, Math.max(0, this.s.colorTemp / 0.6));
+      const tintG = ctx.createRadialGradient(-currentRadius * 0.3, -currentRadius * 0.3, 0, -currentRadius * 0.3, -currentRadius * 0.3, currentRadius * 1.4);
+      tintG.addColorStop(0.00, 'rgba(168, 108, 52, ' + (0.28 * tintStrength) + ')');
+      tintG.addColorStop(0.35, 'rgba(148, 92, 48, ' + (0.18 * tintStrength) + ')');
+      tintG.addColorStop(0.70, 'rgba(110, 78, 52, ' + (0.08 * tintStrength) + ')');
+      tintG.addColorStop(1.00, 'rgba(80, 70, 55, 0)');
+      ctx.fillStyle = tintG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (this.s.sheen > 0.01 && resolvedState !== 'shimmer') {
+      const sheenPhase = (timestamp * 0.0004) % (Math.PI * 2);
+      const sx = Math.cos(sheenPhase) * currentRadius * 0.4;
+      const sy = Math.sin(sheenPhase) * currentRadius * 0.4;
+      const sheenG = ctx.createRadialGradient(sx, sy, 0, sx, sy, currentRadius * 0.6);
+      sheenG.addColorStop(0.0, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.15) + ')');
+      sheenG.addColorStop(0.4, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.10) + ')');
+      sheenG.addColorStop(0.8, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.04) + ')');
+      sheenG.addColorStop(1.0, 'rgba(251, 248, 244, 0)');
+      ctx.fillStyle = sheenG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (resolvedState === 'shimmer' && this.s.sheen > 0.01) {
+      const phaseA = (timestamp * 0.0010) % (Math.PI * 2);
+      const axA = Math.cos(phaseA) * currentRadius * 0.4;
+      const ayA = Math.sin(phaseA) * currentRadius * 0.4;
+      const sheenA = ctx.createRadialGradient(axA, ayA, 0, axA, ayA, currentRadius * 1.1);
+      sheenA.addColorStop(0.0, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.22) + ')');
+      sheenA.addColorStop(0.5, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.10) + ')');
+      sheenA.addColorStop(1.0, 'rgba(251, 248, 244, 0)');
+      ctx.fillStyle = sheenA;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+
+      const phaseB = (-timestamp * 0.0007) % (Math.PI * 2);
+      const axB = Math.cos(phaseB) * currentRadius * 0.4;
+      const ayB = Math.sin(phaseB) * currentRadius * 0.4;
+      const sheenB = ctx.createRadialGradient(axB, ayB, 0, axB, ayB, currentRadius * 1.1);
+      sheenB.addColorStop(0.0, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.11) + ')');
+      sheenB.addColorStop(0.5, 'rgba(251, 248, 244, ' + (this.s.sheen * 0.05) + ')');
+      sheenB.addColorStop(1.0, 'rgba(251, 248, 244, 0)');
+      ctx.fillStyle = sheenB;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    const innerShadow = ctx.createRadialGradient(currentRadius * 0.35, currentRadius * 0.35, 0, 0, 0, currentRadius);
+    innerShadow.addColorStop(0, 'rgba(28, 26, 24, 0.20)');
+    innerShadow.addColorStop(0.5, 'rgba(28, 26, 24, 0.08)');
+    innerShadow.addColorStop(1, 'rgba(28, 26, 24, 0)');
+    ctx.fillStyle = innerShadow;
+    ctx.beginPath();
+    silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.fill();
+
+    const hlG = ctx.createRadialGradient(-currentRadius * 0.32, -currentRadius * 0.38, 0, -currentRadius * 0.32, -currentRadius * 0.38, currentRadius * 0.28);
+    hlG.addColorStop(0, 'rgba(251, 248, 244, 0.50)');
+    hlG.addColorStop(0.5, 'rgba(251, 248, 244, 0.18)');
+    hlG.addColorStop(1, 'rgba(251, 248, 244, 0)');
+    ctx.fillStyle = hlG;
+    ctx.save();
+    ctx.beginPath();
+    ctx.scale(1, 0.65);
+    ctx.arc(-currentRadius * 0.32, -currentRadius * 0.58, currentRadius * 0.28, 0, Math.PI * 2);
+    ctx.restore();
+    ctx.fill();
+
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = 'rgba(139, 126, 111, 0.35)';
+    ctx.globalAlpha = 0.11;
+    ctx.fillStyle = 'rgba(139, 126, 111, 0.6)';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + this.noise.get(i * 0.6, 0) * 3;
+      const px = Math.cos(angle) * currentRadius * (0.3 + this.noise.get(i, 1) * 0.4);
+      const py = Math.sin(angle) * currentRadius * (0.3 + this.noise.get(i, 2) * 0.4);
+      const ps = currentRadius * (0.15 + this.noise.get(i, 3) * 0.1);
+      ctx.beginPath();
+      ctx.ellipse(px, py, ps, ps * (0.6 + this.noise.get(i, 4) * 0.4), angle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    ctx.globalAlpha = 0.035;
+    for (let i = 0; i < 500; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.random() * currentRadius;
+      const x = Math.cos(a) * d;
+      const y = Math.sin(a) * d;
+      const rn = this.noise.get(x * 0.04, y * 0.04);
+      ctx.fillStyle = rn > 0 ? 'rgba(28, 26, 24, 0.5)' : 'rgba(245, 240, 234, 0.5)';
+      ctx.fillRect(x, y, Math.random() < 0.8 ? 1 : 2, Math.random() < 0.8 ? 1 : 2);
+    }
+    ctx.globalAlpha = 1;
+
+    if (this.s.spark > 0.01) {
+      const sparkPhase = (timestamp * 0.0006) % (Math.PI * 2);
+      const spx = Math.cos(sparkPhase) * currentRadius * 0.35;
+      const spy = Math.sin(sparkPhase) * currentRadius * 0.35;
+      const sparkG = ctx.createRadialGradient(spx, spy, 0, spx, spy, currentRadius * 0.4);
+      sparkG.addColorStop(0, 'rgba(255, 250, 240, ' + (this.s.spark * 0.35) + ')');
+      sparkG.addColorStop(0.4, 'rgba(245, 235, 220, ' + (this.s.spark * 0.18) + ')');
+      sparkG.addColorStop(1, 'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = sparkG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (resolvedState === 'playback' && this.s.innerPulse > 0.01) {
+      const s1 = (timestamp * 0.0025) % (Math.PI * 2);
+      const s2 = (timestamp * 0.0042) % (Math.PI * 2);
+      const rhythm = (Math.sin(s1) * 0.5 + 0.5) * (Math.sin(s2) * 0.4 + 0.6);
+      const pulseOp = rhythm * 0.22 * this.s.innerPulse;
+      const pulseG = ctx.createRadialGradient(0, 0, currentRadius * 0.25, 0, 0, currentRadius * 0.7);
+      pulseG.addColorStop(0, 'rgba(235, 224, 200, ' + pulseOp + ')');
+      pulseG.addColorStop(0.6, 'rgba(235, 224, 200, ' + (pulseOp * 0.4) + ')');
+      pulseG.addColorStop(1, 'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = pulseG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (resolvedState === 'guidance' && this.s.innerPulse > 0.05) {
+      const heartbeat = Math.sin(timestamp * 0.0015) * 0.5 + 0.5;
+      const pulseOp = heartbeat * 0.08 * this.s.innerPulse;
+      const pulseG = ctx.createRadialGradient(0, 0, currentRadius * 0.3, 0, 0, currentRadius * 0.65);
+      pulseG.addColorStop(0, 'rgba(235, 224, 200, ' + pulseOp + ')');
+      pulseG.addColorStop(1, 'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = pulseG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (resolvedState === 'infused' && this.s.innerPulse > 0.05) {
+      const ripplePhase = (timestamp % 6000) / 6000;
+      const rippleRadius = currentRadius * (0.1 + ripplePhase * 0.8);
+      const rippleOp = (1 - ripplePhase) * 0.22 * this.s.innerPulse;
+      const rippleG = ctx.createRadialGradient(0, 0, rippleRadius * 0.25, 0, 0, rippleRadius);
+      rippleG.addColorStop(0.0, 'rgba(235, 224, 200, ' + (rippleOp * 0.3) + ')');
+      rippleG.addColorStop(0.7, 'rgba(235, 224, 200, ' + rippleOp + ')');
+      rippleG.addColorStop(1.0, 'rgba(235, 224, 200, 0)');
+      ctx.fillStyle = rippleG;
+      ctx.beginPath();
+      silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    this.animationId = requestAnimationFrame(this.draw);
+  }
+}
+
+/* ========================================================================
+   FirstBreathSequence — vanilla controller
+   ======================================================================== */
+
+const PHASE_CONFIG = {
+  forming:     { state: 'working', size: 140 },
+  crystallize: { state: 'infused', size: 140 },
+  preserved:   { state: 'archive', size: 140 },
+  detail:      { state: 'shimmer', size: 200 },
+};
+
+const CRYSTALLIZE_AT_MS = 5000;
+const PRESERVED_AT_MS = 7500;
+const SKIP_VISIBLE_AT_MS = 1000;
+const TEXT_REVEAL_DELAY_MS = 1800;
+const CRYSTALLIZE_CAPTION_DELAY_MS = 900;
+const FORMING_CAPTION_DELAY_MS = 300;
+// Detail CTA hangs back until chips finish cascading (last chip lands at
+// ~840ms from detail entry). 1200ms gives a ~360ms breath before
+// Continue appears so the user experiences what they earned first.
+const DETAIL_CTA_DELAY_MS = 1200;
+
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const rootEl = document.getElementById('root');
+const haloEl = document.getElementById('halo');
+const canvas = document.getElementById('stone');
+const copyEl = document.getElementById('copy');
+const chipsEl = document.getElementById('chips');
+const ctaEl = document.getElementById('ctaArea');
+const skipEl = document.getElementById('skip');
+const particlesEl = document.getElementById('particles');
+const restartEl = document.getElementById('restart');
+const stoneWrapEl = document.getElementById('stoneWrap');
+const goldRingEl = document.getElementById('goldRing');
+const fragmentsEl = document.getElementById('fragments');
+const stoneBloomEl = document.getElementById('stoneBloom');
+const stoneGlimmerEl = document.getElementById('stoneGlimmer');
+
+const engine = new BreathStoneEngine(canvas);
+engine.start();
+
+// Build particles (forming phase)
+(function buildParticles() {
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < 26; i++) {
+    const delay = (i * 0.37) % 6;
+    const duration = 6 + (i % 5) * 0.8;
+    const left = (i * 53) % 100;
+    const opacity = 0.08 + ((i * 7) % 36) / 100;
+    const span = document.createElement('span');
+    span.className = 'particle';
+    span.style.left = left + '%';
+    span.style.opacity = opacity;
+    span.style.animationDuration = duration + 's';
+    span.style.animationDelay = delay + 's';
+    frag.appendChild(span);
+  }
+  particlesEl.appendChild(frag);
+})();
+
+// Build fragments (crystallize phase) — converging motes
+(function buildFragments() {
+  const count = 20;
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + (i * 0.213);
+    const radius = 160 + ((i * 11) % 55);
+    const fx = Math.cos(angle) * radius;
+    const fy = Math.sin(angle) * radius;
+    const delay = (i * 97) % 1400;
+    const duration = 1500 + ((i * 13) % 500);
+    const size = 3 + (i % 3);
+    const span = document.createElement('span');
+    span.className = 'fragment';
+    span.style.width = size + 'px';
+    span.style.height = size + 'px';
+    span.style.marginLeft = (-size / 2) + 'px';
+    span.style.marginTop = (-size / 2) + 'px';
+    span.style.setProperty('--fx', fx + 'px');
+    span.style.setProperty('--fy', fy + 'px');
+    span.style.animationDuration = duration + 'ms';
+    span.style.animationDelay = delay + 'ms';
+    span.style.animationTimingFunction = 'cubic-bezier(0.3, 0, 0.5, 1)';
+    frag.appendChild(span);
+  }
+  fragmentsEl.appendChild(frag);
+})();
+
+let phase = 'forming';
+let timers = [];
+
+function clearTimers() {
+  timers.forEach(clearTimeout);
+  timers = [];
+}
+
+function setCopyForPhase(p, fadeDelayMs) {
+  // Mark any existing slot(s) as exiting — position absolute so they
+  // don't hold layout, fade out, then unmount after the animation.
+  Array.from(copyEl.children).forEach((slot) => {
+    if (slot.classList.contains('exiting')) return;
+    slot.classList.add('exiting');
+    setTimeout(() => slot.remove(), 500);
+  });
+
+  // Detail phase has no title per copy audit — let the stone speak.
+  if (p === 'detail') return;
+
+  const slot = document.createElement('div');
+  slot.className = 'copy-slot';
+
+  const h1 = document.createElement('h1');
+  h1.className = 'headline';
+  let subtextHTML = null;
+  switch (p) {
+    case 'forming':
+      h1.textContent = 'Your first Breath Stone is forming.';
+      subtextHTML = 'Something from your voice is taking shape.';
+      break;
+    case 'crystallize':
+      h1.textContent = 'Your voice is becoming stone.';
+      break;
+    case 'preserved':
+      h1.className = 'headline small-italic';
+      h1.textContent = 'Your first Breath Stone.';
+      subtextHTML = 'A piece of you, held.';
+      break;
+  }
+  slot.appendChild(h1);
+  let pEl = null;
+  if (subtextHTML) {
+    pEl = document.createElement('p');
+    pEl.className = 'subtext';
+    pEl.textContent = subtextHTML;
+    slot.appendChild(pEl);
+  }
+  copyEl.appendChild(slot);
+  // Slot-level fade + translate so entry mirrors exit (opacity 0→1 with
+  // translateY 6px→0, in step with the exiting slot's 0→-4px).
+  const showIn = () => requestAnimationFrame(() => slot.classList.add('in'));
+  if (fadeDelayMs && fadeDelayMs > 0) {
+    timers.push(setTimeout(showIn, fadeDelayMs));
+  } else {
+    showIn();
+  }
+}
+
+function setCTAForPhase(p, fadeDelayMs) {
+  ctaEl.innerHTML = '';
+  const spec = {
+    preserved:  { label: 'See My Stone', next: () => applyPhase('detail') },
+    detail:     { label: 'Continue',     next: () => showEnd() },
+  }[p];
+  if (!spec) return;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'honey-btn';
+  btn.textContent = spec.label;
+  btn.addEventListener('click', spec.next);
+  ctaEl.appendChild(btn);
+  const showIn = () => requestAnimationFrame(() => btn.classList.add('in'));
+  if (fadeDelayMs && fadeDelayMs > 0) {
+    timers.push(setTimeout(showIn, fadeDelayMs));
+  } else {
+    showIn();
+  }
+}
+
+function applyPhase(p) {
+  phase = p;
+  const cfg = PHASE_CONFIG[p];
+  engine.resize(cfg.size, cfg.size);
+  engine.setState(cfg.state);
+
+  // Halo breathing per beat: active pulse on forming, calm pulse (7s, 2%
+  // range) on crystallize + preserved so the halo never goes silent, fade
+  // out on detail ("no spotlight boundary" — stone sits in atmosphere).
+  haloEl.classList.toggle('pulsing', p === 'forming' && !prefersReducedMotion);
+  haloEl.classList.toggle(
+    'pulsing-calm',
+    (p === 'crystallize' || p === 'preserved') && !prefersReducedMotion
+  );
+  haloEl.classList.toggle('hidden-detail', p === 'detail');
+
+  // Particles only in forming — opacity-driven so the exit crossfades
+  // with fragments fading in, instead of cutting hard.
+  particlesEl.classList.toggle('faded', p !== 'forming');
+
+  // Fragments only in crystallize — crossfade in as particles crossfade out
+  fragmentsEl.classList.toggle('in', p === 'crystallize' && !prefersReducedMotion);
+
+  // Chips only in detail — row.in triggers staggered chipIn animations
+  chipsEl.classList.toggle('in', p === 'detail');
+
+  // Detail-phase light drift — only in detail, respects reduced-motion
+  stoneGlimmerEl.classList.toggle('in', p === 'detail' && !prefersReducedMotion);
+
+  // Skip link visible only in forming / crystallize (fades in after SKIP_VISIBLE_AT_MS)
+  if (p !== 'forming' && p !== 'crystallize') {
+    skipEl.classList.remove('in');
+  }
+
+  // Stone entrance + gold ring + bloom overlay play only on preserved.
+  // Force reflow so the animations replay on restart / skip.
+  stoneWrapEl.classList.remove('entering');
+  stoneBloomEl.classList.remove('playing');
+  goldRingEl.style.display = 'none';
+  if (p === 'preserved' && !prefersReducedMotion) {
+    void stoneWrapEl.offsetWidth;
+    stoneWrapEl.classList.add('entering');
+    void stoneBloomEl.offsetWidth;
+    stoneBloomEl.classList.add('playing');
+    void goldRingEl.offsetWidth;
+    goldRingEl.style.display = '';
+  }
+
+  // Copy + CTA fade delays per beat. Detail has no copy (early return
+  // in setCopyForPhase) but the Continue CTA still respects the delay —
+  // it waits for the chip cascade to settle before inviting the next step.
+  let delay = 0;
+  if (!prefersReducedMotion) {
+    if (p === 'forming') delay = FORMING_CAPTION_DELAY_MS;
+    else if (p === 'crystallize') delay = CRYSTALLIZE_CAPTION_DELAY_MS;
+    else if (p === 'preserved') delay = TEXT_REVEAL_DELAY_MS;
+    else if (p === 'detail') delay = DETAIL_CTA_DELAY_MS;
+  }
+  setCopyForPhase(p, delay);
+  setCTAForPhase(p, delay);
+}
+
+function skipToPreserved() {
+  clearTimers();
+  applyPhase('preserved');
+}
+skipEl.addEventListener('click', skipToPreserved);
+
+function showEnd() {
+  // The ceremony stays in character to its last frame. Retire the active
+  // composition (chips, glimmer, CTA), dim the stage so it reads as
+  // atmosphere, and replace copy with a single italicized serif line.
+  // Reuses the copy-slot crossfade so this exit matches every prior
+  // phase transition.
+  rootEl.classList.add('ended');
+  chipsEl.classList.remove('in');
+  stoneGlimmerEl.classList.remove('in');
+  ctaEl.innerHTML = '';
+
+  Array.from(copyEl.children).forEach((slot) => {
+    if (slot.classList.contains('exiting')) return;
+    slot.classList.add('exiting');
+    setTimeout(() => slot.remove(), 500);
+  });
+
+  const slot = document.createElement('div');
+  slot.className = 'copy-slot end';
+  const p = document.createElement('p');
+  p.className = 'subtext end-line';
+  p.textContent = 'The next stone waits.';
+  slot.appendChild(p);
+  copyEl.appendChild(slot);
+  requestAnimationFrame(() => slot.classList.add('in'));
+}
+
+function startSequence() {
+  clearTimers();
+  chipsEl.classList.remove('in');
+  skipEl.classList.remove('in');
+
+  if (prefersReducedMotion) {
+    applyPhase('preserved');
+    return;
+  }
+
+  // TODO: audio — document.getElementById('audioAmbient').play()
+  //   on first user gesture (iOS autoplay policy).
+  applyPhase('forming');
+  timers.push(setTimeout(() => skipEl.classList.add('in'), SKIP_VISIBLE_AT_MS));
+  timers.push(setTimeout(() => {
+    applyPhase('crystallize');
+    // TODO: audio — document.getElementById('audioCrystallize').play()
+  }, CRYSTALLIZE_AT_MS));
+  timers.push(setTimeout(() => applyPhase('preserved'), PRESERVED_AT_MS));
+  timers.push(setTimeout(() => {
+    // TODO: audio — document.getElementById('audioReveal').play()
+    //   lands on bloom + ring peak.
+  }, PRESERVED_AT_MS + 1000 /* RING_FIRE_AT_MS */));
+}
+
+restartEl.addEventListener('click', startSequence);
+
+// Dev chrome: restart button only appears with `?dev=1`. Keeps the
+// composition clean for screenshots, recordings, and share links.
+if (new URLSearchParams(window.location.search).get('dev') === '1') {
+  document.body.classList.add('dev-mode');
+}
+
+startSequence();
+</script>
+</body>
+</html>

@@ -52,11 +52,24 @@ export function BreathStone({
     engineRef.current?.resize(size, size);
   }, [size]);
 
+  // Soft radial mask hides the canvas's rectangular corners. The engine
+  // paints an ambient gradient + dust motes across the whole canvas rect
+  // for depth, which reads as a visible "box" against a dark background.
+  // Fully opaque through 80% of radius (comfortably past the stone's max
+  // breath scale at 1.30), then fades to transparent by 98%.
+  const maskStyle = {
+    display: 'block',
+    maskImage:
+      'radial-gradient(circle, black 0%, black 80%, transparent 98%)',
+    WebkitMaskImage:
+      'radial-gradient(circle, black 0%, black 80%, transparent 98%)',
+  } as const;
+
   return (
     <canvas
       ref={canvasRef}
       className={className}
-      style={{ display: 'block' }}
+      style={maskStyle}
       aria-hidden="true"
     />
   );

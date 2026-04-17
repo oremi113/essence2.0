@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap');
+/* Spectral + Inter are self-hosted via next/font/google in src/app/layout.tsx
+   — they set --font-display / --font-body as CSS variables on <html>, so the
+   `var(--font-display)` / `var(--font-body)` usages below pick up the
+   preloaded fonts without a render-blocking Google Fonts request. */
 @import "tailwindcss";
 
 @theme {
