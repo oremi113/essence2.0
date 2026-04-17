@@ -297,6 +297,111 @@ button, a, [role="button"] { min-height: 44px; }
 }
 .record-step--celebration { align-items: center; text-align: center; }
 
+/* ─── Top chrome (exit + overflow) ───────────────────────────────────────
+   "Findable, not offered" exit affordance. Visible on stage-intro and
+   prompt screens only. Subtle tertiary color so it reads as navigation,
+   not as a primary action. */
+.record-top-chrome {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 50;
+}
+.record-top-chrome__btn {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    color var(--duration-micro) var(--ease-essence),
+    background-color var(--duration-micro) var(--ease-essence);
+}
+.record-top-chrome__btn:hover {
+  color: var(--color-text-secondary);
+  background: rgba(0, 0, 0, 0.04);
+}
+.record-top-chrome__btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.record-overflow-menu {
+  position: absolute;
+  top: 58px;
+  right: 14px;
+  min-width: 220px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  z-index: 60;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-micro) var(--ease-essence),
+    transform var(--duration-micro) var(--ease-essence);
+}
+.record-overflow-menu--open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.record-overflow-menu__item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: var(--text-ui);
+  font-weight: 500;
+  text-align: left;
+  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.record-overflow-menu__item:hover {
+  background: var(--color-surface-card);
+}
+
+/* Threshold step — used by the Stage 1 intro only. Marks the transition
+   from setup into the real thing. More vertical air, less dense copy. */
+.record-step--threshold {
+  padding-top: var(--space-4xl);
+  padding-bottom: var(--space-2xl);
+  gap: var(--space-lg);
+}
+.record-title--threshold {
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-2xl);
+  max-width: 18ch;
+  align-self: center;
+}
+/* Body-as-aside — italic Spectral, matching the "human aside / coaching
+   note" tone pattern. Not list-of-facts; the last whispered line before
+   the first prompt. */
+.record-body--aside p {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
 .record-eyebrow {
   font-family: var(--font-body);
   font-size: var(--text-caption);
@@ -1317,11 +1422,27 @@ canvas.breath-stone {
   </section>
 
   <!-- 5. Stage 1 intro -->
+  <!--
+    Stage 1 intro is a THRESHOLD screen, not another pre-flight.
+    The Stage Map is the hero here — first Live appearance for the user.
+    Treatment vs the Group 1 screens:
+      - No subtitle (info was already accepted on Checklist).
+      - Title breathes: extra space above and below, stage map is the
+        next thing the eye lands on.
+      - Body becomes a whispered aside (italic Spectral) — the last
+        coaching note before the first prompt, not a list of facts.
+  -->
   <section class="screen screen--warm" data-view="stage-1-intro" data-label="5. Stage 1 intro">
-    <div class="page-transition"><div class="record-step">
+    <div class="record-top-chrome">
+      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="page-transition"><div class="record-step record-step--threshold">
       <div class="record-eyebrow">VOICE TRAINING &middot; STAGE 1 OF 3</div>
-      <h1 class="record-title">Let&rsquo;s start with simple moments.</h1>
-      <p class="record-subtitle">These five prompts establish your natural speaking rhythm.</p>
+      <h1 class="record-title record-title--threshold">Let&rsquo;s start with simple moments.</h1>
       <div class="record-stage-map">
         <div class="record-stage-map__segment record-stage-map__segment--current">
           <div class="record-stage-map__node record-stage-map__node--current">1</div>
@@ -1339,9 +1460,9 @@ canvas.breath-stone {
       <div class="record-stone">
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
-      <div class="record-body">
+      <div class="record-body record-body--aside">
         <p>Speak naturally.</p>
-        <p>There are no wrong answers.</p>
+        <p>Don&rsquo;t worry about getting it perfect.</p>
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Begin Stage 1</button>
@@ -1351,6 +1472,21 @@ canvas.breath-stone {
 
   <!-- 6. Prompt — Stage 1 (warm oat) -->
   <section class="screen" data-view="prompt-1" data-label="6. Prompt · Stage 1">
+    <div class="record-top-chrome">
+      <button class="record-top-chrome__btn js-toggle-menu" aria-label="More options" aria-haspopup="menu">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+        </svg>
+      </button>
+      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="record-overflow-menu" role="menu">
+      <button class="record-overflow-menu__item js-exit-to-paused" role="menuitem">Pause and save progress</button>
+    </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">MOMENT 2 OF 25</div>
       <p class="record-instruction">Speak naturally.</p>
@@ -1411,17 +1547,23 @@ canvas.breath-stone {
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Move to Stage 2</button>
-        <button class="btn-link btn--full">Pause for now</button>
       </div>
     </div></div>
   </section>
 
   <!-- 8. Stage 2 intro -->
   <section class="screen screen--warm" data-view="stage-2-intro" data-label="8. Stage 2 intro">
+    <div class="record-top-chrome">
+      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">STAGE 2 OF 3</div>
       <h1 class="record-title">Now let&rsquo;s go a little deeper.</h1>
-      <p class="record-subtitle">These twelve prompts capture emotional range and personal stories.</p>
+      <p class="record-subtitle">These twelve prompts capture emotional range and meaningful memories.</p>
       <div class="record-stage-map">
         <div class="record-stage-map__segment record-stage-map__segment--completed">
           <div class="record-stage-map__node record-stage-map__node--completed">1</div>
@@ -1440,18 +1582,32 @@ canvas.breath-stone {
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
       <div class="record-body">
-        <p>Take your time with each response.</p>
-        <p>These moments hold more of who you are.</p>
+        <p>Read at your own pace.</p>
+        <p>Let the words land how they feel.</p>
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Begin Stage 2</button>
-        <button class="btn-link btn--full">Pause for now</button>
       </div>
     </div></div>
   </section>
 
   <!-- 9. Prompt — Stage 2 (honey) -->
   <section class="screen" data-view="prompt-2" data-label="9. Prompt · Stage 2">
+    <div class="record-top-chrome">
+      <button class="record-top-chrome__btn js-toggle-menu" aria-label="More options" aria-haspopup="menu">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+        </svg>
+      </button>
+      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="record-overflow-menu" role="menu">
+      <button class="record-overflow-menu__item js-exit-to-paused" role="menuitem">Pause and save progress</button>
+    </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">MOMENT 10 OF 25</div>
       <p class="record-instruction">Speak from memory.</p>
@@ -1512,13 +1668,19 @@ canvas.breath-stone {
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Continue to Stage 3</button>
-        <button class="btn-link btn--full">Pause for now</button>
       </div>
     </div></div>
   </section>
 
   <!-- 11. Stage 3 intro -->
   <section class="screen screen--warm" data-view="stage-3-intro" data-label="11. Stage 3 intro">
+    <div class="record-top-chrome">
+      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">STAGE 3 OF 3</div>
       <h1 class="record-title">These final moments add richness.</h1>
@@ -1541,17 +1703,32 @@ canvas.breath-stone {
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
       <div class="record-body">
-        <p>These are the moments that give your voice its character.</p>
+        <p>Read like you mean it.</p>
+        <p>You&rsquo;re almost there.</p>
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Begin Stage 3</button>
-        <button class="btn-link btn--full">Pause for now</button>
       </div>
     </div></div>
   </section>
 
   <!-- 12. Prompt — Stage 3 (rich) -->
   <section class="screen" data-view="prompt-3" data-label="12. Prompt · Stage 3">
+    <div class="record-top-chrome">
+      <button class="record-top-chrome__btn js-toggle-menu" aria-label="More options" aria-haspopup="menu">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+        </svg>
+      </button>
+      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="record-overflow-menu" role="menu">
+      <button class="record-overflow-menu__item js-exit-to-paused" role="menuitem">Pause and save progress</button>
+    </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">MOMENT 21 OF 25</div>
       <p class="record-instruction">Take your time.</p>
@@ -2504,6 +2681,31 @@ class BreathStoneEngine {
       if (phase === 'idle') setPhase('recording');
       else if (phase === 'recording') setPhase('saving');
     });
+  });
+
+  // ── Exit affordance (X + overflow "Pause and save progress") ─────────────
+  // All .js-exit-to-paused buttons route to the Paused screen.
+  // Overflow menus toggle on .js-toggle-menu click; outside click closes.
+  const pausedIdx = screens.findIndex(s => s.dataset.view === 'paused');
+  function goToPaused() {
+    // Close any open overflow menus before navigating.
+    document.querySelectorAll('.record-overflow-menu--open').forEach(m => m.classList.remove('record-overflow-menu--open'));
+    if (pausedIdx >= 0) { idx = pausedIdx; render(); }
+  }
+  document.querySelectorAll('.js-exit-to-paused').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); goToPaused(); });
+  });
+  document.querySelectorAll('.js-toggle-menu').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = btn.closest('.screen').querySelector('.record-overflow-menu');
+      const willOpen = !menu.classList.contains('record-overflow-menu--open');
+      document.querySelectorAll('.record-overflow-menu--open').forEach(m => m.classList.remove('record-overflow-menu--open'));
+      if (willOpen) menu.classList.add('record-overflow-menu--open');
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.record-overflow-menu--open').forEach(m => m.classList.remove('record-overflow-menu--open'));
   });
 
   render();
