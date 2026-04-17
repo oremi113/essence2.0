@@ -195,6 +195,40 @@ button, a, [role="button"] { min-height: 44px; }
 }
 .stage-pill--active { background: #F5F0EA; color: #1C1A18; border-color: #F5F0EA; }
 
+/* DEV ONLY — Paused-variant picker. Do not lift to React. */
+.dev-reason-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.15);
+  border-radius: 8px;
+}
+.dev-reason-picker[hidden] { display: none; }
+.dev-reason-picker__label {
+  color: rgba(255,255,255,0.45);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 4px;
+}
+.dev-reason-picker__btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.6);
+  font: inherit;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.dev-reason-picker__btn:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.25); }
+.dev-reason-picker__btn--active { background: rgba(245,240,234,0.15); color: #F5F0EA; border-color: rgba(245,240,234,0.4); }
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Phone frame
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -311,9 +345,9 @@ button, a, [role="button"] { min-height: 44px; }
   z-index: 50;
 }
 .record-top-chrome__btn {
-  width: 40px;
-  height: 40px;
-  min-height: 40px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   border-radius: var(--radius-full);
   background: transparent;
   border: none;
@@ -434,6 +468,14 @@ button, a, [role="button"] { min-height: 44px; }
   margin: 0 auto var(--space-xl);
 }
 .record-subtitle--italic { font-style: italic; }
+
+/* Paused screen — copy variants swapped by data-reason on the section. */
+.screen[data-view="paused"] .paused-copy { display: none; }
+.screen[data-view="paused"][data-reason="user-pause"]       .paused-copy[data-reason-for="user-pause"],
+.screen[data-view="paused"][data-reason="user-exit"]        .paused-copy[data-reason-for="user-exit"],
+.screen[data-view="paused"][data-reason="system-interrupt"] .paused-copy[data-reason-for="system-interrupt"] {
+  display: inline;
+}
 
 .record-body {
   display: flex;
@@ -1297,6 +1339,13 @@ canvas.breath-stone {
   border-radius: 3px;
   color: rgba(255,220,210,0.95);
 }
+.ds-gaps__list--resolved li .ds-gaps__resolved {
+  display: block;
+  color: rgba(180, 215, 195, 0.9);
+  margin-top: 4px;
+  font-style: italic;
+}
+.ds-gaps__list--resolved li strong { color: rgba(180, 215, 195, 0.95); }
 </style>
 </head>
 <body>
@@ -1310,6 +1359,15 @@ canvas.breath-stone {
     <button class="stage-nav__btn" id="nextBtn" aria-label="Next view">→</button>
   </div>
   <div class="stage-picker" id="stagePicker"></div>
+  <!-- DEV ONLY. Do not lift to React. Force-applies a Paused variant so
+       reviewers can click through copy side-by-side. Visible only on the
+       Paused screen; hidden on every other view. -->
+  <div class="dev-reason-picker" id="devReasonPicker" hidden>
+    <span class="dev-reason-picker__label">Paused reason</span>
+    <button class="dev-reason-picker__btn" data-reason="user-pause">user-pause</button>
+    <button class="dev-reason-picker__btn" data-reason="user-exit">user-exit</button>
+    <button class="dev-reason-picker__btn" data-reason="system-interrupt">system-interrupt</button>
+  </div>
 </div>
 
 <div class="phone" id="phone">
@@ -1350,7 +1408,11 @@ canvas.breath-stone {
       <p class="record-microcopy" style="margin-top: 0">11–14 minutes</p>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Begin voice training</button>
-        <button class="btn-link btn--full">I&rsquo;ll do this later</button>
+        <!-- "I'll do this later" is a Zone 1 opt-out for users who haven't
+             engaged yet. In production this dismisses voice training and
+             returns to the app's home/dashboard. In the prototype it routes
+             to Entry (no separate home screen exists). See Pass 1 Finding 3. -->
+        <button class="btn-link btn--full js-exit" data-exit="home">I&rsquo;ll do this later</button>
       </div>
     </div></div>
   </section>
@@ -1364,6 +1426,11 @@ canvas.breath-stone {
       <div class="record-stone">
         <canvas class="breath-stone" data-state="idle" data-size="200"></canvas>
       </div>
+      <!-- No btn-link opt-out here — intentional. Entry's "I'll do this later"
+           covers pre-commitment; Mic's "Not now" covers permission doubts.
+           Grounding is a 5-second reverent beat between those two opt-out
+           points; an opt-out here would read as a suggestion to leave for no
+           reason. Hold the line. See Pass 1 Finding 3 side-note. -->
       <div class="record-ctas">
         <button class="btn-primary btn--full">I&rsquo;m ready</button>
       </div>
@@ -1388,7 +1455,14 @@ canvas.breath-stone {
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Allow microphone</button>
-        <button class="btn-link btn--full">Not now</button>
+        <!-- "Not now" is a Zone 1 opt-out for users having second thoughts about
+             mic permission. In production, destination branches on user state:
+               brand-new user → home with a soft "Mic permission is required
+                 before you can begin voice training" state.
+               returning user → back to Entry (they came in, they're heading
+                 back out).
+             Prototype routes both to Entry. See Pass 1 Finding 3. -->
+        <button class="btn-link btn--full js-exit" data-exit="home">Not now</button>
       </div>
     </div></div>
   </section>
@@ -1434,7 +1508,7 @@ canvas.breath-stone {
   -->
   <section class="screen screen--warm" data-view="stage-1-intro" data-label="5. Stage 1 intro">
     <div class="record-top-chrome">
-      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice training" data-exit="home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -1478,14 +1552,14 @@ canvas.breath-stone {
           <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
         </svg>
       </button>
-      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit and save" data-exit="paused" data-reason="user-exit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
     <div class="record-overflow-menu" role="menu">
-      <button class="record-overflow-menu__item js-exit-to-paused" role="menuitem">Pause and save progress</button>
+      <button class="record-overflow-menu__item js-exit" role="menuitem" data-exit="paused" data-reason="user-pause">Pause and save progress</button>
     </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">MOMENT 2 OF 25</div>
@@ -1521,6 +1595,15 @@ canvas.breath-stone {
   </section>
 
   <!-- 7. Celebration — after Stage 1 -->
+  <!--
+    No exit affordance on celebration screens. The celebration is a 2.2s
+    one-shot gesture marking stage completion. The user has already committed
+    by completing the stage, and an X or overflow here would give them a way
+    to abandon at the moment of greatest momentum. Intentional omission — do
+    not add an X button in React. See Pass 1 Finding 2 (2026-04-17).
+    Compatible with either resolution of the onCelebrateEnd decision (Pass 2
+    item 7): tap-to-continue and callback-auto-fade both work with zero exit.
+  -->
   <section class="screen screen--warm" data-view="celebration-1" data-label="7. Celebration · S1→S2">
     <div class="page-transition"><div class="record-step record-step--centered record-step--celebration">
       <div class="record-eyebrow">STAGE 1 COMPLETE</div>
@@ -1554,7 +1637,7 @@ canvas.breath-stone {
   <!-- 8. Stage 2 intro -->
   <section class="screen screen--warm" data-view="stage-2-intro" data-label="8. Stage 2 intro">
     <div class="record-top-chrome">
-      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice training" data-exit="paused" data-reason="user-exit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -1599,14 +1682,14 @@ canvas.breath-stone {
           <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
         </svg>
       </button>
-      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit and save" data-exit="paused" data-reason="user-exit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
     <div class="record-overflow-menu" role="menu">
-      <button class="record-overflow-menu__item js-exit-to-paused" role="menuitem">Pause and save progress</button>
+      <button class="record-overflow-menu__item js-exit" role="menuitem" data-exit="paused" data-reason="user-pause">Pause and save progress</button>
     </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">MOMENT 10 OF 25</div>
@@ -1642,6 +1725,13 @@ canvas.breath-stone {
   </section>
 
   <!-- 10. Celebration — after Stage 2 -->
+  <!--
+    No exit affordance. Same rule as celebration-1: this is a 2.2s one-shot
+    gesture marking stage completion and the user has already committed by
+    finishing Stage 2. An X or overflow here would invite abandonment at the
+    emotional midpoint. Intentional omission — do not add an X button in
+    React. See Pass 1 Finding 2 (2026-04-17).
+  -->
   <section class="screen screen--warm" data-view="celebration-2" data-label="10. Celebration · S2→S3">
     <div class="page-transition"><div class="record-step record-step--centered record-step--celebration">
       <div class="record-stage-badge">HALFWAY THERE</div>
@@ -1675,7 +1765,7 @@ canvas.breath-stone {
   <!-- 11. Stage 3 intro -->
   <section class="screen screen--warm" data-view="stage-3-intro" data-label="11. Stage 3 intro">
     <div class="record-top-chrome">
-      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice training" data-exit="paused" data-reason="user-exit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -1720,14 +1810,14 @@ canvas.breath-stone {
           <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
         </svg>
       </button>
-      <button class="record-top-chrome__btn js-exit-to-paused" aria-label="Close">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit and save" data-exit="paused" data-reason="user-exit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
     <div class="record-overflow-menu" role="menu">
-      <button class="record-overflow-menu__item js-exit-to-paused" role="menuitem">Pause and save progress</button>
+      <button class="record-overflow-menu__item js-exit" role="menuitem" data-exit="paused" data-reason="user-pause">Pause and save progress</button>
     </div>
     <div class="page-transition"><div class="record-step">
       <div class="record-eyebrow">MOMENT 21 OF 25</div>
@@ -1763,21 +1853,50 @@ canvas.breath-stone {
   </section>
 
   <!-- 13. Paused -->
-  <section class="screen" data-view="paused" data-label="13. Paused">
+  <!--
+    Paused screen has three reason variants, set via data-reason on the section
+    when navigating. Copy swaps via CSS attribute selector (see .paused-copy
+    rules) — all three strings are in the HTML; CSS picks one.
+      user-pause       — overflow menu "Pause and save progress" (deliberate)
+      user-exit        — X on a prompt screen with promptsCompleted > 0
+      system-interrupt — OS-level interrupt (phone call, mic loss, backgrounded)
+    Unengaged exits (promptsCompleted === 0) bypass this screen and route to
+    Entry instead — the "progress is saved" framing is a lie when nothing was
+    saved. See data-exit="home" on Stage 1 intro's close button.
+  -->
+  <section class="screen" data-view="paused" data-label="13. Paused" data-reason="user-pause">
     <div class="page-transition"><div class="record-step record-step--centered">
       <div class="record-eyebrow">PAUSED</div>
-      <h1 class="record-title">Your progress is saved.</h1>
-      <p class="record-subtitle">Continue whenever you&rsquo;re ready.</p>
+      <h1 class="record-title">
+        <span class="paused-copy" data-reason-for="user-pause">Your progress is saved.</span>
+        <span class="paused-copy" data-reason-for="user-exit">Saved where you left off.</span>
+        <span class="paused-copy" data-reason-for="system-interrupt">We paused for you.</span>
+      </h1>
+      <p class="record-subtitle">
+        <span class="paused-copy" data-reason-for="user-pause">Continue whenever you&rsquo;re ready.</span>
+        <span class="paused-copy" data-reason-for="user-exit">We saved what you&rsquo;ve recorded.</span>
+        <span class="paused-copy" data-reason-for="system-interrupt">Your last moment is safe.</span>
+      </p>
       <div class="record-stone">
         <canvas class="breath-stone" data-state="idle" data-size="200"></canvas>
       </div>
       <div class="record-ctas">
-        <button class="btn-primary btn--full">Return home</button>
+        <button class="btn-primary btn--full js-paused-resume">Resume training</button>
+        <button class="btn-secondary btn--full js-paused-home">Return home</button>
       </div>
     </div></div>
   </section>
 
   <!-- 14. Working -->
+  <!--
+    No exit affordance. The user is waiting on server-side voice processing;
+    leaving now interrupts the commit and strands them in a broken state.
+    Intentional omission — do not add an X button in React. See Pass 1
+    Finding 6 (2026-04-17).
+    Production escape hatch: if processing exceeds ~60s, surface a soft
+    "This is taking a while — check back in a few minutes" action. Deferred
+    to Session 5; see Pass 2 gaps list, "Working-screen timeout escape."
+  -->
   <section class="screen screen--warm" data-view="working" data-label="14. Working">
     <div class="page-transition"><div class="record-step record-step--centered">
       <div class="record-eyebrow">SHAPING YOUR VOICE</div>
@@ -1791,6 +1910,13 @@ canvas.breath-stone {
   </section>
 
   <!-- 15. Ready -->
+  <!--
+    No exit affordance. This is the endpoint — the primary CTA is "Hear your
+    voice," the payoff moment before monetization. An X here would be
+    "I changed my mind, I don't want to hear it," which is not a real user
+    intent. Intentional omission — do not add an X button in React. See
+    Pass 1 Finding 6 (2026-04-17).
+  -->
   <section class="screen" data-view="ready" data-label="15. Ready">
     <div class="page-transition"><div class="record-step record-step--centered">
       <div class="record-eyebrow">YOUR VOICE</div>
@@ -1985,41 +2111,42 @@ canvas.breath-stone {
 <section class="ds-gaps">
   <h2>Pass 2 — required before code</h2>
   <p class="ds-gaps__lede">
-    Pass 1 covered the happy path. These six state-coverage gaps are where
-    users break, not where they succeed — add them in Pass 2 before Session 5
-    lifts any of this into React. Each is a screen (or screen-variant) this
-    prototype does not yet render.
+    Pass 1 covered the happy path. These state-coverage gaps are where users
+    break, not where they succeed — add them in Pass 2 before Session 5 lifts
+    any of this into React. Each is a screen (or screen-variant) this prototype
+    does not yet render. Original item numbers preserved so commit history
+    stays referenceable; resolved items moved to the section below.
   </p>
   <ol class="ds-gaps__list">
-    <li>
+    <li value="1">
       <strong>Mic permission denied.</strong>
       <span class="ds-gaps__why">Screen 3 has no state for when the user taps "Not now." Flow dead-ends silently.</span>
       <span class="ds-gaps__need">Needs: recovery screen with OS-agnostic instruction + "Open settings" / "Try again" CTAs.</span>
     </li>
-    <li>
+    <li value="2">
       <strong>Upload failed / network drop.</strong>
       <span class="ds-gaps__why">Recording succeeds, upload fails, no view exists for it. <code>--color-status-error</code> and <code>record-label--error</code> are defined but never surface in the flow.</span>
       <span class="ds-gaps__need">Needs: prompt-screen variant showing error label + retry CTA, preserving the user's recording locally.</span>
     </li>
-    <li>
-      <strong>Mid-recording OS interrupt.</strong>
-      <span class="ds-gaps__why">Paused screen is scoped to user-initiated pause. Phone call / backgrounded app is a different UX with a clearer recovery path.</span>
-      <span class="ds-gaps__need">Needs: "We paused for you — your last moment is safe" with a single "Tap to resume" primary.</span>
-    </li>
-    <li>
+    <li value="4">
       <strong>Resume-training entry (returning user).</strong>
       <span class="ds-gaps__why">Screen 1 (Entry) assumes a brand-new user. Returning users mid-journey need concrete progress framing, not "Begin voice training." Paused screen semantically mismatches — it's labelled "Paused," not "Resume."</span>
       <span class="ds-gaps__need">Needs: entry variant with "12 of 25 moments complete · Stage 2 next" + populated stage map + "Continue Stage 2" primary.</span>
     </li>
-    <li>
+    <li value="5">
       <strong>Mic hardware failure.</strong>
       <span class="ds-gaps__why">Distinct from permission denied. Permission granted, but no mic detected or audio levels flatline. No recovery path in the flow.</span>
       <span class="ds-gaps__need">Needs: diagnostic screen "We can't hear you" with "Test microphone" retry + "Skip for now" link.</span>
     </li>
-    <li>
+    <li value="6">
       <strong>Re-record / edit flow.</strong>
       <span class="ds-gaps__why">The "You can re-record anytime" hint implies an entry point the prototype does not render. From where? List view? In-flow scrubber? Post-training review?</span>
       <span class="ds-gaps__need">Needs a design call in Pass 2 before building. Three candidate directions: (a) "Your recordings" list view, (b) collapsed scrubber above the active prompt, (c) one-at-a-time review during a post-training listen-back.</span>
+    </li>
+    <li value="8">
+      <strong>Working-screen timeout escape.</strong>
+      <span class="ds-gaps__why">Screen 14 is intentionally no-exit during normal processing — the user is waiting for voice commit and leaving mid-commit strands them. But if processing exceeds ~60s (server hiccup, slow upload, long queue), the user has no recourse and the screen reads as frozen. Flagged in Pass 1 Finding 6.</span>
+      <span class="ds-gaps__need">Needs: after ~60s on Working, surface a soft "This is taking a while — check back in a few minutes" action. Dismisses to home; server continues processing and notifies (push/email) when voice is ready. Out of prototype scope; Session 5 call.</span>
     </li>
   </ol>
   <h3>Decisions pending (Pass 2 — celebration-group round)</h3>
@@ -2039,6 +2166,14 @@ canvas.breath-stone {
         Recommended split: <strong>B for S1→S2</strong> (early, momentum matters), <strong>A for S2→S3</strong>
         (deeper emotional beat, let them dwell).
       </span>
+    </li>
+  </ol>
+  <h3>Resolved in Pass 1</h3>
+  <ol class="ds-gaps__list ds-gaps__list--resolved">
+    <li value="3">
+      <strong>Mid-recording OS interrupt.</strong>
+      <span class="ds-gaps__why">Original gap: Paused screen was scoped to user-initiated pause. Phone call / backgrounded app is a different UX with a clearer recovery path.</span>
+      <span class="ds-gaps__resolved">Resolved 2026-04-17 — landed as the <code>system-interrupt</code> variant of the Paused screen. Title "We paused for you." / subtitle "Your last moment is safe." The two-CTA pattern (Resume training primary, Return home secondary) matches the other Paused variants, so the structural sibling relationship is preserved. The in-flow trigger (actual OS interrupt detection) is a production-app concern, not a prototype one.</span>
     </li>
   </ol>
   <p class="ds-gaps__footer">
@@ -2594,6 +2729,7 @@ class BreathStoneEngine {
         el.style.animation = '';
       });
     }
+    syncDevReasonPicker();
   }
   function go(delta) { idx = (idx + delta + screens.length) % screens.length; render(); }
   prevBtn.addEventListener('click', () => go(-1));
@@ -2684,28 +2820,107 @@ class BreathStoneEngine {
   });
 
   // ── Exit affordance (X + overflow "Pause and save progress") ─────────────
-  // All .js-exit-to-paused buttons route to the Paused screen.
-  // Overflow menus toggle on .js-toggle-menu click; outside click closes.
+  // Every exit button declares its destination via data-exit:
+  //   data-exit="home"   → Entry. Unengaged users (promptsCompleted === 0)
+  //                          must not land on Paused; "progress is saved" is
+  //                          a lie when nothing was recorded.
+  //   data-exit="paused" → Paused, with a copy variant chosen by data-reason
+  //                          ("user-pause" | "user-exit" | "system-interrupt").
+  // Copy per variant lives in HTML; CSS [data-reason] attribute selector picks
+  // the right .paused-copy spans. Resume training returns to the screen the
+  // user exited from.
   const pausedIdx = screens.findIndex(s => s.dataset.view === 'paused');
-  function goToPaused() {
-    // Close any open overflow menus before navigating.
+  const entryIdx  = screens.findIndex(s => s.dataset.view === 'entry');
+  let resumeFromIdx = -1;
+
+  function closeAllMenus() {
     document.querySelectorAll('.record-overflow-menu--open').forEach(m => m.classList.remove('record-overflow-menu--open'));
-    if (pausedIdx >= 0) { idx = pausedIdx; render(); }
   }
-  document.querySelectorAll('.js-exit-to-paused').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); goToPaused(); });
+  function navigateTo(targetIdx) {
+    closeAllMenus();
+    if (targetIdx >= 0) { idx = targetIdx; render(); }
+  }
+  function applyPausedReason(reason) {
+    const section = screens[pausedIdx];
+    if (!section) return;
+    section.dataset.reason = reason;
+  }
+  document.querySelectorAll('.js-exit').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dest = btn.dataset.exit;
+      if (dest === 'home') {
+        navigateTo(entryIdx);
+        return;
+      }
+      resumeFromIdx = idx;
+      applyPausedReason(btn.dataset.reason || 'user-pause');
+      navigateTo(pausedIdx);
+    });
   });
+  const pausedSection = screens[pausedIdx];
+  if (pausedSection) {
+    pausedSection.querySelector('.js-paused-resume').addEventListener('click', () => {
+      navigateTo(resumeFromIdx >= 0 ? resumeFromIdx : entryIdx);
+    });
+    pausedSection.querySelector('.js-paused-home').addEventListener('click', () => {
+      navigateTo(entryIdx);
+    });
+  }
+
+  // ── DEV-ONLY Paused-variant picker ───────────────────────────────────────
+  // Visible only on the Paused screen. Clicking a reason re-applies it and
+  // jumps to (or re-renders) Paused so reviewers can diff variants side-by-side.
+  // Do NOT lift to React — this is prototype review chrome.
+  const devReasonPicker = document.getElementById('devReasonPicker');
+  function syncDevReasonPicker() {
+    if (!devReasonPicker) return;
+    const onPaused = screens[idx] && screens[idx].dataset.view === 'paused';
+    devReasonPicker.hidden = !onPaused;
+    if (!onPaused) return;
+    const currentReason = pausedSection ? pausedSection.dataset.reason : 'user-pause';
+    devReasonPicker.querySelectorAll('.dev-reason-picker__btn').forEach(btn => {
+      btn.classList.toggle('dev-reason-picker__btn--active', btn.dataset.reason === currentReason);
+    });
+  }
+  if (devReasonPicker) {
+    devReasonPicker.querySelectorAll('.dev-reason-picker__btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        applyPausedReason(btn.dataset.reason);
+        navigateTo(pausedIdx);
+      });
+    });
+  }
+  // ── Overflow menu: open/close + keyboard a11y ─────────────────────────────
+  // On open: move focus into the menu so screen readers know it appeared.
+  // On Escape: close + return focus to the toggle that opened it.
+  // On outside-click: close (focus follows wherever the click landed).
+  // Arrow-key navigation within the menu is deferred — currently only one
+  // menuitem ("Pause and save progress"). If more land in production, add
+  // a roving tabindex pattern. See Pass 2 gaps note.
   document.querySelectorAll('.js-toggle-menu').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const menu = btn.closest('.screen').querySelector('.record-overflow-menu');
       const willOpen = !menu.classList.contains('record-overflow-menu--open');
       document.querySelectorAll('.record-overflow-menu--open').forEach(m => m.classList.remove('record-overflow-menu--open'));
-      if (willOpen) menu.classList.add('record-overflow-menu--open');
+      if (willOpen) {
+        menu.classList.add('record-overflow-menu--open');
+        menu.querySelector('.record-overflow-menu__item')?.focus();
+      }
     });
   });
   document.addEventListener('click', () => {
     document.querySelectorAll('.record-overflow-menu--open').forEach(m => m.classList.remove('record-overflow-menu--open'));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const openMenu = document.querySelector('.record-overflow-menu--open');
+    if (!openMenu) return;
+    openMenu.classList.remove('record-overflow-menu--open');
+    const toggle = openMenu.closest('.screen').querySelector('.js-toggle-menu');
+    toggle?.focus();
   });
 
   render();
