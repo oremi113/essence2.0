@@ -9,10 +9,14 @@
      Universal palette used by onboarding screens and Voice
      Training prompt cards alike. Each step is a small jump
      so the progression reads as richer/warmer, not as abrupt
-     mode changes. Source: ESSENCE Session 4 handoff. */
+     mode changes. Source: ESSENCE Session 4 handoff.
+
+     Warmth-step rule (Voice Training): prompt screens step
+     through the ramp; cards step one stop warmer than their
+     screen. See .record-step--prompt-stage-* rules. */
   --color-bg-neutral:     #FBF8F4;  /* cream — base app background */
   --color-bg-warm-phase:  #F2EDE4;  /* warmer oat — onboarding phase 2 (screens 7–12) */
-  --color-bg-warm-1:      #F9F4ED;  /* very gentle warmth */
+  --color-bg-warm-1:      #F9F3E8;  /* visibly warm vs cream (prev #F9F4ED was perceptually identical) */
   --color-bg-warm-2:      #F6F0E5;  /* soft oat */
   --color-bg-gold:        #F2E8D6;  /* honey */
   --color-bg-rich:        #EDE3D0;  /* richest; ceremonial */
@@ -47,7 +51,7 @@
   --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg:            0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-mineral:       0 4px 12px rgba(122, 128, 136, 0.3); /* recording button */
+  --shadow-mineral:       0 4px 12px rgba(74, 107, 126, 0.3); /* recording button — mineral-tinted */
 
   /* ─── TYPOGRAPHY ──────────────────────────────────── */
   --font-display: 'Spectral', Georgia, serif;
@@ -1688,7 +1692,12 @@
      step up; the card always sits one stop warmer than its screen. */
   .record-step--prompt-stage-1 { background-color: var(--color-bg-warm-1); }
   .record-step--prompt-stage-2 { background-color: var(--color-bg-warm-2); }
-  .record-step--prompt-stage-3 { background-color: var(--color-bg-warm-phase); }
+  .record-step--prompt-stage-3 { background-color: var(--color-bg-gold); }
+
+  /* Ready — voice preserved in the same warm tone that held the deepest
+     prompts. Extends the ramp one step beyond warm-phase so the endpoint
+     is the warmest surface in the flow, not a cream regression. */
+  .record-step--ready { background-color: var(--color-bg-rich); }
 
   /* ─── Typography ──────────────────────────────────────────── */
 
@@ -2044,18 +2053,27 @@
   .record-timer {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--color-text-tertiary);
     text-align: center;
     margin-top: 12px;
     letter-spacing: 0.05em;
     opacity: 0;
-    transition: opacity 300ms ease;
+    transition:
+      opacity 300ms ease,
+      color   200ms ease;
   }
 
   .record-timer--visible {
     opacity: 1;
+  }
+
+  /* Active-recording state — pull color to secondary so the running timer
+     reads as a live counter, not resting microcopy. Reverts to tertiary in
+     saving/saved (transient) states. */
+  .record-timer--active {
+    color: var(--color-text-secondary);
   }
 
   .record-rerecord-hint {
@@ -2142,11 +2160,8 @@
     width: 88px;
     height: 88px;
     border-radius: var(--radius-full);
-    /* Warm-mineral resting state — the hero action earns its place on a
-       warm page. Highlight carries blue-warmth so the sphere reads as
-       "attentive, waiting" instead of "inactive." The resting →
-       recording tap becomes mineral → terracotta (a meaningful hue
-       shift), not just a value change. */
+    /* Mineral-at-rest: mineral→terracotta on tap is a meaningful
+       attention-to-recording shift — not just a value change. */
     background: radial-gradient(
       circle at 30% 28%,
       var(--color-mineral-light, #6B8A9B),
@@ -2176,7 +2191,7 @@
     transform: translateX(-50%);
     width: 64px;
     height: 10px;
-    background: radial-gradient(ellipse, rgba(122, 128, 136, 0.3), transparent 70%);
+    background: radial-gradient(ellipse, rgba(74, 107, 126, 0.3), transparent 70%);
     border-radius: 50%;
     pointer-events: none;
   }
@@ -2184,7 +2199,7 @@
   .record-button:hover {
     transform: scale(1.05);
     box-shadow:
-      0 14px 32px rgba(122, 128, 136, 0.38),
+      0 14px 32px rgba(74, 107, 126, 0.38),
       inset 8px 8px 16px rgba(251, 248, 244, 0.2),
       inset -8px -8px 16px rgba(28, 26, 24, 0.2);
   }

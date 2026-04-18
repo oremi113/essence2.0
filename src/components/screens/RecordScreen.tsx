@@ -630,7 +630,15 @@ function PromptView({
                 : 'Tap to record'}
       </p>
 
-      <div className={`record-timer ${isRecording || hasStopped ? 'record-timer--visible' : ''}`}>
+      <div
+        className={[
+          'record-timer',
+          (isRecording || hasStopped) && 'record-timer--visible',
+          isRecording && 'record-timer--active',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         {String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:
         {String(recordingSeconds % 60).padStart(2, '0')}
       </div>
@@ -742,8 +750,11 @@ function PausedView({ onReturnHome }: { onReturnHome: () => void }) {
       <h1 className="record-title">Your progress is saved.</h1>
       <p className="record-subtitle">Continue whenever you&apos;re ready.</p>
 
+      {/* Stone state: guidance because the system is holding space for
+          the user, not resting. idle reads as "nothing happening" — wrong
+          for a screen where progress is sitting there waiting. */}
       <div className="record-stone">
-        <BreathStone state="idle" size={200} />
+        <BreathStone state="guidance" size={200} />
       </div>
 
       <div className="record-ctas">
@@ -759,16 +770,16 @@ function WorkingView() {
   return (
     <div className="record-step record-step--centered">
       <div className="record-eyebrow">SHAPING YOUR VOICE</div>
-      <h1 className="record-title">Creating your voice record</h1>
+      <h1 className="record-title">Your voice is being preserved.</h1>
+      <p className="record-subtitle">A moment while we shape it.</p>
 
       <div className="record-stone">
         <BreathStone state="working" size={200} />
       </div>
 
-      <div className="record-body">
-        <p>Your 25 moments are being woven together</p>
-        <p className="record-microcopy">This will take about 6 seconds</p>
-      </div>
+      <p className="record-microcopy" style={{ margin: 0 }}>
+        This takes a moment
+      </p>
     </div>
   );
 }
@@ -776,11 +787,15 @@ function WorkingView() {
 // ─── Ready ─────────────────────────────────────────────────────────────────
 
 function ReadyView({ onContinue }: { onContinue: () => void }) {
+  // Session 5 enhancement: one-shot shimmer on mount — a subtle light-pass
+  // across the stone the first time this screen loads, marking the
+  // transition from "shaping" to "preserved." Fires once per ready-state
+  // entry. Treat as arrival moment, not ambient animation.
   return (
-    <div className="record-step record-step--centered">
+    <div className="record-step record-step--centered record-step--ready">
       <div className="record-eyebrow">YOUR VOICE</div>
-      <h1 className="record-title">Your voice is ready</h1>
-      <p className="record-subtitle">Listen to what you have created</p>
+      <h1 className="record-title record-title--weight-500">Your voice is ready.</h1>
+      <p className="record-subtitle">Hear yourself preserved.</p>
 
       <div className="record-stone">
         <BreathStone state="ready" size={200} />

@@ -1,8 +1,9 @@
 # Essence 2.0 — Design tokens
 
 Canonical token set, lifted verbatim from `src/app/globals.css` `@theme`.
-Snapshot taken 2026-04-17. If the source diverges, the source wins —
-regenerate this file from it.
+Last synced 2026-04-17. If the source diverges, the source wins —
+regenerate this file from it. The HTML prototype (`prototypes/voice-recording-flow.html`)
+mirrors these values in its own `:root` block; keep the two in sync.
 
 Reach for **semantic role tokens** (`--text-title`, `--color-surface-card`)
 over raw scale values (`--text-h1`) so future tweaks propagate cleanly.
@@ -15,15 +16,48 @@ Universal warm palette. Onboarding phases and Voice Training prompt cards
 step through this ramp. Each jump is small so the progression reads as
 richer/warmer, not as abrupt mode changes. Source: ESSENCE Session 4.
 
-| Token                   | Hex       | Use                                          |
-| ----------------------- | --------- | -------------------------------------------- |
-| `--color-bg-neutral`    | `#FBF8F4` | Cream — base app background                  |
-| `--color-bg-warm-phase` | `#F2EDE4` | Warmer oat — onboarding phase 2 (screens 7–12) |
-| `--color-bg-warm-1`     | `#F9F4ED` | Very gentle warmth                           |
-| `--color-bg-warm-2`     | `#F6F0E5` | Soft oat — stage 1 prompt card               |
-| `--color-bg-gold`       | `#F2E8D6` | Honey — stage 2 prompt card                  |
-| `--color-bg-rich`       | `#EDE3D0` | Richest / ceremonial — stage 3 prompt card   |
-| `--color-bg-primary`    | `#FBF8F4` | Alias → cream (legacy usages)                |
+| Token                   | Hex       | Use                                                         |
+| ----------------------- | --------- | ----------------------------------------------------------- |
+| `--color-bg-neutral`    | `#FBF8F4` | Cream — base app background                                 |
+| `--color-bg-warm-1`     | `#F9F3E8` | Voice Training · stage 1 screen                             |
+| `--color-bg-warm-2`     | `#F6F0E5` | Voice Training · stage 2 screen · stage 1 card              |
+| `--color-bg-warm-phase` | `#F2EDE4` | Onboarding phase 2 (screens 7–12) · stage intros · working  |
+| `--color-bg-gold`       | `#F2E8D6` | Voice Training · stage 3 screen · stage 2 card              |
+| `--color-bg-rich`       | `#EDE3D0` | Voice Training · stage 3 card · ready (ceremonial endpoint) |
+| `--color-bg-primary`    | `#FBF8F4` | Alias → cream (legacy usages)                               |
+
+### `--color-bg-warm-1` value history
+
+- **2026-04-17** — `#F9F4ED` → `#F9F3E8`. Prior value was only 2–4 RGB units
+  warmer than cream; the token read as perceptually identical to the base.
+  Shifted the yellow/red channels to clear the "visibly warm" threshold
+  while keeping the step to warm-2 small.
+
+### Voice Training ramp rule
+
+**Prompt screens step through the ramp; cards step one stop warmer than
+their screen.** The card-one-stop-warmer rule preserves a consistent "the
+thing you're reading" elevation across all three stages.
+
+| Stage | Screen bg              | Card bg                |
+| ----- | ---------------------- | ---------------------- |
+| 1     | `warm-1` (`#F9F3E8`)   | `warm-2` (`#F6F0E5`)   |
+| 2     | `warm-2` (`#F6F0E5`)   | `gold` (`#F2E8D6`)     |
+| 3     | `gold` (`#F2E8D6`)     | `rich` (`#EDE3D0`)     |
+| Ready | `rich` (`#EDE3D0`)     | — (no card; endpoint)  |
+
+Ready closes the ramp by matching the Stage 3 card the user just left —
+"voice preserved in the same warm tone that held the deepest prompts."
+
+CSS mechanism differs between prototype and production for historical
+reasons, but values are identical:
+
+- **Prototype** — attribute selectors on the outer `.screen`
+  (`.screen[data-view="prompt-1"]` etc.) so the page bg stays solid across
+  the 6 px `.page-transition` slide-in.
+- **Production** — classes on `.record-step` (`.record-step--prompt-stage-*`);
+  React doesn't emit `data-view` attributes. Card backgrounds are
+  class-based in both (`.record-prompt-card--stage-2` / `--stage-3`).
 
 ## Surfaces
 
@@ -42,6 +76,17 @@ the whole palette aligns without renaming usages across the codebase.
 | --------------------- | --------- | ----------------------------------------- |
 | `--color-mineral`     | `#7A8088` | Primary buttons, active states, recording |
 | `--color-mineral-dark`| `#656B73` | Hover on primary buttons                  |
+
+### Record button — mineral-at-rest
+
+`mineral → terracotta` on tap is a meaningful attention-to-recording shift,
+not just a value change. 3-stop warm-mineral radial gradient at rest
+(`#6B8A9B → --color-mineral → #334B5A`), swapping to terracotta during the
+recording pulse. Resting, hover, and ground-shadow all live in the
+`rgba(74, 107, 126, *)` family; alphas vary by state (0.28 resting, 0.3
+ground, 0.38 hover) so they're kept inline on `.record-button` rather than
+tokenized — see `--shadow-mineral` for the canonical "mineral shadow" value
+if you need one standalone.
 
 ## Text
 
@@ -74,7 +119,7 @@ Red is **always** `--color-status-error` (#9C3528 terracotta). Never raw
 | `--shadow-sm`      | `0 2px 4px rgba(0, 0, 0, 0.04)`          | Subtle lift                 |
 | `--shadow-md`      | `0 4px 12px rgba(0, 0, 0, 0.08)`         | Cards                       |
 | `--shadow-lg`      | `0 8px 24px rgba(0, 0, 0, 0.12)`         | Floating panels             |
-| `--shadow-mineral` | `0 4px 12px rgba(122, 128, 136, 0.3)`    | Recording button (mineral)  |
+| `--shadow-mineral` | `0 4px 12px rgba(74, 107, 126, 0.3)`     | Recording button (mineral-tinted) |
 
 ---
 
