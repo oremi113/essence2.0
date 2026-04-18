@@ -16,10 +16,10 @@
      screen. See .record-step--prompt-stage-* rules. */
   --color-bg-neutral:     #FBF8F4;  /* cream — base app background */
   --color-bg-warm-phase:  #F2EDE4;  /* warmer oat — onboarding phase 2 (screens 7–12) */
-  --color-bg-warm-1:      #F9F3E8;  /* visibly warm vs cream (prev #F9F4ED was perceptually identical) */
-  --color-bg-warm-2:      #F6F0E5;  /* soft oat */
-  --color-bg-gold:        #F2E8D6;  /* honey */
-  --color-bg-rich:        #EDE3D0;  /* richest; ceremonial */
+  --color-bg-warm-1:      #FBF6ED;  /* opening cream, one step above neutral */
+  --color-bg-warm-2:      #F2E8D2;  /* soft oat — widened 2026-04-18 for visible stage progression on device */
+  --color-bg-gold:        #E8D8B3;  /* honey */
+  --color-bg-rich:        #D9C28E;  /* richest; ceremonial */
 
   /* Alias retained for components/pages that use the older
      name. Points at the same cream so nothing visually moves. */
