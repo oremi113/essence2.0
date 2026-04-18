@@ -286,7 +286,6 @@ button, a, [role="button"] { min-height: 44px; }
 .page-transition > * > .record-timer,
 .page-transition > * > .record-body,
 .page-transition > * > .record-microcopy,
-.page-transition > * > .record-stage-badge,
 .page-transition > * > .record-celebration-body,
 .page-transition > * > .record-checklist {
   opacity: 0;
@@ -294,7 +293,6 @@ button, a, [role="button"] { min-height: 44px; }
   animation: cinematicFadeIn var(--duration-page) var(--ease-page) both;
 }
 .page-transition > * > .record-eyebrow       { animation-delay: 100ms; }
-.page-transition > * > .record-stage-badge   { animation-delay: 120ms; }
 .page-transition > * > .record-title         { animation-delay: 160ms; }
 .page-transition > * > .record-subtitle      { animation-delay: 200ms; }
 .page-transition > * > .record-instruction   { animation-delay: 220ms; }
@@ -339,6 +337,12 @@ button, a, [role="button"] { min-height: 44px; }
 .screen[data-view="prompt-1"] { background-color: var(--color-bg-warm-1); }
 .screen[data-view="prompt-2"] { background-color: var(--color-bg-warm-2); }
 .screen[data-view="prompt-3"] { background-color: var(--color-bg-gold); }
+/* Celebrations extend the warm ramp — one step warmer than the stage they
+   close, so the threshold crossing carries a small, earned temperature bump.
+   screen--warm stays on the section as a fallback; data-view wins on
+   specificity. See Group 4 Finding E (2026-04-17). */
+.screen[data-view="celebration-1"] { background-color: var(--color-bg-warm-2); }
+.screen[data-view="celebration-2"] { background-color: var(--color-bg-gold); }
 /* Ready — voice preserved in the same warm tone that held the deepest prompts.
    Extends the ramp one step beyond the prompt-3 screen so the endpoint is the
    warmest surface in the flow, matching the Stage 3 card the user just left. */
@@ -449,13 +453,18 @@ button, a, [role="button"] { min-height: 44px; }
   color: var(--color-text-primary);
 }
 
+/* Eyebrow color set to --color-text-secondary flow-wide (Group 4 Finding G,
+   extended 2026-04-17). Tertiary failed AA Large (3:1) on every surface in
+   the flow — measured 1.92–2.21 across phase-primary, warm-phase, warm-1,
+   warm-2, and gold. Secondary (#6B6B6B) passes with 4.39–5.99 depending on
+   the surface, so one token change covers every eyebrow. */
 .record-eyebrow {
   font-family: var(--font-body);
   font-size: var(--text-caption);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   text-align: center;
   margin-bottom: var(--space-md);
 }
@@ -518,20 +527,12 @@ button, a, [role="button"] { min-height: 44px; }
   text-align: center;
   margin: 0 0 var(--space-xs);
 }
-.record-stage-badge {
-  display: inline-block;
-  padding: var(--space-xs) var(--space-lg);
-  background: var(--color-surface-warm);
-  color: var(--color-text-secondary);
-  font-family: var(--font-body);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: var(--radius-pill);
-  margin-bottom: var(--space-lg);
-  align-self: center;
-}
+/* .record-stage-badge retired 2026-04-17 — Group 4 Finding B.
+   Celebration-2 switched to the .record-eyebrow pattern so both celebration
+   screens share one structural shape (eyebrow + weight-500 title + italic
+   subtitle). The pill read too close to the stage-map nodes below it, adding
+   a second progress signal to a moment that should belong to the stage just
+   finished. Also in src/app/globals.css line ~2320 — clean up on React port. */
 
 /* ─── Stone container (hosts the canvas BreathStone) ─────────────────────── */
 .record-stone {
@@ -560,7 +561,13 @@ canvas.breath-stone {
           mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
 }
 
-/* Celebrate overlays */
+/* Celebrate overlays — shimmer and specks fire in composition with the
+   celebrate one-shot (2200ms stone gesture, 2000ms shimmer, 4000ms specks).
+   Visible only on celebration screens. In React: render conditionally on
+   `stoneState === 'celebrate'`, keyed to re-mount per entry so the
+   one-shots replay. See Group 4 Finding A for CTA-gating integration
+   (Continue is callback-gated off the 2200ms onCelebrateEnd — the 4s
+   specks tail is decorative and does not gate input). */
 .record-stone--celebrate { position: relative; }
 .record-stone--celebrate .celebrate-shimmer {
   position: absolute;
@@ -625,6 +632,15 @@ canvas.breath-stone {
 }
 
 /* ─── Stage Map ──────────────────────────────────────────────────────────── */
+/* Two usage modes — do NOT conflate them (Group 4 Finding C, 2026-04-17):
+   • Forward-looking (stage intros): the stage the user is about to enter gets
+     --current on the segment and node. Pulses + outlined label communicate
+     "this is what you're about to do."
+   • Retrospective (celebrations): no --current. All finished stages render
+     --completed, all remaining render --upcoming. The moment belongs to the
+     stage just finished; forward motion is carried by the CTA, not the map.
+   A --current node on an upcoming stage during a celebration visually
+   rushes the user forward and contradicts the 2200ms celebrate gesture. */
 .record-stage-map {
   display: flex;
   align-items: flex-start;
@@ -841,7 +857,12 @@ canvas.breath-stone {
 /* ─── Waveform ───────────────────────────────────────────────────────────── */
 .record-waveform {
   display: flex;
-  align-items: center;
+  /* Baseline-anchored: bar bottoms stay on a fixed line, only tops breathe.
+     Center-aligned bars make the bottom edges oscillate toward the record
+     button below, which reads as the button being rhythmically pressed.
+     flex-end also matches how real amplitude meters render (rising from
+     a baseline, not expanding from a midline). */
+  align-items: flex-end;
   justify-content: center;
   gap: 4px;
   height: 24px;
@@ -857,7 +878,10 @@ canvas.breath-stone {
   flex: 1;
   max-width: 4px;
   background: var(--color-surface-warm);
-  border-radius: 2px;
+  /* Fully-rounded pill caps (radius = ½ width). Reads as a waveform
+     tick, not a bar-chart bar — the canonical shape in premium voice
+     UIs (Voice Memos, Otter, etc.). */
+  border-radius: 1.5px;
   transform-origin: center;
   /* 100ms is real-time audio response, deliberately below --duration-micro
      (200ms). Each bar snaps to the volume envelope of the live waveform —
@@ -867,13 +891,41 @@ canvas.breath-stone {
 .record-waveform--active .record-waveform__bar {
   background: var(--color-mineral);
   /* Ambient infinite loop — off-token intentionally. Loops aren't
-     state transitions, and the bar bounce cadence (1.2s peak-to-peak)
-     is tuned to sit just above a resting breath pulse. */
-  animation: record-waveform-bounce 1.2s ease-in-out infinite;
+     state transitions, and the baseline bar cadence (~1.2s) is tuned
+     to sit just above a resting breath pulse. Per-bar duration +
+     delay overrides below break the uniform cadence so the eye
+     can't latch onto a loop period. Easing is a symmetric organic
+     curve — ease-in-out reads as a pendulum. */
+  animation: record-waveform-bounce 1.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
+/* Per-bar phase offsets + durations — intentionally non-sequential so
+   the bars read as independent voices, not as a progress-bar sweep.
+   A left-to-right delay ramp (0, 0.1, 0.2…) reads as a waveform
+   scanning across; jumbled delays + prime-ish durations read as
+   "each bar has its own rhythm" and the combined loop period is
+   long enough that the pattern never repeats perceptibly. */
+.record-waveform--active .record-waveform__bar:nth-child(1) { animation-delay: 0.00s; animation-duration: 1.10s; }
+.record-waveform--active .record-waveform__bar:nth-child(2) { animation-delay: 0.15s; animation-duration: 1.40s; }
+.record-waveform--active .record-waveform__bar:nth-child(3) { animation-delay: 0.08s; animation-duration: 0.95s; }
+.record-waveform--active .record-waveform__bar:nth-child(4) { animation-delay: 0.22s; animation-duration: 1.25s; }
+.record-waveform--active .record-waveform__bar:nth-child(5) { animation-delay: 0.05s; animation-duration: 1.15s; }
+.record-waveform--active .record-waveform__bar:nth-child(6) { animation-delay: 0.18s; animation-duration: 1.35s; }
+.record-waveform--active .record-waveform__bar:nth-child(7) { animation-delay: 0.11s; animation-duration: 1.05s; }
+.record-waveform--active .record-waveform__bar:nth-child(8) { animation-delay: 0.25s; animation-duration: 1.20s; }
+/* Center-weighted peak envelope — mid bars reach higher, edges taper.
+   Matches how voice energy clusters in mid-frequencies and keeps the
+   overall silhouette rounded rather than a uniform block. */
+.record-waveform__bar:nth-child(1),
+.record-waveform__bar:nth-child(8) { --peak-height: 14px; }
+.record-waveform__bar:nth-child(2),
+.record-waveform__bar:nth-child(7) { --peak-height: 18px; }
+.record-waveform__bar:nth-child(3),
+.record-waveform__bar:nth-child(6) { --peak-height: 22px; }
+.record-waveform__bar:nth-child(4),
+.record-waveform__bar:nth-child(5) { --peak-height: 24px; }
 @keyframes record-waveform-bounce {
   0%, 100% { height: 6px; }
-  50%      { height: 22px; }
+  50%      { height: var(--peak-height, 22px); }
 }
 
 /* ─── Record button ──────────────────────────────────────────────────────── */
@@ -1117,6 +1169,21 @@ canvas.breath-stone {
   transform: translateY(0) scale(0.98);
 }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Celebration-gated Continue — CTA stays invisible and un-tappable for the
+   full 2200ms celebrate one-shot, then fades in on onCelebrateEnd. Keeps the
+   ceremonial gesture and the "move on" affordance from fighting for attention.
+   In the React port, .is-ready is flipped by the BreathStone onCelebrateEnd
+   callback, not by a timer. See prototypes/breath-stone-api.md. */
+.btn-primary.is-waiting {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-large) var(--ease-essence);
+}
+.btn-primary.is-ready {
+  opacity: 1;
+  pointer-events: auto;
+}
 .btn-secondary {
   display: inline-flex;
   align-items: center;
@@ -1673,26 +1740,31 @@ canvas.breath-stone {
 
   <!-- 7. Celebration — after Stage 1 -->
   <!--
-    No exit affordance on celebration screens. The celebration is a 2.2s
-    one-shot gesture marking stage completion. The user has already committed
-    by completing the stage, and an X or overflow here would give them a way
-    to abandon at the moment of greatest momentum. Intentional omission — do
-    not add an X button in React. See Pass 1 Finding 2 (2026-04-17).
-    Compatible with either resolution of the onCelebrateEnd decision (Pass 2
-    item 7): tap-to-continue and callback-auto-fade both work with zero exit.
+    No exit affordance on celebration screens. This is a 2200ms one-shot
+    gesture marking a stage threshold. The user has committed by completing
+    the stage, and an X or overflow here would invite abandonment at peak
+    momentum. Intentional omission.
+
+    CTA is callback-gated: fades in at onCelebrateEnd (2200ms). See Group 4
+    Finding A. Not wired in this static prototype as a full reducer state,
+    but the .is-waiting / .is-ready classes and the setTimeout shim
+    demonstrate the pattern.
   -->
   <section class="screen screen--warm" data-view="celebration-1" data-label="7. Celebration · S1→S2">
     <div class="page-transition"><div class="record-step record-step--centered record-step--celebration">
       <div class="record-eyebrow">STAGE 1 COMPLETE</div>
       <h1 class="record-title record-title--weight-500">You&rsquo;ve settled in.</h1>
       <p class="record-subtitle record-subtitle--italic">Your voice is beginning to take shape.</p>
+      <!-- Retrospective stage map — no --current node on celebrations (Group 4
+           Finding C). The moment is about the stage just finished; forward
+           motion goes to the CTA, not the map. -->
       <div class="record-stage-map">
         <div class="record-stage-map__segment record-stage-map__segment--completed">
           <div class="record-stage-map__node record-stage-map__node--completed">1</div>
           <div class="record-stage-map__label">Everyday</div>
         </div>
-        <div class="record-stage-map__segment record-stage-map__segment--current">
-          <div class="record-stage-map__node record-stage-map__node--current">2</div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">2</div>
           <div class="record-stage-map__label">Emotional</div>
         </div>
         <div class="record-stage-map__segment">
@@ -1705,8 +1777,8 @@ canvas.breath-stone {
         <span class="celebrate-specks"></span>
         <canvas class="breath-stone" data-state="celebrate" data-size="200"></canvas>
       </div>
-      <div class="record-ctas">
-        <button class="btn-primary btn--full">Move to Stage 2</button>
+      <div class="record-ctas record-ctas--gated">
+        <button class="btn-primary btn--full is-waiting" disabled>Keep going</button>
       </div>
     </div></div>
   </section>
@@ -1802,17 +1874,24 @@ canvas.breath-stone {
 
   <!-- 10. Celebration — after Stage 2 -->
   <!--
-    No exit affordance. Same rule as celebration-1: this is a 2.2s one-shot
-    gesture marking stage completion and the user has already committed by
-    finishing Stage 2. An X or overflow here would invite abandonment at the
-    emotional midpoint. Intentional omission — do not add an X button in
-    React. See Pass 1 Finding 2 (2026-04-17).
+    No exit affordance on celebration screens. This is a 2200ms one-shot
+    gesture marking a stage threshold. The user has committed by completing
+    the stage, and an X or overflow here would invite abandonment at peak
+    momentum. Intentional omission.
+
+    CTA is callback-gated: fades in at onCelebrateEnd (2200ms). See Group 4
+    Finding A. Not wired in this static prototype as a full reducer state,
+    but the .is-waiting / .is-ready classes and the setTimeout shim
+    demonstrate the pattern.
   -->
   <section class="screen screen--warm" data-view="celebration-2" data-label="10. Celebration · S2→S3">
     <div class="page-transition"><div class="record-step record-step--centered record-step--celebration">
-      <div class="record-stage-badge">HALFWAY THERE</div>
-      <h1 class="record-title">A fuller picture.</h1>
-      <p class="record-subtitle">The emotional moments gave your voice its depth.</p>
+      <div class="record-eyebrow">STAGE 2 COMPLETE</div>
+      <h1 class="record-title record-title--weight-500">That&rsquo;s the longest stretch done.</h1>
+      <p class="record-subtitle record-subtitle--italic">Eight shorter prompts ahead.</p>
+      <!-- Retrospective stage map — no --current node on celebrations (Group 4
+           Finding C). The moment is about the stage just finished; forward
+           motion goes to the CTA, not the map. -->
       <div class="record-stage-map">
         <div class="record-stage-map__segment record-stage-map__segment--completed">
           <div class="record-stage-map__node record-stage-map__node--completed">1</div>
@@ -1822,8 +1901,8 @@ canvas.breath-stone {
           <div class="record-stage-map__node record-stage-map__node--completed">2</div>
           <div class="record-stage-map__label">Emotional</div>
         </div>
-        <div class="record-stage-map__segment record-stage-map__segment--current">
-          <div class="record-stage-map__node record-stage-map__node--current">3</div>
+        <div class="record-stage-map__segment">
+          <div class="record-stage-map__node record-stage-map__node--upcoming">3</div>
           <div class="record-stage-map__label">Personal</div>
         </div>
       </div>
@@ -1832,8 +1911,8 @@ canvas.breath-stone {
         <span class="celebrate-specks"></span>
         <canvas class="breath-stone" data-state="celebrate" data-size="200"></canvas>
       </div>
-      <div class="record-ctas">
-        <button class="btn-primary btn--full">Continue to Stage 3</button>
+      <div class="record-ctas record-ctas--gated">
+        <button class="btn-primary btn--full is-waiting" disabled>Keep going</button>
       </div>
     </div></div>
   </section>
@@ -2184,10 +2263,6 @@ canvas.breath-stone {
       <span class="record-eyebrow" style="margin: 0">STEP 2</span>
     </div>
     <div class="ds-type__row">
-      <span class="ds-type__role">stage-badge</span>
-      <span class="record-stage-badge" style="margin: 0">HALFWAY THERE</span>
-    </div>
-    <div class="ds-type__row">
       <span class="ds-type__role">microcopy</span>
       <span class="record-microcopy" style="margin: 0">11–14 minutes</span>
     </div>
@@ -2240,23 +2315,12 @@ canvas.breath-stone {
       <span class="ds-gaps__need">Needs: after ~60s on Working, surface a soft "This is taking a while — check back in a few minutes" action. Dismisses to home; server continues processing and notifies (push/email) when voice is ready. Out of prototype scope; Session 5 call.</span>
     </li>
   </ol>
-  <h3>Decisions pending (Pass 2 — celebration-group round)</h3>
-  <ol class="ds-gaps__list" start="7">
+  <h3>Resolved in Pass 2</h3>
+  <ol class="ds-gaps__list ds-gaps__list--resolved" start="7">
     <li>
       <strong>Celebration screens ignore the <code>onCelebrateEnd</code> callback.</strong>
-      <span class="ds-gaps__why">
-        Screens 8 and 11 use <code>data-state="celebrate"</code>. The engine emits
-        <code>onCelebrateEnd</code> after the 2200ms gesture and the stone
-        auto-returns to idle — the prototype wires none of this. User has to
-        tap Continue while the gesture is playing or sit afterward waiting.
-      </span>
-      <span class="ds-gaps__need">
-        Pass 2 decision: <em>(A)</em> keep tap-to-continue (slower, more reverent; risk of momentum loss),
-        or <em>(B)</em> use the callback — Continue stays dim/disabled for 2200ms, then fades in when the
-        gesture completes (celebration is honored, momentum preserved).
-        Recommended split: <strong>B for S1→S2</strong> (early, momentum matters), <strong>A for S2→S3</strong>
-        (deeper emotional beat, let them dwell).
-      </span>
+      <span class="ds-gaps__why">Original gap: Screens 7 and 10 (celebrate state) left Continue live from frame 1 while the 2200ms shimmer-and-specks gesture played. Ceremonial moment and "move on" affordance competed for attention — by celebration #2 the ritual was already dead.</span>
+      <span class="ds-gaps__resolved">Resolved 2026-04-17 — both celebrations use <strong>option B (callback-gated Continue)</strong>. The A/B split proposed in the handoff was rejected: teaching two different rules for the same screen shape erodes premium feel. The dwell-longer intuition for S2→S3 is real but belongs in tempo, not in interaction model. Prototype: Continue ships as <code>.btn-primary.is-waiting[disabled]</code>, flips to <code>.is-ready</code> after a 2200ms timer aligned with the celebrate one-shot. React port: subscribe to <code>BreathStone.onCelebrateEnd</code> — no timer — and flip <code>isWaiting → isReady</code> on the callback. Replay/navigation resets the state so the second playthrough starts hidden again.</span>
     </li>
   </ol>
   <h3>Resolved in Pass 1</h3>
@@ -2812,6 +2876,20 @@ class BreathStoneEngine {
     // Replay celebrate when re-entering a celebration view
     const view = screens[idx].dataset.view || '';
     if (view.startsWith('celebration')) {
+      // Gate Continue: reset first so re-entry (nav, Replay) starts hidden,
+      // then flip to is-ready after the 2200ms celebrate one-shot completes.
+      // React port: subscribe to BreathStone onCelebrateEnd instead of timer.
+      const cta = screens[idx].querySelector('.btn-primary.is-waiting, .btn-primary.is-ready');
+      if (cta) {
+        // Snap back to hidden without easing — the fade belongs on the reveal,
+        // not on the reset. Otherwise a ready→waiting re-entry lingers ~1s.
+        cta.style.transition = 'none';
+        cta.classList.remove('is-ready');
+        cta.classList.add('is-waiting');
+        cta.setAttribute('disabled', '');
+        void cta.offsetWidth;
+        cta.style.transition = '';
+      }
       engines.forEach(({ engine, canvas }) => {
         if (canvas.dataset.state === 'celebrate' && screens[idx].contains(canvas)) {
           engine.setState('celebrate');
@@ -2824,6 +2902,15 @@ class BreathStoneEngine {
         void el.offsetWidth;
         el.style.animation = '';
       });
+      if (cta) {
+        setTimeout(() => {
+          // Bail if the user navigated away before the gesture finished.
+          if (screens[idx] !== cta.closest('.screen') || !screens[idx].classList.contains('screen--active')) return;
+          cta.classList.remove('is-waiting');
+          cta.classList.add('is-ready');
+          cta.removeAttribute('disabled');
+        }, 2200);
+      }
     }
     syncDevReasonPicker();
   }

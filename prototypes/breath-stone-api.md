@@ -99,6 +99,38 @@ The `onCelebrateEnd` callback fires once when the 2200ms gesture
 completes. The stone returns to `idle` automatically — you do not need
 to explicitly flip `state` back.
 
+**Integration rule — celebration Continue buttons are callback-gated.**
+On every screen where `state="celebrate"` is followed by a primary CTA
+("Keep going" on both S1→S2 and S2→S3; do not restate the stage number
+in the CTA — see Group 4 Finding F), the CTA must ship hidden + disabled
+and be revealed only by `onCelebrateEnd`. The
+ceremonial one-shot and the "move on" affordance are not allowed to
+compete for attention. Do not drive this from `setTimeout(…, 2200)` in
+React — the callback is the source of truth, and using the timer
+duplicates a constant that the engine already owns. Reset the gated
+state when the screen is re-entered (route change, back-nav, dev
+replay) so the second playthrough also starts hidden.
+
+```tsx
+const [isReady, setIsReady] = useState(false);
+
+// Reset on screen mount / re-entry
+useEffect(() => { setIsReady(false); }, [celebrationKey]);
+
+<BreathStone state="celebrate" onCelebrateEnd={() => setIsReady(true)} />
+<button
+  className={`btn-primary ${isReady ? 'is-ready' : 'is-waiting'}`}
+  disabled={!isReady}
+>
+  Keep going
+</button>
+```
+
+Resolved 2026-04-17 — Pass 2 decision: both celebrations (S1→S2 and
+S2→S3) use this pattern. The "dwell longer on S2→S3" intuition belongs
+in copy/tempo, not in whether the callback is used. See
+`prototypes/voice-recording-flow.html` ds-gaps item 7 (Resolved in Pass 2).
+
 ### Layered overlays (celebration variant)
 
 The full celebration moment stacks two CSS-only overlays on top of the
