@@ -31,7 +31,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── Design tokens — verbatim from src/app/globals.css @theme ─────────────── */
-/* Warmth-step rule (Voice Training): prompt screens step through the ramp;
+/* Warmth-step rule (Voice Keepsake): prompt screens step through the ramp;
    cards step one stop warmer than their screen. See .record-step--prompt-stage-*
    and .record-prompt-card--stage-* rules. */
 :root {
@@ -287,7 +287,8 @@ button, a, [role="button"] { min-height: 44px; }
 .page-transition > * > .record-body,
 .page-transition > * > .record-microcopy,
 .page-transition > * > .record-celebration-body,
-.page-transition > * > .record-checklist {
+.page-transition > * > .record-checklist,
+.page-transition > * > .record-checklist-anchor {
   opacity: 0;
   transform: translateY(8px);
   animation: cinematicFadeIn var(--duration-page) var(--ease-page) both;
@@ -307,6 +308,7 @@ button, a, [role="button"] { min-height: 44px; }
 .page-transition > * > .record-microcopy     { animation-delay: 340ms; }
 .page-transition > * > .record-celebration-body { animation-delay: 300ms; }
 .page-transition > * > .record-checklist     { animation-delay: 260ms; }
+.page-transition > * > .record-checklist-anchor { animation-delay: 1700ms; }
 .page-transition > * > .record-ctas          { animation-delay: 620ms; }
 @keyframes cinematicFadeIn {
   0%   { opacity: 0; transform: translateY(8px); }
@@ -722,7 +724,7 @@ canvas.breath-stone {
 .record-prompt-card--stage-2 { background: var(--color-bg-gold); }
 .record-prompt-card--stage-3 { background: var(--color-bg-rich); }
 .record-prompt-card__scroll {
-  max-height: 340px;
+  max-height: 380px;
   overflow-y: auto;
   padding: 28px 24px;
   scrollbar-width: thin;
@@ -1095,6 +1097,14 @@ canvas.breath-stone {
   font-family: var(--font-body);
   font-size: var(--text-ui);
   color: var(--color-text-primary);
+  line-height: 1.5;
+}
+.record-checklist-anchor {
+  font-family: var(--font-body);
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: var(--space-xl) var(--space-lg) 0;
   line-height: 1.5;
 }
 
@@ -1521,9 +1531,9 @@ canvas.breath-stone {
   <!-- 1. Entry -->
   <section class="screen" data-view="entry" data-label="1. Entry">
     <div class="page-transition"><div class="record-step">
-      <div class="record-eyebrow">VOICE TRAINING</div>
-      <h1 class="record-title">Your voice journey</h1>
-      <p class="record-subtitle">25 moments that capture your full range</p>
+      <div class="record-eyebrow">VOICE KEEPSAKE &middot; 25 MOMENTS</div>
+      <h1 class="record-title">Save your voice.</h1>
+      <p class="record-subtitle">Save something only you can give. This is for the people who love you.</p>
       <!--
         PREVIEW-current pattern (not Live-current).
         Stage 1 is rendered with --current here to signal "this is where you
@@ -1551,11 +1561,15 @@ canvas.breath-stone {
       <div class="record-stone">
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
-      <p class="record-microcopy" style="margin-top: 0">11–14 minutes</p>
+      <!-- React-port TODO (T3): drop the inline margin-top: 0 and resolve spacing
+     at the reducer/stylesheet level. Microcopy belongs below the stone, above
+     the CTA, with margin-top: var(--space-md). The inline zero here eats into
+     stone-to-CTA breathing room; kept for proto fidelity only. -->
+<p class="record-microcopy" style="margin-top: 0">Twenty-five prompts · 10–15 minutes</p>
       <div class="record-ctas">
-        <button class="btn-primary btn--full">Begin voice training</button>
+        <button class="btn-primary btn--full">Begin</button>
         <!-- "I'll do this later" is a Zone 1 opt-out for users who haven't
-             engaged yet. In production this dismisses voice training and
+             engaged yet. In production this dismisses voice keepsake and
              returns to the app's home/dashboard. In the prototype it routes
              to Entry (no separate home screen exists). See Pass 1 Finding 3. -->
         <button class="btn-link btn--full js-exit" data-exit="home">I&rsquo;ll do this later</button>
@@ -1566,8 +1580,8 @@ canvas.breath-stone {
   <!-- 2. Grounding -->
   <section class="screen" data-view="grounding" data-label="2. Grounding">
     <div class="page-transition"><div class="record-step record-step--centered">
-      <div class="record-eyebrow">VOICE TRAINING</div>
-      <h1 class="record-title">25 moments</h1>
+      <div class="record-eyebrow">VOICE KEEPSAKE &middot; BEFORE YOU BEGIN</div>
+      <h1 class="record-title">This is for them.</h1>
       <p class="record-subtitle">Speak as you would to someone who knows you.</p>
       <div class="record-stone">
         <canvas class="breath-stone" data-state="idle" data-size="200"></canvas>
@@ -1586,9 +1600,9 @@ canvas.breath-stone {
   <!-- 3. Mic Permission -->
   <section class="screen" data-view="mic" data-label="3. Mic permission">
     <div class="page-transition"><div class="record-step record-step--centered">
-      <div class="record-eyebrow">VOICE TRAINING &middot; SETUP</div>
+      <div class="record-eyebrow">VOICE KEEPSAKE &middot; SETUP</div>
       <h1 class="record-title">Your phone needs to hear you.</h1>
-      <p class="record-subtitle">Allow access and we&rsquo;ll go from there.</p>
+      <p class="record-subtitle">We only record when you tap.</p>
       <div class="record-stone" style="min-height: 120px">
         <div class="record-mic-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
@@ -1599,12 +1613,13 @@ canvas.breath-stone {
           </svg>
         </div>
       </div>
+      <p class="record-microcopy" style="margin-top: 0">Your voice stays yours.</p>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Allow microphone</button>
         <!-- "Not now" is a Zone 1 opt-out for users having second thoughts about
              mic permission. In production, destination branches on user state:
                brand-new user → home with a soft "Mic permission is required
-                 before you can begin voice training" state.
+                 before you can begin voice keepsake" state.
                returning user → back to Entry (they came in, they're heading
                  back out).
              Prototype routes both to Entry. See Pass 1 Finding 3. -->
@@ -1616,8 +1631,8 @@ canvas.breath-stone {
   <!-- 4. Checklist -->
   <section class="screen" data-view="checklist" data-label="4. Checklist">
     <div class="page-transition"><div class="record-step">
-      <div class="record-eyebrow">VOICE TRAINING &middot; SETUP</div>
-      <h1 class="record-title">You&rsquo;re all set</h1>
+      <div class="record-eyebrow">VOICE KEEPSAKE &middot; SETUP</div>
+      <h1 class="record-title">Before you begin.</h1>
       <div class="record-stone">
         <canvas class="breath-stone" data-state="guidance" data-size="200"></canvas>
       </div>
@@ -1632,11 +1647,12 @@ canvas.breath-stone {
         </div>
         <div class="record-checklist__item">
           <div class="record-checklist__icon">✓</div>
-          <div class="record-checklist__text">Speak naturally, like telling a story</div>
+          <div class="record-checklist__text">Speak naturally, at your own pace</div>
         </div>
       </div>
+      <p class="record-checklist-anchor">Someone you love, in mind.</p>
       <div class="record-ctas">
-        <button class="btn-primary btn--full">Start Stage 1</button>
+        <button class="btn-primary btn--full">Begin</button>
       </div>
     </div></div>
   </section>
@@ -1654,14 +1670,14 @@ canvas.breath-stone {
   -->
   <section class="screen screen--warm" data-view="stage-1-intro" data-label="5. Stage 1 intro">
     <div class="record-top-chrome">
-      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice training" data-exit="home">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice keepsake" data-exit="home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
     <div class="page-transition"><div class="record-step record-step--threshold">
-      <div class="record-eyebrow">VOICE TRAINING &middot; STAGE 1 OF 3</div>
+      <div class="record-eyebrow">STAGE 1 OF 3 &middot; EVERYDAY</div>
       <h1 class="record-title record-title--threshold">Let&rsquo;s start with simple moments.</h1>
       <div class="record-stage-map">
         <div class="record-stage-map__segment record-stage-map__segment--current">
@@ -1681,7 +1697,7 @@ canvas.breath-stone {
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
       <div class="record-body record-body--aside">
-        <p>Take a breath. We&rsquo;ll start here.</p>
+        <p>Take a breath. Nothing here needs to be rehearsed.</p>
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Begin Stage 1</button>
@@ -1707,10 +1723,10 @@ canvas.breath-stone {
       <button class="record-overflow-menu__item js-exit" role="menuitem" data-exit="paused" data-reason="user-pause">Pause and save progress</button>
     </div>
     <div class="page-transition"><div class="record-step">
-      <div class="record-eyebrow">MOMENT 2 OF 25</div>
+      <div class="record-eyebrow">MOMENT 2 OF 25 &middot; EVERYDAY</div>
       <p class="record-instruction">Speak naturally.</p>
       <div class="record-prompt-card">
-        <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Describe your typical morning &mdash; the first thing you do, what the light looks like, a sound you always hear.</p></div>
+        <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Describe your typical morning. The first thing you do, what the light looks like, a sound you always hear.</p></div>
       </div>
       <div class="record-waveform">
         <div class="record-waveform__bar"></div>
@@ -1752,8 +1768,8 @@ canvas.breath-stone {
   -->
   <section class="screen screen--warm" data-view="celebration-1" data-label="7. Celebration · S1→S2">
     <div class="page-transition"><div class="record-step record-step--centered record-step--celebration">
-      <div class="record-eyebrow">STAGE 1 COMPLETE</div>
-      <h1 class="record-title record-title--weight-500">You&rsquo;ve settled in.</h1>
+      <div class="record-eyebrow">STAGE 1 COMPLETE &middot; EVERYDAY</div>
+      <h1 class="record-title record-title--weight-500">You&rsquo;ve settled into it.</h1>
       <p class="record-subtitle record-subtitle--italic">Your voice is beginning to take shape.</p>
       <!-- Retrospective stage map — no --current node on celebrations (Group 4
            Finding C). The moment is about the stage just finished; forward
@@ -1786,16 +1802,16 @@ canvas.breath-stone {
   <!-- 8. Stage 2 intro -->
   <section class="screen screen--warm" data-view="stage-2-intro" data-label="8. Stage 2 intro">
     <div class="record-top-chrome">
-      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice training" data-exit="paused" data-reason="user-exit">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice keepsake" data-exit="paused" data-reason="user-exit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
     <div class="page-transition"><div class="record-step">
-      <div class="record-eyebrow">STAGE 2 OF 3</div>
-      <h1 class="record-title">Now let&rsquo;s go a little deeper.</h1>
-      <p class="record-subtitle">These twelve prompts capture emotional range and meaningful memories.</p>
+      <div class="record-eyebrow">STAGE 2 OF 3 &middot; EMOTIONAL</div>
+      <h1 class="record-title">Some of these might stay with you.</h1>
+      <p class="record-subtitle">Twelve prompts about feelings, memories, and the people who matter to you.</p>
       <div class="record-stage-map">
         <div class="record-stage-map__segment record-stage-map__segment--completed">
           <div class="record-stage-map__node record-stage-map__node--completed">1</div>
@@ -1814,8 +1830,7 @@ canvas.breath-stone {
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
       <div class="record-body">
-        <p>Read at your own pace.</p>
-        <p>Let the words land how they feel.</p>
+        <p>Think of someone as you read. The words will find them.</p>
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Begin Stage 2</button>
@@ -1841,10 +1856,10 @@ canvas.breath-stone {
       <button class="record-overflow-menu__item js-exit" role="menuitem" data-exit="paused" data-reason="user-pause">Pause and save progress</button>
     </div>
     <div class="page-transition"><div class="record-step">
-      <div class="record-eyebrow">MOMENT 10 OF 25</div>
+      <div class="record-eyebrow">MOMENT 10 OF 25 &middot; EMOTIONAL</div>
       <p class="record-instruction">Let it feel real.</p>
       <div class="record-prompt-card record-prompt-card--stage-2">
-        <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Tell me about a meal you&rsquo;ll never forget &mdash; who was there, what you tasted, why it stayed with you.</p></div>
+        <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Tell me about a meal you&rsquo;ll never forget. Who was there, what you tasted, why it stayed with you.</p></div>
       </div>
       <div class="record-waveform">
         <div class="record-waveform__bar"></div>
@@ -1920,15 +1935,15 @@ canvas.breath-stone {
   <!-- 11. Stage 3 intro -->
   <section class="screen screen--warm" data-view="stage-3-intro" data-label="11. Stage 3 intro">
     <div class="record-top-chrome">
-      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice training" data-exit="paused" data-reason="user-exit">
+      <button class="record-top-chrome__btn js-exit" aria-label="Exit voice keepsake" data-exit="paused" data-reason="user-exit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
     <div class="page-transition"><div class="record-step">
-      <div class="record-eyebrow">STAGE 3 OF 3</div>
-      <h1 class="record-title">These final moments add richness.</h1>
+      <div class="record-eyebrow">STAGE 3 OF 3 &middot; PERSONAL</div>
+      <h1 class="record-title">These last ones are yours.</h1>
       <p class="record-subtitle">Eight prompts that capture expression, care, and continuity.</p>
       <div class="record-stage-map">
         <div class="record-stage-map__segment record-stage-map__segment--completed">
@@ -1948,8 +1963,7 @@ canvas.breath-stone {
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
       <div class="record-body">
-        <p>Read like you mean it.</p>
-        <p>You&rsquo;re almost there.</p>
+        <p>Read like you mean it. What you say here stays.</p>
       </div>
       <div class="record-ctas">
         <button class="btn-primary btn--full">Begin Stage 3</button>
@@ -1975,10 +1989,10 @@ canvas.breath-stone {
       <button class="record-overflow-menu__item js-exit" role="menuitem" data-exit="paused" data-reason="user-pause">Pause and save progress</button>
     </div>
     <div class="page-transition"><div class="record-step">
-      <div class="record-eyebrow">MOMENT 21 OF 25</div>
+      <div class="record-eyebrow">MOMENT 21 OF 25 &middot; PERSONAL</div>
       <p class="record-instruction">Read it the way you&rsquo;d want it remembered.</p>
       <div class="record-prompt-card record-prompt-card--stage-3 record-prompt-card--long">
-        <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Imagine sitting beside someone you love &mdash; a child, a grandchild, a friend who&rsquo;s still young enough to hear you. You have their full attention, for as long as you need. Now think of one piece of advice you&rsquo;ve carried your whole life. Something you learned the slow way, maybe the hard way. Something you wish someone had told you when you were their age. Say it to them now, in your own voice, the way you&rsquo;d say it over coffee or on a long walk. Don&rsquo;t polish it. Don&rsquo;t rehearse. Just speak it plainly &mdash; because they&rsquo;ll remember how it sounded.</p></div>
+        <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Imagine sitting beside someone you love. A child, a grandchild, a friend who&rsquo;s still young enough to hear you. You have their full attention, for as long as you need. Now think of one piece of advice you&rsquo;ve carried your whole life. Something you learned the slow way, maybe the hard way. Something you wish someone had told you when you were their age. Say it to them now, in your own voice, the way you&rsquo;d say it over coffee or on a long walk. Don&rsquo;t polish it. Don&rsquo;t rehearse. Just speak it plainly. They&rsquo;ll remember how it sounded.</p></div>
       </div>
       <div class="record-waveform">
         <div class="record-waveform__bar"></div>
@@ -2022,13 +2036,13 @@ canvas.breath-stone {
     <div class="page-transition"><div class="record-step record-step--centered">
       <div class="record-eyebrow">PAUSED</div>
       <h1 class="record-title">
-        <span class="paused-copy" data-reason-for="user-pause">Your progress is saved.</span>
+        <span class="paused-copy" data-reason-for="user-pause">Your voice is waiting.</span>
         <span class="paused-copy" data-reason-for="user-exit">Saved where you left off.</span>
         <span class="paused-copy" data-reason-for="system-interrupt">We paused for you.</span>
       </h1>
       <p class="record-subtitle">
         <span class="paused-copy" data-reason-for="user-pause">Continue whenever you&rsquo;re ready.</span>
-        <span class="paused-copy" data-reason-for="user-exit">Pick up right where you stopped.</span>
+        <span class="paused-copy" data-reason-for="user-exit">Come back when you can.</span>
         <span class="paused-copy" data-reason-for="system-interrupt">Your last moment is safe.</span>
       </p>
       <!-- Stone state: guidance because the system is holding space for
@@ -2038,7 +2052,7 @@ canvas.breath-stone {
         <canvas class="breath-stone" data-state="guidance" data-size="200"></canvas>
       </div>
       <div class="record-ctas">
-        <button class="btn-primary btn--full js-paused-resume">Resume training</button>
+        <button class="btn-primary btn--full js-paused-resume">Resume</button>
         <button class="btn-secondary btn--full js-paused-home">Return home</button>
       </div>
     </div></div>
@@ -2057,8 +2071,8 @@ canvas.breath-stone {
   <section class="screen screen--warm" data-view="working" data-label="14. Working">
     <div class="page-transition"><div class="record-step record-step--centered">
       <div class="record-eyebrow">SHAPING YOUR VOICE</div>
-      <h1 class="record-title">Your voice is being preserved.</h1>
-      <p class="record-subtitle">A moment while we shape it.</p>
+      <h1 class="record-title">This part takes care.</h1>
+      <p class="record-subtitle">Your voice is being made into something that lasts.</p>
       <div class="record-stone">
         <canvas class="breath-stone" data-state="working" data-size="200"></canvas>
       </div>
@@ -2082,13 +2096,13 @@ canvas.breath-stone {
   <section class="screen" data-view="ready" data-label="15. Ready">
     <div class="page-transition"><div class="record-step record-step--centered record-step--ready">
       <div class="record-eyebrow">YOUR VOICE</div>
-      <h1 class="record-title record-title--weight-500">Your voice is ready.</h1>
-      <p class="record-subtitle">Hear yourself preserved.</p>
+      <h1 class="record-title record-title--weight-500">Your voice is yours.</h1>
+      <p class="record-subtitle">Ready to be kept.</p>
       <div class="record-stone">
         <canvas class="breath-stone" data-state="ready" data-size="200"></canvas>
       </div>
       <div class="record-ctas">
-        <button class="btn-primary btn--full">Hear your voice</button>
+        <button class="btn-primary btn--full">Continue</button>
       </div>
     </div></div>
   </section>
@@ -2207,7 +2221,7 @@ canvas.breath-stone {
       <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Tell me about a meal you&rsquo;ll never forget &mdash; who was there, what you tasted, why it stayed with you.</p></div>
     </div>
     <div class="record-prompt-card record-prompt-card--stage-3 record-prompt-card--long">
-      <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Imagine sitting beside someone you love &mdash; a child, a grandchild, a friend who&rsquo;s still young enough to hear you. You have their full attention, for as long as you need. Now think of one piece of advice you&rsquo;ve carried your whole life. Something you learned the slow way, maybe the hard way. Something you wish someone had told you when you were their age. Say it to them now, in your own voice, the way you&rsquo;d say it over coffee or on a long walk. Don&rsquo;t polish it. Don&rsquo;t rehearse. Just speak it plainly &mdash; because they&rsquo;ll remember how it sounded.</p></div>
+      <div class="record-prompt-card__scroll"><p class="record-prompt-card__text">Imagine sitting beside someone you love. A child, a grandchild, a friend who&rsquo;s still young enough to hear you. You have their full attention, for as long as you need. Now think of one piece of advice you&rsquo;ve carried your whole life. Something you learned the slow way, maybe the hard way. Something you wish someone had told you when you were their age. Say it to them now, in your own voice, the way you&rsquo;d say it over coffee or on a long walk. Don&rsquo;t polish it. Don&rsquo;t rehearse. Just speak it plainly. They&rsquo;ll remember how it sounded.</p></div>
     </div>
   </div>
 
@@ -2300,8 +2314,8 @@ canvas.breath-stone {
       <span class="ds-gaps__need">Needs: prompt-screen variant showing error label + retry CTA, preserving the user's recording locally.</span>
     </li>
     <li value="4">
-      <strong>Resume-training entry (returning user).</strong>
-      <span class="ds-gaps__why">Screen 1 (Entry) assumes a brand-new user. Returning users mid-journey need concrete progress framing, not "Begin voice training." Paused screen semantically mismatches — it's labelled "Paused," not "Resume."</span>
+      <strong>Resume-keepsake entry (returning user).</strong>
+      <span class="ds-gaps__why">Screen 1 (Entry) assumes a brand-new user. Returning users mid-journey need concrete progress framing, not "Begin voice keepsake." Paused screen semantically mismatches — it's labelled "Paused," not "Resume."</span>
       <span class="ds-gaps__need">Needs: entry variant with "12 of 25 moments complete · Stage 2 next" + populated stage map + "Continue Stage 2" primary.</span>
     </li>
     <li value="5">
@@ -2328,11 +2342,11 @@ canvas.breath-stone {
     <li value="3">
       <strong>Mid-recording OS interrupt.</strong>
       <span class="ds-gaps__why">Original gap: Paused screen was scoped to user-initiated pause. Phone call / backgrounded app is a different UX with a clearer recovery path.</span>
-      <span class="ds-gaps__resolved">Resolved 2026-04-17 — landed as the <code>system-interrupt</code> variant of the Paused screen. Title "We paused for you." / subtitle "Your last moment is safe." The two-CTA pattern (Resume training primary, Return home secondary) matches the other Paused variants, so the structural sibling relationship is preserved. The in-flow trigger (actual OS interrupt detection) is a production-app concern, not a prototype one.</span>
+      <span class="ds-gaps__resolved">Resolved 2026-04-17 — landed as the <code>system-interrupt</code> variant of the Paused screen. Title "We paused for you." / subtitle "Your last moment is safe." The two-CTA pattern (Resume primary, Return home secondary) matches the other Paused variants, so the structural sibling relationship is preserved. The in-flow trigger (actual OS interrupt detection) is a production-app concern, not a prototype one.</span>
     </li>
     <li value="6">
       <strong>Re-record flow.</strong>
-      <span class="ds-gaps__why">Original gap: "You can re-record anytime" hint implied an entry point the prototype did not render. Three directions were considered: list view, inline scrubber, post-training review.</span>
+      <span class="ds-gaps__why">Original gap: "You can re-record anytime" hint implied an entry point the prototype did not render. Three directions were considered: list view, inline scrubber, post-keepsake review.</span>
       <span class="ds-gaps__resolved">Resolved 2026-04-17 — landed as the prompt-screen post-save state. After recording capture, the Saved confirmation transitions into a Re-record + Continue button pair that replaces the record-button cluster in place. The "You can re-record anytime" hint line is removed from all three prompt screens. See <code>ESSENCE_Record_PostSave_State_Spec.md</code>.</span>
     </li>
   </ol>
@@ -3011,7 +3025,7 @@ class BreathStoneEngine {
   //   data-exit="paused" → Paused, with a copy variant chosen by data-reason
   //                          ("user-pause" | "user-exit" | "system-interrupt").
   // Copy per variant lives in HTML; CSS [data-reason] attribute selector picks
-  // the right .paused-copy spans. Resume training returns to the screen the
+  // the right .paused-copy spans. Resume returns to the screen the
   // user exited from.
   const pausedIdx = screens.findIndex(s => s.dataset.view === 'paused');
   const entryIdx  = screens.findIndex(s => s.dataset.view === 'entry');
