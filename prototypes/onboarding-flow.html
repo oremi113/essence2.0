@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Onboarding Flow — Essence prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Onboarding prototype — handoff target for UI/UX polish
+   ───────────────────────────────────────────────────────────────────────────
+   Faithful HTML mirror of src/components/screens/OnboardingScreen.tsx
+   (12 screens + Privacy Promise sheet) for design polish. Copy, structure,
+   spacing, and tokens are pulled verbatim from React + globals.css so that
+   any change made here lands cleanly back in the codebase.
+
+   What's faithful:
+     • All 12 screens, real copy, real progress dots, real form card,
+       review card, photo affordance, journey list, time pill, priming
+       lock, privacy modal.
+     • Design tokens copied from src/app/globals.css @theme.
+     • Background ramp (cream → warm-phase oat at screen 6→7).
+     • Per-screen content stagger reveal (top-down).
+     • Phase-shift choreography between screens 6 → 7.
+     • Conveyor cinematic on screen 2 (transient phrases → "Your voice. /
+       Their timeline.").
+     • 3500ms priming lock on screen 11.
+
+   What's approximated:
+     • The BreathStone is rendered as a CSS gradient sphere with a gentle
+       breath animation. The production component is a canvas engine
+       (src/components/breath-stone). For onboarding, the stone state
+       changes per screen (idle → ready → guidance → priming → ready);
+       we annotate each screen with its target state so the designer
+       can review the timing/scale/glow expectations.
+     • Background `background-color` transition is on the wrapper, but
+       the prototype swaps screens by toggling visibility (no slide
+       crossfade between siblings — each screen plays its own enter
+       reveal cleanly).
+
+   What this is NOT:
+     • Not a route. Do not link to it from the app.
+     • Not the source of truth for engineering — that remains
+       OnboardingScreen.tsx + globals.css.
+
+   Design conventions (Session 5, locked):
+     • PrimaryButton — one committed forward action per screen
+       (mineral fill, sentence case, 17px/600, full-width). Never
+       all-caps.
+     • LinkButton — opt-out / skip / back / dismiss (graphite, 15px/500).
+     • Sentence case everywhere except eyebrow labels ("WELCOME TO
+       ESSENCE", "YOUR PROFILE").
+     • Italic reserved for human asides / coaching notes.
+     • Red = var(--color-status-error). Never raw #C84545.
+     • Onboarding title = var(--text-title) = 28px Spectral 600.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Design tokens — verbatim from src/app/globals.css @theme ─────────────── */
+:root {
+  --color-bg-neutral:     #FBF8F4;
+  --color-bg-warm-phase:  #F2EDE4;
+  --color-bg-warm-1:      #F9F3E8;
+  --color-bg-warm-2:      #F6F0E5;
+  --color-bg-gold:        #F2E8D6;
+  --color-bg-rich:        #EDE3D0;
+  --color-bg-primary:     #FBF8F4;
+  --color-surface-card:   #F6F0E5;
+  --color-surface-warm:   #EDE3D0;
+  --color-surface-honey:  #F2E8D6;
+
+  --color-mineral:        #7A8088;
+  --color-mineral-dark:   #656B73;
+
+  --color-text-primary:   #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary:  #ADA9A5;
+
+  --color-status-error:   #9C3528;
+  --color-status-success: #4A7A68;
+
+  --color-border:         rgba(0, 0, 0, 0.06);
+  --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:            0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-mineral:       0 4px 12px rgba(74, 107, 126, 0.3);
+
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-display: 48px;
+  --text-h1:      36px;
+  --text-h2:      28px;
+  --text-h3:      20px;
+  --text-title:        28px;
+  --line-height-title: 1.4;
+  --text-body-lg: 18px;
+  --text-body:    16px;
+  --text-ui:      15px;
+  --text-small:   14px;
+  --text-caption: 12px;
+
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   12px;
+  --space-lg:   16px;
+  --space-xl:   24px;
+  --space-2xl:  32px;
+  --space-3xl:  40px;
+  --space-4xl:  48px;
+
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-page:    cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-micro:  200ms;
+  --duration-small:  400ms;
+  --duration-medium: 800ms;
+  --duration-large:  1200ms;
+  --duration-page:       700ms;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
+html {
+  background-color: #FBF8F4;
+  color: #1C1A18;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  /* PROTOTYPE-ONLY — phone-bezel simulation. Real app body is
+     var(--color-bg-neutral). */
+  background: #1E1B18;
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  padding: 24px 12px 64px;
+}
+button, a, [role="button"] { min-height: 44px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dev chrome — stage navigator (sits outside the phone frame)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.chrome {
+  max-width: 520px;
+  margin: 0 auto 18px;
+  color: rgba(255,255,255,0.85);
+}
+.chrome__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-surface-card);
+  margin: 0 0 4px;
+}
+.chrome__hint { color: rgba(255,255,255,0.5); font-size: 12px; margin: 0 0 14px; }
+.stage-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+}
+.stage-nav__btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.stage-nav__btn:hover { background: rgba(255,255,255,0.08); }
+.stage-nav__label {
+  flex: 1; text-align: center; font-weight: 600;
+  color: var(--color-surface-card); font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.stage-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.stage-pill {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 28px;
+}
+.stage-pill--active { background: #F5F0EA; color: #1C1A18; border-color: #F5F0EA; }
+.chrome__meta {
+  margin-top: 10px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.chrome__meta strong { color: rgba(255,255,255,0.7); font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Phone frame
+   ═══════════════════════════════════════════════════════════════════════════ */
+.phone {
+  max-width: 390px;
+  height: 812px;
+  margin: 0 auto;
+  background: var(--color-bg-primary);
+  border-radius: 40px;
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 24px 56px rgba(0,0,0,0.45),
+    0 0 0 6px #14110F,
+    0 0 0 7px rgba(255,255,255,0.04);
+  /* Background-color transition lives on the wrapper — between the cream
+     phase (screens 1–6) and the warm-phase oat (screens 7–12). */
+  transition: background-color 600ms cubic-bezier(0.32, 0.04, 0.66, 0.99);
+}
+.phone[data-bg="neutral"]    { background-color: var(--color-bg-neutral); }
+.phone[data-bg="warm-phase"] { background-color: var(--color-bg-warm-phase); }
+
+/* Each screen layers full-bleed inside the phone. Only one is visible at a
+   time. We animate the active one in via a frame crossfade and per-element
+   stagger, mirroring the React onboarding-slide-forward + reveal pacing. */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  /* The wrapper IS the background painter — screens stay transparent so
+     the cream→warm-phase color shift reads as the room warming, not as
+     screens slamming into a new color. */
+  background: transparent;
+  padding: 80px 24px 32px;
+}
+.screen--active { display: flex; animation: onb-frame-crossfade 400ms var(--ease-page) both; }
+
+@keyframes onb-frame-crossfade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Progress dots (top center, 12 dots, always visible)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-progress {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  z-index: 4;
+  pointer-events: none;
+}
+.onboarding-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    opacity 200ms ease;
+}
+.onboarding-dot--completed { background-color: var(--color-mineral); opacity: 0.6; }
+.onboarding-dot--active    { background-color: var(--color-mineral); opacity: 1; }
+.onboarding-dot--pending   {
+  background-color: transparent;
+  border: 1px solid var(--color-mineral);
+  opacity: 0.35;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Back button (top-left chevron, hidden on screen 1)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-back {
+  position: absolute;
+  top: 16px;
+  left: 12px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-full);
+  z-index: 5;
+  transition: opacity 200ms ease, color 200ms ease;
+}
+.onboarding-back:hover:not(:disabled) { color: var(--color-text-primary); }
+.onboarding-back--hidden { opacity: 0; pointer-events: none; }
+.onboarding-back svg { width: 20px; height: 20px; display: block; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BreathStone — CSS approximation of the canvas engine
+   The real component lives at src/components/breath-stone and runs a
+   Perlin-noise modulated breath cycle on canvas. The visuals here are
+   gradient + animation only; design treats stone position, size, and
+   ground shadow as fixed. State (idle / ready / guidance / priming)
+   drives glow intensity and breath speed in production — annotated
+   here per-screen via data-stone="...".
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-stone-slot {
+  width: 144px;
+  height: 144px;
+  margin: 0 auto 32px;
+  flex-shrink: 0;
+  position: relative;
+}
+.onboarding-stone-slot::after {
+  /* Ground shadow */
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 9px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.07), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.breath-stone {
+  width: 144px;
+  height: 144px;
+  border-radius: 50%;
+  position: relative;
+  background:
+    radial-gradient(circle at 28% 28%,
+      #E8DCC8 0%,
+      #D9CAB1 30%,
+      #C5B59A 60%,
+      #A8987F 88%,
+      #8C7E6A 100%);
+  box-shadow:
+    inset -8px -10px 18px rgba(60, 40, 20, 0.18),
+    inset 6px 8px 14px rgba(255, 240, 220, 0.55),
+    0 6px 18px rgba(80, 60, 30, 0.12);
+  animation: stone-breath 4500ms var(--ease-essence) infinite;
+  transform-origin: center;
+  -webkit-mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
+          mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
+}
+.breath-stone::after {
+  /* Sheen highlight — the bright top-left specular */
+  content: '';
+  position: absolute;
+  top: 14%;
+  left: 18%;
+  width: 38%;
+  height: 30%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 250, 235, 0.55), transparent 70%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+/* State variants — the production engine drives these via STATE_TARGETS.
+   Approximated here through breath speed + glow halo. */
+.breath-stone[data-state="idle"]     { animation-duration: 4500ms; }
+.breath-stone[data-state="ready"]    { animation-duration: 4000ms; box-shadow: inset -8px -10px 18px rgba(60, 40, 20, 0.18), inset 6px 8px 14px rgba(255, 240, 220, 0.6), 0 0 26px rgba(232, 200, 140, 0.18), 0 6px 18px rgba(80, 60, 30, 0.12); }
+.breath-stone[data-state="guidance"] { animation-duration: 6200ms; box-shadow: inset -8px -10px 18px rgba(60, 40, 20, 0.18), inset 6px 8px 14px rgba(255, 240, 220, 0.55), 0 0 18px rgba(180, 160, 130, 0.22), 0 6px 18px rgba(80, 60, 30, 0.12); }
+.breath-stone[data-state="priming"]  { animation-duration: 6000ms; animation-timing-function: cubic-bezier(0.42, 0.0, 0.58, 1); }
+
+@keyframes stone-breath {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+/* Stone hosted at wrapper level so it never re-mounts between screens.
+   Position matches the slot reservation. */
+.onboarding-persistent-stone {
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  filter: blur(12px);
+  animation: onb-stone-reveal 1500ms var(--ease-page) 100ms forwards;
+}
+@keyframes onb-stone-reveal {
+  to { opacity: 1; filter: blur(0); transform: translateX(-50%) scale(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Onboarding step layout — verbatim structure from globals.css
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-step {
+  display: flex;
+  flex-direction: column;
+  padding-top: 28px;
+  gap: 0;
+  min-height: 100%;
+}
+.onboarding-step--centered {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.onboarding-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-bottom: 16px;
+}
+.onboarding-phase-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7b8a99;
+  opacity: 0.6;
+  text-align: center;
+  margin: 0 0 12px;
+}
+.onboarding-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: var(--line-height-title);
+  text-align: center;
+  margin: 0 0 12px;
+}
+.onboarding-subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  text-align: center;
+  margin: 0 0 24px;
+}
+.onboarding-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.onboarding-body p {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: 0;
+}
+.onboarding-body p.onboarding-body__muted {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+.onboarding-body p.onboarding-body__emphasis {
+  color: var(--color-mineral-dark);
+  font-weight: 600;
+}
+.onboarding-body__never {
+  color: var(--color-mineral-dark);
+  font-weight: 700;
+}
+.onboarding-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 32px;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Buttons — PrimaryButton + LinkButton (Session 5 conventions)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.btn-primary {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 24px;
+  background: var(--color-mineral);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 26px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background-color 200ms var(--ease-essence),
+    transform 120ms var(--ease-essence),
+    opacity 200ms var(--ease-essence),
+    box-shadow 200ms var(--ease-essence);
+  box-shadow: var(--shadow-mineral);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-mineral-dark);
+}
+.btn-primary:active:not(:disabled) { transform: scale(0.98); }
+.btn-primary:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.btn-link {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: color 200ms ease;
+}
+.btn-link:hover { color: var(--color-text-primary); }
+
+/* Secondary inline link (used on Screen 4 to open Privacy Promise sheet). */
+.onboarding-secondary-link {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 24px auto 0;
+  padding: 12px 6px;
+  min-height: auto;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-mineral);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+.onboarding-secondary-link:hover { color: var(--color-mineral-dark); }
+.onboarding-secondary-link svg { transition: transform 200ms ease; }
+.onboarding-secondary-link:hover svg { transform: translateX(2px); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Stagger reveal — top-down content fade per screen
+   ═══════════════════════════════════════════════════════════════════════════ */
+.screen--active .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-conveyor-tail):not(.onboarding-ctas--delayed) {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: onb-reveal 700ms var(--ease-page) both;
+  animation-delay: calc(var(--reveal-index, 0) * 500ms);
+}
+.screen--active .onboarding-step > *:nth-child(2) { --reveal-index: 1; }
+.screen--active .onboarding-step > *:nth-child(3) { --reveal-index: 2; }
+.screen--active .onboarding-step > *:nth-child(4) { --reveal-index: 3; }
+.screen--active .onboarding-step > *:nth-child(5) { --reveal-index: 4; }
+.screen--active .onboarding-step > *:nth-child(6) { --reveal-index: 5; }
+.screen--active .onboarding-step > *:nth-child(7) { --reveal-index: 6; }
+.screen--active .onboarding-step > *:nth-child(8) { --reveal-index: 7; }
+
+.screen--active .onboarding-body {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+.screen--active .onboarding-body > * {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: onb-reveal 700ms var(--ease-page) both;
+  animation-delay: calc(var(--body-base, 1000ms) + var(--body-index, 0) * 180ms + var(--body-closer-beat, 0ms));
+}
+.screen--active .onboarding-body > *:nth-child(1) { --body-index: 0; }
+.screen--active .onboarding-body > *:nth-child(2) { --body-index: 1; }
+.screen--active .onboarding-body > *:nth-child(3) { --body-index: 2; }
+.screen--active .onboarding-body > *:nth-child(4) { --body-index: 3; }
+.screen--active .onboarding-body > *:nth-child(5) { --body-index: 4; --body-closer-beat: 160ms; }
+.screen--active .onboarding-body--screen5 { --body-base: 1500ms; }
+
+@keyframes onb-reveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screen 2 — Conveyor cinematic
+   Transient phrases enter, hold, exit; final pair lands and stays.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-conveyor {
+  position: relative;
+  height: 28px;
+  margin: 8px auto 12px;
+  max-width: 340px;
+  pointer-events: none;
+}
+.onboarding-conveyor__phrase {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-style: italic;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  opacity: 0;
+  transform: translateX(16px);
+  white-space: nowrap;
+}
+.screen--active .onboarding-conveyor__phrase {
+  animation: onb-conveyor-pass 1900ms var(--ease-essence)
+    calc(1000ms + var(--phrase-index, 1) * 1500ms) both;
+}
+.screen--active .onboarding-conveyor__phrase--final {
+  animation: onb-conveyor-land 650ms var(--ease-page) 11500ms both;
+}
+.screen--active .onboarding-conveyor-tail {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-style: italic;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  max-width: 340px;
+  margin: 0 auto 32px;
+  opacity: 0;
+  transform: translateX(16px);
+  animation: onb-conveyor-land 650ms var(--ease-page) 13550ms both;
+  pointer-events: none;
+}
+@keyframes onb-conveyor-pass {
+  0%   { opacity: 0; transform: translateX(16px); }
+  21%  { opacity: 1; transform: translateX(0); }
+  79%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-16px); }
+}
+@keyframes onb-conveyor-land {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.screen--active .onboarding-ctas--delayed {
+  animation: onb-fade-up 700ms var(--ease-essence) 14300ms both;
+}
+@keyframes onb-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screen 6 — Journey list + total time pill
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-journey {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 0;
+  list-style: none;
+}
+.onboarding-journey__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--color-surface-card);
+  border-radius: var(--radius-2xl);
+}
+.onboarding-journey__num {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-warm-1);
+  border: 1px solid var(--color-mineral);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  line-height: 1;
+}
+.onboarding-journey__item--current .onboarding-journey__num {
+  background: var(--color-mineral);
+  color: #FFFFFF;
+  font-weight: 600;
+  border-color: var(--color-mineral);
+}
+.onboarding-journey__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.onboarding-journey__label {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.35;
+}
+.onboarding-journey__duration {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.35;
+}
+.onboarding-total-time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  margin: 4px 0 16px;
+  background: var(--color-surface-honey);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+}
+.onboarding-total-time__left {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+.onboarding-total-time__left svg {
+  width: 16px; height: 16px; color: var(--color-text-secondary);
+}
+.onboarding-total-time__value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screen 8 — Combined "About you" form card
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--color-bg-neutral);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin: 0 0 20px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+.onboarding-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.onboarding-field-row { display: flex; gap: 12px; }
+.onboarding-field-row > .onboarding-field { flex: 1; }
+.onboarding-field-row > .onboarding-field--grow { flex: 1 1 auto; }
+.onboarding-field-row > .onboarding-field--fixed { flex: 0 0 88px; }
+.onboarding-field__label {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.onboarding-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 14px;
+  background: var(--color-bg-neutral);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  letter-spacing: normal;
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+.onboarding-input:focus {
+  outline: none;
+  border-color: var(--color-mineral);
+  background: #FFFFFF;
+}
+.onboarding-input::placeholder { color: var(--color-text-tertiary); }
+.onboarding-input--select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screen 9 — Review card
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-review-card {
+  position: relative;
+  background: var(--color-bg-neutral);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin: 0 0 24px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.onboarding-review-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.onboarding-review-row__label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+.onboarding-review-row__value {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--color-text-primary);
+  text-align: right;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.onboarding-review-card__edit {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  padding: 6px 0 0;
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  min-height: auto;
+  transition: color 200ms ease;
+}
+.onboarding-review-card__edit:hover { color: var(--color-text-primary); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screen 10 — Photo circle
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-photo {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--color-bg-neutral);
+  border: 2px dashed var(--color-surface-warm);
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  margin-inline: auto;
+  transition:
+    background 300ms var(--ease-essence),
+    border-color 300ms var(--ease-essence);
+}
+.onboarding-photo:hover { border-color: var(--color-mineral); }
+.onboarding-photo__label { font-family: var(--font-body); font-size: 12px; font-weight: 500; }
+.onboarding-photo--filled {
+  background: radial-gradient(circle at 30% 28%, #E8DCC8, #D4C6A8 60%, #C4B8A0 100%);
+  border: 2px solid transparent;
+  color: transparent;
+}
+.onboarding-photo-confirmation {
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-status-success);
+  margin-top: 12px;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.onboarding-photo-confirmation--visible { opacity: 1; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screen 11 — Priming hint + locked CTA
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-priming-hint {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  text-align: center;
+  margin: 4px 0 20px;
+  opacity: 0;
+  animation: onb-fade-up 800ms var(--ease-essence) 2500ms forwards;
+}
+.onboarding-ctas--locked .btn-primary {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 800ms var(--ease-essence);
+}
+.onboarding-ctas--unlocked .btn-primary {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 800ms var(--ease-essence);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screen 12 — Ready list
+   ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-ready-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.onboarding-ready-list p {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Privacy Promise — bottom-sheet modal (opens from Screen 4)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.privacy-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.privacy-modal--open { display: flex; animation: onb-fade-up 280ms var(--ease-essence); }
+.privacy-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 26, 24, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.privacy-modal__sheet {
+  position: relative;
+  background: var(--color-bg-neutral);
+  border-radius: 24px 24px 0 0;
+  padding: 14px 28px 40px;
+  max-height: 100%;
+  min-height: 92%;
+  overflow-y: auto;
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.18);
+  animation: privacy-slide-up 360ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+@keyframes privacy-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.privacy-modal__handle {
+  width: 44px;
+  height: 4px;
+  margin: 0 auto 10px;
+  border-radius: 2px;
+  background: var(--color-surface-warm);
+}
+.privacy-modal__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 50%;
+  min-height: auto;
+  transition: color 200ms ease, background-color 200ms ease;
+}
+.privacy-modal__close:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-card);
+}
+.privacy-modal__content {
+  padding-top: 2px;
+  max-width: 440px;
+  margin: 0 auto;
+}
+.privacy-modal__shield {
+  display: block;
+  margin: 0 auto 8px;
+  color: #7b8a99;
+}
+.privacy-modal__eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-bottom: 14px;
+}
+.privacy-modal__title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: var(--line-height-title);
+  text-align: center;
+  margin: 0 0 32px;
+}
+.privacy-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.privacy-modal__body p {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin: 0;
+  text-align: left;
+}
+.privacy-modal__intro { font-size: 16px; }
+.privacy-modal__promises {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.privacy-modal__promise {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.privacy-modal__promise + .privacy-modal__promise {
+  padding-top: 22px;
+  border-top: 1px solid var(--color-surface-warm);
+}
+.privacy-modal__body .privacy-modal__commitment {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+.privacy-modal__emphasis {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.privacy-modal__body .privacy-modal__proof {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+.privacy-modal__signature {
+  margin-top: 12px;
+  text-align: center !important;
+  font-style: italic;
+  color: var(--color-text-tertiary) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Reduced motion — gentle fades only
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .breath-stone { animation: none; }
+  .screen--active .onboarding-step > *,
+  .screen--active .onboarding-body > *,
+  .screen--active .onboarding-conveyor__phrase,
+  .screen--active .onboarding-conveyor-tail,
+  .screen--active .onboarding-ctas--delayed {
+    animation-duration: 400ms;
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Annotations — small per-screen design notes shown beside the phone
+   ═══════════════════════════════════════════════════════════════════════════ */
+.notes {
+  max-width: 520px;
+  margin: 18px auto 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.notes__title {
+  color: var(--color-surface-card);
+  font-weight: 600;
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+.notes__body { margin: 0; }
+.notes__meta {
+  margin-top: 8px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+}
+.notes__meta span strong { color: rgba(255,255,255,0.7); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <h1 class="chrome__title">Onboarding Flow — prototype</h1>
+  <p class="chrome__hint">← / → to step. Number keys 1–9 jump. P opens the privacy sheet on Screen 4. Mirrors src/components/screens/OnboardingScreen.tsx.</p>
+  <div class="stage-nav">
+    <button class="stage-nav__btn" id="prevBtn" aria-label="Previous screen">←</button>
+    <div class="stage-nav__label" id="stageLabel">1 / 12</div>
+    <button class="stage-nav__btn" id="nextBtn" aria-label="Next screen">→</button>
+  </div>
+  <div class="stage-picker" id="stagePicker"></div>
+  <div class="chrome__meta">
+    <span><strong>Stone state:</strong> <span id="stoneStateLabel">idle</span></span>
+    <span><strong>Background:</strong> <span id="bgLabel">neutral</span></span>
+  </div>
+</div>
+
+<div class="phone" id="phone" data-bg="neutral">
+
+  <!-- Persistent BreathStone — never re-mounts. State is annotated per
+       screen via JS toggling data-state on this element, mirroring the
+       PersistentStone component in OnboardingScreen.tsx. -->
+  <div class="onboarding-persistent-stone" id="persistentStone" aria-hidden="true">
+    <div class="breath-stone" data-state="idle"></div>
+  </div>
+
+  <!-- Progress dots (12 dots, always visible) -->
+  <div class="onboarding-progress" id="progressDots" aria-hidden="true"></div>
+
+  <!-- Back button (hidden on screen 1) -->
+  <button class="onboarding-back onboarding-back--hidden" id="backBtn" aria-label="Go back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 1 — Welcome (cinematic intro)
+       Stone: idle · Bg: neutral
+       Notes: Sole forward CTA. The stone has just performed its 1500ms
+       blur+scale-up reveal; copy fades in stagger above the CTA.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen screen--active" data-screen="1" data-stone="idle" data-bg="neutral">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <div class="onboarding-eyebrow">Welcome to ESSENCE</div>
+      <h1 class="onboarding-title">Your voice is yours alone.</h1>
+      <p class="onboarding-subtitle">We help you keep it safe for the people who matter most.</p>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 2 — Purpose / cinematic conveyor
+       Stone: idle · Bg: neutral
+       The conveyor cycles through six transient phrases (italic tertiary)
+       then lands "Your voice." + "Their timeline." stacked.
+       Continue CTA fades in 14.3s after entry — long deliberately.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="2" data-stone="idle" data-bg="neutral">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Here's what ESSENCE does.</h1>
+      <div class="onboarding-body">
+        <p>You record a few minutes of natural speech.</p>
+        <p>We create a voice that sounds like you.</p>
+        <p>Then you use it to leave messages for the future.</p>
+      </div>
+      <div class="onboarding-conveyor" aria-hidden="true">
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:1">Birthday wishes.</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:2">Love notes.</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:3">&ldquo;I&rsquo;m proud of you.&rdquo;</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:4">Life advice.</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:5">Letters for later.</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:6">A goodbye, whenever it comes.</span>
+        <span class="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">Your voice.</span>
+      </div>
+      <div class="onboarding-conveyor-tail" aria-hidden="true">Their timeline.</div>
+      <div class="onboarding-ctas onboarding-ctas--delayed">
+        <button class="btn-primary js-next">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 3 — Who this is for
+       Stone: idle · Bg: neutral
+       The closer ("Your voice deserves to last.") gets the emphasis variant
+       and an extra body-stagger beat.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="3" data-stone="idle" data-bg="neutral">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">This is for people who plan ahead.</h1>
+      <div class="onboarding-body">
+        <p>Parents who want their grandchildren to hear their voice.</p>
+        <p>Partners who want to leave love notes for special days.</p>
+        <p>Whether you have all the time in the world, or not.</p>
+        <p class="onboarding-body__emphasis">Your voice deserves to last.</p>
+      </div>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">That sounds like me</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 4 — Safety & trust (opens privacy promise sheet)
+       Stone: idle · Bg: neutral
+       Three "never" lines in mineral-dark/700 weight. Closer is muted/italic.
+       Secondary link below body opens the Privacy Promise bottom sheet.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="4" data-stone="idle" data-bg="neutral">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Your voice stays private. Always.</h1>
+      <div class="onboarding-body">
+        <p>We <span class="onboarding-body__never">never</span> sell your recordings.</p>
+        <p>We <span class="onboarding-body__never">never</span> use them to train other products.</p>
+        <p>We <span class="onboarding-body__never">never</span> share them without your permission.</p>
+        <p class="onboarding-body__muted">Protected with end-to-end encryption.</p>
+      </div>
+      <button type="button" class="onboarding-secondary-link js-open-privacy">
+        Read our privacy promise
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">I understand</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 5 — Why your voice matters
+       Stone: ready (subtle warm glow, slightly faster breath)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="5" data-stone="ready" data-bg="neutral">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">No one else sounds like you.</h1>
+      <div class="onboarding-body onboarding-body--screen5">
+        <p>The way you say someone&rsquo;s name.</p>
+        <p>The rhythm of how you tell a story.</p>
+        <p>The warmth in your laugh.</p>
+        <p class="onboarding-body__emphasis">These things can&rsquo;t be written down. But they can be preserved.</p>
+      </div>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 6 — How this works (journey + total-time pill)
+       Stone: ready · Bg: neutral
+       3-step journey, current step highlighted with mineral-filled badge.
+       Below: warm-honey total-time pill. Closer microcopy is muted/italic.
+       Tap "Let's begin" triggers the bespoke phase exit (250ms drift left
+       + fade) and Screen 7 enters with stone leading title by 80ms.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="6" data-stone="ready" data-bg="neutral">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Here&rsquo;s how this works.</h1>
+      <ol class="onboarding-journey">
+        <li class="onboarding-journey__item onboarding-journey__item--current">
+          <span class="onboarding-journey__num" aria-hidden="true">1</span>
+          <span class="onboarding-journey__text">
+            <span class="onboarding-journey__label">Make your profile</span>
+            <span class="onboarding-journey__duration">Less than 1 minute</span>
+          </span>
+        </li>
+        <li class="onboarding-journey__item">
+          <span class="onboarding-journey__num" aria-hidden="true">2</span>
+          <span class="onboarding-journey__text">
+            <span class="onboarding-journey__label">Record your voice</span>
+            <span class="onboarding-journey__duration">10&ndash;12 minutes</span>
+          </span>
+        </li>
+        <li class="onboarding-journey__item">
+          <span class="onboarding-journey__num" aria-hidden="true">3</span>
+          <span class="onboarding-journey__text">
+            <span class="onboarding-journey__label">Create your first message</span>
+            <span class="onboarding-journey__duration">About 2 minutes</span>
+          </span>
+        </li>
+      </ol>
+      <div class="onboarding-total-time">
+        <span class="onboarding-total-time__left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Total time
+        </span>
+        <span class="onboarding-total-time__value">About 15 minutes</span>
+      </div>
+      <div class="onboarding-body">
+        <p class="onboarding-body__muted">We&rsquo;ll guide every step &mdash; pause anytime.</p>
+      </div>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">Let&rsquo;s begin</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 7 — Identity setup intro (PHASE TRANSITION TARGET)
+       Stone: guidance · Bg: warm-phase (cream → oat color shift, 600ms)
+       Bespoke enter animation: stone leads title by 80ms, 380ms ease-out.
+       The phase eyebrow ("YOUR PROFILE") is a structural echo of Screen 1's
+       "WELCOME TO ESSENCE" but in mineral blue-gray to signal the new act.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="7" data-stone="guidance" data-bg="warm-phase">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <div class="onboarding-phase-label">YOUR PROFILE</div>
+      <h1 class="onboarding-title">First, tell us a little about you.</h1>
+      <p class="onboarding-subtitle">This helps us personalize your experience.</p>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">Get started</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 8 — Combined "About you" form
+       Stone: idle · Bg: warm-phase
+       Cream form card lifts off the warm-phase oat. First-name autofocuses
+       400ms after slide settles. Continue is disabled until all fields are
+       valid (enabled here for handoff so designer can test the form layout).
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="8" data-stone="idle" data-bg="warm-phase">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Tell us about you.</h1>
+      <p class="onboarding-subtitle">A few quick details so your messages feel personal.</p>
+      <div class="onboarding-form-card">
+        <div class="onboarding-field-row">
+          <div class="onboarding-field">
+            <label class="onboarding-field__label" for="onb-first-name">First name</label>
+            <input id="onb-first-name" type="text" class="onboarding-input" placeholder="First" autocomplete="given-name" maxlength="50">
+          </div>
+          <div class="onboarding-field">
+            <label class="onboarding-field__label" for="onb-last-name">Last name</label>
+            <input id="onb-last-name" type="text" class="onboarding-input" placeholder="Last" autocomplete="family-name" maxlength="80">
+          </div>
+        </div>
+        <div class="onboarding-field">
+          <label class="onboarding-field__label" for="onb-dob">Date of birth</label>
+          <input id="onb-dob" type="date" class="onboarding-input" min="1900-01-01">
+        </div>
+        <div class="onboarding-field-row">
+          <div class="onboarding-field onboarding-field--grow">
+            <label class="onboarding-field__label" for="onb-city">City</label>
+            <input id="onb-city" type="text" class="onboarding-input" placeholder="Where you live" autocomplete="address-level2" maxlength="80">
+          </div>
+          <div class="onboarding-field onboarding-field--fixed">
+            <label class="onboarding-field__label" for="onb-state">State</label>
+            <select id="onb-state" class="onboarding-input onboarding-input--select" autocomplete="address-level1">
+              <option value="">—</option>
+              <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+              <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+              <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+              <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+              <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+              <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+              <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+              <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+              <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+              <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+              <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+              <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+              <option>WI</option><option>WY</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 9 — Review (verify captured data before proceeding)
+       Stone: idle · Bg: warm-phase
+       Sample data pre-filled. "Change" returns to Screen 8.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="9" data-stone="idle" data-bg="warm-phase">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Does this look right?</h1>
+      <p class="onboarding-subtitle">We&rsquo;ll use this to personalize your recording.</p>
+      <div class="onboarding-review-card">
+        <div class="onboarding-review-row">
+          <div class="onboarding-review-row__label">Name</div>
+          <div class="onboarding-review-row__value">Sarah McConnell</div>
+        </div>
+        <div class="onboarding-review-row">
+          <div class="onboarding-review-row__label">Date of birth</div>
+          <div class="onboarding-review-row__value">3/14/1968</div>
+        </div>
+        <div class="onboarding-review-row">
+          <div class="onboarding-review-row__label">Location</div>
+          <div class="onboarding-review-row__value">Asheville, NC</div>
+        </div>
+        <button type="button" class="onboarding-review-card__edit js-back-to-form">Change</button>
+      </div>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-next">Looks good</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 10 — Photo upload (optional)
+       Stone: idle · Bg: warm-phase
+       Tap circle to toggle filled state. Filled state swaps the CTA copy
+       and reveals "Continue without photo" link below.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="10" data-stone="idle" data-bg="warm-phase">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Add a photo if you&rsquo;d like.</h1>
+      <p class="onboarding-subtitle">It helps your messages feel more personal. Completely optional.</p>
+      <button type="button" class="onboarding-photo js-photo-toggle" aria-label="Add photo">
+        <svg id="photoIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span class="onboarding-photo__label" id="photoLabel">Tap to add</span>
+      </button>
+      <p class="onboarding-photo-confirmation" id="photoConfirmation">Looking good ✓</p>
+      <div class="onboarding-ctas" id="photoCtas">
+        <button class="btn-primary js-next" id="photoPrimary">Continue without photo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 11 — Priming moment (3500ms button unlock)
+       Stone: priming (slow, deep breath, balanced inhale/exhale)
+       Hint copy ("Breathe with the stone for a moment.") fades in at 2500ms.
+       Primary CTA unlocks at 3500ms (opacity 0.4 → 1, pointer events on).
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="11" data-stone="priming" data-bg="warm-phase">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Take a breath.</h1>
+      <p class="onboarding-priming-hint">Breathe with the stone for a moment.</p>
+      <div class="onboarding-body">
+        <p>In a moment, you&rsquo;ll start recording your voice.</p>
+        <p>Think of it like leaving a voicemail for someone you love.</p>
+      </div>
+      <div class="onboarding-ctas onboarding-ctas--locked" id="primingCtas">
+        <button class="btn-primary js-next">Begin setup</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SCREEN 12 — Ready to begin
+       Stone: ready · Bg: warm-phase
+       Final summary list. "Begin recording" calls onComplete in production
+       (persists profile to Supabase, navigates to /app/record).
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="screen" data-screen="12" data-stone="ready" data-bg="warm-phase">
+    <div class="onboarding-step">
+      <div class="onboarding-stone-slot"></div>
+      <h1 class="onboarding-title">Ready to begin recording?</h1>
+      <div class="onboarding-ready-list">
+        <p>You&rsquo;ll need about 10&ndash;13 minutes in a quiet space.</p>
+        <p>We&rsquo;ll guide you through 25 short prompts.</p>
+        <p>Your microphone will need to be enabled.</p>
+      </div>
+      <div class="onboarding-ctas">
+        <button class="btn-primary js-finish">Begin recording</button>
+        <button class="btn-link">I need more time</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       PRIVACY PROMISE — bottom-sheet modal (opens from Screen 4)
+       Backdrop blurs the onboarding behind it; sheet slides up 360ms.
+       Close: X button, backdrop tap, or Escape key.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="privacy-modal" id="privacyModal" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+    <button type="button" class="privacy-modal__backdrop js-close-privacy" aria-label="Close privacy promise"></button>
+    <div class="privacy-modal__sheet">
+      <div class="privacy-modal__handle" aria-hidden="true"></div>
+      <button type="button" class="privacy-modal__close js-close-privacy" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="privacy-modal__content">
+        <svg class="privacy-modal__shield" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V6l-8-4z"/></svg>
+        <div class="privacy-modal__eyebrow">OUR PRIVACY PROMISE</div>
+        <h2 id="privacy-title" class="privacy-modal__title">Your voice belongs to you. Full stop.</h2>
+        <div class="privacy-modal__body">
+          <p class="privacy-modal__intro">
+            Your recordings are encrypted the moment they leave your device.
+            They exist only for you and the people you choose. Not even our
+            team can access them.
+          </p>
+          <ul class="privacy-modal__promises">
+            <li class="privacy-modal__promise">
+              <p class="privacy-modal__commitment">
+                We will <span class="privacy-modal__emphasis">never</span> sell your voice data.
+              </p>
+              <p class="privacy-modal__proof">
+                Not to advertisers. Not to researchers. Not to anyone.
+              </p>
+            </li>
+            <li class="privacy-modal__promise">
+              <p class="privacy-modal__commitment">
+                We will <span class="privacy-modal__emphasis">never</span> use your recordings to train AI models.
+              </p>
+              <p class="privacy-modal__proof">
+                Not ours. Not anyone else&rsquo;s.
+              </p>
+            </li>
+            <li class="privacy-modal__promise">
+              <p class="privacy-modal__commitment">
+                If you delete your account, your voice is
+                <span class="privacy-modal__emphasis">permanently gone</span>
+                from our servers within 48 hours.
+              </p>
+            </li>
+          </ul>
+          <p class="privacy-modal__signature">
+            ESSENCE was built by people who lost someone.
+            <br>
+            We know what this holds.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes" id="notes">
+  <p class="notes__title" id="notesTitle">Screen 1 — Welcome</p>
+  <p class="notes__body" id="notesBody">Sole forward CTA. The stone has just performed its 1500ms blur+scale-up reveal; copy fades in stagger above the CTA.</p>
+  <div class="notes__meta">
+    <span><strong>Stone:</strong> <span id="notesStone">idle</span></span>
+    <span><strong>Bg:</strong> <span id="notesBg">neutral</span></span>
+    <span><strong>Source:</strong> OnboardingScreen.tsx · Screen<span id="notesNum">1</span></span>
+  </div>
+</div>
+
+<script>
+/* ───────────────────────────────────────────────────────────────────────
+   Stage navigation + per-screen behavior
+   ─────────────────────────────────────────────────────────────────────── */
+
+const SCREEN_META = {
+  1:  { title: 'Welcome',                           note: 'Sole forward CTA. The stone has just performed its 1500ms blur+scale-up reveal; copy fades in stagger above the CTA.' },
+  2:  { title: 'Purpose / cinematic conveyor',      note: 'Six transient italic phrases pass through the conveyor (1.9s each, 1.5s stagger), then "Your voice. / Their timeline." lands and stays. Continue fades in at 14.3s.' },
+  3:  { title: 'Who this is for',                   note: 'Three personas + emphasis closer. Body paragraphs stagger 180ms apart; the closer ("Your voice deserves to last.") gets an extra 160ms beat.' },
+  4:  { title: 'Safety & trust',                    note: 'Three "never" lines (mineral-dark/700). Closer is muted/italic. "Read our privacy promise" link opens the bottom-sheet modal — preserves onboarding state behind it.' },
+  5:  { title: 'Why your voice matters',            note: 'Stone steps up to ready (subtle warm glow, slightly faster breath). Body sits at the 4th step-child slot so its base reveal delay shifts +500ms.' },
+  6:  { title: 'How this works',                    note: 'Numbered journey list (current step has filled mineral badge). Warm-honey total-time pill below. Tapping "Let\'s begin" plays the bespoke phase exit (250ms drift left + fade) before Screen 7 enters.' },
+  7:  { title: 'Identity setup intro (PHASE)',      note: 'Background warms cream → oat over 600ms. Stone leads title by 80ms with a 380ms ease-out. "YOUR PROFILE" eyebrow uses mineral blue-gray, structurally echoing Screen 1\'s "WELCOME TO ESSENCE".' },
+  8:  { title: 'About you (form card)',             note: 'Cream form card lifts off the warm-phase oat. First-name autofocuses 400ms after settle. All fields required for Continue (enabled here for handoff so the form layout is reviewable).' },
+  9:  { title: 'Review',                            note: 'Sample data pre-filled. "Change" jumps back to Screen 8. The cream card uses the same elevation treatment as Screen 8 for structural rhyme.' },
+  10: { title: 'Photo upload (optional)',           note: 'Tap circle to toggle filled state. When filled, primary CTA copy swaps and "Continue without photo" link appears below.' },
+  11: { title: 'Priming moment (3500ms unlock)',    note: 'Stone steps to priming (slow, deep, balanced inhale/exhale). Hint fades in at 2500ms. Primary CTA unlocks at 3500ms — the 800ms opacity transition feels like permission arriving.' },
+  12: { title: 'Ready to begin',                    note: 'Final summary. "Begin recording" calls onComplete in production: persists profile to Supabase, navigates to /app/record. "I need more time" is a no-op pause affordance.' },
+};
+
+const phone        = document.getElementById('phone');
+const screens      = Array.from(phone.querySelectorAll('.screen'));
+const persistent   = document.getElementById('persistentStone');
+const stone        = persistent.querySelector('.breath-stone');
+const progressDots = document.getElementById('progressDots');
+const backBtn      = document.getElementById('backBtn');
+const stagePicker  = document.getElementById('stagePicker');
+const stageLabel   = document.getElementById('stageLabel');
+const prevBtn      = document.getElementById('prevBtn');
+const nextBtn      = document.getElementById('nextBtn');
+const stoneStateLabel = document.getElementById('stoneStateLabel');
+const bgLabel      = document.getElementById('bgLabel');
+const notesTitle   = document.getElementById('notesTitle');
+const notesBody    = document.getElementById('notesBody');
+const notesStone   = document.getElementById('notesStone');
+const notesBg      = document.getElementById('notesBg');
+const notesNum     = document.getElementById('notesNum');
+const privacyModal = document.getElementById('privacyModal');
+
+const TOTAL = screens.length;
+let current = 1;
+let primingTimer = null;
+
+/* Build the 12 progress dots once */
+for (let i = 0; i < TOTAL; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'onboarding-dot';
+  progressDots.appendChild(dot);
+}
+const dots = Array.from(progressDots.children);
+
+/* Build the stage picker pills */
+screens.forEach((s, i) => {
+  const idx = i + 1;
+  const pill = document.createElement('button');
+  pill.className = 'stage-pill';
+  pill.textContent = idx + '. ' + SCREEN_META[idx].title;
+  pill.addEventListener('click', () => goTo(idx));
+  stagePicker.appendChild(pill);
+});
+const pills = Array.from(stagePicker.children);
+
+function goTo(n) {
+  n = Math.min(TOTAL, Math.max(1, n));
+  current = n;
+
+  /* Reset priming timer if we leave/re-enter screen 11 */
+  if (primingTimer) { clearTimeout(primingTimer); primingTimer = null; }
+
+  screens.forEach((s, i) => {
+    s.classList.toggle('screen--active', i + 1 === n);
+  });
+
+  /* Force a reflow on the active screen so its enter animation replays
+     when the same screen is re-selected. */
+  const active = screens[n - 1];
+  active.style.animation = 'none';
+  /* eslint-disable-next-line no-unused-expressions */
+  active.offsetWidth;
+  active.style.animation = '';
+
+  /* Wrapper bg + stone state pulled from data attributes on the active screen */
+  const bg    = active.dataset.bg   || 'neutral';
+  const state = active.dataset.stone || 'idle';
+  phone.dataset.bg = bg;
+  stone.dataset.state = state;
+
+  /* Progress dots */
+  dots.forEach((d, i) => {
+    d.className = 'onboarding-dot';
+    if (i + 1 < n)        d.classList.add('onboarding-dot--completed');
+    else if (i + 1 === n) d.classList.add('onboarding-dot--active');
+    else                  d.classList.add('onboarding-dot--pending');
+  });
+
+  /* Back button */
+  backBtn.classList.toggle('onboarding-back--hidden', n === 1);
+
+  /* Stage picker active pill */
+  pills.forEach((p, i) => p.classList.toggle('stage-pill--active', i + 1 === n));
+  stageLabel.textContent = n + ' / ' + TOTAL;
+
+  /* Chrome meta + notes panel */
+  stoneStateLabel.textContent = state;
+  bgLabel.textContent = bg;
+  notesTitle.textContent = 'Screen ' + n + ' — ' + SCREEN_META[n].title;
+  notesBody.textContent  = SCREEN_META[n].note;
+  notesStone.textContent = state;
+  notesBg.textContent    = bg;
+  notesNum.textContent   = n;
+
+  /* Per-screen behaviors */
+  if (n === 11) startPrimingUnlock();
+  if (n === 10) resetPhoto();
+}
+
+function startPrimingUnlock() {
+  const ctas = document.getElementById('primingCtas');
+  if (!ctas) return;
+  ctas.classList.remove('onboarding-ctas--unlocked');
+  ctas.classList.add('onboarding-ctas--locked');
+  primingTimer = setTimeout(() => {
+    ctas.classList.remove('onboarding-ctas--locked');
+    ctas.classList.add('onboarding-ctas--unlocked');
+  }, 3500);
+}
+
+function resetPhoto() {
+  const photo   = document.querySelector('.onboarding-photo');
+  const label   = document.getElementById('photoLabel');
+  const icon    = document.getElementById('photoIcon');
+  const confirm = document.getElementById('photoConfirmation');
+  const primary = document.getElementById('photoPrimary');
+  if (!photo) return;
+  photo.classList.remove('onboarding-photo--filled');
+  if (icon) icon.style.display = '';
+  if (label) label.style.display = '';
+  confirm.classList.remove('onboarding-photo-confirmation--visible');
+  primary.textContent = 'Continue without photo';
+  /* Remove any extra link button added on previous toggle */
+  const extra = document.getElementById('photoSkipLink');
+  if (extra) extra.remove();
+}
+
+/* ─── Wiring ───────────────────────────────────────────────────────── */
+prevBtn.addEventListener('click', () => goTo(current - 1));
+nextBtn.addEventListener('click', () => goTo(current + 1));
+backBtn.addEventListener('click', () => goTo(current - 1));
+
+document.querySelectorAll('.js-next').forEach((b) => {
+  b.addEventListener('click', () => goTo(current + 1));
+});
+document.querySelectorAll('.js-finish').forEach((b) => {
+  b.addEventListener('click', () => {
+    /* Production: persists profile + navigates to /app/record. Loop here. */
+    goTo(1);
+  });
+});
+document.querySelectorAll('.js-back-to-form').forEach((b) => {
+  b.addEventListener('click', () => goTo(8));
+});
+
+/* Privacy modal */
+function openPrivacy()  { privacyModal.classList.add('privacy-modal--open'); }
+function closePrivacy() { privacyModal.classList.remove('privacy-modal--open'); }
+document.querySelectorAll('.js-open-privacy').forEach((b) => b.addEventListener('click', openPrivacy));
+document.querySelectorAll('.js-close-privacy').forEach((b) => b.addEventListener('click', closePrivacy));
+
+/* Photo toggle */
+document.querySelector('.js-photo-toggle')?.addEventListener('click', () => {
+  const photo   = document.querySelector('.onboarding-photo');
+  const label   = document.getElementById('photoLabel');
+  const icon    = document.getElementById('photoIcon');
+  const confirm = document.getElementById('photoConfirmation');
+  const primary = document.getElementById('photoPrimary');
+  const ctas    = document.getElementById('photoCtas');
+
+  const filled = photo.classList.toggle('onboarding-photo--filled');
+  if (filled) {
+    photo.setAttribute('aria-label', 'Remove photo');
+    if (icon) icon.style.display = 'none';
+    if (label) label.style.display = 'none';
+    confirm.classList.add('onboarding-photo-confirmation--visible');
+    primary.textContent = 'Save photo';
+    if (!document.getElementById('photoSkipLink')) {
+      const skip = document.createElement('button');
+      skip.id = 'photoSkipLink';
+      skip.className = 'btn-link js-next';
+      skip.textContent = 'Continue without photo';
+      skip.addEventListener('click', () => goTo(current + 1));
+      ctas.appendChild(skip);
+    }
+  } else {
+    photo.setAttribute('aria-label', 'Add photo');
+    if (icon) icon.style.display = '';
+    if (label) label.style.display = '';
+    confirm.classList.remove('onboarding-photo-confirmation--visible');
+    primary.textContent = 'Continue without photo';
+    const extra = document.getElementById('photoSkipLink');
+    if (extra) extra.remove();
+  }
+});
+
+/* Keyboard nav: arrows step, 1–9 jump, 0 = screen 10, P = open privacy on S4, Esc = close */
+document.addEventListener('keydown', (e) => {
+  /* Don't capture keys while editing form fields */
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+
+  if (e.key === 'ArrowRight') { e.preventDefault(); goTo(current + 1); }
+  else if (e.key === 'ArrowLeft')  { e.preventDefault(); goTo(current - 1); }
+  else if (e.key === 'Escape')     { closePrivacy(); }
+  else if (e.key === 'p' || e.key === 'P') { if (current === 4) openPrivacy(); }
+  else if (/^[1-9]$/.test(e.key))  { goTo(parseInt(e.key, 10)); }
+  else if (e.key === '0')          { goTo(10); }
+});
+
+/* Boot — initialize Screen 1 state */
+goTo(1);
+</script>
+
+</body>
+</html>
