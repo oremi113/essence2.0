@@ -10,16 +10,16 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { generateSpeech } from "@/lib/elevenlabs";
 import { AUDIO_BUCKET, messageAudioObjectPath } from "@/lib/audio/storage-paths";
 import { NextResponse } from "next/server";
-import { AppError, ErrorCode } from "@/lib/errors";
+import { ErrorCode } from "@/lib/errors";
 import { logEvent, logError, hashPrompt, durationSince } from "@/lib/logger";
 import { assertCanGenerateMessage } from "@/lib/guards";
 import { recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
 import { defineRoute } from "@/lib/api/defineRoute";
+import { messageCreateSchema } from "@/lib/api/schemas";
 import { sanitizeErrorMessage } from "@/lib/api/sanitize";
 
 export const maxDuration = 120; // 2 min — TTS + upload
 
-const MAX_PROMPT_LENGTH = 2000;
 const LIST_LIMIT = 50;
 
 // ---------------------------------------------------------------------------
@@ -87,63 +87,18 @@ export const GET = defineRoute(
 // POST — Create message (Phase 6 + Phase 8 hardening)
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Body parser — typed, throws AppError on invalid input. Centralized so the
-// POST handler doesn't need an unsafe `as` cast and downstream code gets
-// real types.
-// ---------------------------------------------------------------------------
-
-interface CreateMessageBody {
-  voiceProfileId: string;
-  promptText: string;
-  title?: string;
-  recipientId?: string;
-}
-
-function parseCreateMessageBody(raw: unknown): CreateMessageBody {
-  if (raw === null || typeof raw !== "object") {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid JSON body", 400, false);
-  }
-  const r = raw as Record<string, unknown>;
-
-  const voiceProfileId = typeof r.voiceProfileId === "string" ? r.voiceProfileId.trim() : "";
-  if (!voiceProfileId) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "voiceProfileId is required", 400, false);
-  }
-
-  const promptText = typeof r.promptText === "string" ? r.promptText : "";
-  if (!promptText.trim()) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "promptText is required", 400, false);
-  }
-  if (promptText.length > MAX_PROMPT_LENGTH) {
-    throw new AppError(
-      ErrorCode.VALIDATION_ERROR,
-      `promptText must be ${MAX_PROMPT_LENGTH} characters or fewer`,
-      400,
-      false
-    );
-  }
-
-  const title = typeof r.title === "string" ? r.title : undefined;
-  const recipientId = typeof r.recipientId === "string" ? r.recipientId : undefined;
-
-  return { voiceProfileId, promptText, title, recipientId };
-}
-
 export const POST = defineRoute(
   {
     auth: true,
     checkBodySize: true,
+    bodySchema: messageCreateSchema,
     dedup: { action: "message_generate", event: "message_generate_dedup" },
   },
-  async ({ request, user, requestId }) => {
+  async ({ body, user, requestId }) => {
     const startMs = Date.now();
     const supabase = await createSupabaseServerClient();
 
-    // --- Parse + validate input ---
-    const rawBody = await request.json().catch(() => null);
-    const { voiceProfileId, promptText, title, recipientId } =
-      parseCreateMessageBody(rawBody);
+    const { voiceProfileId, promptText, title, recipientId } = body;
 
     // --- Centralized guard: ownership + ready + vendor_voice_id + daily cap ---
     const service = createSupabaseServiceClient();

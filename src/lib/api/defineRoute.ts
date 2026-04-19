@@ -5,8 +5,9 @@
  */
 import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
+import type { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { assertBodySize, handleRouteError, ErrorCode } from "@/lib/errors";
+import { assertBodySize, handleRouteError, AppError, ErrorCode } from "@/lib/errors";
 import {
   generateRequestId,
   logEvent,
@@ -40,9 +41,16 @@ interface DedupConfig<TParams extends RouteParams> {
   meta?: (ctx: AuthedRouteContext<TParams>) => Record<string, unknown>;
 }
 
+/** Per-route override for the 400 response shape when bodySchema fails. */
+type InvalidBodyResponse = (error: z.ZodError) => {
+  body: unknown;
+  status: number;
+};
+
 interface DefineRouteOptions<
   TAuth extends boolean,
   TParams extends RouteParams,
+  TBody,
 > {
   /** If true, run getUser() and short-circuit with 401 when missing. */
   auth: TAuth;
@@ -50,12 +58,42 @@ interface DefineRouteOptions<
   checkBodySize?: boolean;
   /** Optional dedup gate; only valid when auth is true. */
   dedup?: TAuth extends true ? DedupConfig<TParams> : never;
+  /**
+   * Optional Zod schema applied to the parsed JSON body. When set, the
+   * handler receives the parsed result as `body`. Invalid JSON / schema
+   * failures short-circuit with a 400 (shape configurable via
+   * invalidBodyResponse).
+   */
+  bodySchema?: z.ZodType<TBody>;
+  /**
+   * Override the 400 response returned when bodySchema fails. Default:
+   * throw AppError(VALIDATION_ERROR, <first issue>, 400, false), which
+   * matches the { error, code, retryable } shape.
+   */
+  invalidBodyResponse?: InvalidBodyResponse;
 }
 
-type Handler<TAuth extends boolean, TParams extends RouteParams> =
-  TAuth extends true
+interface HandlerContextBase<TParams extends RouteParams, TBody>
+  extends RouteContextBase<TParams> {
+  body: TBody;
+}
+
+interface AuthedHandlerContext<TParams extends RouteParams, TBody>
+  extends AuthedRouteContext<TParams> {
+  body: TBody;
+}
+
+type Handler<
+  TAuth extends boolean,
+  TParams extends RouteParams,
+  TBody,
+> = TAuth extends true
+  ? [TBody] extends [never]
     ? (ctx: AuthedRouteContext<TParams>) => Promise<Response>
-    : (ctx: RouteContextBase<TParams>) => Promise<Response>;
+    : (ctx: AuthedHandlerContext<TParams, TBody>) => Promise<Response>
+  : [TBody] extends [never]
+    ? (ctx: RouteContextBase<TParams>) => Promise<Response>
+    : (ctx: HandlerContextBase<TParams, TBody>) => Promise<Response>;
 
 type NextRouteArg<TParams extends RouteParams> = {
   params: Promise<TParams>;
@@ -68,9 +106,10 @@ type NextRouteArg<TParams extends RouteParams> = {
 export function defineRoute<
   TAuth extends boolean,
   TParams extends RouteParams = RouteParams,
+  TBody = never,
 >(
-  options: DefineRouteOptions<TAuth, TParams>,
-  handler: Handler<TAuth, TParams>,
+  options: DefineRouteOptions<TAuth, TParams, TBody>,
+  handler: Handler<TAuth, TParams, TBody>,
 ) {
   return async (
     request: Request,
@@ -80,6 +119,32 @@ export function defineRoute<
     try {
       if (options.checkBodySize) {
         assertBodySize(request);
+      }
+
+      // Parse + validate body upfront when a schema is configured. We
+      // consume request.json() here so downstream handlers receive the
+      // typed value via ctx.body.
+      let parsedBody: TBody = undefined as TBody;
+      if (options.bodySchema) {
+        const raw = await request.json().catch(() => null);
+        const result = options.bodySchema.safeParse(raw);
+        if (!result.success) {
+          if (options.invalidBodyResponse) {
+            const { body, status } = options.invalidBodyResponse(result.error);
+            return withRequestId(
+              NextResponse.json(body, { status }),
+              requestId,
+            );
+          }
+          const first = result.error.issues[0];
+          throw new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            first?.message ?? "Invalid JSON body",
+            400,
+            false,
+          );
+        }
+        parsedBody = result.data as TBody;
       }
 
       const params = (routeArg?.params
@@ -98,11 +163,12 @@ export function defineRoute<
           );
         }
 
-        const ctx: AuthedRouteContext<TParams> = {
+        const ctx: AuthedHandlerContext<TParams, TBody> = {
           request,
           requestId,
           params,
           user,
+          body: parsedBody,
         };
 
         if (options.dedup && isDedupBlocked(user.id, options.dedup.action)) {
@@ -127,12 +193,21 @@ export function defineRoute<
           );
         }
 
-        const response = await (handler as Handler<true, TParams>)(ctx);
+        const response = await (
+          handler as (ctx: AuthedHandlerContext<TParams, TBody>) => Promise<Response>
+        )(ctx);
         return withRequestId(response, requestId);
       }
 
-      const ctx: RouteContextBase<TParams> = { request, requestId, params };
-      const response = await (handler as Handler<false, TParams>)(ctx);
+      const ctx: HandlerContextBase<TParams, TBody> = {
+        request,
+        requestId,
+        params,
+        body: parsedBody,
+      };
+      const response = await (
+        handler as (ctx: HandlerContextBase<TParams, TBody>) => Promise<Response>
+      )(ctx);
       return withRequestId(response, requestId);
     } catch (err) {
       const { body, status } = handleRouteError(err, requestId);
