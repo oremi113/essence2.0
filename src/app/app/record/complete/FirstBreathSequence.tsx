@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -11,8 +12,17 @@ import {
 import { useRouter } from 'next/navigation';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { track } from '@/lib/analytics/client';
+import {
+  useSequenceTimeline,
+  type SequencePhase,
+} from '@/lib/animation/useSequenceTimeline';
 
 type Phase = 'forming' | 'crystallize' | 'preserved' | 'detail';
+
+// Sub-phases inside preserved let the timeline drive the revealTone beat
+// (lands on bloom + ring peak) and the text/CTA reveal without sibling
+// setTimeouts. Visually all three map to the 'preserved' Phase above.
+type TimelinePhase = 'forming' | 'crystallize' | 'preserved' | 'revealTone' | 'revealed';
 
 interface PhaseConfig {
   state: BreathStoneState;
@@ -125,11 +135,8 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   const audioCrystallizeRef = useRef<HTMLAudioElement>(null);
   const audioRevealRef = useRef<HTMLAudioElement>(null);
 
-  const [autoPhase, setAutoPhase] = useState<Phase>('forming');
   const [userPhase, setUserPhase] = useState<Phase | null>(null);
-  const [ctaRevealed, setCtaRevealed] = useState<boolean>(false);
   const [skipRevealed, setSkipRevealed] = useState<boolean>(false);
-  const [preservedRevealed, setPreservedRevealed] = useState<boolean>(false);
   const [detailRevealed, setDetailRevealed] = useState<boolean>(false);
   // Copy crossfade: two-slot pattern so the old beat fades out while the
   // new one fades in, instead of the old content being ripped from the DOM.
@@ -137,7 +144,49 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   const [exitingCopyPhase, setExitingCopyPhase] = useState<Phase | null>(null);
   const prevCopyPhaseRef = useRef<Phase>('forming');
 
-  const phase: Phase = userPhase ?? (prefersReducedMotion ? 'preserved' : autoPhase);
+  const timelinePhases = useMemo<SequencePhase<TimelinePhase>[]>(
+    () => [
+      { key: 'forming', duration: CRYSTALLIZE_AT_MS },
+      {
+        key: 'crystallize',
+        duration: PRESERVED_AT_MS - CRYSTALLIZE_AT_MS,
+        onEnter: () => {
+          // TODO: audio — audioCrystallizeRef.current?.play() (harmonic swell)
+        },
+      },
+      { key: 'preserved', duration: RING_FIRE_AT_MS },
+      {
+        key: 'revealTone',
+        duration: TEXT_REVEAL_DELAY_MS - RING_FIRE_AT_MS,
+        onEnter: () => {
+          // TODO: audio — audioRevealRef.current?.play() (low resonant bell)
+          //   lands on bloom + ring peak.
+        },
+      },
+      {
+        key: 'revealed',
+        duration: 0,
+        onEnter: () => {
+          track('breath_stone_sequence_completed', { voiceProfileId });
+        },
+      },
+    ],
+    [voiceProfileId]
+  );
+
+  const { currentPhase: timelinePhase, skipTo: timelineSkipTo } =
+    useSequenceTimeline(timelinePhases, {
+      paused: prefersReducedMotion,
+    });
+
+  const autoVisualPhase: Phase =
+    timelinePhase === 'forming' || timelinePhase === 'crystallize'
+      ? timelinePhase
+      : 'preserved';
+
+  const phase: Phase = userPhase ?? (prefersReducedMotion ? 'preserved' : autoVisualPhase);
+  const preservedRevealed = timelinePhase === 'revealed';
+  const ctaRevealed = preservedRevealed;
   const ctaVisible = ctaRevealed || prefersReducedMotion || phase !== 'forming';
   const skipVisible = skipRevealed || prefersReducedMotion;
   // During the preserved entrance (2.5s bloom + ring), copy and CTA stay
@@ -157,36 +206,14 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Skip affordance fades in shortly after mount, independent of the main
+  // beat progression so it's available during both forming and crystallize.
   useEffect(() => {
     if (prefersReducedMotion) return;
-
     // TODO: audio — fire audioAmbientRef.current?.play() on first user gesture.
-    const tSkip = setTimeout(() => setSkipRevealed(true), SKIP_VISIBLE_AT_MS);
-    const tCrystal = setTimeout(() => {
-      setAutoPhase('crystallize');
-      // TODO: audio — audioCrystallizeRef.current?.play() (harmonic swell)
-    }, CRYSTALLIZE_AT_MS);
-    const tPreserved = setTimeout(() => {
-      setAutoPhase('preserved');
-    }, PRESERVED_AT_MS);
-    const tRevealTone = setTimeout(() => {
-      // TODO: audio — audioRevealRef.current?.play() (low resonant bell)
-      //   lands on bloom + ring peak.
-    }, PRESERVED_AT_MS + RING_FIRE_AT_MS);
-    const tReveal = setTimeout(() => {
-      setPreservedRevealed(true);
-      setCtaRevealed(true);
-      track('breath_stone_sequence_completed', { voiceProfileId });
-    }, PRESERVED_AT_MS + TEXT_REVEAL_DELAY_MS);
-
-    return () => {
-      clearTimeout(tSkip);
-      clearTimeout(tCrystal);
-      clearTimeout(tPreserved);
-      clearTimeout(tRevealTone);
-      clearTimeout(tReveal);
-    };
-  }, [prefersReducedMotion, voiceProfileId]);
+    const t = setTimeout(() => setSkipRevealed(true), SKIP_VISIBLE_AT_MS);
+    return () => clearTimeout(t);
+  }, [prefersReducedMotion]);
 
   // Detail CTA holds back until the chip cascade has settled. Reset on
   // exit so a re-entry (restart flows in future) fires the delay again.
@@ -224,13 +251,12 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
 
   const skipToPreserved = useCallback(() => {
     track('breath_stone_skip_tapped', { voiceProfileId });
-    setAutoPhase('preserved');
     // Delay reveal even on skip so the user still gets the stone's entrance.
-    setTimeout(() => {
-      setPreservedRevealed(true);
-      setCtaRevealed(true);
-    }, TEXT_REVEAL_DELAY_MS);
-  }, [voiceProfileId]);
+    // The timeline auto-advances preserved → revealTone → revealed over
+    // TEXT_REVEAL_DELAY_MS, which flips the reveal flags and fires the
+    // completed event.
+    timelineSkipTo('preserved');
+  }, [voiceProfileId, timelineSkipTo]);
 
   const goToDetail = useCallback(() => {
     track('breath_stone_cta_tapped', { voiceProfileId, phase: 'preserved' });
