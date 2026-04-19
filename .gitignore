@@ -55,3 +55,6 @@ next-env.d.ts
 /blob-report/
 /playwright/.cache/
 /.playwright-mcp/
+
+# Local scratch output (scripts write here)
+/.tmp/

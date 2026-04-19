@@ -7,7 +7,7 @@
  */
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AppError, ErrorCode } from "@/lib/errors";
-import { ensureProfile } from "@/lib/profile-ensure";
+import { ensureProfile } from "@/lib/profile";
 
 // ---------------------------------------------------------------------------
 // Caps (env-overridable)

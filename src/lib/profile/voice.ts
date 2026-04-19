@@ -1,5 +1,5 @@
 import "server-only";
-import { getOrCreateProfile } from "@/lib/profile";
+import { getOrCreateProfile } from "./core";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Matches public.voice_profile_status enum. Keep in sync with DB. */

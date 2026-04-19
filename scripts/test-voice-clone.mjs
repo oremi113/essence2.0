@@ -6,7 +6,7 @@
  * Reads ELEVENLABS_API_KEY from .env.local, fetches the voice clone
  * from the database voice_id, and generates a short audio sample.
  */
-import { readFileSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
 // --- Read API key from .env.local ---
@@ -84,9 +84,11 @@ if (!ttsRes.ok) {
 }
 
 const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
-const outPath = resolve(process.cwd(), "test-voice-output.mp3");
+const outDir = resolve(process.cwd(), ".tmp");
+mkdirSync(outDir, { recursive: true });
+const outPath = resolve(outDir, "test-voice-output.mp3");
 writeFileSync(outPath, audioBuffer);
 
 console.log(`\n✅ Success! Audio saved to: ${outPath}`);
 console.log(`   File size: ${(audioBuffer.length / 1024).toFixed(1)} KB`);
-console.log(`\nTo listen, run:  open test-voice-output.mp3`);
+console.log(`\nTo listen, run:  open ${outPath}`);
