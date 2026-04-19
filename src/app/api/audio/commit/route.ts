@@ -3,48 +3,29 @@
  *
  * Phase 8: body size check, structured logging.
  */
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AUDIO_BUCKET } from "@/lib/audio/storage-paths";
 import { NextResponse } from "next/server";
-import { assertBodySize, handleRouteError } from "@/lib/errors";
-import { logEvent, logError, generateRequestId, withRequestId } from "@/lib/logger";
+import { logEvent, logError } from "@/lib/logger";
+import { defineRoute } from "@/lib/api/defineRoute";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const MIN_BYTES = 5 * 1024; // 5KB
 
-export async function POST(request: Request) {
-  const requestId = generateRequestId();
-
-  try {
-    // --- Body size check ---
-    assertBodySize(request);
-
+export const POST = defineRoute(
+  { auth: true, checkBodySize: true },
+  async ({ request, user, requestId }) => {
     const supabaseAuth = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabaseAuth.auth.getUser();
-    if (!user) {
-      return withRequestId(
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-        requestId
-      );
-    }
 
     const body = await request.json();
     const kind = body?.kind;
     const id = body?.id;
 
     if (kind !== "training_clip") {
-      return withRequestId(
-        NextResponse.json({ error: "Invalid kind" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
     }
     if (!id) {
-      return withRequestId(
-        NextResponse.json({ error: "id required" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "id required" }, { status: 400 });
     }
 
     const { data: row, error: fetchError } = await supabaseAuth
@@ -54,22 +35,13 @@ export async function POST(request: Request) {
       .single();
 
     if (fetchError || !row) {
-      return withRequestId(
-        NextResponse.json({ error: "Clip not found" }, { status: 404 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Clip not found" }, { status: 404 });
     }
     if (row.user_id !== user.id) {
-      return withRequestId(
-        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (row.status !== "uploading") {
-      return withRequestId(
-        NextResponse.json({ error: "Clip not in uploading state" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Clip not in uploading state" }, { status: 400 });
     }
 
     const bucket = row.storage_bucket || AUDIO_BUCKET;
@@ -80,26 +52,17 @@ export async function POST(request: Request) {
 
     if (downloadError || !blob) {
       logError({ event: "commit_object_not_found", requestId, userId: user.id, error: downloadError, meta: { objectPath } });
-      return withRequestId(
-        NextResponse.json({ error: "Object not found in storage" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Object not found in storage" }, { status: 400 });
     }
 
     const byteSize = blob.size;
     if (byteSize < MIN_BYTES) {
-      return withRequestId(
-        NextResponse.json({ error: "File too small" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "File too small" }, { status: 400 });
     }
 
     const mime = row.mime_type ?? "audio/webm";
     if (!mime.startsWith("audio/")) {
-      return withRequestId(
-        NextResponse.json({ error: "Invalid content type" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Invalid content type" }, { status: 400 });
     }
 
     const { error: updateError } = await supabaseAuth
@@ -111,10 +74,7 @@ export async function POST(request: Request) {
 
     if (updateError) {
       logError({ event: "commit_update_failed", requestId, userId: user.id, error: updateError });
-      return withRequestId(
-        NextResponse.json({ error: "Failed to commit", detail: updateError.message }, { status: 500 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Failed to commit", detail: updateError.message }, { status: 500 });
     }
 
     logEvent({
@@ -125,12 +85,6 @@ export async function POST(request: Request) {
       meta: { clipId: id, byteSize },
     });
 
-    return withRequestId(
-      NextResponse.json({ ok: true, status: "uploaded", byteSize }),
-      requestId
-    );
-  } catch (err) {
-    const { body, status } = handleRouteError(err, requestId);
-    return withRequestId(NextResponse.json(body, { status }), requestId);
+    return NextResponse.json({ ok: true, status: "uploaded", byteSize });
   }
-}
+);

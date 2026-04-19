@@ -10,31 +10,18 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AUDIO_BUCKET, trainingClipObjectPath } from "@/lib/audio/storage-paths";
 import { NextResponse } from "next/server";
-import { assertBodySize, handleRouteError } from "@/lib/errors";
-import { logEvent, logError, generateRequestId, withRequestId } from "@/lib/logger";
+import { logEvent, logError } from "@/lib/logger";
 import { assertCanUploadClip } from "@/lib/guards";
 import { recordUsageEvent } from "@/lib/rate-limit";
 import { TOTAL_PROMPT_COUNT } from "@/lib/voice-training/script";
+import { defineRoute } from "@/lib/api/defineRoute";
 
 const UPLOAD_URL_EXPIRY_SEC = 60 * 10; // 10 min
 
-export async function POST(request: Request) {
-  const requestId = generateRequestId();
-
-  try {
-    // --- Body size check ---
-    assertBodySize(request);
-
+export const POST = defineRoute(
+  { auth: true, checkBodySize: true },
+  async ({ request, user, requestId }) => {
     const supabaseAuth = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabaseAuth.auth.getUser();
-    if (!user) {
-      return withRequestId(
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-        requestId
-      );
-    }
 
     const body = await request.json();
     const kind = body?.kind;
@@ -48,33 +35,21 @@ export async function POST(request: Request) {
         : null;
 
     if (kind !== "training_clip") {
-      return withRequestId(
-        NextResponse.json({ error: "Invalid kind" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
     }
     if (!voiceProfileId || typeof voiceProfileId !== "string") {
-      return withRequestId(
-        NextResponse.json({ error: "voiceProfileId required" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "voiceProfileId required" }, { status: 400 });
     }
     const promptIndex = promptId != null ? Number(promptId) : undefined;
     if (promptIndex == null || !Number.isInteger(promptIndex) || promptIndex < 1) {
-      return withRequestId(
-        NextResponse.json({ error: "promptId (prompt_index) required and must be >= 1" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "promptId (prompt_index) required and must be >= 1" }, { status: 400 });
     }
 
     // --- Upper bound: V2 script has exactly 25 prompts ---
     if (promptIndex > TOTAL_PROMPT_COUNT) {
-      return withRequestId(
-        NextResponse.json(
-          { error: "PROMPT_OUT_OF_RANGE", detail: `promptId must be between 1 and ${TOTAL_PROMPT_COUNT}` },
-          { status: 400 }
-        ),
-        requestId
+      return NextResponse.json(
+        { error: "PROMPT_OUT_OF_RANGE", detail: `promptId must be between 1 and ${TOTAL_PROMPT_COUNT}` },
+        { status: 400 }
       );
     }
 
@@ -95,16 +70,13 @@ export async function POST(request: Request) {
 
     const expectedNext = (maxRow?.prompt_index ?? 0) + 1;
     if (promptIndex !== expectedNext) {
-      return withRequestId(
-        NextResponse.json(
-          {
-            error: "PROMPT_OUT_OF_ORDER",
-            detail: `Expected prompt ${expectedNext}, got ${promptIndex}`,
-            expectedNext,
-          },
-          { status: 400 }
-        ),
-        requestId
+      return NextResponse.json(
+        {
+          error: "PROMPT_OUT_OF_ORDER",
+          detail: `Expected prompt ${expectedNext}, got ${promptIndex}`,
+          expectedNext,
+        },
+        { status: 400 }
       );
     }
 
@@ -144,10 +116,7 @@ export async function POST(request: Request) {
 
     if (insertError) {
       logError({ event: "init_upload_insert_failed", requestId, userId: user.id, voiceProfileId, error: insertError });
-      return withRequestId(
-        NextResponse.json({ error: "Failed to create clip", detail: insertError.message }, { status: 500 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Failed to create clip", detail: insertError.message }, { status: 500 });
     }
 
     const clipId = row.id;
@@ -165,10 +134,7 @@ export async function POST(request: Request) {
 
     if (signError) {
       logError({ event: "init_upload_sign_failed", requestId, userId: user.id, voiceProfileId, error: signError });
-      return withRequestId(
-        NextResponse.json({ error: "Failed to create upload URL" }, { status: 500 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Failed to create upload URL" }, { status: 500 });
     }
 
     const expiresAt = new Date(Date.now() + UPLOAD_URL_EXPIRY_SEC * 1000).toISOString();
@@ -182,19 +148,13 @@ export async function POST(request: Request) {
       meta: { clipId, promptIndex },
     });
 
-    return withRequestId(
-      NextResponse.json({
-        id: clipId,
-        objectPath,
-        signedUploadUrl: signData.signedUrl,
-        uploadToken: signData.token,
-        requiredHeaders: { "Content-Type": mime },
-        expiresAt,
-      }),
-      requestId
-    );
-  } catch (err) {
-    const { body, status } = handleRouteError(err, requestId);
-    return withRequestId(NextResponse.json(body, { status }), requestId);
+    return NextResponse.json({
+      id: clipId,
+      objectPath,
+      signedUploadUrl: signData.signedUrl,
+      uploadToken: signData.token,
+      requiredHeaders: { "Content-Type": mime },
+      expiresAt,
+    });
   }
-}
+);

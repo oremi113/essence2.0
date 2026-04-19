@@ -10,10 +10,12 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { generateSpeech } from "@/lib/elevenlabs";
 import { AUDIO_BUCKET, messageAudioObjectPath } from "@/lib/audio/storage-paths";
 import { NextResponse } from "next/server";
-import { AppError, ErrorCode, assertBodySize, handleRouteError } from "@/lib/errors";
-import { logEvent, logError, generateRequestId, hashPrompt, durationSince, withRequestId } from "@/lib/logger";
+import { AppError, ErrorCode } from "@/lib/errors";
+import { logEvent, logError, hashPrompt, durationSince } from "@/lib/logger";
 import { assertCanGenerateMessage } from "@/lib/guards";
-import { isDedupBlocked, recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
+import { recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
+import { defineRoute } from "@/lib/api/defineRoute";
+import { sanitizeErrorMessage } from "@/lib/api/sanitize";
 
 export const maxDuration = 120; // 2 min — TTS + upload
 
@@ -37,21 +39,15 @@ function extractRecipientName(rel: unknown): string | null {
   return typeof name === "string" ? name : null;
 }
 
-export async function GET() {
-  const requestId = generateRequestId();
-  try {
+export const GET = defineRoute(
+  { auth: true },
+  async ({ user, requestId }) => {
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     // Memory Shelf only displays saved messages; filter at the DB
-     // level so we don't ship failed/pending rows the client throws
-     // away. If a future caller needs other statuses, add a `?status=`
-     // query param rather than broadening the default.
+    // level so we don't ship failed/pending rows the client throws
+    // away. If a future caller needs other statuses, add a `?status=`
+    // query param rather than broadening the default.
     const { data: messages, error } = await supabase
       .from("messages")
       .select(
@@ -84,19 +80,12 @@ export async function GET() {
     }));
 
     return NextResponse.json({ messages: items });
-  } catch (err) {
-    const { body, status } = handleRouteError(err, requestId);
-    return NextResponse.json(body, { status });
   }
-}
+);
 
 // ---------------------------------------------------------------------------
 // POST — Create message (Phase 6 + Phase 8 hardening)
 // ---------------------------------------------------------------------------
-
-function sanitize(msg: string, max = 500): string {
-  return String(msg).replace(/\s+/g, " ").trim().slice(0, max);
-}
 
 // ---------------------------------------------------------------------------
 // Body parser — typed, throws AppError on invalid input. Centralized so the
@@ -141,42 +130,15 @@ function parseCreateMessageBody(raw: unknown): CreateMessageBody {
   return { voiceProfileId, promptText, title, recipientId };
 }
 
-export async function POST(request: Request) {
-  const requestId = generateRequestId();
-  const startMs = Date.now();
-
-  try {
-    // --- Body size check ---
-    assertBodySize(request);
-
-    // --- Auth ---
+export const POST = defineRoute(
+  {
+    auth: true,
+    checkBodySize: true,
+    dedup: { action: "message_generate", event: "message_generate_dedup" },
+  },
+  async ({ request, user, requestId }) => {
+    const startMs = Date.now();
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return withRequestId(
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-        requestId
-      );
-    }
-
-    // --- In-memory dedup (UX polish only) ---
-    if (isDedupBlocked(user.id, "message_generate")) {
-      logEvent({
-        event: "message_generate_dedup",
-        requestId,
-        userId: user.id,
-        outcome: "rejected",
-      });
-      return withRequestId(
-        NextResponse.json(
-          { error: "Request already in progress. Please wait.", code: ErrorCode.RATE_LIMIT_EXCEEDED, retryable: true },
-          { status: 429 }
-        ),
-        requestId
-      );
-    }
 
     // --- Parse + validate input ---
     const rawBody = await request.json().catch(() => null);
@@ -227,10 +189,7 @@ export async function POST(request: Request) {
         meta: { existingStatus: existing.status },
       });
       await updateUsageEventOutcome(service, requestId, "idempotent_hit");
-      return withRequestId(
-        NextResponse.json({ messageId: existing.id, status: existing.status, idempotent: true }),
-        requestId
-      );
+      return NextResponse.json({ messageId: existing.id, status: existing.status, idempotent: true });
     }
 
     logEvent({
@@ -263,12 +222,9 @@ export async function POST(request: Request) {
     if (insertError || !message) {
       logError({ event: "message_insert_failed", requestId, userId: user.id, error: insertError });
       await updateUsageEventOutcome(service, requestId, "error");
-      return withRequestId(
-        NextResponse.json(
-          { error: "Could not create message", code: ErrorCode.INTERNAL_ERROR, retryable: true },
-          { status: 500 }
-        ),
-        requestId
+      return NextResponse.json(
+        { error: "Could not create message", code: ErrorCode.INTERNAL_ERROR, retryable: true },
+        { status: 500 }
       );
     }
 
@@ -300,25 +256,22 @@ export async function POST(request: Request) {
         .update({
           status: "failed",
           last_error_code: ttsResult.code ?? String(ttsResult.status),
-          last_error_message: sanitize(ttsResult.message),
+          last_error_message: sanitizeErrorMessage(ttsResult.message, 500),
         })
         .eq("id", messageId)
         .eq("user_id", user.id)
         .eq("status", "generating"); // monotonic guard
 
       await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
-      return withRequestId(
-        NextResponse.json(
-          {
-            messageId,
-            status: "failed",
-            error: "Could not generate audio. Please try again.",
-            code: errorCode,
-            retryable: true,
-          },
-          { status: 502 }
-        ),
-        requestId
+      return NextResponse.json(
+        {
+          messageId,
+          status: "failed",
+          error: "Could not generate audio. Please try again.",
+          code: errorCode,
+          retryable: true,
+        },
+        { status: 502 }
       );
     }
 
@@ -343,10 +296,7 @@ export async function POST(request: Request) {
         meta: { transition: "generating->saving" },
       });
       await updateUsageEventOutcome(service, requestId, "stale");
-      return withRequestId(
-        NextResponse.json({ messageId, status: "generating", error: "State conflict." }, { status: 409 }),
-        requestId
-      );
+      return NextResponse.json({ messageId, status: "generating", error: "State conflict." }, { status: 409 });
     }
 
     // --- Upload audio to Supabase Storage ---
@@ -376,25 +326,22 @@ export async function POST(request: Request) {
         .update({
           status: "failed",
           last_error_code: "STORAGE_UPLOAD_FAILED",
-          last_error_message: sanitize(uploadError.message),
+          last_error_message: sanitizeErrorMessage(uploadError.message, 500),
         })
         .eq("id", messageId)
         .eq("user_id", user.id)
         .eq("status", "saving"); // monotonic guard
 
       await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
-      return withRequestId(
-        NextResponse.json(
-          {
-            messageId,
-            status: "failed",
-            error: "Could not save audio. Please try again.",
-            code: ErrorCode.STORAGE_FAILED,
-            retryable: true,
-          },
-          { status: 502 }
-        ),
-        requestId
+      return NextResponse.json(
+        {
+          messageId,
+          status: "failed",
+          error: "Could not save audio. Please try again.",
+          code: ErrorCode.STORAGE_FAILED,
+          retryable: true,
+        },
+        { status: 502 }
       );
     }
 
@@ -424,12 +371,9 @@ export async function POST(request: Request) {
         meta: { transition: "saving->saved" },
       });
       await updateUsageEventOutcome(service, requestId, "stale");
-      return withRequestId(
-        NextResponse.json(
-          { messageId, status: "saving", error: "Message created but finalization failed." },
-          { status: 500 }
-        ),
-        requestId
+      return NextResponse.json(
+        { messageId, status: "saving", error: "Message created but finalization failed." },
+        { status: 500 }
       );
     }
 
@@ -446,12 +390,6 @@ export async function POST(request: Request) {
     });
     await updateUsageEventOutcome(service, requestId, "success", totalDurationMs);
 
-    return withRequestId(
-      NextResponse.json({ messageId, status: "saved" }),
-      requestId
-    );
-  } catch (err) {
-    const { body, status } = handleRouteError(err, requestId);
-    return withRequestId(NextResponse.json(body, { status }), requestId);
+    return NextResponse.json({ messageId, status: "saved" });
   }
-}
+);
