@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, useReducer } from 'react';
 import { useRouter } from 'next/navigation';
 import { BreathStone } from '@/components/breath-stone';
 import { PageTransition, PrimaryButton, LinkButton } from '@/components/ui';
 import { MicIcon, MicStopIcon } from '@/components/icons';
 import { RecordingUpload, type Status as UploadStatus, type RecordingUploadHandle } from '@/components/audio/RecordingUpload';
-import { TOTAL_PROMPT_COUNT, ALL_PROMPTS, getStageForPrompt, getStageStartIndex } from '@/lib/voice-training/script';
+import { TOTAL_PROMPT_COUNT, ALL_PROMPTS, getStageForPrompt } from '@/lib/voice-training/script';
 import { resolvePrompt } from '@/lib/voice-training/resolver';
 import type { ResolverContext, PromptCelebration } from '@/lib/voice-training/types';
 import { TIMING } from '@/lib/config/timing';
 import type { RecordScreenData } from './RecordScreen.types';
+import { recordReducer, deriveInitialView } from './RecordScreen.reducer';
 
 // Whether the prompt at this index has an attached celebration is now
 // driven by the script itself — see VoicePrompt.celebration. Adding a
@@ -23,34 +24,6 @@ import type { RecordScreenData } from './RecordScreen.types';
 function progressPercent(promptIndex: number, isUploaded: boolean): number {
   const completed = promptIndex + (isUploaded ? 1 : 0);
   return (completed / TOTAL_PROMPT_COUNT) * 100;
-}
-
-// ─── VIEW MODE ─────────────────────────────────────────────────────────────
-type ViewMode =
-  | { type: 'entry' }
-  | { type: 'grounding' }
-  | { type: 'mic-permission' }
-  | { type: 'checklist' }
-  | { type: 'environment' }
-  | { type: 'stage-intro'; stage: 1 | 2 | 3 }
-  | { type: 'prompt'; promptIndex: number }
-  | { type: 'celebration'; afterPromptIndex: number }
-  | { type: 'paused' }
-  | { type: 'working' }
-  | { type: 'ready' };
-
-function deriveInitialView(data: RecordScreenData): ViewMode {
-  if (data.voiceProfileStatus === 'processing' || data.voiceProfileStatus === 'queued')
-    return { type: 'working' };
-  if (data.voiceProfileStatus === 'ready')
-    return { type: 'ready' };
-  if (data.clipsRecorded === 0)
-    return { type: 'entry' };
-  if (data.clipsRecorded === getStageStartIndex(2))
-    return { type: 'stage-intro', stage: 2 };
-  if (data.clipsRecorded === getStageStartIndex(3))
-    return { type: 'stage-intro', stage: 3 };
-  return { type: 'prompt', promptIndex: Math.min(data.clipsRecorded, TOTAL_PROMPT_COUNT - 1) };
 }
 
 // ─── STAGE MAP ─────────────────────────────────────────────────────────────
@@ -88,7 +61,7 @@ interface RecordScreenProps {
 
 export function RecordScreen({ data }: RecordScreenProps) {
   const router = useRouter();
-  const [view, setView] = useState<ViewMode>(() => deriveInitialView(data));
+  const [view, dispatch] = useReducer(recordReducer, data, deriveInitialView);
 
   // Build resolver context client-side. timeZone is the user's IANA
   // zone so the timeOfDayName resolver picks morning/afternoon/etc.
@@ -116,12 +89,8 @@ export function RecordScreen({ data }: RecordScreenProps) {
   }, [view.type, router, data.voiceProfileStatus]);
 
   // React to server-side status changes (from router.refresh).
-  // Functional update + guard avoids the setState-in-effect lint and
-  // also prevents a stale transition if view moved away before the
-  // server-ready propagated.
   useEffect(() => {
-    if (data.voiceProfileStatus !== 'ready') return;
-    setView((v) => (v.type === 'working' ? { type: 'ready' } : v));
+    dispatch({ type: 'VOICE_PROFILE_STATUS_CHANGED', status: data.voiceProfileStatus });
   }, [data.voiceProfileStatus]);
 
   // Fallback: if backend doesn't flip status within 8s, advance anyway.
@@ -130,36 +99,10 @@ export function RecordScreen({ data }: RecordScreenProps) {
   useEffect(() => {
     if (view.type !== 'working') return;
     const timeout = setTimeout(() => {
-      setView((v) => (v.type === 'working' ? { type: 'ready' } : v));
+      dispatch({ type: 'WORKING_TIMEOUT_ELAPSED' });
     }, TIMING.WORKING_FALLBACK_ADVANCE_MS);
     return () => clearTimeout(timeout);
   }, [view.type]);
-
-  // ─── Navigation helpers ─────────────────────────────────────
-
-  const advanceFromPrompt = useCallback((promptIndex: number) => {
-    if (ALL_PROMPTS[promptIndex]?.celebration) {
-      setView({ type: 'celebration', afterPromptIndex: promptIndex });
-    } else {
-      setView({ type: 'prompt', promptIndex: promptIndex + 1 });
-    }
-  }, []);
-
-  const advanceFromCelebration = useCallback((afterPromptIndex: number) => {
-    const next = ALL_PROMPTS[afterPromptIndex]?.celebration?.next;
-    if (!next) return;
-    switch (next.kind) {
-      case 'next-prompt':
-        setView({ type: 'prompt', promptIndex: afterPromptIndex + 1 });
-        return;
-      case 'stage-intro':
-        setView({ type: 'stage-intro', stage: next.stage });
-        return;
-      case 'working':
-        setView({ type: 'working' });
-        return;
-    }
-  }, []);
 
   // ─── Render ─────────────────────────────────────────────────
 
@@ -167,7 +110,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
     return (
       <PageTransition>
         <EntryView
-          onContinue={() => setView({ type: 'grounding' })}
+          onContinue={() => dispatch({ type: 'ENTRY_CONTINUED' })}
           onDoLater={() => router.push('/home')}
         />
       </PageTransition>
@@ -176,7 +119,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
   if (view.type === 'grounding')
     return (
       <PageTransition>
-        <GroundingView onContinue={() => setView({ type: 'mic-permission' })} />
+        <GroundingView onContinue={() => dispatch({ type: 'GROUNDING_CONTINUED' })} />
       </PageTransition>
     );
 
@@ -184,7 +127,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
     return (
       <PageTransition>
         <MicPermissionView
-          onGranted={() => setView({ type: 'checklist' })}
+          onGranted={() => dispatch({ type: 'MIC_PERMISSION_GRANTED' })}
           onSkip={() => router.push('/home')}
         />
       </PageTransition>
@@ -193,7 +136,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
   if (view.type === 'checklist')
     return (
       <PageTransition>
-        <ChecklistView onContinue={() => setView({ type: 'environment' })} />
+        <ChecklistView onContinue={() => dispatch({ type: 'CHECKLIST_CONTINUED' })} />
       </PageTransition>
     );
 
@@ -201,7 +144,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
     return (
       <PageTransition>
         <EnvironmentView
-          onReady={() => setView({ type: 'stage-intro', stage: 1 })}
+          onReady={() => dispatch({ type: 'ENVIRONMENT_READY' })}
         />
       </PageTransition>
     );
@@ -211,10 +154,8 @@ export function RecordScreen({ data }: RecordScreenProps) {
       <PageTransition>
         <StageIntroView
           stage={view.stage}
-          onContinue={() =>
-            setView({ type: 'prompt', promptIndex: getStageStartIndex(view.stage) })
-          }
-          onPause={() => setView({ type: 'paused' })}
+          onContinue={() => dispatch({ type: 'STAGE_INTRO_CONTINUED' })}
+          onPause={() => dispatch({ type: 'PAUSE_REQUESTED' })}
         />
       </PageTransition>
     );
@@ -224,8 +165,8 @@ export function RecordScreen({ data }: RecordScreenProps) {
       <PageTransition>
         <CelebrationView
           afterPromptIndex={view.afterPromptIndex}
-          onContinue={() => advanceFromCelebration(view.afterPromptIndex)}
-          onPause={() => setView({ type: 'paused' })}
+          onContinue={() => dispatch({ type: 'CELEBRATION_CONTINUED' })}
+          onPause={() => dispatch({ type: 'PAUSE_REQUESTED' })}
         />
       </PageTransition>
     );
@@ -264,7 +205,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
         promptText={resolved?.resolvedText ?? ''}
         instruction={prompt?.instruction ?? ''}
         voiceProfileId={data.voiceProfileId}
-        onAdvance={() => advanceFromPrompt(promptIndex)}
+        onAdvance={() => dispatch({ type: 'PROMPT_ADVANCED' })}
       />
     </PageTransition>
   );
