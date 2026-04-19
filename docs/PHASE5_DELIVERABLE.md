@@ -4,7 +4,7 @@
 
 - **DB:** Added `queued` to `voice_profile_status`; added attempt-tracking columns to `voice_profiles`: `attempt_count`, `last_attempt_at`, `last_error_at`, `source_clip_count`, `source_clip_seconds`. No audio in Postgres; `training_clips` already have `storage_path`, `status` (uploaded = complete).
 - **Server:** `lib/elevenlabs.ts` (server-only, `createVoiceFromClips`, timeout 2 min). POST/GET voice-profiles routes with auth, ownership, min-clip validation, idempotency, lock to processing, and retry backoff (5 min, 30 min, 2 h; max 3 attempts). `vendor_voice_id` and `ready_at` set on success; never returned to client.
-- **UI:** Record page link "Create voice from clips" → `/app/voice/create?voiceProfileId=...`. Processing screen with poll (2.5 s, 90 s then "Taking longer"), success ("Your voice is ready", Continue), failure (message, Back; Retry only if `retry_available`).
+- **UI:** Record page link "Create voice from clips" → `/app/voice/create?voiceProfileId=...`. Processing screen with poll (2.5 s, 90 s then "Taking longer"), success ("Your voice is yours.", Continue), failure (message, Back; Retry only if `retry_available`).
 
 ---
 
@@ -47,7 +47,7 @@ Phase 5 attempt-tracking columns:
 3. **Record:** Sign in, go to `/app/record`, select a voice profile, record and commit at least **10** clips (status `uploaded`).
 4. **Create voice:** Click "Create voice from clips". You should land on `/app/voice/create?voiceProfileId=...`.
 5. **Processing:** See "Preparing your voice" and spinner; after 90 s see "Taking longer" if still in progress.
-6. **Success:** When ElevenLabs returns, see "Your voice is ready" and Continue → back to record.
+6. **Success:** When ElevenLabs returns, see "Your voice is yours." and Continue → back to record.
 7. **Failure:** If &lt; 10 clips: clear "INSUFFICIENT_CLIPS" message. If vendor fails: see error and Retry only when `retry_available` (after backoff).
 8. **Idempotency:** Open create page twice for same profile; second load should not double-start (either already ready or polling same run).
 9. **No secrets:** Confirm `vendor_voice_id` / ElevenLabs voice id never appears in network responses to client or in client-rendered UI.

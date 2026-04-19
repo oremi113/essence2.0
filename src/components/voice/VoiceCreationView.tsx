@@ -235,8 +235,8 @@ export function VoiceCreationView() {
   if (viewState === "success") {
     return (
       <div style={{ padding: 24 }}>
-        <h2>Your voice is ready</h2>
-        <p>You can now use this voice to create messages.</p>
+        <h2>Your voice is yours.</h2>
+        <p>Ready to be kept. You can now use this voice to create messages.</p>
         <div style={{ marginTop: 16 }}>
           <button
             type="button"

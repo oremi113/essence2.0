@@ -56,7 +56,7 @@ export const voiceTrainingScript: VoiceStage[] = [
           "Speak naturally.",
         emotionalTone: "content/happy",
         lineType: "simple",
-        line: "You know what I secretly love? A big thunderstorm. When the sky goes dark in the middle of the afternoon and the wind picks up and you can just feel it coming. That first crack of thunder, the flash of lightning through the trees. Then the rain hits — just crashes down, all at once. I love sitting by the window and watching it. The streaks of water on the glass, the way everything outside looks blurred and strange. There’s something about a storm that makes you feel small, but in a good way. Like the world’s reminding you it’s bigger than your problems. I find that really comforting, actually.",
+        line: "You know what I secretly love? A big thunderstorm. When the sky goes dark in the middle of the afternoon and the wind picks up and you can just feel it coming. That first crack of thunder, the flash of lightning through the trees. Then the rain hits. Just crashes down, all at once. I love sitting by the window and watching it. The streaks of water on the glass, the way everything outside looks blurred and strange. There’s something about a storm that makes you feel small, but in a good way. Like the world’s reminding you it’s bigger than your problems. I find that really comforting, actually.",
       },
       // ---------------------------------------------------------------
       // Prompt 3 — city
@@ -91,15 +91,15 @@ export const voiceTrainingScript: VoiceStage[] = [
         lineType: "simple",
         line: "You know what? If you’re listening to this, I just want you to know something. Whatever you’re going through right now, you’re doing better than you think. I mean that. Life’s hard sometimes, and it’s exhausting, but you’re here. You’re still showing up. And that counts for something. So give yourself some credit, okay? You’ve earned it.",
         celebration: {
-          eyebrow: "MILESTONE",
-          title: "Stage 1 Complete",
+          eyebrow: "STAGE 1 COMPLETE · EVERYDAY",
+          title: "You’ve settled into it.",
           titleWeight: 500,
-          subtitle:
-            "You shaped the first five moments. Your voice record is beginning to form.",
+          subtitle: "Your voice is beginning to take shape.",
+          italicSubtitle: true,
           showStageMap: true,
           stageMapCurrent: 2,
           showPauseLink: true,
-          cta: "Begin Stage 2",
+          cta: "Keep going",
           next: { kind: "stage-intro", stage: 2 },
         },
       },
@@ -207,7 +207,7 @@ export const voiceTrainingScript: VoiceStage[] = [
           "Let it feel real.",
         emotionalTone: "content/happy",
         lineType: "city",
-        line: "My perfect day? It’s actually pretty simple. I’d wake up without an alarm, make a really good cup of coffee, and just take my time with breakfast. No rush, no stress. Then maybe take a walk around {city}, enjoy the weather, clear my head. Later, I’d spend time with people I love. Maybe cook a nice dinner together, nothing fancy. Just good food, good company, good conversation. That’s it. That’s my perfect day. What about you — what does yours look like?",
+        line: "My perfect day? It’s actually pretty simple. I’d wake up without an alarm, make a really good cup of coffee, and just take my time with breakfast. No rush, no stress. Then maybe take a walk around {city}, enjoy the weather, clear my head. Later, I’d spend time with people I love. Maybe cook a nice dinner together, nothing fancy. Just good food, good company, good conversation. That’s it. That’s my perfect day. What about you? What does yours look like?",
       },
       // ---------------------------------------------------------------
       // Prompt 11 — simple
@@ -229,7 +229,7 @@ export const voiceTrainingScript: VoiceStage[] = [
           "Let it feel real.",
         emotionalTone: "warm/teaching",
         lineType: "simple",
-        line: "You want to know my secret for a great breakfast? Start with fresh scrambled eggs. Crack three into a bowl, splash in some milk, just a little. Whisk it up until it’s smooth. Then get your skillet hot — not screaming hot, just sizzling. Drop in some butter, swirl it around, pour the eggs in, and stir them gently. Slowly. Don’t rush it. That’s the trick. Patience. Sprinkle a little salt, maybe some pepper, and you’ve got something special. Simple, but special. Just like the best things in life.",
+        line: "You want to know my secret for a great breakfast? Start with fresh scrambled eggs. Crack three into a bowl, splash in some milk, just a little. Whisk it up until it’s smooth. Then get your skillet hot. Not screaming hot, just sizzling. Drop in some butter, swirl it around, pour the eggs in, and stir them gently. Slowly. Don’t rush it. That’s the trick. Patience. Sprinkle a little salt, maybe some pepper, and you’ve got something special. Simple, but special. Just like the best things in life.",
         celebration: {
           title: "You’re halfway there",
           titleWeight: 400,
@@ -258,7 +258,7 @@ export const voiceTrainingScript: VoiceStage[] = [
           "Let it feel real.",
         emotionalTone: "excited/joyful",
         lineType: "simple",
-        line: "I’ll never forget getting news that completely knocked me sideways — in the best possible way. I just stood there for a second, trying to process it, and then this wave of joy hit me all at once. I grabbed the phone, started calling people, tripping over my words, laughing before I could even finish the sentence. That kind of happiness — the kind that just floods through you before you can even think — that’s the good stuff. That’s what life’s really about.",
+        line: "I’ll never forget getting news that completely knocked me sideways, in the best possible way. I just stood there for a second, trying to process it, and then this wave of joy hit me all at once. I grabbed the phone, started calling people, tripping over my words, laughing before I could even finish the sentence. That kind of happiness, the kind that just floods through you before you can even think, that’s the good stuff. That’s what life’s really about.",
       },
       // ---------------------------------------------------------------
       // Prompt 15 — simple
@@ -293,15 +293,15 @@ export const voiceTrainingScript: VoiceStage[] = [
         lineType: "simple",
         line: "Here’s what I’ve learned about love over the years. It’s not always fireworks and grand gestures. Most of the time, it’s quiet. It’s small, steady, and consistent. It’s showing up. It’s being there when it’s hard. It’s choosing each other, over and over again, even on the days when it’s not easy. The movies got it all wrong. Real love is in the everyday moments, the little things. That’s where the magic actually is.",
         celebration: {
-          eyebrow: "MILESTONE",
-          title: "Stage 2 Complete",
-          titleWeight: 400,
-          subtitle:
-            "Your voice has gained depth and warmth. The final stage awaits.",
+          eyebrow: "STAGE 2 COMPLETE",
+          title: "That’s the longest stretch done.",
+          titleWeight: 500,
+          subtitle: "Eight shorter prompts ahead.",
+          italicSubtitle: true,
           showStageMap: true,
           stageMapCurrent: 3,
           showPauseLink: true,
-          cta: "Begin Stage 3",
+          cta: "Keep going",
           next: { kind: "stage-intro", stage: 3 },
         },
       },
@@ -373,7 +373,7 @@ export const voiceTrainingScript: VoiceStage[] = [
           friend:
             "Hey friend, I know it’s been a long day. Take a breath. Let it all go for a minute. You don’t have to fix anything tonight. You don’t have to be strong right now. Just rest. You’ve done enough today. More than enough. I’m proud of you, even if you don’t feel like you earned it. You did. Goodnight, my friend. Rest easy.",
           parent:
-            "Hey, it’s me. I hope you’re resting. You’ve done so much — more than you probably realize. All those years of taking care of everyone else, I just want you to know: you can rest now. Close your eyes. Everything’s okay. I’m here, and I love you. More than I always say. Goodnight. Sleep well. I’ll talk to you soon.",
+            "Hey, it’s me. I hope you’re resting. You’ve done so much. More than you probably realize. All those years of taking care of everyone else, I just want you to know: you can rest now. Close your eyes. Everything’s okay. I’m here, and I love you. More than I always say. Goodnight. Sleep well. I’ll talk to you soon.",
           default:
             "Hey, close your eyes for a minute. Everything’s okay. Whatever happened today, you made it through. And that’s enough. You don’t have to carry anything right now. Just breathe. Let everything get quiet. You’re safe, you’re cared for, and tomorrow’s a fresh start. Goodnight. Sleep well. I’m glad you’re here.",
         },
@@ -430,7 +430,7 @@ export const voiceTrainingScript: VoiceStage[] = [
           "Read it the way you’d want it remembered.",
         emotionalTone: "playful/light",
         lineType: "simple",
-        line: "You know what always makes me laugh? When everything goes wrong at once. Like, you spill your coffee, and then you slip on it, and then your phone rings and you grab it with your wet hand and it flies across the room, and the dog thinks it’s a toy so now he’s running off with it, and you’re chasing the dog in your socks on a wet floor. And somehow nobody’s around to see any of it. Or worse — everyone is. What do you even do at that point? You just have to stand there and laugh. Because life is ridiculous, and so are we.",
+        line: "You know what always makes me laugh? When everything goes wrong at once. Like, you spill your coffee, and then you slip on it, and then your phone rings and you grab it with your wet hand and it flies across the room, and the dog thinks it’s a toy so now he’s running off with it, and you’re chasing the dog in your socks on a wet floor. And somehow nobody’s around to see any of it. Or worse. Everyone is. What do you even do at that point? You just have to stand there and laugh. Because life is ridiculous, and so are we.",
       },
       // ---------------------------------------------------------------
       // Prompt 25 — relationshipGoodbye

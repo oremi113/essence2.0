@@ -288,9 +288,11 @@ function EntryView({
 }) {
   return (
     <div className="record-step">
-      <div className="record-eyebrow">STEP 2</div>
-      <h1 className="record-title">Your Voice Journey</h1>
-      <p className="record-subtitle">25 moments that capture your full range</p>
+      <div className="record-eyebrow">VOICE KEEPSAKE · 25 MOMENTS</div>
+      <h1 className="record-title">Save your voice.</h1>
+      <p className="record-subtitle">
+        Save something only you can give. This is for the people who love you.
+      </p>
 
       <StageMap currentStage={1} />
 
@@ -298,8 +300,12 @@ function EntryView({
         <BreathStone state="ready" size={200} />
       </div>
 
+      <p className="record-microcopy" style={{ marginTop: 0 }}>
+        Twenty-five prompts · 10–15 minutes
+      </p>
+
       <div className="record-ctas">
-        <PrimaryButton onClick={onContinue}>Begin voice training</PrimaryButton>
+        <PrimaryButton onClick={onContinue}>Begin</PrimaryButton>
         <LinkButton onClick={onDoLater}>
           I&apos;ll do this later
         </LinkButton>
@@ -313,15 +319,13 @@ function EntryView({
 function GroundingView({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="record-step record-step--centered">
-      <div className="record-eyebrow">BEFORE WE BEGIN</div>
-      <h1 className="record-title">25 Moments</h1>
-      <p className="record-subtitle">Each captures a different facet of who you are</p>
+      <div className="record-eyebrow">VOICE KEEPSAKE · BEFORE YOU BEGIN</div>
+      <h1 className="record-title">This is for them.</h1>
+      <p className="record-subtitle">Speak as you would to someone who knows you.</p>
 
       <div className="record-stone">
         <BreathStone state="idle" size={200} />
       </div>
-
-      <p className="record-microcopy">11–14 minutes</p>
 
       <div className="record-ctas">
         <PrimaryButton onClick={onContinue}>I&apos;m ready</PrimaryButton>
@@ -354,15 +358,19 @@ function MicPermissionView({
 
   return (
     <div className="record-step record-step--centered">
-      <div className="record-eyebrow">SETUP</div>
-      <h1 className="record-title">Microphone Access</h1>
-      <p className="record-subtitle">We need permission to record your voice</p>
+      <div className="record-eyebrow">VOICE KEEPSAKE · SETUP</div>
+      <h1 className="record-title">Your phone needs to hear you.</h1>
+      <p className="record-subtitle">We only record when you tap.</p>
 
       <div className="record-stone">
         <div className="record-mic-icon">
           <MicIcon size={28} stroke="var(--color-mineral)" />
         </div>
       </div>
+
+      <p className="record-microcopy" style={{ marginTop: 0 }}>
+        Your voice stays yours.
+      </p>
 
       {error && (
         <p className="record-microcopy" style={{ color: 'var(--color-status-error)' }}>
@@ -373,9 +381,6 @@ function MicPermissionView({
       <div className="record-ctas">
         <PrimaryButton onClick={handleAllow}>Allow microphone</PrimaryButton>
         <LinkButton onClick={onSkip}>Not now</LinkButton>
-        <p className="record-mic-hint">
-          You&apos;ll need microphone access to record your voice.
-        </p>
       </div>
     </div>
   );
@@ -386,14 +391,14 @@ function MicPermissionView({
 const CHECKLIST_ITEMS = [
   'Quiet environment',
   'Phone at comfortable distance',
-  'Speak naturally, like telling a story',
+  'Speak naturally, at your own pace',
 ];
 
 function ChecklistView({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="record-step">
-      <div className="record-eyebrow">QUICK CHECK</div>
-      <h1 className="record-title">You&apos;re all set</h1>
+      <div className="record-eyebrow">VOICE KEEPSAKE · SETUP</div>
+      <h1 className="record-title">Before you begin.</h1>
 
       <div className="record-stone">
         <BreathStone state="guidance" size={200} />
@@ -407,6 +412,8 @@ function ChecklistView({ onContinue }: { onContinue: () => void }) {
           </div>
         ))}
       </div>
+
+      <p className="record-checklist-anchor">Someone you love, in mind.</p>
 
       <div className="record-ctas">
         <PrimaryButton onClick={onContinue}>Begin</PrimaryButton>
@@ -442,21 +449,21 @@ function EnvironmentView({ onReady }: { onReady: () => void }) {
 const STAGE_INTRO_CONFIG = {
   1: {
     title: 'Let’s start with simple moments.',
-    subtitle: 'These five prompts establish your natural speaking rhythm.',
-    body: ['Take a breath. We’ll start here.'],
+    body: 'Take a breath. Nothing here needs to be rehearsed.',
+    bodyAside: true,
     cta: 'Begin Stage 1',
   },
   2: {
-    title: 'Now we will explore deeper moments.',
-    subtitle: 'These twelve prompts capture emotional range and personal stories.',
-    body: ['Read at your own pace. Let the words land how they feel.'],
-    cta: 'Continue',
+    title: 'Some of these might stay with you.',
+    body: 'Think of someone as you read. The words will find them.',
+    bodyAside: false,
+    cta: 'Begin Stage 2',
   },
   3: {
-    title: 'These final moments add richness.',
-    subtitle: 'Eight prompts that capture expression, care, and continuity.',
-    body: ['Read like you mean it. You’re almost there.'],
-    cta: 'Continue',
+    title: 'These last ones are yours.',
+    body: 'Read like you mean it. What you say here stays.',
+    bodyAside: false,
+    cta: 'Begin Stage 3',
   },
 } as const;
 
@@ -470,12 +477,14 @@ function StageIntroView({
   onPause: () => void;
 }) {
   const config = STAGE_INTRO_CONFIG[stage];
+  const bodyClass = config.bodyAside ? 'record-body record-body--aside' : 'record-body';
 
   return (
     <div className="record-step">
-      <div className="record-eyebrow">STAGE {stage} OF 3</div>
+      <div className="record-eyebrow">
+        STAGE {stage} OF 3 · {STAGE_LABELS[stage - 1].toUpperCase()}
+      </div>
       <h1 className="record-title">{config.title}</h1>
-      <p className="record-subtitle">{config.subtitle}</p>
 
       <StageMap currentStage={stage} />
 
@@ -483,10 +492,8 @@ function StageIntroView({
         <BreathStone state="ready" size={200} />
       </div>
 
-      <div className="record-body">
-        {config.body.map((line, i) => (
-          <p key={i}>{line}</p>
-        ))}
+      <div className={bodyClass}>
+        <p>{config.body}</p>
       </div>
 
       <div className="record-ctas">
@@ -579,15 +586,27 @@ function PromptView({
   return (
     <div className={`record-step record-step--prompt-stage-${stage}`}>
       <div className="record-eyebrow">
-        {isFinal ? 'FINAL MOMENT' : `MOMENT ${promptIndex + 1} OF ${TOTAL_PROMPT_COUNT}`}
+        {isFinal
+          ? 'FINAL MOMENT'
+          : `MOMENT ${promptIndex + 1} OF ${TOTAL_PROMPT_COUNT} · ${STAGE_LABELS[stage - 1].toUpperCase()}`}
       </div>
 
       {instruction && (
         <p className="record-instruction">{instruction}</p>
       )}
 
-      <div className={`record-prompt-card record-prompt-card--stage-${stage}`}>
-        <p className="record-prompt-card__text">{promptText}</p>
+      <div
+        className={[
+          'record-prompt-card',
+          `record-prompt-card--stage-${stage}`,
+          promptText.trim().split(/\s+/).length > 60 && 'record-prompt-card--long',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <div className="record-prompt-card__scroll">
+          <p className="record-prompt-card__text">{promptText}</p>
+        </div>
       </div>
 
       <div className={`record-waveform ${isRecording ? 'record-waveform--active' : ''}`}>
@@ -747,7 +766,7 @@ function PausedView({ onReturnHome }: { onReturnHome: () => void }) {
   return (
     <div className="record-step record-step--centered">
       <div className="record-eyebrow">PAUSED</div>
-      <h1 className="record-title">Your progress is saved.</h1>
+      <h1 className="record-title">Your voice is waiting.</h1>
       <p className="record-subtitle">Continue whenever you&apos;re ready.</p>
 
       {/* Stone state: guidance because the system is holding space for
@@ -770,8 +789,8 @@ function WorkingView() {
   return (
     <div className="record-step record-step--centered">
       <div className="record-eyebrow">SHAPING YOUR VOICE</div>
-      <h1 className="record-title">Your voice is being preserved.</h1>
-      <p className="record-subtitle">A moment while we shape it.</p>
+      <h1 className="record-title">This part takes care.</h1>
+      <p className="record-subtitle">Your voice is being made into something that lasts.</p>
 
       <div className="record-stone">
         <BreathStone state="working" size={200} />
@@ -794,15 +813,15 @@ function ReadyView({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="record-step record-step--centered record-step--ready">
       <div className="record-eyebrow">YOUR VOICE</div>
-      <h1 className="record-title record-title--weight-500">Your voice is ready.</h1>
-      <p className="record-subtitle">Hear yourself preserved.</p>
+      <h1 className="record-title record-title--weight-500">Your voice is yours.</h1>
+      <p className="record-subtitle">Ready to be kept.</p>
 
       <div className="record-stone">
         <BreathStone state="ready" size={200} />
       </div>
 
       <div className="record-ctas">
-        <PrimaryButton onClick={onContinue}>Hear your voice</PrimaryButton>
+        <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
       </div>
     </div>
   );
