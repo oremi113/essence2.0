@@ -137,3 +137,12 @@ Relationship:
 Relationship:
 - `recipients.user_id -> auth.users.id`
 
+---
+
+## API request validation: Zod (2026-04-19)
+
+- API route bodies are validated with Zod schemas wired through `defineRoute`'s `bodySchema` option. Hand-rolled parsers are not added for new routes.
+- Schemas live in `src/lib/api/schemas.ts` (or adjacent to the route if single-use).
+- On validation failure the factory throws `AppError(VALIDATION_ERROR, ...)` → 400 with `{ error, code, retryable }`. Routes needing a different shape pass `invalidBodyResponse`.
+- Context: PR #31 consolidated route boilerplate but explicitly deferred validation ("No Zod" guardrail, scoped to that PR). PR #37 completed the validation half of that plan. The two-step sequence was intentional — each PR had a clean scope — not a reversal.
+
