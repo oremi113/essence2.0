@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
+import { track } from '@/lib/analytics/client';
 
 type Phase = 'forming' | 'crystallize' | 'preserved' | 'detail';
 
@@ -95,7 +96,6 @@ interface FirstBreathSequenceProps {
 }
 
 export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps) {
-  void voiceProfileId; // reserved for analytics events wired in a later session
   const router = useRouter();
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -146,7 +146,16 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     phase !== 'preserved' || preservedRevealed || prefersReducedMotion;
   const entranceActive = phase === 'preserved' && !prefersReducedMotion;
 
-  // TODO: analytics — breath_stone_sequence_started
+  // Fire-and-forget funnel start. Effect scope (not render scope) so React's
+  // Strict Mode double-render in dev doesn't double-emit.
+  useEffect(() => {
+    track('breath_stone_sequence_started', {
+      voiceProfileId,
+      reducedMotion: prefersReducedMotion,
+    });
+    // Intentionally empty deps — sequence_started is a single mount event.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (prefersReducedMotion) return;
@@ -167,7 +176,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     const tReveal = setTimeout(() => {
       setPreservedRevealed(true);
       setCtaRevealed(true);
-      // TODO: analytics — breath_stone_sequence_completed
+      track('breath_stone_sequence_completed', { voiceProfileId });
     }, PRESERVED_AT_MS + TEXT_REVEAL_DELAY_MS);
 
     return () => {
@@ -177,7 +186,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
       clearTimeout(tRevealTone);
       clearTimeout(tReveal);
     };
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, voiceProfileId]);
 
   // Detail CTA holds back until the chip cascade has settled. Reset on
   // exit so a re-entry (restart flows in future) fires the delay again.
@@ -214,25 +223,25 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   }, [phase, prefersReducedMotion]);
 
   const skipToPreserved = useCallback(() => {
-    // TODO: analytics — breath_stone_skip_tapped
+    track('breath_stone_skip_tapped', { voiceProfileId });
     setAutoPhase('preserved');
     // Delay reveal even on skip so the user still gets the stone's entrance.
     setTimeout(() => {
       setPreservedRevealed(true);
       setCtaRevealed(true);
     }, TEXT_REVEAL_DELAY_MS);
-  }, []);
+  }, [voiceProfileId]);
 
   const goToDetail = useCallback(() => {
-    // TODO: analytics — breath_stone_cta_tapped (phase: preserved)
+    track('breath_stone_cta_tapped', { voiceProfileId, phase: 'preserved' });
     setUserPhase('detail');
-  }, []);
+  }, [voiceProfileId]);
 
   const handleExit = useCallback(() => {
-    // TODO: analytics — breath_stone_cta_tapped (phase: detail)
+    track('breath_stone_cta_tapped', { voiceProfileId, phase: 'detail' });
     // TODO: replace with router.push('/app/checkout') when Session 7 is complete
     router.push('/app/record/complete/stub');
-  }, [router]);
+  }, [router, voiceProfileId]);
 
   const stone = PHASE_CONFIG[phase];
 
