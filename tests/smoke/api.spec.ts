@@ -4,7 +4,7 @@
  * BrowserContext and assert gate behavior.
  */
 import { test, expect } from './fixtures/auth';
-import { seedClipRows, uploadToStorage, getTrainingClip } from './fixtures/supabase';
+import { seedClipRows, getTrainingClip } from './fixtures/supabase';
 
 test.describe('voice prompts API gates', () => {
   test('sequential enforcement: prompt 5 before 1..4 is rejected', async ({

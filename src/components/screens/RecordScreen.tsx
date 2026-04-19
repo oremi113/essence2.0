@@ -121,7 +121,6 @@ export function RecordScreen({ data }: RecordScreenProps) {
   // server-ready propagated.
   useEffect(() => {
     if (data.voiceProfileStatus !== 'ready') return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setView((v) => (v.type === 'working' ? { type: 'ready' } : v));
   }, [data.voiceProfileStatus]);
 

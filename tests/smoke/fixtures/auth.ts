@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks -- `use` here is the Playwright fixture callback, not React's hook. */
 import { test as base, expect, type BrowserContext, type APIRequestContext } from '@playwright/test';
 import {
   createTestUser,
