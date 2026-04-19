@@ -15,35 +15,24 @@ import { assertCanUploadClip } from "@/lib/guards";
 import { recordUsageEvent } from "@/lib/rate-limit";
 import { TOTAL_PROMPT_COUNT } from "@/lib/voice-training/script";
 import { defineRoute } from "@/lib/api/defineRoute";
+import { audioInitUploadSchema } from "@/lib/api/schemas";
 
 const UPLOAD_URL_EXPIRY_SEC = 60 * 10; // 10 min
 
 export const POST = defineRoute(
-  { auth: true, checkBodySize: true },
-  async ({ request, user, requestId }) => {
+  {
+    auth: true,
+    checkBodySize: true,
+    bodySchema: audioInitUploadSchema,
+    invalidBodyResponse: (error) => ({
+      body: { error: error.issues[0]?.message ?? "Invalid body" },
+      status: 400,
+    }),
+  },
+  async ({ body, user, requestId }) => {
     const supabaseAuth = await createSupabaseServerClient();
 
-    const body = await request.json();
-    const kind = body?.kind;
-    const voiceProfileId = body?.voiceProfileId;
-    const promptId = body?.promptId ?? body?.prompt_index;
-    const mime = body?.mime ?? "audio/webm";
-    // Optional: resolved variant keys for debugging (client-provided, not authoritative)
-    const resolvedVariantKeys =
-      body?.resolvedVariantKeys && typeof body.resolvedVariantKeys === "object"
-        ? body.resolvedVariantKeys
-        : null;
-
-    if (kind !== "training_clip") {
-      return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
-    }
-    if (!voiceProfileId || typeof voiceProfileId !== "string") {
-      return NextResponse.json({ error: "voiceProfileId required" }, { status: 400 });
-    }
-    const promptIndex = promptId != null ? Number(promptId) : undefined;
-    if (promptIndex == null || !Number.isInteger(promptIndex) || promptIndex < 1) {
-      return NextResponse.json({ error: "promptId (prompt_index) required and must be >= 1" }, { status: 400 });
-    }
+    const { voiceProfileId, promptIndex, mime, resolvedVariantKeys } = body;
 
     // --- Upper bound: V2 script has exactly 25 prompts ---
     if (promptIndex > TOTAL_PROMPT_COUNT) {

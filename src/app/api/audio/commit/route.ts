@@ -8,25 +8,25 @@ import { AUDIO_BUCKET } from "@/lib/audio/storage-paths";
 import { NextResponse } from "next/server";
 import { logEvent, logError } from "@/lib/logger";
 import { defineRoute } from "@/lib/api/defineRoute";
+import { audioCommitSchema } from "@/lib/api/schemas";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const MIN_BYTES = 5 * 1024; // 5KB
 
 export const POST = defineRoute(
-  { auth: true, checkBodySize: true },
-  async ({ request, user, requestId }) => {
+  {
+    auth: true,
+    checkBodySize: true,
+    bodySchema: audioCommitSchema,
+    invalidBodyResponse: (error) => ({
+      body: { error: error.issues[0]?.message ?? "Invalid body" },
+      status: 400,
+    }),
+  },
+  async ({ body, user, requestId }) => {
     const supabaseAuth = await createSupabaseServerClient();
 
-    const body = await request.json();
-    const kind = body?.kind;
-    const id = body?.id;
-
-    if (kind !== "training_clip") {
-      return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
-    }
-    if (!id) {
-      return NextResponse.json({ error: "id required" }, { status: 400 });
-    }
+    const { id } = body;
 
     const { data: row, error: fetchError } = await supabaseAuth
       .from("training_clips")
