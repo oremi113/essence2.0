@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import {
   useUploadPipeline,
@@ -61,11 +61,6 @@ function baseConfig<TMeta = { name: string }>(
 
 const sampleBlob = () => new Blob(['hello'], { type: 'audio/webm' });
 const sampleMeta = () => ({ name: 'clip.webm' });
-
-beforeEach(() => {
-  // Silence unhandled-rejection noise from upload() errors in tests that
-  // deliberately trigger rejection but await via try/catch.
-});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -373,6 +368,20 @@ describe('useUploadPipeline — cancel', () => {
     expect(result.current.status).toBe<UploadStatus>('failed');
   });
 
+  it('cancel before any upload is a no-op', () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const { result } = renderHook(() => useUploadPipeline(baseConfig()));
+
+    expect(result.current.status).toBe<UploadStatus>('idle');
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    expect(result.current.status).toBe<UploadStatus>('idle');
+    expect(result.current.error).toBeNull();
+  });
+
   it('cancel after success is a no-op', async () => {
     const fetchMock = happyPathFetch();
     vi.stubGlobal('fetch', fetchMock);
@@ -486,6 +495,34 @@ describe('useUploadPipeline — config hooks', () => {
     expect(buildInitBody).toHaveBeenCalledWith({ name: 'x.webm' });
     const initCallBody = (fetchMock.mock.calls[0][1] as RequestInit).body;
     expect(initCallBody).toBe(JSON.stringify({ wrapped: 'x.webm' }));
+  });
+
+  it('default buildInitBody sends meta directly as the init body', async () => {
+    const fetchMock = happyPathFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => useUploadPipeline(baseConfig()));
+
+    await act(async () => {
+      await result.current.upload(sampleBlob(), { name: 'x.webm' });
+    });
+
+    const initCallBody = (fetchMock.mock.calls[0][1] as RequestInit).body;
+    expect(initCallBody).toBe(JSON.stringify({ name: 'x.webm' }));
+  });
+
+  it('default buildCommitBody sends { id: init.id } as the commit body', async () => {
+    const fetchMock = happyPathFetch({
+      init: { id: 'row-99', signedUploadUrl: 'https://s3.example/put', requiredHeaders: {} },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => useUploadPipeline(baseConfig()));
+
+    await act(async () => {
+      await result.current.upload(sampleBlob(), sampleMeta());
+    });
+
+    const commitCallBody = (fetchMock.mock.calls[2][1] as RequestInit).body;
+    expect(commitCallBody).toBe(JSON.stringify({ id: 'row-99' }));
   });
 
   it('buildCommitBody receives (meta, init) and controls the commit body', async () => {
