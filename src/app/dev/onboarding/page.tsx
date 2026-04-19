@@ -10,6 +10,11 @@ import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen
  * `onComplete` is stubbed: logs the captured data, waits briefly so
  * the user can see the "loading" state, shows a confirmation alert, then
  * bumps a key so the component re-mounts and the flow resets to screen 1.
+ *
+ * `onUploadAvatar` is stubbed: returns a local object URL so the photo
+ * screen + review card render the just-picked image without hitting
+ * Supabase. Useful for previewing the visual flow without setting up
+ * Storage locally.
  */
 export default function OnboardingDevPage() {
   const [runId, setRunId] = useState(0);
@@ -20,8 +25,7 @@ export default function OnboardingDevPage() {
       lastName: string,
       dob: string,
       city: string,
-      stateCode: string,
-      hasPhoto: boolean
+      stateCode: string
     ) => {
       console.log('[dev/onboarding] mock onComplete:', {
         firstName,
@@ -29,7 +33,6 @@ export default function OnboardingDevPage() {
         dob,
         city,
         stateCode,
-        hasPhoto,
       });
       await new Promise((resolve) => setTimeout(resolve, 900));
       alert(
@@ -39,7 +42,6 @@ export default function OnboardingDevPage() {
           `name:  ${firstName} ${lastName}`,
           `dob:   ${dob}`,
           `city:  ${city}, ${stateCode}`,
-          `photo: ${hasPhoto ? 'added' : 'skipped'}`,
           '',
           'In production this writes to profiles and redirects to /app/record.',
           'Restarting the flow from screen 1.',
@@ -50,14 +52,29 @@ export default function OnboardingDevPage() {
     []
   );
 
+  const mockUpload = useCallback(async (formData: FormData) => {
+    const file = formData.get('file');
+    if (!(file instanceof File)) throw new Error('No file');
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    return { avatarUrl: URL.createObjectURL(file) };
+  }, []);
+
   const data: OnboardingScreenData = {
     firstName: null,
     lastName: null,
     dateOfBirth: null,
     city: null,
     state: null,
+    avatarUrl: null,
     isCompleted: false,
   };
 
-  return <OnboardingScreen key={runId} data={data} onComplete={mockComplete} />;
+  return (
+    <OnboardingScreen
+      key={runId}
+      data={data}
+      onComplete={mockComplete}
+      onUploadAvatar={mockUpload}
+    />
+  );
 }

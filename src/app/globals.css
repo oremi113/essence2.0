@@ -1245,6 +1245,37 @@
     opacity: 1;
   }
 
+  /* Surfaces server-side validation failures (mime, size, network).
+     Stays visible until the user picks a different file. */
+  .onboarding-photo-error {
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-status-error);
+    margin: 8px auto 0;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  /* Round photo on the review card — sits above the data rows so the
+     user sees the image they uploaded when verifying their profile. */
+  .onboarding-review-card__avatar {
+    align-self: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .onboarding-review-card__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
   /* ─── ONBOARDING — TIME BADGE (Screen 6) ────────────────── */
 
   /* Total-time row (Screen 6). Same warm-oat pill color as the

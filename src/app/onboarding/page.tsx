@@ -1,5 +1,14 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServiceClient } from '@/lib/supabase/service';
+import {
+  AVATAR_BUCKET,
+  AVATAR_MAX_BYTES,
+  AVATAR_ALLOWED_MIME,
+  avatarObjectPath,
+  extensionForMime,
+  getAvatarSignedUrl,
+} from '@/lib/profile';
 import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen.types';
 import { OnboardingPageClient } from './OnboardingPageClient';
 
@@ -42,7 +51,7 @@ export default async function OnboardingPage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'first_name, last_name, display_name, date_of_birth, city, state, onboarding_completed_at'
+      'first_name, last_name, display_name, date_of_birth, city, state, avatar_storage_bucket, avatar_storage_path, onboarding_completed_at'
     )
     .eq('user_id', user.id)
     .maybeSingle();
@@ -61,12 +70,22 @@ export default async function OnboardingPage() {
   const fallbackFirst = parts[0] ?? null;
   const fallbackLast = parts.slice(1).join(' ') || null;
 
+  // Resume case: if the user uploaded a photo on a prior session, mint a
+  // fresh signed URL so the photo screen and review card render it.
+  const serviceClient = createSupabaseServiceClient();
+  const avatarUrl = await getAvatarSignedUrl(
+    serviceClient,
+    profile?.avatar_storage_bucket ?? null,
+    profile?.avatar_storage_path ?? null
+  );
+
   const data: OnboardingScreenData = {
     firstName: profile?.first_name ?? fallbackFirst,
     lastName: profile?.last_name ?? fallbackLast,
     dateOfBirth: profile?.date_of_birth ?? null,
     city: profile?.city ?? null,
     state: profile?.state ?? null,
+    avatarUrl,
     isCompleted: false,
   };
 
@@ -79,8 +98,7 @@ export default async function OnboardingPage() {
     lastName: string,
     dateOfBirth: string,
     city: string,
-    stateCode: string,
-    hasPhoto: boolean
+    stateCode: string
   ) {
     'use server';
     const supabase = await createSupabaseServerClient();
@@ -112,10 +130,70 @@ export default async function OnboardingPage() {
         onboarding_completed_at: new Date().toISOString(),
       })
       .eq('user_id', user.id);
-
-    // hasPhoto captured for a future session that wires Supabase Storage.
-    void hasPhoto;
   }
 
-  return <OnboardingPageClient data={data} onComplete={completeOnboarding} />;
+  // Server action — uploads the Screen 10 photo to the private
+  // `profile-photos` bucket and writes the path to profiles. Returns a
+  // fresh signed URL so the wizard can show the just-uploaded image
+  // immediately without waiting for a re-render.
+  //
+  // Validation: mime allowlist + 2MB cap. We trust the client's chosen
+  // mime as a hint but enforce both sides server-side.
+  async function uploadAvatar(formData: FormData): Promise<{ avatarUrl: string }> {
+    'use server';
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not signed in');
+
+    const file = formData.get('file');
+    if (!(file instanceof File)) throw new Error('No file uploaded');
+
+    const allowed = AVATAR_ALLOWED_MIME as readonly string[];
+    if (!allowed.includes(file.type)) {
+      throw new Error('Unsupported image type. Use JPEG, PNG, or WebP.');
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      throw new Error('Image is too large. Please choose one under 2MB.');
+    }
+
+    const ext = extensionForMime(file.type);
+    if (!ext) throw new Error('Unsupported image type.');
+
+    const path = avatarObjectPath(user.id, ext);
+    const service = createSupabaseServiceClient();
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { error: uploadError } = await service.storage
+      .from(AVATAR_BUCKET)
+      .upload(path, buffer, {
+        contentType: file.type,
+        upsert: true, // re-upload overwrites in place
+      });
+    if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+    // Persist the path; the bucket is constant today but stored alongside
+    // for future-proofing (see migration comment).
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        avatar_storage_bucket: AVATAR_BUCKET,
+        avatar_storage_path: path,
+      })
+      .eq('user_id', user.id);
+    if (updateError) throw new Error(`Save failed: ${updateError.message}`);
+
+    const signed = await getAvatarSignedUrl(service, AVATAR_BUCKET, path);
+    if (!signed) throw new Error('Could not generate preview URL.');
+    return { avatarUrl: signed };
+  }
+
+  return (
+    <OnboardingPageClient
+      data={data}
+      onComplete={completeOnboarding}
+      onUploadAvatar={uploadAvatar}
+    />
+  );
 }

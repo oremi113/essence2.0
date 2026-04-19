@@ -15,21 +15,34 @@ export interface OnboardingScreenData {
   city: string | null;
   /** 2-letter US state code (e.g. "CA"), or null. */
   state: string | null;
+  /** Short-lived signed URL for the user's avatar, or null if no photo
+   *  has been uploaded yet. Refreshed on every page load. */
+  avatarUrl: string | null;
   /** Whether onboarding has already been completed. If true, the
    *  wrapping page should redirect rather than re-render the wizard. */
   isCompleted: boolean;
 }
 
 /**
- * Server action signature used by the wizard. Called once from Screen 11.
+ * Server action signature used by the wizard. Called once from Screen 12.
  * `dateOfBirth` arrives as a YYYY-MM-DD string; `state` is a 2-letter US
- * code. `hasPhoto` is a UI flag only — Storage wiring is deferred.
+ * code. The avatar (if any) is uploaded out-of-band on Screen 10 via
+ * OnUploadAvatar.
  */
 export type OnCompleteOnboarding = (
   firstName: string,
   lastName: string,
   dateOfBirth: string,
   city: string,
-  state: string,
-  hasPhoto: boolean
+  state: string
 ) => Promise<void>;
+
+/**
+ * Server action for the optional Screen 10 photo upload. Returns the new
+ * signed URL on success so the wizard can render the just-uploaded image
+ * inline (the next /onboarding load would also resolve a signed URL via
+ * page.tsx, but holding the user for a navigation feels worse).
+ *
+ * Throws on validation/upload failure — the caller surfaces a retry.
+ */
+export type OnUploadAvatar = (formData: FormData) => Promise<{ avatarUrl: string }>;
