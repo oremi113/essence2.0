@@ -11,6 +11,7 @@ import {
   AVATAR_ALLOWED_MIME,
   AVATAR_MAX_BYTES,
 } from '@/lib/profile/avatar-shared';
+import { ONBOARDING_TIMING } from '@/lib/config/onboarding-timing';
 
 export type PhotoState =
   | 'empty'
@@ -61,8 +62,8 @@ export function usePhotoUpload({
   onUpload,
   onSuccess,
   onStoneStateChange,
-  minRingMs = 400,
-  stoneBeatMs = 1200,
+  minRingMs = ONBOARDING_TIMING.PHOTO_MIN_RING_MS,
+  stoneBeatMs = ONBOARDING_TIMING.PHOTO_STONE_BEAT_MS,
 }: UsePhotoUploadOptions): UsePhotoUploadResult {
   const [state, setState] = useState<PhotoState>(
     initialPhotoUrl ? 'filled' : 'empty'

@@ -1,6 +1,7 @@
 'use client';
 
 import { PrimaryButton } from '@/components/ui';
+import { ONBOARDING_TIMING } from '@/lib/config/onboarding-timing';
 import { StepShell, StoneSlot } from './chrome';
 
 // ─── SCREEN 2 — Purpose / cinematic conveyor ──────────────────────
@@ -14,16 +15,11 @@ const CONVEYOR_PHRASES: readonly string[] = [
   'A goodbye, whenever it comes.',
 ];
 
-// Conveyor rhythm — named beats, not magic numbers. Edit individual
-// values to tune the tempo; finalLand and ctaLand recompute.
-const INTRO_DELAY = 1000;     // ms before the first phrase fires
-const PHRASE_DURATION = 1500; // ms between phrase entries (stagger)
-const FINAL_BEAT = 1500;      // ms of silence before "Your voice." lands
-const CTA_BEAT = 3000;        // ms of silence before the CTA fades in
-
 const finalLandMs =
-  INTRO_DELAY + CONVEYOR_PHRASES.length * PHRASE_DURATION + FINAL_BEAT;
-const ctaLandMs = finalLandMs + CTA_BEAT;
+  ONBOARDING_TIMING.CONVEYOR_INTRO_DELAY_MS +
+  CONVEYOR_PHRASES.length * ONBOARDING_TIMING.CONVEYOR_PHRASE_DURATION_MS +
+  ONBOARDING_TIMING.CONVEYOR_FINAL_BEAT_MS;
+const ctaLandMs = finalLandMs + ONBOARDING_TIMING.CONVEYOR_CTA_BEAT_MS;
 
 export function Screen2({ onNext }: { onNext: () => void }) {
   return (
@@ -42,7 +38,14 @@ export function Screen2({ onNext }: { onNext: () => void }) {
           "Your voice." lands as the quiet conclusion. --phrase-index
           drives per-phrase delay via CSS calc; the final phrase and
           CTA delays are set inline so they recompute with phrase count. */}
-      <div className="onboarding-conveyor" aria-hidden="true">
+      <div
+        className="onboarding-conveyor"
+        aria-hidden="true"
+        style={{
+          ['--conveyor-intro' as string]: `${ONBOARDING_TIMING.CONVEYOR_INTRO_DELAY_MS}ms`,
+          ['--conveyor-stagger' as string]: `${ONBOARDING_TIMING.CONVEYOR_PHRASE_DURATION_MS}ms`,
+        }}
+      >
         {CONVEYOR_PHRASES.map((phrase, i) => (
           <span
             key={phrase}
