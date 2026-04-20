@@ -32,7 +32,7 @@ export function Screen12Ready({
           textAlign: 'center',
         }}
       >
-        What you record today will be kept for whenever it&apos;s needed.
+        What you record today will be kept for whenever it&rsquo;s needed.
       </p>
 
       <div className="onboarding-ctas">

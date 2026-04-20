@@ -11,7 +11,7 @@ export function Screen7({ onNext }: { onNext: () => void }) {
       <StoneSlot />
 
       <div className="onboarding-phase-label">YOUR PROFILE</div>
-      <h1 className="onboarding-title">Now, the part that&apos;s about you.</h1>
+      <h1 className="onboarding-title">Now, the part that&rsquo;s about you.</h1>
 
       <div className="onboarding-ctas">
         <PrimaryButton onClick={onNext}>Get started</PrimaryButton>

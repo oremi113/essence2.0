@@ -29,7 +29,7 @@ export function Screen9Review({
 
       <h1 className="onboarding-title">Does this look right?</h1>
       <p className="onboarding-subtitle">
-        We&apos;ll use this to personalize your recording.
+        We&rsquo;ll use this to personalize your recording.
       </p>
 
       <div className="onboarding-review-card">
@@ -64,7 +64,7 @@ export function Screen9Review({
       </div>
 
       <div className="onboarding-ctas">
-        <PrimaryButton onClick={onNext}>Yes, that&apos;s right</PrimaryButton>
+        <PrimaryButton onClick={onNext}>Yes, that&rsquo;s right</PrimaryButton>
       </div>
     </StepShell>
   );

@@ -1184,6 +1184,35 @@
     line-height: 1.5;
   }
 
+  /* Error styling pattern for inputs + per-field message.
+     Validation runs on Continue press only (see Screen8). No shake /
+     bounce / flash — the master spec rules those out in §12.1. */
+  .onboarding-input--error {
+    border-color: var(--color-status-error);
+    background: color-mix(in srgb, var(--color-status-error) 4%, transparent);
+  }
+
+  .onboarding-input--error:focus {
+    outline: 2px solid color-mix(in srgb, var(--color-status-error) 30%, transparent);
+    outline-offset: 2px;
+    border-color: var(--color-status-error);
+    background: color-mix(in srgb, var(--color-status-error) 4%, transparent);
+  }
+
+  .onboarding-field__error {
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    color: var(--color-status-error);
+    line-height: 1.4;
+    margin: 6px 0 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .onboarding-field__error[hidden] {
+    display: none;
+  }
+
   /* ─── ONBOARDING — PHOTO CIRCLE (Screen 9) ──────────────── */
 
   .onboarding-photo {
@@ -1389,16 +1418,22 @@
      Primary CTA starts at 40% opacity, locked, then unlocks
      after 3500ms. Class toggled via React state. */
 
+  /* Visual lock only — keyboard/mouse activation is gated by the
+     button's aria-disabled + onClick/onKeyDown guards in Screen 11,
+     not by pointer-events: none (which would also suppress the
+     not-allowed cursor). */
   .onboarding-ctas--locked .btn-primary {
     opacity: 0.4;
-    pointer-events: none;
     transition: opacity 800ms cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 
   .onboarding-ctas--unlocked .btn-primary {
     opacity: 1;
-    pointer-events: auto;
     transition: opacity 800ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .btn-primary[aria-disabled="true"] {
+    cursor: not-allowed;
   }
 
   .onboarding-priming-hint {
@@ -1432,27 +1467,29 @@
 
   .onboarding-review-row {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 12px;
+    align-items: flex-start;
+    gap: var(--space-lg);
   }
 
   .onboarding-review-row__label {
+    flex: 0 0 auto;
+    min-width: 120px;
     font-family: var(--font-body);
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--color-text-tertiary);
-    flex-shrink: 0;
   }
 
   .onboarding-review-row__value {
+    flex: 1 1 auto;
+    min-width: 0;
     font-family: var(--font-body);
     font-size: 15px;
     color: var(--color-text-primary);
-    text-align: right;
     line-height: 1.4;
+    overflow-wrap: break-word;
     word-break: break-word;
   }
 

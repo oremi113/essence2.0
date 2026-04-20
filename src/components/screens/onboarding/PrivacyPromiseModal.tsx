@@ -73,7 +73,7 @@ export function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
                   We will <span className="privacy-modal__emphasis">never</span> use your recordings to train AI models.
                 </p>
                 <p className="privacy-modal__proof">
-                  Not ours. Not anyone else&apos;s.
+                  Not ours. Not anyone else&rsquo;s.
                 </p>
               </li>
               <li className="privacy-modal__promise">

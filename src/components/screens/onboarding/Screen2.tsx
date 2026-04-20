@@ -30,7 +30,7 @@ export function Screen2({ onNext }: { onNext: () => void }) {
     <StepShell>
       <StoneSlot />
 
-      <h1 className="onboarding-title">Here&apos;s what ESSENCE does.</h1>
+      <h1 className="onboarding-title">Here&rsquo;s what ESSENCE does.</h1>
 
       <div className="onboarding-body">
         <p>You record a few minutes of natural speech.</p>
