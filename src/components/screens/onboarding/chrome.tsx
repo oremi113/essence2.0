@@ -8,7 +8,13 @@
  */
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { ChevronLeftIcon } from '@/components/icons';
 
@@ -47,6 +53,33 @@ export const SCREEN_CONFIG: Record<number, ScreenConfig> = {
 };
 
 const DEFAULT_SETTLE_DELAY_MS = 500;
+
+// Local reduced-motion subscription. Will be replaced by a shared
+// `useReducedMotion` hook when B3 lands; keeping it inline here avoids
+// speculating about that hook's final shape and location.
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+function subscribeReducedMotion(callback: () => void) {
+  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
+  mq.addEventListener('change', callback);
+  return () => mq.removeEventListener('change', callback);
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+function getReducedMotionServerSnapshot() {
+  return false;
+}
+
+function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot
+  );
+}
 
 // ─── ProgressDots ─────────────────────────────────────────────────
 
@@ -157,9 +190,36 @@ export function PersistentStone({
 
   const display: BreathStoneState = override ?? settled;
 
+  // Act-transition wash (Bucket B2): one-shot mineral overlay on the
+  // 6 → 7 crossfade. Detect the transition during render by comparing
+  // the tracked previous screen against the current — the React-
+  // sanctioned pattern for "derive state from prop changes" that
+  // avoids a setState-in-effect cascade. washEpoch bumps on each
+  // qualifying transition so a fresh <span> mounts (forwards animation
+  // replays on every 6 → 7 arrival, including back-and-forth).
+  // Skipped entirely under prefers-reduced-motion.
+  const reducedMotion = usePrefersReducedMotion();
+  const [prevScreen, setPrevScreen] = useState(currentScreen);
+  const [washEpoch, setWashEpoch] = useState<number | null>(null);
+
+  if (prevScreen !== currentScreen) {
+    if (prevScreen === 6 && currentScreen === 7 && !reducedMotion) {
+      setWashEpoch((e) => (e ?? 0) + 1);
+    }
+    setPrevScreen(currentScreen);
+  }
+
   return (
     <div className="onboarding-persistent-stone" aria-hidden="true">
       <BreathStone state={display} size={144} />
+      {washEpoch !== null && (
+        <span
+          key={washEpoch}
+          className="onb-act-wash"
+          aria-hidden="true"
+          onAnimationEnd={() => setWashEpoch(null)}
+        />
+      )}
     </div>
   );
 }
