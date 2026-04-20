@@ -17,11 +17,14 @@ Do not add features outside MVP scope without updating `docs/DECISIONS.md`.
 Public:
 - NEXT_PUBLIC_SUPABASE_URL
 - NEXT_PUBLIC_SUPABASE_ANON_KEY
+- NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (Session 7b)
 
 Server-only:
 - SUPABASE_SERVICE_ROLE_KEY
 - ELEVENLABS_API_KEY
 - APP_URL (or NEXT_PUBLIC_APP_URL if chosen)
+- STRIPE_SECRET_KEY (Session 7b)
+- STRIPE_WEBHOOK_SECRET (Session 7b — from `stripe listen` locally, or production webhook signing secret)
 
 Rules:
 - Never use `NEXT_PUBLIC_*` for secrets
@@ -65,6 +68,12 @@ Supabase:
 ElevenLabs:
 - Rotate key in ElevenLabs dashboard
 - Update Vercel env + local `.env.local`
+
+Stripe:
+- Rotate secret key: dashboard.stripe.com → Developers → API keys → roll
+- Rotate webhook signing secret: dashboard → Developers → Webhooks → endpoint → roll
+- Update Vercel env + local `.env.local` after every roll
+- Test (sandbox) keys: lower urgency, but rotate if leaked to a public surface
 
 ## Common failure modes
 
