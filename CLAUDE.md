@@ -72,3 +72,22 @@ belongs in the screen component. If a screen grows an `import
   screens all you want; the route stays.
 - `/dev/{name}` pages are permanent scaffolding. If a screen exists,
   its dev page exists.
+
+## Debug / scratch artifacts
+
+Throwaway artifacts — Playwright screenshots, accessibility snapshots,
+ad-hoc JSON dumps, anything produced while debugging — go in `/.tmp/`
+at the repo root. That path is gitignored. **Never** drop PNGs,
+snapshots, or scratch logs at the repo root or under `src/` — they'll
+clutter `git status` and leak into commits if anyone stages with
+`git add .`.
+
+When calling tools that take a `filename` argument (Playwright MCP,
+etc.), always prefix with `.tmp/`:
+
+```
+mcp__playwright__browser_take_screenshot({ filename: ".tmp/vault-reveal.png", ... })
+```
+
+Clean `.tmp/` whenever it starts feeling noisy — nothing there should
+be load-bearing.
