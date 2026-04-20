@@ -564,9 +564,17 @@
      The cinematic intro (blur + scale-up) plays exactly once on first
      mount because there are no remounts to restart it. */
   .onboarding-persistent-stone {
+    /* Canonical stone size — mirrored in chrome.tsx's <BreathStone size={144}>.
+       Exposed as a custom property so `.onb-act-wash` (and any future overlay
+       siblings) can size against the stone without the wrapper's intrinsic
+       width/height becoming load-bearing. If this changes, update the size
+       prop in PersistentStone to match. */
+    --stone-size: 144px;
     position: absolute;
     top: calc(80px + 40px);  /* wrapper pad-top + step pad-top */
     left: 50%;
+    width: var(--stone-size);
+    height: var(--stone-size);
     transform: translateX(-50%) scale(0.88);
     z-index: 1;
     pointer-events: none;
@@ -602,8 +610,19 @@
      warmer." Mount is React-gated on prev===6 && current===7 &&
      !reducedMotion; animation unmounts on completion via onAnimationEnd. */
   .onb-act-wash {
+    /* Explicit dimensions (rather than `inset: 0`) so the wash is decoupled
+       from the wrapper's intrinsic size. A zero-intrinsic-size wrapper —
+       possible briefly on first paint before the canvas resize effect runs,
+       or after any future refactor that changes the persistent-stone
+       container — would otherwise make the wash render at 0×0. Anchored
+       top-left to match the canvas's own top-left placement inside the
+       wrapper. `--stone-size` is declared on `.onboarding-persistent-stone`
+       with a 144px fallback. */
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: var(--stone-size, 144px);
+    height: var(--stone-size, 144px);
     border-radius: 50%;
     background: radial-gradient(
       circle at center,
@@ -1010,20 +1029,107 @@
     }
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     Reduced motion — destination states, no oscillation, no translate.
+     Matches the user's baseline expectation of software under this setting
+     (macOS Reduce Motion / iOS Reduce Motion / Windows "Show animations"
+     off). The BreathStone engine handles its own reduced-motion branch
+     via the `reducedMotion` prop threaded through `chrome.tsx`; CSS here
+     covers layout animations only.
+     ═══════════════════════════════════════════════════════════════════════ */
   @media (prefers-reduced-motion: reduce) {
-    .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed),
+    /* Collapse staggered content reveals to their destination state. The
+       `animation: none` + explicit opacity/transform ensures children
+       arrive composed, not mid-keyframe. `!important` is needed because
+       the rules above attach animation with `animation-name` and
+       inline `animation-delay` which have higher specificity than a
+       selector-matched property. */
+    .onboarding-step > *:not(.onboarding-stone-slot),
     .onboarding-body > * {
-      transform: none;
-      animation-duration: 500ms;
-      animation-timing-function: ease-out;
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
     }
-    @keyframes onb-reveal {
-      to { opacity: 1; }
-    }
+
+    /* Persistent stone intro — no blur / scale reveal. The base rule sets
+       opacity: 0 + scale(0.88) and relies on the `onb-stone-reveal forwards`
+       animation to settle to the destination; under reduced motion we kill
+       the animation and pin the destination values explicitly. */
     .onboarding-persistent-stone {
-      filter: none;
-      transform: translateX(-50%);
-      animation-duration: 600ms;
+      opacity: 1 !important;
+      filter: none !important;
+      transform: translateX(-50%) !important;
+      animation: none !important;
+    }
+
+    /* Screen-level crossfade: opacity only, shorter duration, no translate.
+       Preserves the "screen arrived" signal without vestibular load. */
+    .onboarding-slide-forward,
+    .onboarding-slide-back {
+      animation: onb-frame-crossfade-reduced 200ms var(--ease-essence) both;
+    }
+
+    @keyframes onb-frame-crossfade-reduced {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* Screen 2 conveyor: suppress entirely. The body paragraphs above it
+       already carry the screen's meaning. The conveyor is pure decoration. */
+    .onboarding-conveyor {
+      display: none;
+    }
+
+    /* Screen 2 delayed CTA: render immediately with no fade-in, no delay.
+       The multi-second animation-delay from Screen2.tsx only makes sense
+       if the conveyor plays. */
+    .onboarding-ctas--delayed {
+      animation: none !important;
+      animation-delay: 0ms !important;
+      opacity: 1 !important;
+    }
+
+    /* Screen 11 priming hint: suppress entirely. The hint is motion-paired
+       ("Breathe with the stone for a moment") and has no meaning without
+       the stone's breath cycle. The 3500ms JS lock is also bypassed in
+       Screen11.tsx so the button mounts active. */
+    .onboarding-priming-hint {
+      display: none;
+    }
+
+    /* Screen 11 priming CTA: skip the lock state visually. The component
+       short-circuits `unlocked` to `true` under reduced motion, but this
+       belt-and-suspenders rule ensures even a momentary `--locked` class
+       on mount doesn't dim the button. */
+    .onboarding-ctas--locked .btn-primary {
+      opacity: 1 !important;
+      transition: none;
+    }
+
+    /* ─── Screen 10 (B1) photo control ────────────────────────────────
+       The upload ring, photo fade-in, success confirmation, replace link,
+       and error copy all default to animated reveals. Under reduced
+       motion they collapse to their destination states; the ring holds
+       at a dim static opacity so the "uploading" signal remains visible
+       without oscillation. The stone beat on upload (idle → ready → idle
+       over 1200ms) is handled by the engine's reducedMotion branch — it
+       snaps between states rather than lerping, which is correct behavior. */
+    .onboarding-photo__ring {
+      animation: none !important;
+      opacity: 0.25;
+      transform: none !important;
+    }
+
+    .onboarding-photo__img {
+      animation: none !important;
+      opacity: 1;
+    }
+
+    .onboarding-photo-confirmation,
+    .onboarding-photo__replace,
+    .onboarding-photo-error {
+      animation: none !important;
+      opacity: 1 !important;
     }
   }
 

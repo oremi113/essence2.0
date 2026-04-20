@@ -277,6 +277,15 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
 
 // ─── ENGINE CLASS ───────────────────────────────────────────────────────────
 
+export interface SetStateOptions {
+  /** Called once when a `celebrate` gesture completes. */
+  onCelebrateEnd?: () => void;
+  /** When true, snap to target with zero amplitude/irregularity, gate
+   *  per-frame motion overlays, and halt the draw loop after one paint.
+   *  Honors the user's `(prefers-reduced-motion: reduce)` preference. */
+  reducedMotion?: boolean;
+}
+
 export class BreathStoneEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -296,17 +305,27 @@ export class BreathStoneEngine {
   private celebrateStartTime: number | null = null;
   private onCelebrateEnd?: () => void;
 
+  // Reduced-motion: freezes breath amplitude/irregularity to 0, gates
+  // motion-driven overlays in the draw loop, and short-circuits the
+  // animation loop to a single frame per state change.
+  private reducedMotion = false;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
   }
 
-  setState(state: BreathStoneState, onCelebrateEnd?: () => void) {
+  setState(state: BreathStoneState, options: SetStateOptions = {}) {
     const prev = this.currentState;
+    const wasReducedMotion = this.reducedMotion;
+    const nextReducedMotion = options.reducedMotion ?? false;
+
     this.currentState = state;
+    this.reducedMotion = nextReducedMotion;
+
     if (state === 'celebrate') {
       this.celebrateStartTime = null;
-      this.onCelebrateEnd = onCelebrateEnd;
+      this.onCelebrateEnd = options.onCelebrateEnd;
     }
     // Kill accumulated spring momentum on a real state change. Without
     // this, switching to a state with much larger breathAmplitude (e.g.
@@ -315,9 +334,38 @@ export class BreathStoneEngine {
     if (prev !== state) {
       this.breathVelocity = 0;
     }
+
+    if (nextReducedMotion) {
+      // Engine invariant under reduced motion: amplitude and silhouette
+      // irregularity are pinned at 0 — no breath, no organic wobble. The
+      // stone holds the target state's resting glow / color temp / spark
+      // values so "warm ready", "cool idle", "amber infused" still read.
+      const target = STATE_TARGETS[state];
+      this.s = { ...target, breathAmplitude: 0, irregularity: 0 };
+      this.lastBreathTarget = 1;
+      // Halt any running rAF; paint a single static frame.
+      if (this.animationId !== null) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
+      }
+      this.draw(0);
+      return;
+    }
+
+    // Exiting reduced-motion: resume the animation loop. Lerp re-engages
+    // and chases the target smoothly from the static snapshot.
+    if (wasReducedMotion && this.animationId === null) {
+      this.start();
+    }
   }
 
   start() {
+    // No-op if already running or if reduced-motion has us in static mode.
+    if (this.animationId !== null) return;
+    if (this.reducedMotion) {
+      this.draw(0);
+      return;
+    }
     this.animationId = requestAnimationFrame(this.draw);
   }
 
@@ -335,6 +383,11 @@ export class BreathStoneEngine {
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.ctx.scale(dpr, dpr);
+    // Resizing wipes the canvas. Under reduced motion the rAF loop is
+    // halted, so nothing repaints unless we do it explicitly.
+    if (this.reducedMotion) {
+      this.draw(0);
+    }
   }
 
   // ─── BREATHING PHYSICS ─────────────────────────────────────────────────
@@ -462,32 +515,45 @@ export class BreathStoneEngine {
     // (shimmer ember oscillation, infused ember pulse) before lerping.
     const target: StateParams = { ...STATE_TARGETS[resolvedState] };
 
-    if (resolvedState === 'shimmer') {
-      // Slow ceremonial oscillation — outer glow breathes 0.08 → 0.22 over
-      // ~8s. This is what makes shimmer feel held-and-ceremonial rather
-      // than frozen. Lerp chases smoothly on state entry/exit.
-      target.glowIntensity = 0.15 + Math.sin(timestamp * 0.0008) * 0.07;
-    } else if (resolvedState === 'infused') {
-      // Ember pulse — glow cycles 0.20 → 0.45 over ~6s, same period as
-      // the concentric ripple below so they breathe together.
-      target.glowIntensity = 0.325 + Math.sin(timestamp * 0.00105) * 0.125;
+    // Reduced-motion: freeze time-varying math to 0 so sine-driven
+    // positions (sheen, spark) render at a deterministic phase and any
+    // stray timestamp usage produces a stable frame.
+    const motionTs = this.reducedMotion ? 0 : timestamp;
+
+    if (!this.reducedMotion) {
+      if (resolvedState === 'shimmer') {
+        // Slow ceremonial oscillation — outer glow breathes 0.08 → 0.22 over
+        // ~8s. This is what makes shimmer feel held-and-ceremonial rather
+        // than frozen. Lerp chases smoothly on state entry/exit.
+        target.glowIntensity = 0.15 + Math.sin(timestamp * 0.0008) * 0.07;
+      } else if (resolvedState === 'infused') {
+        // Ember pulse — glow cycles 0.20 → 0.45 over ~6s, same period as
+        // the concentric ripple below so they breathe together.
+        target.glowIntensity = 0.325 + Math.sin(timestamp * 0.00105) * 0.125;
+      }
     }
 
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-    this.s.glowIntensity   = lerp(this.s.glowIntensity,   target.glowIntensity,   0.04);
-    this.s.breathAmplitude = lerp(this.s.breathAmplitude, target.breathAmplitude, 0.03);
-    this.s.irregularity    = lerp(this.s.irregularity,    target.irregularity,    0.03);
-    this.s.colorTemp       = lerp(this.s.colorTemp,       target.colorTemp,       0.04);
-    this.s.backgroundBloom = lerp(this.s.backgroundBloom, target.backgroundBloom, 0.03);
-    this.s.spark           = lerp(this.s.spark,           target.spark,           0.05);
-    this.s.innerPulse      = lerp(this.s.innerPulse,      target.innerPulse,      0.06);
-    this.s.vignette        = lerp(this.s.vignette,        target.vignette,        0.04);
-    this.s.breathSpeed     = lerp(this.s.breathSpeed,     target.breathSpeed,     0.02);
-    this.s.voiceReactive   = lerp(this.s.voiceReactive,   target.voiceReactive,   0.04);
-    this.s.sheen           = lerp(this.s.sheen,           target.sheen,           0.04);
-    this.s.peakHold        = lerp(this.s.peakHold,        target.peakHold,        0.03);
-    this.s.peakTremor      = lerp(this.s.peakTremor ?? 0, target.peakTremor ?? 0, 0.04);
+    // Under reduced-motion `this.s` is snapped to target in `setState` and
+    // the draw loop paints exactly one frame; skipping the lerp keeps the
+    // snapshot clean and avoids re-introducing drift from a partially lerped
+    // previous-state residue.
+    if (!this.reducedMotion) {
+      this.s.glowIntensity   = lerp(this.s.glowIntensity,   target.glowIntensity,   0.04);
+      this.s.breathAmplitude = lerp(this.s.breathAmplitude, target.breathAmplitude, 0.03);
+      this.s.irregularity    = lerp(this.s.irregularity,    target.irregularity,    0.03);
+      this.s.colorTemp       = lerp(this.s.colorTemp,       target.colorTemp,       0.04);
+      this.s.backgroundBloom = lerp(this.s.backgroundBloom, target.backgroundBloom, 0.03);
+      this.s.spark           = lerp(this.s.spark,           target.spark,           0.05);
+      this.s.innerPulse      = lerp(this.s.innerPulse,      target.innerPulse,      0.06);
+      this.s.vignette        = lerp(this.s.vignette,        target.vignette,        0.04);
+      this.s.breathSpeed     = lerp(this.s.breathSpeed,     target.breathSpeed,     0.02);
+      this.s.voiceReactive   = lerp(this.s.voiceReactive,   target.voiceReactive,   0.04);
+      this.s.sheen           = lerp(this.s.sheen,           target.sheen,           0.04);
+      this.s.peakHold        = lerp(this.s.peakHold,        target.peakHold,        0.03);
+      this.s.peakTremor      = lerp(this.s.peakTremor ?? 0, target.peakTremor ?? 0, 0.04);
+    }
 
     // ── 2. BREATHING ────────────────────────────────────────────────────
     // Celebrate is a single gesture, not a breath cycle — it uses a
@@ -542,7 +608,9 @@ export class BreathStoneEngine {
     // and serves as its own gate via the multiplier on `reactiveRadius`.
     // A `> 0.5` threshold used to live here, which caused a visible pop
     // ~200ms into the idle→recording transition when the lerp crossed it.
-    const voiceVolume = (Math.sin(timestamp * 0.003) * 0.5 + 0.5) * 0.15;
+    const voiceVolume = this.reducedMotion
+      ? 0
+      : (Math.sin(timestamp * 0.003) * 0.5 + 0.5) * 0.15;
     const reactiveRadius = currentRadius * (1 + voiceVolume * this.s.voiceReactive);
     const silhouette = this.generateSilhouette(reactiveRadius, 72, this.s.irregularity, timestamp);
 
@@ -589,15 +657,20 @@ export class BreathStoneEngine {
       ctx.fillRect(0, 0, W, H);
     }
 
-    // Ambient particles
-    ctx.globalAlpha = 0.012;
-    for (let i = 0; i < 25; i++) {
-      const px = (this.noise.get(i * 0.2, timestamp * 0.00004) * 0.5 + 0.5) * W;
-      const py = (this.noise.get(i * 0.2 + 100, timestamp * 0.00004) * 0.5 + 0.5) * H;
-      ctx.fillStyle = '#E8DCC8';
-      ctx.fillRect(px, py, 1.5, 1.5);
+    // Ambient particles — gated under reduced-motion so the single static
+    // frame isn't punctuated by drifting specks that would otherwise never
+    // animate (the loop halts, so a lone random placement would just look
+    // like noise against the stone's otherwise still presence).
+    if (!this.reducedMotion) {
+      ctx.globalAlpha = 0.012;
+      for (let i = 0; i < 25; i++) {
+        const px = (this.noise.get(i * 0.2, timestamp * 0.00004) * 0.5 + 0.5) * W;
+        const py = (this.noise.get(i * 0.2 + 100, timestamp * 0.00004) * 0.5 + 0.5) * H;
+        ctx.fillStyle = '#E8DCC8';
+        ctx.fillRect(px, py, 1.5, 1.5);
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
     // ── 5. STONE BODY ────────────────────────────────────────────────────
     ctx.save();
@@ -719,11 +792,16 @@ export class BreathStoneEngine {
 
     // Directional sheen — sunlight moving across surface.
     // "Parchment" character: softer core, longer falloff, no spreading.
-    // Gated out of shimmer — shimmer has its own two-layer counter-rotating
-    // sheen pass below so the state reads as light sweeping across glaze
-    // rather than a wandering point.
-    if (this.s.sheen > 0.01 && resolvedState !== 'shimmer') {
-      const sheenPhase = (timestamp * 0.0004) % (Math.PI * 2);
+    // Gated out of shimmer (which uses the two-layer counter-rotating sweep
+    // below) — except under reduced-motion, where the shimmer-specific
+    // animated layers are suppressed, so we fall back to this single
+    // static sheen so the state still reads as a glazed surface catching
+    // light rather than a matte disc.
+    const useStaticSheen =
+      this.s.sheen > 0.01 &&
+      (resolvedState !== 'shimmer' || this.reducedMotion);
+    if (useStaticSheen) {
+      const sheenPhase = (motionTs * 0.0004) % (Math.PI * 2);
       const sx = Math.cos(sheenPhase) * currentRadius * 0.4;
       const sy = Math.sin(sheenPhase) * currentRadius * 0.4;
       const sheenG = ctx.createRadialGradient(sx, sy, 0, sx, sy, currentRadius * 0.6);
@@ -742,7 +820,8 @@ export class BreathStoneEngine {
     // A single light source in a circle reads mechanical; two highlights
     // at different speeds in opposite directions create the visual
     // interference pattern of light bouncing off glazed ceramic.
-    if (resolvedState === 'shimmer' && this.s.sheen > 0.01) {
+    // Reduced-motion falls through to the single static sheen above.
+    if (resolvedState === 'shimmer' && this.s.sheen > 0.01 && !this.reducedMotion) {
       // Layer A — forward, full opacity
       const phaseA = (timestamp * 0.0010) % (Math.PI * 2);
       const axA = Math.cos(phaseA) * currentRadius * 0.4;
@@ -819,22 +898,31 @@ export class BreathStoneEngine {
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
-    // Surface roughness — Perlin micro warm/cool variation
-    ctx.globalAlpha = 0.035;
-    for (let i = 0; i < 500; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = Math.random() * currentRadius;
-      const x = Math.cos(a) * d;
-      const y = Math.sin(a) * d;
-      const rn = this.noise.get(x * 0.04, y * 0.04);
-      ctx.fillStyle = rn > 0 ? 'rgba(28, 26, 24, 0.5)' : 'rgba(245, 240, 234, 0.5)';
-      ctx.fillRect(x, y, Math.random() < 0.8 ? 1 : 2, Math.random() < 0.8 ? 1 : 2);
+    // Surface roughness — Perlin micro warm/cool variation. Relies on
+    // `Math.random()` for position + size, so under reduced-motion we
+    // skip the pass entirely; with the loop halted after one draw, the
+    // grain would otherwise freeze as an arbitrary noise field rather
+    // than reading as ceramic micro-texture (the effect depends on
+    // per-frame averaging to look like a surface, not pixels).
+    if (!this.reducedMotion) {
+      ctx.globalAlpha = 0.035;
+      for (let i = 0; i < 500; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.random() * currentRadius;
+        const x = Math.cos(a) * d;
+        const y = Math.sin(a) * d;
+        const rn = this.noise.get(x * 0.04, y * 0.04);
+        ctx.fillStyle = rn > 0 ? 'rgba(28, 26, 24, 0.5)' : 'rgba(245, 240, 234, 0.5)';
+        ctx.fillRect(x, y, Math.random() < 0.8 ? 1 : 2, Math.random() < 0.8 ? 1 : 2);
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
-    // Prismatic spark — ready / shimmer
+    // Prismatic spark — ready / shimmer. Under reduced-motion the phase
+    // is pinned so the spark renders at a stable position; static light
+    // reads as deliberate, a drifting speck in a frozen scene would not.
     if (this.s.spark > 0.01) {
-      const sparkPhase = (timestamp * 0.0006) % (Math.PI * 2);
+      const sparkPhase = (motionTs * 0.0006) % (Math.PI * 2);
       const spx = Math.cos(sparkPhase) * currentRadius * 0.35;
       const spy = Math.sin(sparkPhase) * currentRadius * 0.35;
       const sparkG = ctx.createRadialGradient(spx, spy, 0, spx, spy, currentRadius * 0.4);
@@ -855,7 +943,13 @@ export class BreathStoneEngine {
     // `pulseOp` multiplier — no hard threshold, which used to snap the
     // effect on ~100ms after entering playback (and flicker on entry
     // from ready, whose innerPulse target sits at exactly 0.3).
-    if (resolvedState === 'playback' && this.s.innerPulse > 0.01) {
+    // Suppressed under reduced-motion — the overlay is a time-varying
+    // sine on its own, not a property that falls out of the snapshot.
+    if (
+      resolvedState === 'playback' &&
+      this.s.innerPulse > 0.01 &&
+      !this.reducedMotion
+    ) {
       const s1 = (timestamp * 0.0025) % (Math.PI * 2);
       const s2 = (timestamp * 0.0042) % (Math.PI * 2);
       const rhythm = (Math.sin(s1) * 0.5 + 0.5) * (Math.sin(s2) * 0.4 + 0.6);
@@ -873,8 +967,13 @@ export class BreathStoneEngine {
 
     // Guidance heartbeat — single slow sine pulse, distinct from
     // playback's double-sine speech cadence. Reads as a patient body
-    // waiting, not as speech. Gated to guidance only.
-    if (resolvedState === 'guidance' && this.s.innerPulse > 0.05) {
+    // waiting, not as speech. Gated to guidance only, and suppressed
+    // under reduced-motion (the "heartbeat" is literally the motion).
+    if (
+      resolvedState === 'guidance' &&
+      this.s.innerPulse > 0.05 &&
+      !this.reducedMotion
+    ) {
       const heartbeat = Math.sin(timestamp * 0.0015) * 0.5 + 0.5;
       const pulseOp = heartbeat * 0.08 * this.s.innerPulse;
       const pulseG = ctx.createRadialGradient(
@@ -893,8 +992,14 @@ export class BreathStoneEngine {
     // Infused concentric ripple — 6-second cycle, expanding from core
     // outward. Opacity fades as radius grows, then resets. "Stone
     // dropped in water" — inevitable, not random. Same period as the
-    // ember glow oscillation so they breathe together. Gated to infused.
-    if (resolvedState === 'infused' && this.s.innerPulse > 0.05) {
+    // ember glow oscillation so they breathe together. Gated to infused,
+    // and suppressed under reduced-motion — the ripple IS the motion;
+    // a frozen arbitrary phase would read as an unexplained halo.
+    if (
+      resolvedState === 'infused' &&
+      this.s.innerPulse > 0.05 &&
+      !this.reducedMotion
+    ) {
       const ripplePhase = (timestamp % 6000) / 6000;               // 0 → 1
       const rippleRadius = currentRadius * (0.1 + ripplePhase * 0.8); // 0.1r → 0.9r
       const rippleOp = (1 - ripplePhase) * 0.22 * this.s.innerPulse;
@@ -914,6 +1019,12 @@ export class BreathStoneEngine {
 
     ctx.restore();
 
+    // Reduced-motion: paint exactly one frame per state change, no loop.
+    // The next draw is triggered explicitly by `setState` or `resize`.
+    if (this.reducedMotion) {
+      this.animationId = null;
+      return;
+    }
     this.animationId = requestAnimationFrame(this.draw);
   };
 }

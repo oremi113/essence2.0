@@ -24,6 +24,7 @@ interface BreathStoneProps {
   size?: number;                    // default: 280
   className?: string;
   onCelebrateEnd?: () => void;      // fires when celebrate returns to idle
+  reducedMotion?: boolean;          // default: false — freeze breath + overlays
 }
 ```
 
@@ -35,6 +36,7 @@ interface BreathStoneProps {
 | `size`           | `number`          |          | `280`   | Canvas renders square at this pixel dimension. Internally scales by `devicePixelRatio`.               |
 | `className`      | `string`          |          | `''`    | Applied to the `<canvas>` element. Parent usually wraps in `.record-stone` for ground shadow.         |
 | `onCelebrateEnd` | `() => void`      |          | —       | Fires ~2200ms after entering `celebrate`, when the stone auto-returns to `idle`. Use to advance UI.   |
+| `reducedMotion`  | `boolean`         |          | `false` | When true, freezes breath amplitude to 0 and suppresses all overlay animations (sheen/bloom/shimmer/ember/ripple). Static properties (glow, color temp, spark) still reflect the target state; state changes snap instead of lerping. Pair with `useReducedMotion` from `@/lib/animation/useReducedMotion` so the canvas honors `(prefers-reduced-motion: reduce)` alongside CSS. |
 
 ## `BreathStoneState` — the 11 states
 

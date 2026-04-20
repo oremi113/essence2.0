@@ -12,11 +12,11 @@ import {
   useEffect,
   useMemo,
   useState,
-  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { ChevronLeftIcon } from '@/components/icons';
+import { useReducedMotion } from '@/lib/animation/useReducedMotion';
 
 export const TOTAL_SCREENS = 12;
 
@@ -53,33 +53,6 @@ export const SCREEN_CONFIG: Record<number, ScreenConfig> = {
 };
 
 const DEFAULT_SETTLE_DELAY_MS = 500;
-
-// Local reduced-motion subscription. Will be replaced by a shared
-// `useReducedMotion` hook when B3 lands; keeping it inline here avoids
-// speculating about that hook's final shape and location.
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-
-function subscribeReducedMotion(callback: () => void) {
-  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
-  mq.addEventListener('change', callback);
-  return () => mq.removeEventListener('change', callback);
-}
-
-function getReducedMotionSnapshot() {
-  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
-}
-
-function getReducedMotionServerSnapshot() {
-  return false;
-}
-
-function usePrefersReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    getReducedMotionSnapshot,
-    getReducedMotionServerSnapshot
-  );
-}
 
 // ─── ProgressDots ─────────────────────────────────────────────────
 
@@ -191,33 +164,44 @@ export function PersistentStone({
   const display: BreathStoneState = override ?? settled;
 
   // Act-transition wash (Bucket B2): one-shot mineral overlay on the
-  // 6 → 7 crossfade. Detect the transition during render by comparing
-  // the tracked previous screen against the current — the React-
-  // sanctioned pattern for "derive state from prop changes" that
-  // avoids a setState-in-effect cascade. washEpoch bumps on each
-  // qualifying transition so a fresh <span> mounts (forwards animation
-  // replays on every 6 → 7 arrival, including back-and-forth).
+  // 6 → 7 crossfade. Two state slots:
+  //   • prevScreen — compared against currentScreen at render to detect
+  //     the qualifying transition (the React-sanctioned "derive state
+  //     from prop changes" pattern; avoids a setState-in-effect cascade).
+  //   • actTransitionActive — lifecycle boolean for the wash span. True
+  //     from trigger until the CSS animation's onAnimationEnd fires.
+  //
+  // Once the wash is active, additional 6 → 7 arrivals (rapid back-and-
+  // forth) are no-ops until the current wash completes. Explicit lifecycle
+  // here — versus the prior epoch/key-remount pattern — eliminates the
+  // race where an incoming trigger could be swallowed by the stale
+  // onAnimationEnd of a previous span. Single wash at a time; second
+  // qualifying arrival while the first is playing is intentionally ignored.
   // Skipped entirely under prefers-reduced-motion.
-  const reducedMotion = usePrefersReducedMotion();
+  const reducedMotion = useReducedMotion();
   const [prevScreen, setPrevScreen] = useState(currentScreen);
-  const [washEpoch, setWashEpoch] = useState<number | null>(null);
+  const [actTransitionActive, setActTransitionActive] = useState(false);
 
   if (prevScreen !== currentScreen) {
-    if (prevScreen === 6 && currentScreen === 7 && !reducedMotion) {
-      setWashEpoch((e) => (e ?? 0) + 1);
+    if (
+      prevScreen === 6 &&
+      currentScreen === 7 &&
+      !reducedMotion &&
+      !actTransitionActive
+    ) {
+      setActTransitionActive(true);
     }
     setPrevScreen(currentScreen);
   }
 
   return (
     <div className="onboarding-persistent-stone" aria-hidden="true">
-      <BreathStone state={display} size={144} />
-      {washEpoch !== null && (
+      <BreathStone state={display} size={144} reducedMotion={reducedMotion} />
+      {actTransitionActive && (
         <span
-          key={washEpoch}
           className="onb-act-wash"
           aria-hidden="true"
-          onAnimationEnd={() => setWashEpoch(null)}
+          onAnimationEnd={() => setActTransitionActive(false)}
         />
       )}
     </div>

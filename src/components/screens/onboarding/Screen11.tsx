@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useReducedMotion } from '@/lib/animation/useReducedMotion';
 import { StepShell, StoneSlot } from './chrome';
 
 // ─── SCREEN 11 — Priming moment (3500ms button unlock) ────────────
@@ -10,14 +11,25 @@ import { StepShell, StoneSlot } from './chrome';
 // attribute so the button stays in the accessibility tree and screen
 // readers announce its dimmed/locked state (the native `disabled`
 // attribute hides it entirely).
+//
+// Reduced-motion: the lock is meaningless without the stone's breath
+// cue, so we start unlocked and render the button active on mount.
+// The priming-hint copy ("Breathe with the stone for a moment") is
+// hidden via CSS in the same mode — see globals.css.
 
 export function Screen11Priming({ onNext }: { onNext: () => void }) {
-  const [unlocked, setUnlocked] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const [timerFired, setTimerFired] = useState(false);
+  // Derive `unlocked` rather than duplicating it into state — lets the
+  // mid-session system toggle from "RM off" to "RM on" immediately release
+  // the lock without re-running the effect to mutate state.
+  const unlocked = timerFired || reducedMotion;
 
   useEffect(() => {
-    const t = setTimeout(() => setUnlocked(true), 3500);
+    if (reducedMotion) return;
+    const t = setTimeout(() => setTimerFired(true), 3500);
     return () => clearTimeout(t);
-  }, []);
+  }, [reducedMotion]);
 
   const isLocked = !unlocked;
 
