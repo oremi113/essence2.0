@@ -6,9 +6,12 @@ import { usePhotoUpload } from '@/components/screens/onboarding/usePhotoUpload';
 /**
  * Unit tests for usePhotoUpload.
  *
- * Covers initial state, file-change happy path, error path via thrown
+ * Covers initial state (empty vs filled), client-side validation
+ * (type/size), happy path state transitions, minimum-ring floor,
+ * stone-beat callback timing, replace flow, error path via thrown
  * onUpload, reset, object-URL lifecycle, and that unmounting during an
- * in-flight upload is safe (no thrown errors, no unhandled rejections).
+ * in-flight upload is safe (no thrown errors, no unhandled rejections,
+ * stone override released).
  */
 
 // ----- helpers -------------------------------------------------------------
@@ -17,8 +20,18 @@ let urlCounter = 0;
 const createdUrls: string[] = [];
 const revokedUrls: string[] = [];
 
-function makeFile(name = 'avatar.png', type = 'image/png') {
-  return new File([new Uint8Array([1, 2, 3, 4])], name, { type });
+function makeFile(
+  name = 'avatar.png',
+  type = 'image/png',
+  size = 4
+): File {
+  return new File([new Uint8Array(size)], name, { type });
+}
+
+function makeOversizedFile(name = 'big.png', type = 'image/png'): File {
+  // 2MB cap lives in AVATAR_MAX_BYTES; go comfortably over.
+  const bytes = new Uint8Array(3 * 1024 * 1024);
+  return new File([bytes], name, { type });
 }
 
 function makeChangeEvent(file: File | null) {
@@ -52,77 +65,58 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // ----- tests ---------------------------------------------------------------
 
 describe('usePhotoUpload — initial state', () => {
-  it('starts idle with no preview, no error, not uploading', () => {
-    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: null });
+  it('starts in `empty` with no preview and no error when there is no initial photo', () => {
+    const onUpload = vi.fn();
     const { result } = renderHook(() => usePhotoUpload({ onUpload }));
+    expect(result.current.state).toBe('empty');
     expect(result.current.preview).toBeNull();
-    expect(result.current.isUploading).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(typeof result.current.handleFileChange).toBe('function');
-    expect(typeof result.current.reset).toBe('function');
+    expect(result.current.errorKey).toBeNull();
+  });
+
+  it('starts in `filled` when initialPhotoUrl is provided', () => {
+    const onUpload = vi.fn();
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, initialPhotoUrl: 'https://cdn/existing.png' })
+    );
+    expect(result.current.state).toBe('filled');
+    expect(result.current.preview).toBeNull();
   });
 });
 
-describe('usePhotoUpload — handleFileChange happy path', () => {
-  it('sets preview, toggles isUploading, and calls onUpload with FormData', async () => {
-    let resolveUpload: (v: { avatarUrl?: string; error?: string }) => void = () => {};
-    const uploadPromise = new Promise<{ avatarUrl?: string; error?: string }>((r) => {
-      resolveUpload = r;
-    });
-    const onUpload = vi.fn().mockReturnValue(uploadPromise);
-    const onSuccess = vi.fn();
+describe('usePhotoUpload — client-side validation', () => {
+  it('rejects unsupported mime types with `type` error and does not call onUpload', () => {
+    const onUpload = vi.fn();
+    const { result } = renderHook(() => usePhotoUpload({ onUpload }));
 
-    const { result } = renderHook(() => usePhotoUpload({ onUpload, onSuccess }));
-
-    const file = makeFile();
-
-    // Kick off the change inside act so preview state is committed.
     act(() => {
-      result.current.handleFileChange(makeChangeEvent(file));
+      result.current.handleFileChange(
+        makeChangeEvent(makeFile('avatar.gif', 'image/gif'))
+      );
     });
 
-    // Preview set synchronously; upload in flight.
-    expect(result.current.preview).toBe(createdUrls[0]);
-    expect(result.current.isUploading).toBe(true);
-    expect(onUpload).toHaveBeenCalledTimes(1);
-
-    const fd = onUpload.mock.calls[0][0] as FormData;
-    expect(fd).toBeInstanceOf(FormData);
-    expect(fd.get('file')).toBe(file);
-
-    // Resolve the upload.
-    await act(async () => {
-      resolveUpload({ avatarUrl: 'https://cdn/x.png' });
-      await uploadPromise;
-    });
-
-    expect(result.current.isUploading).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(onSuccess).toHaveBeenCalledTimes(1);
-    expect(onSuccess).toHaveBeenCalledWith('https://cdn/x.png');
-    // Preview is preserved on success.
-    expect(result.current.preview).toBe(createdUrls[0]);
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(result.current.state).toBe('error');
+    expect(result.current.errorKey).toBe('type');
+    expect(result.current.preview).toBeNull();
   });
 
-  it('calls onSuccess with null when onUpload resolves without avatarUrl', async () => {
-    const onUpload = vi.fn().mockResolvedValue({});
-    const onSuccess = vi.fn();
-    const { result } = renderHook(() => usePhotoUpload({ onUpload, onSuccess }));
+  it('rejects oversized files with `size` error and does not call onUpload', () => {
+    const onUpload = vi.fn();
+    const { result } = renderHook(() => usePhotoUpload({ onUpload }));
 
-    await act(async () => {
-      result.current.handleFileChange(makeChangeEvent(makeFile()));
-      // Let the resolved promise settle.
-      await Promise.resolve();
-      await Promise.resolve();
+    act(() => {
+      result.current.handleFileChange(makeChangeEvent(makeOversizedFile()));
     });
 
-    expect(onSuccess).toHaveBeenCalledWith(null);
-    expect(result.current.isUploading).toBe(false);
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(result.current.state).toBe('error');
+    expect(result.current.errorKey).toBe('size');
   });
 
   it('does nothing when no file is present on the change event', () => {
@@ -132,121 +126,275 @@ describe('usePhotoUpload — handleFileChange happy path', () => {
       result.current.handleFileChange(makeChangeEvent(null));
     });
     expect(onUpload).not.toHaveBeenCalled();
-    expect(result.current.preview).toBeNull();
-    expect(result.current.isUploading).toBe(false);
+    expect(result.current.state).toBe('empty');
+  });
+});
+
+describe('usePhotoUpload — happy path', () => {
+  it('sets preview, transitions to `uploading`, and calls onUpload with FormData', () => {
+    let resolveUpload: (v: { avatarUrl: string }) => void = () => {};
+    const uploadPromise = new Promise<{ avatarUrl: string }>((r) => {
+      resolveUpload = r;
+    });
+    const onUpload = vi.fn().mockReturnValue(uploadPromise);
+    const { result } = renderHook(() => usePhotoUpload({ onUpload }));
+
+    const file = makeFile();
+    act(() => {
+      result.current.handleFileChange(makeChangeEvent(file));
+    });
+
+    expect(result.current.state).toBe('uploading');
+    expect(result.current.preview).toBe(createdUrls[0]);
+    expect(onUpload).toHaveBeenCalledTimes(1);
+    const fd = onUpload.mock.calls[0][0] as FormData;
+    expect(fd).toBeInstanceOf(FormData);
+    expect(fd.get('file')).toBe(file);
+
+    // Tidy: resolve so nothing leaks past the test.
+    resolveUpload({ avatarUrl: 'https://cdn/x.png' });
   });
 
-  it('resets the <input> value so the same file can be re-selected', () => {
-    const onUpload = vi.fn().mockResolvedValue({});
-    const { result } = renderHook(() => usePhotoUpload({ onUpload }));
-    const evt = makeChangeEvent(makeFile());
-    act(() => {
-      result.current.handleFileChange(evt);
+  it('transitions to `success` and fires onSuccess with the avatar URL', async () => {
+    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x.png' });
+    const onSuccess = vi.fn();
+
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, onSuccess, minRingMs: 0, stoneBeatMs: 0 })
+    );
+
+    await act(async () => {
+      result.current.handleFileChange(makeChangeEvent(makeFile()));
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    // Hook assigns '' to the input so the onChange fires again next time.
-    expect((evt.target as unknown as { value: string }).value).toBe('');
+
+    expect(result.current.state).toBe('success');
+    expect(onSuccess).toHaveBeenCalledWith('https://cdn/x.png');
+    expect(result.current.preview).toBe(createdUrls[0]);
+  });
+
+  it('clears any previous error when a new upload starts', async () => {
+    const onUpload = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ avatarUrl: 'https://cdn/x.png' });
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 0, stoneBeatMs: 0 })
+    );
+
+    await act(async () => {
+      result.current.handleFileChange(makeChangeEvent(makeFile()));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.errorKey).toBe('generic');
+
+    await act(async () => {
+      result.current.handleFileChange(makeChangeEvent(makeFile()));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.errorKey).toBeNull();
+    expect(result.current.state).toBe('success');
+  });
+});
+
+describe('usePhotoUpload — ring floor + stone beat timing', () => {
+  it('holds `uploading` state until minRingMs has elapsed even when upload is faster', async () => {
+    vi.useFakeTimers();
+    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x.png' });
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 400, stoneBeatMs: 0 })
+    );
+
+    await act(async () => {
+      result.current.handleFileChange(makeChangeEvent(makeFile()));
+    });
+    // Let the upload promise resolve (0ms elapsed, 400ms remaining).
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.state).toBe('uploading');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(result.current.state).toBe('success');
+  });
+
+  it('fires stone callback with `ready` on success and `null` after stoneBeatMs', async () => {
+    vi.useFakeTimers();
+    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x.png' });
+    const onStoneStateChange = vi.fn();
+
+    const { result } = renderHook(() =>
+      usePhotoUpload({
+        onUpload,
+        onStoneStateChange,
+        minRingMs: 0,
+        stoneBeatMs: 1200,
+      })
+    );
+
+    await act(async () => {
+      result.current.handleFileChange(makeChangeEvent(makeFile()));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(onStoneStateChange).toHaveBeenNthCalledWith(1, 'ready');
+    expect(onStoneStateChange).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1200);
+    });
+    expect(onStoneStateChange).toHaveBeenNthCalledWith(2, null);
+  });
+});
+
+describe('usePhotoUpload — replace flow', () => {
+  it('enters `replacing` (not `uploading`) when starting from `filled`', () => {
+    let resolveUpload: (v: { avatarUrl: string }) => void = () => {};
+    const onUpload = vi.fn().mockImplementation(
+      () =>
+        new Promise<{ avatarUrl: string }>((r) => {
+          resolveUpload = r;
+        })
+    );
+    const { result } = renderHook(() =>
+      usePhotoUpload({
+        onUpload,
+        initialPhotoUrl: 'https://cdn/existing.png',
+      })
+    );
+    expect(result.current.state).toBe('filled');
+
+    act(() => {
+      result.current.handleFileChange(makeChangeEvent(makeFile()));
+    });
+
+    expect(result.current.state).toBe('replacing');
+    expect(result.current.preview).toBe(createdUrls[0]);
+
+    resolveUpload({ avatarUrl: 'https://cdn/new.png' });
+  });
+
+  it('enters `replacing` when starting from `success`', async () => {
+    const onUpload = vi
+      .fn()
+      .mockResolvedValue({ avatarUrl: 'https://cdn/x.png' });
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 0, stoneBeatMs: 0 })
+    );
+
+    await act(async () => {
+      result.current.handleFileChange(makeChangeEvent(makeFile('a.png')));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.state).toBe('success');
+
+    let resolveSecond: (v: { avatarUrl: string }) => void = () => {};
+    onUpload.mockImplementationOnce(
+      () =>
+        new Promise<{ avatarUrl: string }>((r) => {
+          resolveSecond = r;
+        })
+    );
+
+    act(() => {
+      result.current.handleFileChange(makeChangeEvent(makeFile('b.png')));
+    });
+    expect(result.current.state).toBe('replacing');
+    resolveSecond({ avatarUrl: 'https://cdn/b.png' });
   });
 });
 
 describe('usePhotoUpload — error paths', () => {
-  it('populates error, clears preview, and revokes URL when onUpload throws', async () => {
+  it('sets `generic` errorKey, clears preview, and revokes URL when onUpload throws', async () => {
     const onUpload = vi.fn().mockRejectedValue(new Error('Network down'));
-    const onSuccess = vi.fn();
-    const { result } = renderHook(() => usePhotoUpload({ onUpload, onSuccess }));
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 0 })
+    );
 
     await act(async () => {
       result.current.handleFileChange(makeChangeEvent(makeFile()));
-      // let microtasks flush
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(result.current.error).toBe('Network down');
-    expect(result.current.isUploading).toBe(false);
+    expect(result.current.state).toBe('error');
+    expect(result.current.errorKey).toBe('generic');
     expect(result.current.preview).toBeNull();
-    expect(onSuccess).not.toHaveBeenCalled();
-    // URL for the just-cleared preview was revoked.
     expect(revokedUrls).toContain(createdUrls[0]);
   });
 
-  it('uses a generic message when the thrown value is not an Error', async () => {
-    const onUpload = vi.fn().mockRejectedValue('nope');
+  it('resets the <input> value so the same file can be re-selected', () => {
+    const onUpload = vi.fn();
     const { result } = renderHook(() => usePhotoUpload({ onUpload }));
-    await act(async () => {
-      result.current.handleFileChange(makeChangeEvent(makeFile()));
-      await Promise.resolve();
-      await Promise.resolve();
+    const evt = makeChangeEvent(makeFile('avatar.gif', 'image/gif'));
+    act(() => {
+      result.current.handleFileChange(evt);
     });
-    expect(result.current.error).toBe('Upload failed.');
-  });
-
-  // Documents *current* behavior for onUpload resolving with { error }: the
-  // hook destructures only avatarUrl, so the returned error is NOT surfaced
-  // in state and onSuccess(null) is still called. Flagged in the PR body.
-  it('does not currently surface a returned { error } into hook state', async () => {
-    const onUpload = vi
-      .fn()
-      .mockResolvedValue({ error: 'file too large' });
-    const onSuccess = vi.fn();
-    const { result } = renderHook(() => usePhotoUpload({ onUpload, onSuccess }));
-
-    await act(async () => {
-      result.current.handleFileChange(makeChangeEvent(makeFile()));
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.error).toBeNull();
-    expect(result.current.isUploading).toBe(false);
-    expect(result.current.preview).toBe(createdUrls[0]);
-    expect(onSuccess).toHaveBeenCalledWith(null);
+    expect((evt.target as unknown as { value: string }).value).toBe('');
   });
 });
 
 describe('usePhotoUpload — reset', () => {
-  it('clears preview, error, and isUploading', async () => {
-    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x' });
-    const { result } = renderHook(() => usePhotoUpload({ onUpload }));
+  it('returns to `empty` when there was no initial photo', async () => {
+    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x.png' });
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 0, stoneBeatMs: 0 })
+    );
 
     await act(async () => {
       result.current.handleFileChange(makeChangeEvent(makeFile()));
       await Promise.resolve();
       await Promise.resolve();
     });
-
-    expect(result.current.preview).toBe(createdUrls[0]);
+    expect(result.current.state).toBe('success');
 
     act(() => {
       result.current.reset();
     });
 
+    expect(result.current.state).toBe('empty');
     expect(result.current.preview).toBeNull();
-    expect(result.current.error).toBeNull();
-    expect(result.current.isUploading).toBe(false);
+    expect(result.current.errorKey).toBeNull();
   });
 
-  it('triggers the effect-cleanup revocation when reset nulls preview', async () => {
-    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x' });
-    const { result } = renderHook(() => usePhotoUpload({ onUpload }));
+  it('returns to `filled` when there was an initial photo', async () => {
+    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x.png' });
+    const { result } = renderHook(() =>
+      usePhotoUpload({
+        onUpload,
+        initialPhotoUrl: 'https://cdn/existing.png',
+        minRingMs: 0,
+        stoneBeatMs: 0,
+      })
+    );
+
     await act(async () => {
       result.current.handleFileChange(makeChangeEvent(makeFile()));
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(revokedUrls).not.toContain(createdUrls[0]);
 
     act(() => {
       result.current.reset();
     });
 
-    expect(revokedUrls).toContain(createdUrls[0]);
+    expect(result.current.state).toBe('filled');
   });
 });
 
 describe('usePhotoUpload — object URL lifecycle', () => {
   it('revokes the previous object URL when preview changes to a new file', async () => {
     const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x' });
-    const { result } = renderHook(() => usePhotoUpload({ onUpload }));
+    const { result } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 0, stoneBeatMs: 0 })
+    );
 
     await act(async () => {
       result.current.handleFileChange(makeChangeEvent(makeFile('a.png')));
@@ -260,16 +408,17 @@ describe('usePhotoUpload — object URL lifecycle', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    const secondUrl = createdUrls[1];
 
-    // First URL is revoked when preview switches to the second.
     expect(revokedUrls).toContain(firstUrl);
-    expect(secondUrl).not.toBe(firstUrl);
+    expect(createdUrls[1]).not.toBe(firstUrl);
   });
 
   it('revokes the current object URL on unmount', async () => {
     const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x' });
-    const { result, unmount } = renderHook(() => usePhotoUpload({ onUpload }));
+    const { result, unmount } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 0, stoneBeatMs: 0 })
+    );
+
     await act(async () => {
       result.current.handleFileChange(makeChangeEvent(makeFile()));
       await Promise.resolve();
@@ -279,35 +428,58 @@ describe('usePhotoUpload — object URL lifecycle', () => {
     expect(revokedUrls).not.toContain(url);
 
     unmount();
-
     expect(revokedUrls).toContain(url);
   });
 
   it('does not throw if unmount happens while an upload is in flight', async () => {
-    let resolveUpload: (v: { avatarUrl?: string }) => void = () => {};
-    const uploadPromise = new Promise<{ avatarUrl?: string }>((r) => {
+    let resolveUpload: (v: { avatarUrl: string }) => void = () => {};
+    const uploadPromise = new Promise<{ avatarUrl: string }>((r) => {
       resolveUpload = r;
     });
     const onUpload = vi.fn().mockReturnValue(uploadPromise);
 
-    const { result, unmount } = renderHook(() => usePhotoUpload({ onUpload }));
+    const { result, unmount } = renderHook(() =>
+      usePhotoUpload({ onUpload, minRingMs: 0, stoneBeatMs: 0 })
+    );
 
     act(() => {
       result.current.handleFileChange(makeChangeEvent(makeFile()));
     });
 
-    // Unmount before the upload resolves.
     unmount();
 
-    // Now resolve. No thrown errors / unhandled rejections expected.
     await act(async () => {
       resolveUpload({ avatarUrl: 'https://cdn/x' });
       await uploadPromise;
       await Promise.resolve();
     });
 
-    // If we got here without throwing, the hook handled post-unmount settling.
     expect(createdUrls).toHaveLength(1);
     expect(revokedUrls).toContain(createdUrls[0]);
+  });
+
+  it('releases the stone override on unmount if the beat is still in flight', async () => {
+    vi.useFakeTimers();
+    const onUpload = vi.fn().mockResolvedValue({ avatarUrl: 'https://cdn/x' });
+    const onStoneStateChange = vi.fn();
+    const { result, unmount } = renderHook(() =>
+      usePhotoUpload({
+        onUpload,
+        onStoneStateChange,
+        minRingMs: 0,
+        stoneBeatMs: 1200,
+      })
+    );
+
+    await act(async () => {
+      result.current.handleFileChange(makeChangeEvent(makeFile()));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(onStoneStateChange).toHaveBeenLastCalledWith('ready');
+
+    // Unmount BEFORE the beat timeout fires.
+    unmount();
+    expect(onStoneStateChange).toHaveBeenLastCalledWith(null);
   });
 });
