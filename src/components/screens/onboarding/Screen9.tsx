@@ -33,6 +33,15 @@ export function Screen9Review({
       </p>
 
       <div className="onboarding-review-card">
+        <div className="onboarding-review-card__header">
+          <button
+            type="button"
+            className="onboarding-review-card__change"
+            onClick={onEdit}
+          >
+            Change
+          </button>
+        </div>
         {avatarUrl && (
           <div className="onboarding-review-card__avatar">
             {/* Signed URL is short-lived (1h) and re-minted on /onboarding load. */}
@@ -52,17 +61,10 @@ export function Screen9Review({
           <div className="onboarding-review-row__label">Location</div>
           <div className="onboarding-review-row__value">{location}</div>
         </div>
-        <button
-          type="button"
-          className="onboarding-review-card__edit"
-          onClick={onEdit}
-        >
-          Change
-        </button>
       </div>
 
       <div className="onboarding-ctas">
-        <PrimaryButton onClick={onNext}>Looks good</PrimaryButton>
+        <PrimaryButton onClick={onNext}>Yes, that&apos;s right</PrimaryButton>
       </div>
     </StepShell>
   );

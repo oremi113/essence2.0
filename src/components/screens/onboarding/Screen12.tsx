@@ -19,16 +19,30 @@ export function Screen12Ready({
       <h1 className="onboarding-title">Ready to begin recording?</h1>
 
       <div className="onboarding-ready-list">
-        <p>You&apos;ll need about 10–13 minutes in a quiet space.</p>
-        <p>We&apos;ll guide you through 25 short prompts.</p>
-        <p>Your microphone will need to be enabled.</p>
+        <p>About 10 to 13 minutes in a quiet space.</p>
+        <p>Twenty-five short prompts, in your own pace.</p>
+        <p>Microphone enabled.</p>
       </div>
+
+      <p
+        className="onboarding-ready-closer"
+        style={{
+          fontStyle: 'italic',
+          color: 'var(--color-text-primary)',
+          textAlign: 'center',
+        }}
+      >
+        What you record today will be kept for whenever it&apos;s needed.
+      </p>
 
       <div className="onboarding-ctas">
         <PrimaryButton onClick={onBegin} isLoading={isSubmitting}>
           Begin recording
         </PrimaryButton>
-        <LinkButton onClick={() => { /* no-op — user stays on screen */ }}>
+        <LinkButton
+          className="btn-link--soft"
+          onClick={() => { /* no-op — user stays on screen */ }}
+        >
           I need more time
         </LinkButton>
       </div>

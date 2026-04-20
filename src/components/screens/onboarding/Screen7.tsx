@@ -7,14 +7,11 @@ import { StepShell, StoneSlot } from './chrome';
 
 export function Screen7({ onNext }: { onNext: () => void }) {
   return (
-    <StepShell>
+    <StepShell centered>
       <StoneSlot />
 
       <div className="onboarding-phase-label">YOUR PROFILE</div>
-      <h1 className="onboarding-title">First, tell us a little about you.</h1>
-      <p className="onboarding-subtitle">
-        This helps us personalize your experience.
-      </p>
+      <h1 className="onboarding-title">Now, the part that&apos;s about you.</h1>
 
       <div className="onboarding-ctas">
         <PrimaryButton onClick={onNext}>Get started</PrimaryButton>

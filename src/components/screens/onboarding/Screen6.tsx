@@ -50,7 +50,7 @@ export function Screen6({ onNext }: { onNext: () => void }) {
           <span className="onboarding-journey__num" aria-hidden="true">2</span>
           <span className="onboarding-journey__text">
             <span className="onboarding-journey__label">Record your voice</span>
-            <span className="onboarding-journey__duration">10–12 minutes</span>
+            <span className="onboarding-journey__duration">10 to 13 minutes</span>
           </span>
         </li>
         <li className="onboarding-journey__item">
@@ -72,7 +72,7 @@ export function Screen6({ onNext }: { onNext: () => void }) {
 
       <div className="onboarding-body">
         <p className="onboarding-body__muted">
-          We&apos;ll guide every step — pause anytime.
+          Most people finish in one sitting. You can also pause and return anytime.
         </p>
       </div>
 
