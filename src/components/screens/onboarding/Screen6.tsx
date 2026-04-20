@@ -36,7 +36,7 @@ export function Screen6({ onNext }: { onNext: () => void }) {
     <StepShell>
       <StoneSlot />
 
-      <h1 className="onboarding-title">Here&apos;s how this works.</h1>
+      <h1 className="onboarding-title">Here&rsquo;s how this works.</h1>
 
       <ol className="onboarding-journey">
         <li className="onboarding-journey__item onboarding-journey__item--current">
@@ -82,7 +82,7 @@ export function Screen6({ onNext }: { onNext: () => void }) {
           disabled={exiting}
           className={pressing ? 'onboarding-btn-pressing' : ''}
         >
-          Let&apos;s begin
+          Let&rsquo;s begin
         </PrimaryButton>
       </div>
     </StepShell>

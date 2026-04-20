@@ -38,7 +38,7 @@ export function Screen10Photo({
     <StepShell>
       <StoneSlot />
 
-      <h1 className="onboarding-title">Add a photo if you&apos;d like.</h1>
+      <h1 className="onboarding-title">Add a photo if you&rsquo;d like.</h1>
       <p className="onboarding-subtitle">
         It helps your messages feel more personal. Completely optional.
       </p>

@@ -24,9 +24,18 @@
      • Background ramp (cream → warm-phase oat at screen 6→7).
      • Per-screen content stagger reveal (top-down).
      • Phase-shift choreography between screens 6 → 7.
-     • Conveyor cinematic on screen 2 (transient phrases → "Your voice. /
-       Their timeline.").
-     • 3500ms priming lock on screen 11.
+     • Conveyor cinematic on screen 2 — three transient phrases, then
+       "Your voice." lands at 7000ms as the quiet conclusion. Continue
+       CTA fades in at 10000ms.
+     • Screen 8 form: three-select DOB, validation on Continue press
+       (never on blur/change), per-field error copy + red border, typing
+       clears that field's error only.
+     • Screen 9 review: Change button in top-right header; left-aligned
+       values with 120px fixed label column so long names wrap cleanly.
+     • 3500ms priming lock on screen 11 — aria-disabled + tabindex=-1
+       (not the native `disabled` attribute, which would remove the
+       button from the accessibility tree entirely) + click/keydown
+       guards that block Enter/Space during the lock.
 
    What's approximated:
      • The BreathStone is rendered as a CSS gradient sphere with a gentle
@@ -53,7 +62,7 @@
      • Sentence case everywhere except eyebrow labels ("WELCOME TO
        ESSENCE", "YOUR PROFILE").
      • Italic reserved for human asides / coaching notes.
-     • Red = var(--color-status-error). Never raw #C84545.
+     • Red = var(--color-status-error). Never raw hex.
      • Onboarding title = var(--text-title) = 28px Spectral 600.
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -61,10 +70,10 @@
 :root {
   --color-bg-neutral:     #FBF8F4;
   --color-bg-warm-phase:  #F2EDE4;
-  --color-bg-warm-1:      #F9F3E8;
-  --color-bg-warm-2:      #F6F0E5;
-  --color-bg-gold:        #F2E8D6;
-  --color-bg-rich:        #EDE3D0;
+  --color-bg-warm-1:      #FBF6ED;
+  --color-bg-warm-2:      #F2E8D2;
+  --color-bg-gold:        #E8D8B3;
+  --color-bg-rich:        #D9C28E;
   --color-bg-primary:     #FBF8F4;
   --color-surface-card:   #F6F0E5;
   --color-surface-warm:   #EDE3D0;
@@ -542,6 +551,15 @@ button, a, [role="button"] { min-height: 44px; }
 }
 .btn-link:hover { color: var(--color-text-primary); }
 
+/* Soft variant — used on Screen 12 for "I need more time" so the pause
+   affordance reads as quiet reassurance rather than a competing CTA. */
+.btn-link--soft {
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+.btn-link--soft:hover { color: var(--color-text-secondary); text-decoration: underline; }
+
 /* Secondary inline link (used on Screen 4 to open Privacy Promise sheet). */
 .onboarding-secondary-link {
   align-self: center;
@@ -570,7 +588,7 @@ button, a, [role="button"] { min-height: 44px; }
 /* ═══════════════════════════════════════════════════════════════════════════
    Stagger reveal — top-down content fade per screen
    ═══════════════════════════════════════════════════════════════════════════ */
-.screen--active .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-conveyor-tail):not(.onboarding-ctas--delayed) {
+.screen--active .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed) {
   opacity: 0;
   transform: translateY(10px);
   animation: onb-reveal 700ms var(--ease-page) both;
@@ -600,7 +618,6 @@ button, a, [role="button"] { min-height: 44px; }
 .screen--active .onboarding-body > *:nth-child(3) { --body-index: 2; }
 .screen--active .onboarding-body > *:nth-child(4) { --body-index: 3; }
 .screen--active .onboarding-body > *:nth-child(5) { --body-index: 4; --body-closer-beat: 160ms; }
-.screen--active .onboarding-body--screen5 { --body-base: 1500ms; }
 
 @keyframes onb-reveal {
   to { opacity: 1; transform: translateY(0); }
@@ -636,21 +653,11 @@ button, a, [role="button"] { min-height: 44px; }
   animation: onb-conveyor-pass 1900ms var(--ease-essence)
     calc(1000ms + var(--phrase-index, 1) * 1500ms) both;
 }
+/* The landing beat for "Your voice." — per-screen animation-delay is
+   set inline on the element (7000ms) since the phrase count (and thus
+   the land timing) derives from Screen 2's conveyor phrase list. */
 .screen--active .onboarding-conveyor__phrase--final {
-  animation: onb-conveyor-land 650ms var(--ease-page) 11500ms both;
-}
-.screen--active .onboarding-conveyor-tail {
-  font-family: var(--font-body);
-  font-size: var(--text-body);
-  font-style: italic;
-  color: var(--color-text-tertiary);
-  text-align: center;
-  max-width: 340px;
-  margin: 0 auto 32px;
-  opacity: 0;
-  transform: translateX(16px);
-  animation: onb-conveyor-land 650ms var(--ease-page) 13550ms both;
-  pointer-events: none;
+  animation: onb-conveyor-land 650ms var(--ease-page) both;
 }
 @keyframes onb-conveyor-pass {
   0%   { opacity: 0; transform: translateX(16px); }
@@ -662,8 +669,11 @@ button, a, [role="button"] { min-height: 44px; }
   from { opacity: 0; transform: translateX(16px); }
   to   { opacity: 1; transform: translateX(0); }
 }
+/* CTA fade-in timing is set inline on each screen that uses this class,
+   since the appropriate beat depends on the screen's own cinematic rhythm
+   (Screen 2 fires at 10000ms after its conveyor lands). */
 .screen--active .onboarding-ctas--delayed {
-  animation: onb-fade-up 700ms var(--ease-essence) 14300ms both;
+  animation: onb-fade-up 700ms var(--ease-essence) both;
 }
 @keyframes onb-fade-up {
   from { opacity: 0; transform: translateY(6px); }
@@ -819,6 +829,31 @@ button, a, [role="button"] { min-height: 44px; }
   cursor: pointer;
 }
 
+/* Error styling pattern — validation runs on Continue press only. No
+   shake / bounce / flash: master spec §12.1 rules them out. Per-field
+   error message renders directly below its input. For the DOB row (three
+   selects), the single error message sits below the entire row. */
+.onboarding-input--error {
+  border-color: var(--color-status-error);
+  background: color-mix(in srgb, var(--color-status-error) 4%, transparent);
+}
+.onboarding-input--error:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-status-error) 30%, transparent);
+  outline-offset: 2px;
+  border-color: var(--color-status-error);
+  background: color-mix(in srgb, var(--color-status-error) 4%, transparent);
+}
+.onboarding-field__error {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  color: var(--color-status-error);
+  line-height: 1.4;
+  margin: 6px 0 0;
+  padding: 0;
+  text-align: left;
+}
+.onboarding-field__error[hidden] { display: none; }
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Screen 9 — Review card
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -834,46 +869,72 @@ button, a, [role="button"] { min-height: 44px; }
   flex-direction: column;
   gap: 12px;
 }
+/* Left-aligned values with a fixed-width label column — swapped from the
+   old right-aligned space-between so long values (hyphenated names, city
+   names with diacritics) wrap gracefully inside the card. */
 .onboarding-review-row {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
+  align-items: flex-start;
+  gap: var(--space-lg);
 }
 .onboarding-review-row__label {
+  flex: 0 0 auto;
+  min-width: 120px;
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-text-tertiary);
-  flex-shrink: 0;
 }
 .onboarding-review-row__value {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--font-body);
   font-size: 15px;
   color: var(--color-text-primary);
-  text-align: right;
   line-height: 1.4;
+  overflow-wrap: break-word;
   word-break: break-word;
 }
-.onboarding-review-card__edit {
-  align-self: flex-end;
+/* Header row holds the Change button, top-right of the card. */
+.onboarding-review-card__header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-sm);
+}
+.onboarding-review-card__change {
   background: none;
   border: none;
-  padding: 6px 0 0;
-  margin-top: 4px;
+  padding: var(--space-xs) var(--space-sm);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--text-small);
   font-weight: 500;
   color: var(--color-text-secondary);
-  text-decoration: underline;
-  text-underline-offset: 3px;
   cursor: pointer;
   min-height: auto;
-  transition: color 200ms ease;
+  transition: color 200ms var(--ease-essence);
 }
-.onboarding-review-card__edit:hover { color: var(--color-text-primary); }
+.onboarding-review-card__change:hover { color: var(--color-text-primary); }
+
+/* Optional avatar — sits above the data rows when the user uploaded
+   a photo on Screen 10. Signed URL is short-lived (1h) and re-minted
+   on /onboarding load in production. */
+.onboarding-review-card__avatar {
+  align-self: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.onboarding-review-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Screen 10 — Photo circle
@@ -914,6 +975,18 @@ button, a, [role="button"] { min-height: 44px; }
 }
 .onboarding-photo-confirmation--visible { opacity: 1; }
 
+/* Surfaces server-side validation failures (mime, size, network) when
+   the upload fails. Stays visible until the user picks a different file. */
+.onboarding-photo-error {
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-status-error);
+  margin: 8px auto 0;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Screen 11 — Priming hint + locked CTA
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -927,16 +1000,18 @@ button, a, [role="button"] { min-height: 44px; }
   opacity: 0;
   animation: onb-fade-up 800ms var(--ease-essence) 2500ms forwards;
 }
+/* Visual lock only — keyboard/mouse activation is gated by the button's
+   aria-disabled + onClick/onKeyDown guards, not pointer-events: none
+   (which would also suppress the not-allowed cursor). */
 .onboarding-ctas--locked .btn-primary {
   opacity: 0.4;
-  pointer-events: none;
   transition: opacity 800ms var(--ease-essence);
 }
 .onboarding-ctas--unlocked .btn-primary {
   opacity: 1;
-  pointer-events: auto;
   transition: opacity 800ms var(--ease-essence);
 }
+.btn-primary[aria-disabled="true"] { cursor: not-allowed; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Screen 12 — Ready list
@@ -1117,7 +1192,6 @@ button, a, [role="button"] { min-height: 44px; }
   .screen--active .onboarding-step > *,
   .screen--active .onboarding-body > *,
   .screen--active .onboarding-conveyor__phrase,
-  .screen--active .onboarding-conveyor-tail,
   .screen--active .onboarding-ctas--delayed {
     animation-duration: 400ms;
     transform: none;
@@ -1212,9 +1286,11 @@ button, a, [role="button"] { min-height: 44px; }
   <!-- ═══════════════════════════════════════════════════════════════════
        SCREEN 2 — Purpose / cinematic conveyor
        Stone: idle · Bg: neutral
-       The conveyor cycles through six transient phrases (italic tertiary)
-       then lands "Your voice." + "Their timeline." stacked.
-       Continue CTA fades in 14.3s after entry — long deliberately.
+       The conveyor cycles through three transient italic phrases (1.9s
+       each, 1.5s stagger starting 1.0s after mount). "Your voice." then
+       lands at 7000ms as the quiet conclusion. Continue CTA fades in at
+       10000ms (3000ms after the land) — long deliberately so the beat
+       has room to breathe before the user moves on.
        ═══════════════════════════════════════════════════════════════════ -->
   <section class="screen" data-screen="2" data-stone="idle" data-bg="neutral">
     <div class="onboarding-step">
@@ -1226,16 +1302,12 @@ button, a, [role="button"] { min-height: 44px; }
         <p>Then you use it to leave messages for the future.</p>
       </div>
       <div class="onboarding-conveyor" aria-hidden="true">
-        <span class="onboarding-conveyor__phrase" style="--phrase-index:1">Birthday wishes.</span>
-        <span class="onboarding-conveyor__phrase" style="--phrase-index:2">Love notes.</span>
-        <span class="onboarding-conveyor__phrase" style="--phrase-index:3">&ldquo;I&rsquo;m proud of you.&rdquo;</span>
-        <span class="onboarding-conveyor__phrase" style="--phrase-index:4">Life advice.</span>
-        <span class="onboarding-conveyor__phrase" style="--phrase-index:5">Letters for later.</span>
-        <span class="onboarding-conveyor__phrase" style="--phrase-index:6">A goodbye, whenever it comes.</span>
-        <span class="onboarding-conveyor__phrase onboarding-conveyor__phrase--final">Your voice.</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:1">Love notes.</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:2">&ldquo;I&rsquo;m proud of you.&rdquo;</span>
+        <span class="onboarding-conveyor__phrase" style="--phrase-index:3">A goodbye, whenever it comes.</span>
+        <span class="onboarding-conveyor__phrase onboarding-conveyor__phrase--final" style="animation-delay: 7000ms">Your voice.</span>
       </div>
-      <div class="onboarding-conveyor-tail" aria-hidden="true">Their timeline.</div>
-      <div class="onboarding-ctas onboarding-ctas--delayed">
+      <div class="onboarding-ctas onboarding-ctas--delayed" style="animation-delay: 10000ms">
         <button class="btn-primary js-next">Continue</button>
       </div>
     </div>
@@ -1250,12 +1322,10 @@ button, a, [role="button"] { min-height: 44px; }
   <section class="screen" data-screen="3" data-stone="idle" data-bg="neutral">
     <div class="onboarding-step">
       <div class="onboarding-stone-slot"></div>
-      <h1 class="onboarding-title">This is for people who plan ahead.</h1>
+      <h1 class="onboarding-title">This is for people who think ahead.</h1>
       <div class="onboarding-body">
-        <p>Parents who want their grandchildren to hear their voice.</p>
-        <p>Partners who want to leave love notes for special days.</p>
-        <p>Whether you have all the time in the world, or not.</p>
-        <p class="onboarding-body__emphasis">Your voice deserves to last.</p>
+        <p>Whether you have decades or a shorter window, your voice is something only you can give.</p>
+        <p class="onboarding-body__emphasis">It deserves to last.</p>
       </div>
       <div class="onboarding-ctas">
         <button class="btn-primary js-next">That sounds like me</button>
@@ -1296,12 +1366,12 @@ button, a, [role="button"] { min-height: 44px; }
   <section class="screen" data-screen="5" data-stone="ready" data-bg="neutral">
     <div class="onboarding-step">
       <div class="onboarding-stone-slot"></div>
-      <h1 class="onboarding-title">No one else sounds like you.</h1>
-      <div class="onboarding-body onboarding-body--screen5">
+      <h1 class="onboarding-title">There are things only your voice can carry.</h1>
+      <div class="onboarding-body">
         <p>The way you say someone&rsquo;s name.</p>
         <p>The rhythm of how you tell a story.</p>
         <p>The warmth in your laugh.</p>
-        <p class="onboarding-body__emphasis">These things can&rsquo;t be written down. But they can be preserved.</p>
+        <p class="onboarding-body__emphasis">These things can&rsquo;t be written down. But they can be kept.</p>
       </div>
       <div class="onboarding-ctas">
         <button class="btn-primary js-next">Continue</button>
@@ -1333,7 +1403,7 @@ button, a, [role="button"] { min-height: 44px; }
           <span class="onboarding-journey__num" aria-hidden="true">2</span>
           <span class="onboarding-journey__text">
             <span class="onboarding-journey__label">Record your voice</span>
-            <span class="onboarding-journey__duration">10&ndash;12 minutes</span>
+            <span class="onboarding-journey__duration">10 to 13 minutes</span>
           </span>
         </li>
         <li class="onboarding-journey__item">
@@ -1352,7 +1422,7 @@ button, a, [role="button"] { min-height: 44px; }
         <span class="onboarding-total-time__value">About 15 minutes</span>
       </div>
       <div class="onboarding-body">
-        <p class="onboarding-body__muted">We&rsquo;ll guide every step &mdash; pause anytime.</p>
+        <p class="onboarding-body__muted">Most people finish in one sitting. You can also pause and return anytime.</p>
       </div>
       <div class="onboarding-ctas">
         <button class="btn-primary js-next">Let&rsquo;s begin</button>
@@ -1368,11 +1438,10 @@ button, a, [role="button"] { min-height: 44px; }
        "WELCOME TO ESSENCE" but in mineral blue-gray to signal the new act.
        ═══════════════════════════════════════════════════════════════════ -->
   <section class="screen" data-screen="7" data-stone="guidance" data-bg="warm-phase">
-    <div class="onboarding-step">
+    <div class="onboarding-step onboarding-step--centered">
       <div class="onboarding-stone-slot"></div>
       <div class="onboarding-phase-label">YOUR PROFILE</div>
-      <h1 class="onboarding-title">First, tell us a little about you.</h1>
-      <p class="onboarding-subtitle">This helps us personalize your experience.</p>
+      <h1 class="onboarding-title">Now, the part that&rsquo;s about you.</h1>
       <div class="onboarding-ctas">
         <button class="btn-primary js-next">Get started</button>
       </div>
@@ -1383,33 +1452,98 @@ button, a, [role="button"] { min-height: 44px; }
        SCREEN 8 — Combined "About you" form
        Stone: idle · Bg: warm-phase
        Cream form card lifts off the warm-phase oat. First-name autofocuses
-       400ms after slide settles. Continue is disabled until all fields are
-       valid (enabled here for handoff so designer can test the form layout).
+       400ms after slide settles. Continue is ALWAYS pressable; validation
+       runs on Continue press — per-field error copy renders below the
+       failing field and the input gets the --error class. Typing clears
+       that field's error only. The DOB field uses three selects (Month/
+       Day/Year); Year defaults to the "Year" placeholder so the user
+       must actively select a value. For handoff, tapping Continue with
+       empty fields triggers the error states so the designer can review
+       the messaging + alignment. A second tap (with invalid Feb 31 etc.)
+       swaps the DOB copy to the combination-invalid variant.
        ═══════════════════════════════════════════════════════════════════ -->
   <section class="screen" data-screen="8" data-stone="idle" data-bg="warm-phase">
     <div class="onboarding-step">
       <div class="onboarding-stone-slot"></div>
       <h1 class="onboarding-title">Tell us about you.</h1>
       <p class="onboarding-subtitle">A few quick details so your messages feel personal.</p>
+      <form id="onb-form" novalidate>
       <div class="onboarding-form-card">
         <div class="onboarding-field-row">
           <div class="onboarding-field">
             <label class="onboarding-field__label" for="onb-first-name">First name</label>
-            <input id="onb-first-name" type="text" class="onboarding-input" placeholder="First" autocomplete="given-name" maxlength="50">
+            <input id="onb-first-name" type="text" class="onboarding-input" autocomplete="given-name" maxlength="50">
+            <p class="onboarding-field__error" id="onb-err-first-name" hidden>Please add your first name.</p>
           </div>
           <div class="onboarding-field">
             <label class="onboarding-field__label" for="onb-last-name">Last name</label>
-            <input id="onb-last-name" type="text" class="onboarding-input" placeholder="Last" autocomplete="family-name" maxlength="80">
+            <input id="onb-last-name" type="text" class="onboarding-input" autocomplete="family-name" maxlength="80">
+            <p class="onboarding-field__error" id="onb-err-last-name" hidden>Please add your last name.</p>
           </div>
         </div>
         <div class="onboarding-field">
-          <label class="onboarding-field__label" for="onb-dob">Date of birth</label>
-          <input id="onb-dob" type="date" class="onboarding-input" min="1900-01-01">
+          <span class="onboarding-field__label">Date of birth</span>
+          <div class="onboarding-field-row">
+            <div class="onboarding-field onboarding-field--fixed">
+              <select id="onb-dob-month" class="onboarding-input onboarding-input--select" aria-label="Birth month">
+                <option value="">Month</option>
+                <option value="1">January</option><option value="2">February</option>
+                <option value="3">March</option><option value="4">April</option>
+                <option value="5">May</option><option value="6">June</option>
+                <option value="7">July</option><option value="8">August</option>
+                <option value="9">September</option><option value="10">October</option>
+                <option value="11">November</option><option value="12">December</option>
+              </select>
+            </div>
+            <div class="onboarding-field onboarding-field--fixed">
+              <select id="onb-dob-day" class="onboarding-input onboarding-input--select" aria-label="Birth day">
+                <option value="">Day</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+                <option>9</option><option>10</option><option>11</option><option>12</option>
+                <option>13</option><option>14</option><option>15</option><option>16</option>
+                <option>17</option><option>18</option><option>19</option><option>20</option>
+                <option>21</option><option>22</option><option>23</option><option>24</option>
+                <option>25</option><option>26</option><option>27</option><option>28</option>
+                <option>29</option><option>30</option><option>31</option>
+              </select>
+            </div>
+            <div class="onboarding-field onboarding-field--grow">
+              <select id="onb-dob-year" class="onboarding-input onboarding-input--select" aria-label="Birth year">
+                <option value="">Year</option>
+                <!-- 2010 down to 1925; production generates Array.from({length:86}). -->
+                <option>2010</option><option>2009</option><option>2008</option><option>2007</option>
+                <option>2006</option><option>2005</option><option>2004</option><option>2003</option>
+                <option>2002</option><option>2001</option><option>2000</option><option>1999</option>
+                <option>1998</option><option>1997</option><option>1996</option><option>1995</option>
+                <option>1994</option><option>1993</option><option>1992</option><option>1991</option>
+                <option>1990</option><option>1989</option><option>1988</option><option>1987</option>
+                <option>1986</option><option>1985</option><option>1984</option><option>1983</option>
+                <option>1982</option><option>1981</option><option>1980</option><option>1979</option>
+                <option>1978</option><option>1977</option><option>1976</option><option>1975</option>
+                <option>1974</option><option>1973</option><option>1972</option><option>1971</option>
+                <option>1970</option><option>1969</option><option>1968</option><option>1967</option>
+                <option>1966</option><option>1965</option><option>1964</option><option>1963</option>
+                <option>1962</option><option>1961</option><option>1960</option><option>1959</option>
+                <option>1958</option><option>1957</option><option>1956</option><option>1955</option>
+                <option>1954</option><option>1953</option><option>1952</option><option>1951</option>
+                <option>1950</option><option>1949</option><option>1948</option><option>1947</option>
+                <option>1946</option><option>1945</option><option>1944</option><option>1943</option>
+                <option>1942</option><option>1941</option><option>1940</option><option>1939</option>
+                <option>1938</option><option>1937</option><option>1936</option><option>1935</option>
+                <option>1934</option><option>1933</option><option>1932</option><option>1931</option>
+                <option>1930</option><option>1929</option><option>1928</option><option>1927</option>
+                <option>1926</option><option>1925</option>
+              </select>
+            </div>
+          </div>
+          <p class="onboarding-field__error" id="onb-err-dob" hidden>Please complete your date of birth.</p>
         </div>
         <div class="onboarding-field-row">
           <div class="onboarding-field onboarding-field--grow">
             <label class="onboarding-field__label" for="onb-city">City</label>
-            <input id="onb-city" type="text" class="onboarding-input" placeholder="Where you live" autocomplete="address-level2" maxlength="80">
+            <input id="onb-city" type="text" class="onboarding-input" autocomplete="address-level2" maxlength="80">
+            <p class="onboarding-field__error" id="onb-err-city" hidden>Please add your city.</p>
           </div>
           <div class="onboarding-field onboarding-field--fixed">
             <label class="onboarding-field__label" for="onb-state">State</label>
@@ -1429,19 +1563,28 @@ button, a, [role="button"] { min-height: 44px; }
               <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
               <option>WI</option><option>WY</option>
             </select>
+            <p class="onboarding-field__error" id="onb-err-state" hidden>Please choose your state.</p>
           </div>
         </div>
       </div>
       <div class="onboarding-ctas">
-        <button class="btn-primary js-next">Continue</button>
+        <button type="submit" class="btn-primary">Continue</button>
       </div>
+      </form>
     </div>
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════════════
        SCREEN 9 — Review (verify captured data before proceeding)
        Stone: idle · Bg: warm-phase
-       Sample data pre-filled. "Change" returns to Screen 8.
+       Sample data pre-filled. "Change" sits in a header row at the top-
+       right of the card and returns to Screen 8 (form state persists —
+       values come from the parent useOnboardingForm hook, not localStorage
+       round-trips). Values are LEFT-aligned with a 120px fixed label
+       column so long names (e.g. "Constantina Aleksandropoulou-Rasmussen")
+       wrap gracefully inside the card instead of clipping or pushing the
+       card wider. Avatar slot is conditional in production — rendered
+       here in the default markup so designers can review both states.
        ═══════════════════════════════════════════════════════════════════ -->
   <section class="screen" data-screen="9" data-stone="idle" data-bg="warm-phase">
     <div class="onboarding-step">
@@ -1449,6 +1592,25 @@ button, a, [role="button"] { min-height: 44px; }
       <h1 class="onboarding-title">Does this look right?</h1>
       <p class="onboarding-subtitle">We&rsquo;ll use this to personalize your recording.</p>
       <div class="onboarding-review-card">
+        <div class="onboarding-review-card__header">
+          <button type="button" class="onboarding-review-card__change js-back-to-form">Change</button>
+        </div>
+        <!-- Avatar slot — production renders this `{avatarUrl && ...}` so
+             it only appears when the user uploaded a photo on Screen 10.
+             Swap the src or remove the block to preview the no-photo state. -->
+        <div class="onboarding-review-card__avatar">
+          <!-- Inline SVG placeholder — keeps the prototype offline-clean -->
+          <svg viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg" aria-label="Profile photo placeholder">
+            <defs>
+              <radialGradient id="avatarG" cx="30%" cy="28%" r="85%">
+                <stop offset="0%" stop-color="#E8DCC8"/>
+                <stop offset="60%" stop-color="#D4C6A8"/>
+                <stop offset="100%" stop-color="#C4B8A0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="44" cy="44" r="44" fill="url(#avatarG)"/>
+          </svg>
+        </div>
         <div class="onboarding-review-row">
           <div class="onboarding-review-row__label">Name</div>
           <div class="onboarding-review-row__value">Sarah McConnell</div>
@@ -1461,10 +1623,9 @@ button, a, [role="button"] { min-height: 44px; }
           <div class="onboarding-review-row__label">Location</div>
           <div class="onboarding-review-row__value">Asheville, NC</div>
         </div>
-        <button type="button" class="onboarding-review-card__edit js-back-to-form">Change</button>
       </div>
       <div class="onboarding-ctas">
-        <button class="btn-primary js-next">Looks good</button>
+        <button class="btn-primary js-next">Yes, that&rsquo;s right</button>
       </div>
     </div>
   </section>
@@ -1498,7 +1659,11 @@ button, a, [role="button"] { min-height: 44px; }
        SCREEN 11 — Priming moment (3500ms button unlock)
        Stone: priming (slow, deep breath, balanced inhale/exhale)
        Hint copy ("Breathe with the stone for a moment.") fades in at 2500ms.
-       Primary CTA unlocks at 3500ms (opacity 0.4 → 1, pointer events on).
+       Primary CTA unlocks at 3500ms — the 800ms opacity transition feels
+       like permission arriving. During the lock the button uses
+       aria-disabled="true" + tabindex="-1" (NOT the native `disabled`
+       attribute, which removes it from the accessibility tree entirely);
+       onClick + onKeyDown guards block activation until unlock.
        ═══════════════════════════════════════════════════════════════════ -->
   <section class="screen" data-screen="11" data-stone="priming" data-bg="warm-phase">
     <div class="onboarding-step">
@@ -1510,7 +1675,7 @@ button, a, [role="button"] { min-height: 44px; }
         <p>Think of it like leaving a voicemail for someone you love.</p>
       </div>
       <div class="onboarding-ctas onboarding-ctas--locked" id="primingCtas">
-        <button class="btn-primary js-next">Begin setup</button>
+        <button type="button" class="btn-primary btn--full js-priming-begin" id="primingBtn" aria-disabled="true" tabindex="-1">Begin setup</button>
       </div>
     </div>
   </section>
@@ -1526,13 +1691,16 @@ button, a, [role="button"] { min-height: 44px; }
       <div class="onboarding-stone-slot"></div>
       <h1 class="onboarding-title">Ready to begin recording?</h1>
       <div class="onboarding-ready-list">
-        <p>You&rsquo;ll need about 10&ndash;13 minutes in a quiet space.</p>
-        <p>We&rsquo;ll guide you through 25 short prompts.</p>
-        <p>Your microphone will need to be enabled.</p>
+        <p>About 10 to 13 minutes in a quiet space.</p>
+        <p>Twenty-five short prompts, in your own pace.</p>
+        <p>Microphone enabled.</p>
       </div>
+      <p class="onboarding-ready-closer" style="font-style: italic; color: var(--color-text-primary); text-align: center;">
+        What you record today will be kept for whenever it&rsquo;s needed.
+      </p>
       <div class="onboarding-ctas">
         <button class="btn-primary js-finish">Begin recording</button>
-        <button class="btn-link">I need more time</button>
+        <button class="btn-link btn--full btn-link--soft">I need more time</button>
       </div>
     </div>
   </section>
@@ -1613,17 +1781,17 @@ button, a, [role="button"] { min-height: 44px; }
 
 const SCREEN_META = {
   1:  { title: 'Welcome',                           note: 'Sole forward CTA. The stone has just performed its 1500ms blur+scale-up reveal; copy fades in stagger above the CTA.' },
-  2:  { title: 'Purpose / cinematic conveyor',      note: 'Six transient italic phrases pass through the conveyor (1.9s each, 1.5s stagger), then "Your voice. / Their timeline." lands and stays. Continue fades in at 14.3s.' },
-  3:  { title: 'Who this is for',                   note: 'Three personas + emphasis closer. Body paragraphs stagger 180ms apart; the closer ("Your voice deserves to last.") gets an extra 160ms beat.' },
+  2:  { title: 'Purpose / cinematic conveyor',      note: 'Three transient italic phrases pass through the conveyor (1.9s each, 1.5s stagger). "Your voice." lands at 7s as the quiet conclusion; the Continue CTA fades in 3s after, at 10s. No tail phrase — "Their timeline." was dropped for restraint.' },
+  3:  { title: 'Who this is for',                   note: 'One body paragraph + emphasis closer ("It deserves to last."). Tighter than the earlier 3-persona variant — the single line does the work of the list.' },
   4:  { title: 'Safety & trust',                    note: 'Three "never" lines (mineral-dark/700). Closer is muted/italic. "Read our privacy promise" link opens the bottom-sheet modal — preserves onboarding state behind it.' },
-  5:  { title: 'Why your voice matters',            note: 'Stone steps up to ready (subtle warm glow, slightly faster breath). Body sits at the 4th step-child slot so its base reveal delay shifts +500ms.' },
-  6:  { title: 'How this works',                    note: 'Numbered journey list (current step has filled mineral badge). Warm-honey total-time pill below. Tapping "Let\'s begin" plays the bespoke phase exit (250ms drift left + fade) before Screen 7 enters.' },
-  7:  { title: 'Identity setup intro (PHASE)',      note: 'Background warms cream → oat over 600ms. Stone leads title by 80ms with a 380ms ease-out. "YOUR PROFILE" eyebrow uses mineral blue-gray, structurally echoing Screen 1\'s "WELCOME TO ESSENCE".' },
-  8:  { title: 'About you (form card)',             note: 'Cream form card lifts off the warm-phase oat. First-name autofocuses 400ms after settle. All fields required for Continue (enabled here for handoff so the form layout is reviewable).' },
-  9:  { title: 'Review',                            note: 'Sample data pre-filled. "Change" jumps back to Screen 8. The cream card uses the same elevation treatment as Screen 8 for structural rhyme.' },
-  10: { title: 'Photo upload (optional)',           note: 'Tap circle to toggle filled state. When filled, primary CTA copy swaps and "Continue without photo" link appears below.' },
-  11: { title: 'Priming moment (3500ms unlock)',    note: 'Stone steps to priming (slow, deep, balanced inhale/exhale). Hint fades in at 2500ms. Primary CTA unlocks at 3500ms — the 800ms opacity transition feels like permission arriving.' },
-  12: { title: 'Ready to begin',                    note: 'Final summary. "Begin recording" calls onComplete in production: persists profile to Supabase, navigates to /app/record. "I need more time" is a no-op pause affordance.' },
+  5:  { title: 'Why your voice matters',            note: 'Stone steps up to ready (subtle warm glow, slightly faster breath). Three specific-detail paragraphs + emphasis closer ("These things can\'t be written down. But they can be kept."). Verb is deliberately "kept", not "preserved".' },
+  6:  { title: 'How this works',                    note: 'Numbered journey list (current step has filled mineral badge). Step 2 is "10 to 13 minutes". Warm-honey total-time pill below. Tapping "Let\'s begin" plays the bespoke phase exit (250ms drift left + fade) before Screen 7 enters.' },
+  7:  { title: 'Identity setup intro (PHASE)',      note: 'Background warms cream → oat over 600ms. Stone leads title by 80ms with a 380ms ease-out. No subtitle — just the phase eyebrow + h1 ("Now, the part that\'s about you."). Centered step layout so the single line anchors.' },
+  8:  { title: 'About you (form card)',             note: 'Cream form card lifts off the warm-phase oat. First-name autofocuses 400ms after settle. DOB is three selects (Month/Day/Year) — Year shows "Year" placeholder, no pre-selection. Continue is ALWAYS pressable; validation runs on press. Per-field error copy renders below the failing input; typing clears that field\'s error only. No shake/bounce.' },
+  9:  { title: 'Review',                            note: '"Change" sits in a header row at the top-right and returns to Screen 8 with form state preserved. Review rows are LEFT-aligned with a 120px fixed label column so long names wrap gracefully. Optional avatar circle appears above the rows when the user uploaded a photo on Screen 10.' },
+  10: { title: 'Photo upload (optional)',           note: 'Tap circle to toggle filled state. When filled, primary CTA copy swaps to "Save photo" and "Continue without photo" link appears below.' },
+  11: { title: 'Priming moment (3500ms unlock)',    note: 'Stone steps to priming (slow, deep, balanced inhale/exhale). Hint fades in at 2500ms. Primary CTA unlocks at 3500ms. Lock uses aria-disabled="true" + tabindex="-1" (NOT native `disabled`, which would hide it from screen readers); click + keydown guards block Enter/Space during the lock.' },
+  12: { title: 'Ready to begin',                    note: 'Three body items + italic closer ("What you record today will be kept for whenever it\'s needed."). "Begin recording" calls onComplete in production: persists profile to Supabase, navigates to /app/record. "I need more time" is a soft pause affordance (btn-link--soft).' },
 };
 
 const phone        = document.getElementById('phone');
@@ -1724,12 +1892,17 @@ function goTo(n) {
 
 function startPrimingUnlock() {
   const ctas = document.getElementById('primingCtas');
-  if (!ctas) return;
+  const btn  = document.getElementById('primingBtn');
+  if (!ctas || !btn) return;
   ctas.classList.remove('onboarding-ctas--unlocked');
   ctas.classList.add('onboarding-ctas--locked');
+  btn.setAttribute('aria-disabled', 'true');
+  btn.setAttribute('tabindex', '-1');
   primingTimer = setTimeout(() => {
     ctas.classList.remove('onboarding-ctas--locked');
     ctas.classList.add('onboarding-ctas--unlocked');
+    btn.setAttribute('aria-disabled', 'false');
+    btn.setAttribute('tabindex', '0');
   }, 3500);
 }
 
@@ -1768,6 +1941,118 @@ document.querySelectorAll('.js-back-to-form').forEach((b) => {
   b.addEventListener('click', () => goTo(8));
 });
 
+/* Screen 11 priming button — click + keydown guards mirror production.
+   During the lock (aria-disabled="true") clicks and Enter/Space no-op;
+   after unlock, either advances to Screen 12. */
+const primingBtn = document.getElementById('primingBtn');
+if (primingBtn) {
+  primingBtn.addEventListener('click', (e) => {
+    if (primingBtn.getAttribute('aria-disabled') === 'true') {
+      e.preventDefault();
+      return;
+    }
+    goTo(current + 1);
+  });
+  primingBtn.addEventListener('keydown', (e) => {
+    if (primingBtn.getAttribute('aria-disabled') === 'true'
+        && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+    }
+  });
+}
+
+/* Screen 8 form — validation on submit. Validation mirrors production:
+   runs only when the user presses Continue (never on blur or change).
+   Typing in an errored field clears THAT field's error, not the others.
+   DOB has two failure modes — any part empty ("complete your date of
+   birth") vs. all filled but invalid combination like Feb 31 ("that
+   date doesn't look right"). */
+const FORM = document.getElementById('onb-form');
+if (FORM) {
+  const $ = (id) => document.getElementById(id);
+  const fn = $('onb-first-name');
+  const ln = $('onb-last-name');
+  const dm = $('onb-dob-month');
+  const dd = $('onb-dob-day');
+  const dy = $('onb-dob-year');
+  const ci = $('onb-city');
+  const st = $('onb-state');
+  const ef = { firstName: $('onb-err-first-name'), lastName: $('onb-err-last-name'),
+               dob: $('onb-err-dob'), city: $('onb-err-city'), state: $('onb-err-state') };
+
+  function isValidCalendarDate(m, d, y) {
+    m = parseInt(m, 10); d = parseInt(d, 10); y = parseInt(y, 10);
+    if (!m || !d || !y) return false;
+    const dt = new Date(y, m - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+  }
+
+  function setError(input, errEl, msg) {
+    if (msg) { input.classList.add('onboarding-input--error'); input.setAttribute('aria-invalid', 'true'); errEl.hidden = false; errEl.textContent = msg; }
+    else     { input.classList.remove('onboarding-input--error'); input.removeAttribute('aria-invalid'); errEl.hidden = true; }
+  }
+  function clearError(input, errEl) { setError(input, errEl, ''); }
+
+  // On input, clear that field's error.
+  fn.addEventListener('input',  () => clearError(fn, ef.firstName));
+  ln.addEventListener('input',  () => clearError(ln, ef.lastName));
+  ci.addEventListener('input',  () => clearError(ci, ef.city));
+  st.addEventListener('change', () => clearError(st, ef.state));
+  [dm, dd, dy].forEach((sel) => sel.addEventListener('change', () => {
+    [dm, dd, dy].forEach((s) => s.classList.remove('onboarding-input--error'));
+    [dm, dd, dy].forEach((s) => s.removeAttribute('aria-invalid'));
+    ef.dob.hidden = true;
+  }));
+
+  FORM.addEventListener('submit', (e) => {
+    e.preventDefault();
+    let firstFailId = null;
+    const flag = (el, id) => { if (!firstFailId) firstFailId = id; };
+
+    if (!fn.value.trim()) { setError(fn, ef.firstName, 'Please add your first name.'); flag(fn, 'onb-first-name'); }
+    else                  clearError(fn, ef.firstName);
+
+    if (!ln.value.trim()) { setError(ln, ef.lastName, 'Please add your last name.'); flag(ln, 'onb-last-name'); }
+    else                  clearError(ln, ef.lastName);
+
+    const m = dm.value, d = dd.value, y = dy.value;
+    [dm, dd, dy].forEach((s) => s.classList.remove('onboarding-input--error'));
+    if (!m || !d || !y) {
+      ef.dob.hidden = false; ef.dob.textContent = 'Please complete your date of birth.';
+      if (!m) dm.classList.add('onboarding-input--error');
+      if (!d) dd.classList.add('onboarding-input--error');
+      if (!y) dy.classList.add('onboarding-input--error');
+      [dm, dd, dy].forEach((s) => s.setAttribute('aria-invalid', 'true'));
+      flag(dm, 'onb-dob-month');
+    } else if (!isValidCalendarDate(m, d, y)) {
+      ef.dob.hidden = false; ef.dob.textContent = "That date doesn't look right. Please check.";
+      [dm, dd, dy].forEach((s) => s.classList.add('onboarding-input--error'));
+      [dm, dd, dy].forEach((s) => s.setAttribute('aria-invalid', 'true'));
+      flag(dm, 'onb-dob-month');
+    } else {
+      ef.dob.hidden = true;
+      [dm, dd, dy].forEach((s) => s.removeAttribute('aria-invalid'));
+    }
+
+    if (!ci.value.trim()) { setError(ci, ef.city, 'Please add your city.'); flag(ci, 'onb-city'); }
+    else                  clearError(ci, ef.city);
+
+    if (!st.value)        { setError(st, ef.state, 'Please choose your state.'); flag(st, 'onb-state'); }
+    else                  clearError(st, ef.state);
+
+    if (firstFailId) {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(firstFailId);
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (r.top < 0 || r.bottom > window.innerHeight) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    } else {
+      goTo(current + 1);
+    }
+  });
+}
+
 /* Privacy modal */
 function openPrivacy()  { privacyModal.classList.add('privacy-modal--open'); }
 function closePrivacy() { privacyModal.classList.remove('privacy-modal--open'); }
@@ -1793,7 +2078,7 @@ document.querySelector('.js-photo-toggle')?.addEventListener('click', () => {
     if (!document.getElementById('photoSkipLink')) {
       const skip = document.createElement('button');
       skip.id = 'photoSkipLink';
-      skip.className = 'btn-link js-next';
+      skip.className = 'btn-link btn--full js-next';
       skip.textContent = 'Continue without photo';
       skip.addEventListener('click', () => goTo(current + 1));
       ctas.appendChild(skip);
