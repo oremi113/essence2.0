@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESSENCE Voice Vault â€” Design Palette & Integration Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#FBF8F4;--card:#F5F0EA;--sand:#EBE4DC;--honey:#E8DCC8;
+      --mineral:#7A8088;--mineral-dark:#656B73;
+      --text1:#1C1A18;--text2:#6B6B6B;--text3:#ADA9A5;
+      --border:rgba(0,0,0,0.06);
+      --serif:'Spectral',Georgia,serif;--sans:'Inter',-apple-system,system-ui,sans-serif;
+      --mono:'SF Mono',Monaco,monospace;
+    }
+    html{font-size:16px}
+    body{background:var(--bg);color:var(--text1);font-family:var(--sans);
+      -webkit-font-smoothing:antialiased;line-height:1.6}
+
+    .doc{max-width:920px;margin:0 auto;padding:64px 32px 160px}
+
+    /* Header */
+    .doc-header{border-bottom:1px solid var(--border);padding-bottom:32px;margin-bottom:48px}
+    .doc-eyebrow{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.16em;color:var(--mineral);margin-bottom:8px}
+    .doc-title{font-family:var(--serif);font-size:36px;font-weight:600;color:var(--text1);line-height:1.2;margin-bottom:12px}
+    .doc-subtitle{font-size:15px;color:var(--text2);line-height:1.7;max-width:640px}
+    .doc-meta{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap}
+    .doc-meta-item{font-size:11px;color:var(--text3)}
+    .doc-meta-item strong{color:var(--text2);font-weight:600}
+
+    /* Sections */
+    .section{margin-bottom:64px}
+    .section-num{font-family:var(--serif);font-size:11px;font-weight:600;color:var(--mineral);margin-bottom:4px}
+    .section-title{font-family:var(--serif);font-size:22px;font-weight:600;margin-bottom:8px}
+    .section-desc{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:24px;max-width:640px}
+
+    /* Swatches */
+    .swatch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:32px}
+    .swatch{border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+    .swatch-color{height:64px}
+    .swatch-info{padding:10px 12px;background:#fff}
+    .swatch-name{font-size:12px;font-weight:600;color:var(--text1);margin-bottom:2px}
+    .swatch-hex{font-family:var(--mono);font-size:11px;color:var(--text2)}
+    .swatch-rgb{font-family:var(--mono);font-size:10px;color:var(--text3)}
+    .swatch-use{font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4}
+
+    /* Metal gradient demo */
+    .metal-strip{display:flex;height:48px;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid var(--border)}
+    .metal-strip div{flex:1}
+    .metal-label{font-size:10px;color:var(--text3);display:flex;justify-content:space-between;margin-bottom:16px}
+
+    /* Code blocks */
+    .code-block{background:#1C1A18;border-radius:10px;padding:20px 24px;overflow-x:auto;margin-bottom:16px;position:relative}
+    .code-block pre{font-family:var(--mono);font-size:12px;line-height:1.7;color:#E0DCD6;white-space:pre;tab-size:2}
+    .code-block .cm{color:#6B6B6B}
+    .code-block .kw{color:#C4A882}
+    .code-block .str{color:#A8C4A0}
+    .code-block .num{color:#D4A0A0}
+    .code-block .fn{color:#A0B8D4}
+    .code-label{position:absolute;top:10px;right:14px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#656B73;background:#2A2622;padding:2px 8px;border-radius:4px}
+
+    /* Tables */
+    .spec-table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px}
+    .spec-table th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--sand);font-weight:600;color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:0.06em}
+    .spec-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+    .spec-table td:first-child{font-weight:600;color:var(--text1);white-space:nowrap}
+    .spec-table .mono{font-family:var(--mono);font-size:11px;color:var(--mineral)}
+
+    /* Live vault renders */
+    .vault-row{display:flex;gap:24px;justify-content:center;align-items:end;flex-wrap:wrap;margin-bottom:16px}
+    .vault-cell{display:flex;flex-direction:column;align-items:center}
+    .vault-cell canvas{border-radius:12px;border:1px solid var(--border)}
+    .vault-cell-label{margin-top:8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3)}
+
+    /* Animated demo */
+    .anim-stage{display:flex;flex-direction:column;align-items:center;margin-bottom:16px}
+    .anim-stage canvas{border-radius:12px;border:1px solid var(--border)}
+    .anim-btn{margin-top:16px;font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:0.03em;
+      color:var(--bg);background:var(--text1);border:none;border-radius:8px;
+      padding:10px 28px;cursor:pointer;transition:transform 0.12s ease}
+    .anim-btn:active{transform:scale(0.97)}
+
+    /* Notes */
+    .note{background:var(--card);border-radius:10px;padding:16px 20px;font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:24px;border-left:3px solid var(--honey)}
+    .note strong{color:var(--text1)}
+
+    /* State comparison */
+    .state-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    .state-card{background:var(--card);border-radius:12px;padding:16px 20px;border:1px solid var(--border)}
+    .state-card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--mineral);margin-bottom:8px}
+    .state-card-list{list-style:none;font-size:12px;color:var(--text2);line-height:1.8}
+    .state-card-list li::before{content:'Â·';color:var(--honey);font-weight:700;margin-right:6px}
+
+    /* Stone color stops */
+    .stone-strip{display:flex;height:36px;border-radius:6px;overflow:hidden;margin-bottom:4px;border:1px solid var(--border)}
+    .stone-strip div{flex:1;position:relative}
+    .stone-strip div span{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;color:var(--text3);white-space:nowrap}
+
+    /* Divider */
+    .divider{height:1px;background:var(--border);margin:48px 0}
+
+    /* Responsive */
+    @media(max-width:640px){
+      .doc{padding:32px 16px 120px}
+      .doc-title{font-size:28px}
+      .swatch-grid{grid-template-columns:1fr 1fr}
+      .state-pair{grid-template-columns:1fr}
+      .vault-row{flex-direction:column;align-items:center}
+    }
+  </style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="doc-eyebrow">ESSENCE Design System</div>
+    <h1 class="doc-title">Voice Vault â€” Design Palette & Integration Guide</h1>
+    <p class="doc-subtitle">Everything needed to render the Voice Vault component in any ESSENCE screen. Color palette, state parameters, render code, animation timing, and integration examples.</p>
+    <div class="doc-meta">
+      <div class="doc-meta-item"><strong>Source:</strong> vault-phase5-final.html</div>
+      <div class="doc-meta-item"><strong>Canvas:</strong> 600Ã—600 @2x</div>
+      <div class="doc-meta-item"><strong>Dependencies:</strong> Canvas 2D only</div>
+      <div class="doc-meta-item"><strong>Updated:</strong> Feb 2026</div>
+    </div>
+  </div>
+
+  <!-- 01: COLOR PALETTE -->
+  <div class="section">
+    <div class="section-num">01</div>
+    <h2 class="section-title">Color Palette</h2>
+    <p class="section-desc">The vault inherits the MINERAL & WARMTH palette. These are the exact colors used in the render code. Every gradient stop, every alpha blend, derives from these seven values.</p>
+
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#FBF8F4"></div><div class="swatch-info"><div class="swatch-name">Background</div><div class="swatch-hex">#FBF8F4</div><div class="swatch-rgb">rgb(251, 248, 244)</div><div class="swatch-use">Canvas fill, environment, specular highlight base</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#F5F0EA"></div><div class="swatch-info"><div class="swatch-name">Card</div><div class="swatch-hex">#F5F0EA</div><div class="swatch-rgb">rgb(245, 240, 234)</div><div class="swatch-use">Case highlight, shimmer, hammered texture light</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#EBE4DC"></div><div class="swatch-info"><div class="swatch-name">Sand</div><div class="swatch-hex">#EBE4DC</div><div class="swatch-rgb">rgb(235, 228, 220)</div><div class="swatch-use">Interior gradient center, stone glow outer ring</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#E8DCC8"></div><div class="swatch-info"><div class="swatch-name">Honey</div><div class="swatch-hex">#E8DCC8</div><div class="swatch-rgb">rgb(232, 220, 200)</div><div class="swatch-use">Stone glow core, inter-ring glow, aura, warm light cast</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#7A8088"></div><div class="swatch-info"><div class="swatch-name">Mineral</div><div class="swatch-hex">#7A8088</div><div class="swatch-rgb">rgb(122, 128, 136)</div><div class="swatch-use">Cool metal base â€” case, rings, spokes when warmth = 0</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#656B73"></div><div class="swatch-info"><div class="swatch-name">Mineral Dark</div><div class="swatch-hex">#656B73</div><div class="swatch-rgb">rgb(101, 107, 115)</div><div class="swatch-use">Ring inner edge, hammered texture dark, vein fill</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#1C1A18"></div><div class="swatch-info"><div class="swatch-name">Text Primary</div><div class="swatch-hex">#1C1A18</div><div class="swatch-rgb">rgb(28, 26, 24)</div><div class="swatch-use">Contact shadow, stone texture dark, environment darken</div></div></div>
+    </div>
+
+    <div class="note"><strong>The metal color function.</strong> The case, rings, and spokes are not flat colors â€” they use a parametric function: <code>mineralMetal(warmth, lightness)</code>. Warmth (0â†’1) blends from cool Mineral toward warm [188,178,158]. Lightness (0â†’1) then maps that base between dark [85,88,94] and light [235,228,218]. Every metallic surface in the vault is generated from this single function.</div>
+
+    <div class="section-num" style="margin-top:24px">Metal Gradient</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">The warmth axis at lightness 0.5. Left: warmth 0 (cool mineral). Right: warmth 1 (warm bronze).</p>
+    <div class="metal-strip" id="metalStrip"></div>
+    <div class="metal-label"><span>warmth: 0.0</span><span>warmth: 0.5</span><span>warmth: 1.0</span></div>
+
+    <div class="section-num" style="margin-top:16px">Stone Color Stops â€” Open</div>
+    <div class="stone-strip" id="stoneOpen"></div>
+    <div style="height:24px"></div>
+    <div class="section-num">Stone Color Stops â€” Sealed</div>
+    <div class="stone-strip" id="stoneSealed"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 02: VAULT GEOMETRY -->
+  <div class="section">
+    <div class="section-num">02</div>
+    <h2 class="section-title">Vault Geometry</h2>
+    <p class="section-desc">Fixed dimensions at hero size. The canvas is 600Ã—600 @2x, displayed at 300Ã—300 (or 360Ã—360 for animation). All measurements are in canvas pixels.</p>
+
+    <table class="spec-table">
+      <thead><tr><th>Element</th><th>Dimension</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Canvas</td><td class="mono">600 Ã— 600</td><td>@2x retina. Display at 300px or 360px</td></tr>
+        <tr><td>Case</td><td class="mono">300 Ã— 340</td><td>Portrait rectangle, centered. Corner radius 30px</td></tr>
+        <tr><td>Interior well</td><td class="mono">256 Ã— 296</td><td>22px inset from case edge. Corner radius 24px</td></tr>
+        <tr><td>Mechanism center</td><td class="mono">cx, cy+8</td><td>8px below canvas center (visual weight)</td></tr>
+        <tr><td>Mechanism radius</td><td class="mono">105</td><td>Defines outermost ring position</td></tr>
+        <tr><td>Ring widths</td><td class="mono">Â±5, Â±4, Â±3</td><td>Outer: Â±5. Middle: Â±4. Inner: Â±3</td></tr>
+        <tr><td>Stone radius</td><td class="mono">30 â†’ 40</td><td>Open â†’ Sealed. Grows 33% on seal</td></tr>
+        <tr><td>Spokes</td><td class="mono">8 Ã— variable</td><td>Width: 1.8â†’6.5. Run from inner ring to outer ring</td></tr>
+        <tr><td>Bolt caps</td><td class="mono">r: 2.8â†’5.0</td><td>At outer spoke end. Grow with seal</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 03: STATE PARAMETERS -->
+  <div class="section">
+    <div class="section-num">03</div>
+    <h2 class="section-title">State Parameters</h2>
+    <p class="section-desc">Two states. Every visual property lerps between them during the seal animation. Open = something needs to happen. Sealed = everything is safe.</p>
+
+    <div class="state-pair">
+      <div class="state-card">
+        <div class="state-card-title">Open</div>
+        <ul class="state-card-list">
+          <li>Warmth: 0.22 (cool, slightly mineral)</li>
+          <li>Stone glow: 0.02 (barely perceptible)</li>
+          <li>Stone radius: 30px (small, inert)</li>
+          <li>Spoke width: 1.8px / opacity: 0.18</li>
+          <li>Ring contract: 0.0 (loose, spaced)</li>
+          <li>Interior: cool sand-to-mineral gradient</li>
+          <li>Case highlight: 0.04 (flat lighting)</li>
+          <li>Shadow: blur 24, alpha 0.14 (soft lift)</li>
+          <li>Cool wash: 0.06 (slight blue tint)</li>
+          <li>Corner darkening: 0.07</li>
+          <li>Gap breaches: 0.06 (visible ring gaps)</li>
+          <li>Shimmer: active (slow drift in interior)</li>
+        </ul>
+      </div>
+      <div class="state-card">
+        <div class="state-card-title">Sealed</div>
+        <ul class="state-card-list">
+          <li>Warmth: 0.90 (warm, golden)</li>
+          <li>Stone glow: 0.30 (organic bloom)</li>
+          <li>Stone radius: 40px (grown, alive)</li>
+          <li>Spoke width: 6.5px / opacity: 0.65</li>
+          <li>Ring contract: 1.0 (tight, locked)</li>
+          <li>Interior: warm honey-to-sand gradient</li>
+          <li>Case highlight: 0.22 (focused specular)</li>
+          <li>Shadow: blur 14, alpha 0.07 (settled)</li>
+          <li>Cool wash: 0.00 (eliminated)</li>
+          <li>Corner darkening: 0.00 (warmed away)</li>
+          <li>Gap breaches: 0.00 (rings sealed)</li>
+          <li>Shimmer: killed (perfect stillness)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note"><strong>The emotional axis.</strong> Openâ†’Sealed is not just a visual transition. It maps to the user's emotional state: "I haven't recorded yet" â†’ "My voice is preserved and safe." Every parameter serves this axis. The stone leads the transition â€” its warmth and glow change first, and the mechanism (rings, spokes) follows.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 04: LIVE RENDERS -->
+  <div class="section">
+    <div class="section-num">04</div>
+    <h2 class="section-title">Live Renders</h2>
+    <p class="section-desc">The vault at hero size in both states. These are rendered live from the exact code below.</p>
+
+    <div class="vault-row">
+      <div class="vault-cell"><canvas id="v-open" width="600" height="600" style="width:260px;height:260px"></canvas><div class="vault-cell-label">Open (t=0)</div></div>
+      <div class="vault-cell"><canvas id="v-sealed" width="600" height="600" style="width:260px;height:260px"></canvas><div class="vault-cell-label">Sealed (t=1)</div></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 05: SEAL ANIMATION -->
+  <div class="section">
+    <div class="section-num">05</div>
+    <h2 class="section-title">Seal Animation</h2>
+    <p class="section-desc">800ms total across three phases. Then 600ms of absolute silence. The stone leads, the mechanism follows.</p>
+
+    <table class="spec-table">
+      <thead><tr><th>Phase</th><th>Duration</th><th>Easing</th><th>What moves</th></tr></thead>
+      <tbody>
+        <tr><td>P1 â€” Initiation</td><td class="mono">150ms</td><td class="mono">easeOutQuad</td><td>Glow spike + begin ring close (2 axes)</td></tr>
+        <tr><td>P2 â€” Compression</td><td class="mono">500ms</td><td class="mono">easeInOutCubic</td><td>Ring close + spoke thicken + stone grow (3 axes)</td></tr>
+        <tr><td>P3 â€” Lock</td><td class="mono">150ms</td><td class="mono">sin Ã— (1-t) Ã— 1.2</td><td>Overshoot Y settle (1 axis)</td></tr>
+        <tr><td>Silence</td><td class="mono">600ms</td><td>â€”</td><td>Nothing. Dead stop. Stillness IS the seal.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note"><strong>Cross-phase curves.</strong> Warmth, environment darken, rim, highlight sharpness, aura â€” all follow a single <code>globalT</code> curve: <code>p2Ã—0.6 + p3Ã—0.4</code>. The stone has its own curve: <code>p1Ã—0.1 + p2Ã—0.7 + p3Ã—0.2</code>. The mechanism has: <code>p1Ã—0.3 + p2Ã—0.7</code>. Stone leads.</div>
+
+    <div class="anim-stage">
+      <canvas id="v-anim" width="600" height="600" style="width:320px;height:320px"></canvas>
+      <button class="anim-btn" id="sealBtn">Seal</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 06: RENDER CODE -->
+  <div class="section">
+    <div class="section-num">06</div>
+    <h2 class="section-title">Integration Code</h2>
+    <p class="section-desc">The vault is a pure Canvas 2D render. No DOM dependencies, no external libraries. One function call renders it at any seal progress.</p>
+
+    <div class="note"><strong>How to use.</strong> Import the full render code from <code>vault-phase5-final.html</code>. The key functions are: <code>drawFrame(ms, isOpen)</code> for animation, or set the OPEN/SEALED params and lerp manually for static renders. The vault needs: (1) a 600Ã—600 canvas element, (2) the utility functions (seededRandom, PerlinNoise, mix, rgba), (3) the offscreen static layers (hammer, velvet, stone texture), and (4) the pre-computed stone outline and vein data.</div>
+
+    <div class="code-block"><div class="code-label">Static Render</div><pre><span class="cm">// Render vault at any seal progress (0 = open, 1 = sealed)</span>
+<span class="kw">const</span> canvas = document.getElementById(<span class="str">'myVault'</span>);
+<span class="kw">const</span> t = <span class="num">0.0</span>; <span class="cm">// 0 = open, 1 = sealed, 0.5 = mid-transition</span>
+
+<span class="cm">// Set up offscreen layers (once at init)</span>
+<span class="fn">initStaticLayers</span>();
+
+<span class="cm">// Draw at specific seal progress</span>
+<span class="fn">drawFrame</span>(<span class="num">0</span>, t === <span class="num">0</span>); <span class="cm">// ms=0 â†’ uses OPEN params</span>
+<span class="cm">// For sealed: manually set all params to SEALED values</span></pre></div>
+
+    <div class="code-block"><div class="code-label">Animated Seal</div><pre><span class="kw">const</span> P1=<span class="num">150</span>, P2=<span class="num">500</span>, P3=<span class="num">150</span>, SILENCE=<span class="num">600</span>;
+<span class="kw">const</span> TOTAL = P1 + P2 + P3; <span class="cm">// 800ms</span>
+
+<span class="kw">function</span> <span class="fn">triggerSeal</span>() {
+  <span class="kw">let</span> start = <span class="kw">null</span>;
+  <span class="kw">function</span> <span class="fn">tick</span>(ts) {
+    <span class="kw">if</span> (!start) start = ts;
+    <span class="kw">const</span> ms = ts - start;
+    <span class="fn">drawFrame</span>(Math.min(ms, TOTAL), <span class="kw">false</span>);
+    <span class="kw">if</span> (ms < TOTAL + SILENCE)
+      requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}</pre></div>
+
+    <div class="code-block"><div class="code-label">Metal Color Function</div><pre><span class="kw">function</span> <span class="fn">mineralMetal</span>(warmth, lightness) {
+  <span class="kw">const</span> cool = [<span class="num">122</span>,<span class="num">128</span>,<span class="num">136</span>]; <span class="cm">// #7A8088</span>
+  <span class="kw">const</span> warm = [<span class="num">188</span>,<span class="num">178</span>,<span class="num">158</span>]; <span class="cm">// warm bronze target</span>
+  <span class="kw">const</span> base = <span class="fn">mix</span>(cool, warm, warmth * <span class="num">0.6</span>);
+  <span class="kw">const</span> light = [<span class="num">235</span>,<span class="num">228</span>,<span class="num">218</span>];
+  <span class="kw">const</span> dark  = [<span class="num">85</span>,<span class="num">88</span>,<span class="num">94</span>];
+  <span class="kw">return</span> lightness >= <span class="num">0.5</span>
+    ? <span class="fn">mix</span>(base, light, (lightness-<span class="num">0.5</span>)*<span class="num">2</span>)
+    : <span class="fn">mix</span>(dark, base, lightness*<span class="num">2</span>);
+}</pre></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 07: CONTEXT USAGE -->
+  <div class="section">
+    <div class="section-num">07</div>
+    <h2 class="section-title">Where the Vault Appears</h2>
+    <p class="section-desc">The vault is not just an icon â€” it's the emotional center of the app. It appears at different sizes and states depending on context.</p>
+
+    <table class="spec-table">
+      <thead><tr><th>Screen</th><th>Size</th><th>State</th><th>Behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Home â€” pre-recording</td><td class="mono">320px hero</td><td>Open</td><td>Subtle interior shimmer. Invites action.</td></tr>
+        <tr><td>Home â€” post-seal</td><td class="mono">320px hero</td><td>Sealed</td><td>Still. Stone glows. Warmth radiates.</td></tr>
+        <tr><td>Vault Reveal (paywall)</td><td class="mono">360px hero</td><td>Seal animation</td><td>Full 800ms + 600ms silence. Ceremonial.</td></tr>
+        <tr><td>Memory Shelf card</td><td class="mono">160px card</td><td>Sealed</td><td>Static. Simplified: no velvet nap, fewer hammer spots.</td></tr>
+        <tr><td>Navigation bar</td><td class="mono">48px icon</td><td>Open/Sealed</td><td>Symbolic: flat case, circle, warm dot.</td></tr>
+        <tr><td>Settings / profile</td><td class="mono">120px mid</td><td>Sealed</td><td>Structural: case outline, 2 rings, 4 spokes, simple stone.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 08: COMPLETE PARAMETER TABLE -->
+  <div class="section">
+    <div class="section-num">08</div>
+    <h2 class="section-title">Complete Parameter Reference</h2>
+    <p class="section-desc">Every interpolatable property with its Open and Sealed values. Copy directly into code.</p>
+
+    <table class="spec-table">
+      <thead><tr><th>Parameter</th><th>Open</th><th>Sealed</th><th>Curve</th></tr></thead>
+      <tbody>
+        <tr><td>warmth</td><td class="mono">0.22</td><td class="mono">0.90</td><td>globalT</td></tr>
+        <tr><td>glow</td><td class="mono">0.03</td><td class="mono">0.35</td><td>globalT</td></tr>
+        <tr><td>ringContract</td><td class="mono">0.0</td><td class="mono">1.0</td><td>mechT</td></tr>
+        <tr><td>spokeWidth</td><td class="mono">1.8</td><td class="mono">6.5</td><td>mechT</td></tr>
+        <tr><td>spokeOpacity</td><td class="mono">0.18</td><td class="mono">0.65</td><td>mechT</td></tr>
+        <tr><td>stoneGlow</td><td class="mono">0.02</td><td class="mono">0.30</td><td>stoneT</td></tr>
+        <tr><td>stoneRadius</td><td class="mono">30</td><td class="mono">40</td><td>stoneT</td></tr>
+        <tr><td>interiorDark</td><td class="mono">0.42</td><td class="mono">0.08</td><td>stoneT</td></tr>
+        <tr><td>caseHighlight</td><td class="mono">0.04</td><td class="mono">0.22</td><td>globalT</td></tr>
+        <tr><td>caseShadowDepth</td><td class="mono">0.09</td><td class="mono">0.02</td><td>stoneT</td></tr>
+        <tr><td>highlightSharpness</td><td class="mono">0.6</td><td class="mono">1.0</td><td>globalT</td></tr>
+        <tr><td>interiorVignette</td><td class="mono">0.12</td><td class="mono">0.04</td><td>stoneT</td></tr>
+        <tr><td>shadowBlur</td><td class="mono">24</td><td class="mono">14</td><td>mechT</td></tr>
+        <tr><td>shadowAlpha</td><td class="mono">0.14</td><td class="mono">0.07</td><td>mechT</td></tr>
+        <tr><td>shadowOffY</td><td class="mono">6</td><td class="mono">4</td><td>mechT</td></tr>
+        <tr><td>rimAlpha</td><td class="mono">0.14</td><td class="mono">0.38</td><td>globalT</td></tr>
+        <tr><td>rimWidth</td><td class="mono">2.2</td><td class="mono">2.8</td><td>globalT</td></tr>
+        <tr><td>coolWashAlpha</td><td class="mono">0.06</td><td class="mono">0.00</td><td>globalT</td></tr>
+        <tr><td>stoneSpecAlpha</td><td class="mono">0.25</td><td class="mono">0.50</td><td>stoneT</td></tr>
+        <tr><td>stoneSpecRadius</td><td class="mono">0.22</td><td class="mono">0.30</td><td>stoneT</td></tr>
+        <tr><td>stoneEdge</td><td class="mono">0.08</td><td class="mono">0.12</td><td>stoneT</td></tr>
+        <tr><td>stoneVein</td><td class="mono">0.04</td><td class="mono">0.06</td><td>stoneT</td></tr>
+        <tr><td>stoneTexture</td><td class="mono">0.012</td><td class="mono">0.018</td><td>stoneT</td></tr>
+        <tr><td>stoneContact</td><td class="mono">0.12</td><td class="mono">0.08</td><td>stoneT</td></tr>
+        <tr><td>cornerDark</td><td class="mono">0.07</td><td class="mono">0.00</td><td>mechT</td></tr>
+        <tr><td>gapBreachAlpha</td><td class="mono">0.06</td><td class="mono">0.00</td><td>mechT</td></tr>
+        <tr><td>auraOpacity</td><td class="mono">0.00</td><td class="mono">0.09</td><td>globalT</td></tr>
+        <tr><td>auraRadius</td><td class="mono">0</td><td class="mono">7</td><td>globalT</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note"><strong>Animation curves.</strong><br>
+    <code>stoneT = p1Ã—0.1 + p2Ã—0.7 + p3Ã—0.2</code> â€” stone leads<br>
+    <code>mechT = p1Ã—0.3 + p2Ã—0.7</code> â€” mechanism follows<br>
+    <code>globalT = p2Ã—0.6 + p3Ã—0.4</code> â€” warmth/environment last</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 09: SOURCE FILE -->
+  <div class="section">
+    <div class="section-num">09</div>
+    <h2 class="section-title">Source File Reference</h2>
+    <p class="section-desc">The canonical implementation is <code>vault-phase5-final.html</code> â€” a single self-contained HTML file with all render code, animation, and state management. 732 lines.</p>
+
+    <table class="spec-table">
+      <thead><tr><th>Section</th><th>Lines</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr><td>Utilities</td><td class="mono">1â€“70</td><td>seededRandom, PerlinNoise, palette, mix/rgba, mineralMetal</td></tr>
+        <tr><td>Shared renderers</td><td class="mono">71â€“181</td><td>mineralRing, drawInterior, drawBreathStone, drawHammered, drawNotches, drawRim</td></tr>
+        <tr><td>State params</td><td class="mono">191â€“214</td><td>OPEN and SEALED objects (28 properties each)</td></tr>
+        <tr><td>Phase timing</td><td class="mono">216â€“236</td><td>P1/P2/P3/SILENCE, phaseProgress(), easing functions</td></tr>
+        <tr><td>Static layers</td><td class="mono">248â€“320</td><td>Offscreen canvases: hammer, velvet, stone texture, outline, veins</td></tr>
+        <tr><td>Ring renderer</td><td class="mono">322â€“348</td><td>drawRing() â€” hoisted, no per-frame allocation</td></tr>
+        <tr><td>drawFrame()</td><td class="mono">350â€“680</td><td>The main render. Interpolates all params, draws all layers</td></tr>
+        <tr><td>Controller</td><td class="mono">682â€“728</td><td>openLoop, triggerSeal, resetToOpen, button handler</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Hidden working canvas (drawFrame renders here, then copies to visible canvases) -->
+<canvas id="vault" width="600" height="600" style="display:none"></canvas>
+
+<!-- ============================================ -->
+<!-- RENDER ENGINE (inline â€” renders live demos) -->
+<!-- ============================================ -->
+<script>
+  // ============================================
+  // SHARED UTILITIES
+  // ============================================
+  function seededRandom(seed){let s=seed;return function(){s=(s*16807)%2147483647;return(s-1)/2147483646;};}
+  class PerlinNoise{
+    constructor(){this.g={};this.m={};}
+    rv(){const t=Math.random()*Math.PI*2;return{x:Math.cos(t),y:Math.sin(t)};}
+    dp(x,y,vx,vy){const k=`${vx},${vy}`;if(!this.g[k])this.g[k]=this.rv();return(x-vx)*this.g[k].x+(y-vy)*this.g[k].y;}
+    sm(x){return 6*x**5-15*x**4+10*x**3;}
+    lr(x,a,b){return a+this.sm(x)*(b-a);}
+    get(x,y){const k=`${x},${y}`;if(this.m[k])return this.m[k];const xf=Math.floor(x),yf=Math.floor(y);
+      const v=this.lr(y-yf,this.lr(x-xf,this.dp(x,y,xf,yf),this.dp(x,y,xf+1,yf)),this.lr(x-xf,this.dp(x,y,xf,yf+1),this.dp(x,y,xf+1,yf+1)));this.m[k]=v;return v;}
+  }
+  const noise=new PerlinNoise();
+
+  const PAL={bg:[251,248,244],card:[245,240,234],sand:[235,228,220],honey:[232,220,200],
+    mineral:[122,128,136],mineralDk:[101,107,115],text1:[28,26,24],text2:[107,107,107],text3:[173,169,165]};
+
+  function mix(a,b,t){return[Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t)];}
+  function rgb(c){return`rgb(${c[0]},${c[1]},${c[2]})`;}
+  function rgba(c,a){return`rgba(${c[0]},${c[1]},${c[2]},${a})`;}
+
+  function mineralMetal(warmth,lightness){
+    const cool=PAL.mineral,warm=[188,178,158];
+    const base=mix(cool,warm,warmth*0.6);
+    const light=[235,228,218],dark=[85,88,94];
+    return lightness>=0.5?mix(base,light,(lightness-0.5)*2):mix(dark,base,lightness*2);
+  }
+
+  // Shared mineral ring renderer
+  function mineralRing(ctx,cx,cy,iR,oR,w,type){
+    ctx.save();ctx.filter='blur(4px)';ctx.fillStyle='rgba(0,0,0,0.04)';
+    ctx.beginPath();ctx.arc(cx+1,cy+1.5,(iR+oR)/2,0,Math.PI*2);ctx.fill();ctx.restore();
+    const rg=ctx.createRadialGradient(cx-oR*0.08,cy-oR*0.08,iR,cx,cy,oR);
+    if(type==='warm'){rg.addColorStop(0,rgb(mineralMetal(w,0.72)));rg.addColorStop(0.4,rgb(mineralMetal(w,0.58)));rg.addColorStop(1,rgb(mineralMetal(w,0.42)));}
+    else if(type==='cool'){rg.addColorStop(0,rgb(mineralMetal(w*0.3,0.7)));rg.addColorStop(0.4,rgb(mineralMetal(w*0.3,0.55)));rg.addColorStop(1,rgb(mineralMetal(w*0.3,0.4)));}
+    else{rg.addColorStop(0,rgb(mineralMetal(w*0.7,0.68)));rg.addColorStop(0.4,rgb(mineralMetal(w*0.7,0.54)));rg.addColorStop(1,rgb(mineralMetal(w*0.7,0.38)));}
+    ctx.beginPath();ctx.arc(cx,cy,oR,0,Math.PI*2);ctx.arc(cx,cy,iR,0,Math.PI*2,true);ctx.closePath();ctx.fillStyle=rg;ctx.fill();
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,oR,0,Math.PI*2);ctx.arc(cx,cy,iR,0,Math.PI*2,true);ctx.closePath();ctx.clip();
+    const hl=ctx.createLinearGradient(cx,cy-oR,cx,cy-oR*0.25);
+    hl.addColorStop(0,rgba(PAL.bg,type==='cool'?0.22*w:0.16*w));hl.addColorStop(1,rgba(PAL.bg,0));
+    ctx.fillStyle=hl;ctx.fillRect(cx-oR,cy-oR,oR*2,oR);
+    const sh=ctx.createLinearGradient(cx,cy+oR*0.25,cx,cy+oR);
+    sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(1,`rgba(0,0,0,${0.06*w})`);
+    ctx.fillStyle=sh;ctx.fillRect(cx-oR,cy,oR*2,oR);ctx.restore();
+    ctx.strokeStyle=rgba(PAL.bg,0.08*w);ctx.lineWidth=0.4;ctx.beginPath();ctx.arc(cx,cy,oR,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle=rgba(PAL.mineralDk,0.06*w);ctx.beginPath();ctx.arc(cx,cy,iR,0,Math.PI*2);ctx.stroke();
+  }
+
+  // Shared sand/oat interior
+  function drawInterior(ctx,cx,cy,r,sealed){
+    const fl=mix(PAL.sand,PAL.text3,sealed?0.1:0.25);
+    const fd=mix(PAL.sand,PAL.mineralDk,sealed?0.35:0.5);
+    const fg=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+    fg.addColorStop(0,rgb(fl));fg.addColorStop(0.5,rgb(mix(fl,fd,0.4)));fg.addColorStop(1,rgb(fd));
+    ctx.fillStyle=fg;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+    const fR=seededRandom(444);
+    for(let i=0;i<8;i++){const rr=18+i*14;ctx.strokeStyle=rgba(PAL.text3,0.06+fR()*0.04);ctx.lineWidth=0.3;ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);ctx.stroke();}
+    for(let i=0;i<80;i++){const a=fR()*Math.PI*2,d=fR()*r*0.9;ctx.fillStyle=fR()>0.5?rgba(PAL.card,0.06+fR()*0.04):rgba(PAL.mineralDk,0.02+fR()*0.02);ctx.fillRect(cx+Math.cos(a)*d,cy+Math.sin(a)*d,0.5+fR(),0.5+fR());}
+    ctx.restore();
+    const ds=ctx.createRadialGradient(cx,cy,r*0.45,cx,cy,r);
+    ds.addColorStop(0,'rgba(0,0,0,0)');ds.addColorStop(0.7,`rgba(0,0,0,${sealed?0.03:0.06})`);ds.addColorStop(1,`rgba(0,0,0,${sealed?0.1:0.18})`);
+    ctx.fillStyle=ds;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    const dd=ctx.createRadialGradient(cx+r*0.15,cy+r*0.15,0,cx+r*0.12,cy+r*0.12,r*0.8);
+    dd.addColorStop(0,`rgba(0,0,0,${sealed?0.03:0.06})`);dd.addColorStop(0.5,'rgba(0,0,0,0.01)');dd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=dd;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  }
+
+  // Breath Stone
+  function drawBreathStone(ctx,cx,cy,r,glowAmt,warm){
+    const gg=ctx.createRadialGradient(cx,cy,r*0.3,cx,cy,r*2.2);
+    gg.addColorStop(0,rgba(PAL.honey,glowAmt*0.25));gg.addColorStop(0.3,rgba(PAL.sand,glowAmt*0.12));
+    gg.addColorStop(0.6,rgba(PAL.sand,glowAmt*0.04));gg.addColorStop(1,rgba(PAL.sand,0));
+    ctx.fillStyle=gg;ctx.beginPath();ctx.arc(cx,cy,r*2.2,0,Math.PI*2);ctx.fill();
+    const segs=54,pts=[];
+    for(let i=0;i<segs;i++){const a=(i/segs)*Math.PI*2;const n=noise.get(Math.cos(a)*0.2+cx*0.001,Math.sin(a)*0.2+cy*0.001);
+      pts.push({x:cx+Math.cos(a)*r*(1+n*0.045),y:cy+Math.sin(a)*r*(1+n*0.045)});}
+    function trace(){ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.closePath();}
+    ctx.save();ctx.translate(0,r*0.08);const cs=ctx.createRadialGradient(cx,cy,0,cx,cy,r*0.75);
+    cs.addColorStop(0,'rgba(28,26,24,0.1)');cs.addColorStop(1,'rgba(28,26,24,0)');ctx.fillStyle=cs;ctx.beginPath();ctx.arc(cx,cy,r*0.75,0,Math.PI*2);ctx.fill();ctx.restore();
+    const bd=ctx.createRadialGradient(cx-r*0.28,cy-r*0.28,0,cx,cy,r*1.3);
+    bd.addColorStop(0,'#F8F0DC');bd.addColorStop(0.12,'#EFE6D0');bd.addColorStop(0.28,'#E5D8C0');bd.addColorStop(0.48,'#D8CAB0');
+    bd.addColorStop(0.65,'#C4B8A0');bd.addColorStop(0.80,'#AEA090');bd.addColorStop(0.92,'#938A7D');bd.addColorStop(1,'#7D827E');
+    ctx.fillStyle=bd;trace();ctx.fill();
+    const ish=ctx.createRadialGradient(cx+r*0.3,cy+r*0.3,0,cx,cy,r);
+    ish.addColorStop(0,'rgba(28,26,24,0.16)');ish.addColorStop(0.5,'rgba(28,26,24,0.04)');ish.addColorStop(1,'rgba(28,26,24,0)');
+    ctx.fillStyle=ish;trace();ctx.fill();
+    ctx.save();ctx.scale(1,0.6);const hlG=ctx.createRadialGradient(cx-r*0.3,(cy-r*0.45)/0.6,0,cx-r*0.3,(cy-r*0.45)/0.6,r*0.3);
+    hlG.addColorStop(0,'rgba(251,248,244,0.5)');hlG.addColorStop(0.5,'rgba(251,248,244,0.18)');hlG.addColorStop(1,'rgba(251,248,244,0)');
+    ctx.fillStyle=hlG;ctx.beginPath();ctx.arc(cx-r*0.3,(cy-r*0.45)/0.6,r*0.3,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.globalAlpha=0.06;ctx.fillStyle=rgba(PAL.mineralDk,0.4);
+    for(let i=0;i<6;i++){const va=(i/6)*Math.PI*2+noise.get(i*0.6,cx*0.01)*2;const vd=r*(0.25+noise.get(i,1)*0.35),vs=r*(0.1+noise.get(i,3)*0.08);
+      ctx.beginPath();ctx.ellipse(cx+Math.cos(va)*vd,cy+Math.sin(va)*vd,vs,vs*(0.5+noise.get(i,4)*0.4),va,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+    ctx.globalAlpha=0.018;const tR=seededRandom(Math.round(cx*cy+7));
+    for(let i=0;i<160;i++){const a=tR()*Math.PI*2,d=tR()*r*0.9;ctx.fillStyle=tR()>0.5?rgba(PAL.text1,0.4):rgba(PAL.bg,0.5);
+      ctx.fillRect(cx+Math.cos(a)*d,cy+Math.sin(a)*d,tR()<0.8?1:1.4,tR()<0.8?1:1.4);}
+    ctx.globalAlpha=1;
+    ctx.strokeStyle=rgba(PAL.text3,0.12);ctx.lineWidth=0.5;trace();ctx.stroke();
+  }
+
+  // Shared hammered texture
+  function drawHammered(ctx,cx,cy,innerR,outerR,count,seed){
+    const rR=seededRandom(seed);
+    const w=outerR-innerR;
+    for(let i=0;i<count;i++){const a=rR()*Math.PI*2,d=innerR+rR()*w,px=cx+Math.cos(a)*d,py=cy+Math.sin(a)*d,pr=2+rR()*5;
+      const dg=ctx.createRadialGradient(px-pr*0.15,py-pr*0.15,0,px,py,pr);
+      dg.addColorStop(0,rgba(PAL.card,0.04+rR()*0.03));dg.addColorStop(0.5,rgba(PAL.card,0));dg.addColorStop(1,rgba(PAL.mineralDk,0.02+rR()*0.015));
+      ctx.fillStyle=dg;ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();}
+  }
+
+  // Shared dial notches
+  function drawNotches(ctx,cx,cy,innerR,wallWidth,warmth){
+    const nR=innerR+wallWidth*0.45;
+    for(let i=0;i<24;i++){const a=(i/24)*Math.PI*2;
+      if(i%6===0){const n1x=cx+Math.cos(a)*(innerR+2),n1y=cy+Math.sin(a)*(innerR+2),n2x=cx+Math.cos(a)*(innerR+wallWidth*0.6),n2y=cy+Math.sin(a)*(innerR+wallWidth*0.6);
+        ctx.strokeStyle=rgba(PAL.text3,0.08+warmth*0.04);ctx.lineWidth=0.8;ctx.beginPath();ctx.moveTo(n1x,n1y);ctx.lineTo(n2x,n2y);ctx.stroke();
+      }else{const nx=cx+Math.cos(a)*nR,ny=cy+Math.sin(a)*nR;ctx.fillStyle=rgba(PAL.text3,0.04+warmth*0.02);ctx.beginPath();ctx.arc(nx,ny,0.7,0,Math.PI*2);ctx.fill();}}
+  }
+
+  // Shared mineral rim
+  function drawRim(ctx,cx,cy,innerR,outerR,warmth,sealed,seed){
+    const rg=ctx.createRadialGradient(cx-outerR*0.08,cy-outerR*0.08,innerR,cx,cy,outerR);
+    rg.addColorStop(0,rgb(mineralMetal(warmth,0.58)));rg.addColorStop(0.35,rgb(mineralMetal(warmth,0.48)));
+    rg.addColorStop(0.7,rgb(mineralMetal(warmth,0.38)));rg.addColorStop(1,rgb(mineralMetal(warmth,0.3)));
+    ctx.beginPath();ctx.arc(cx,cy,outerR,0,Math.PI*2);ctx.arc(cx,cy,innerR,0,Math.PI*2,true);ctx.closePath();ctx.fillStyle=rg;ctx.fill();
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,outerR,0,Math.PI*2);ctx.arc(cx,cy,innerR,0,Math.PI*2,true);ctx.closePath();ctx.clip();
+    const hl=ctx.createLinearGradient(cx,cy-outerR,cx,cy-outerR*0.3);hl.addColorStop(0,rgba(PAL.bg,0.2*warmth));hl.addColorStop(1,rgba(PAL.bg,0));
+    ctx.fillStyle=hl;ctx.fillRect(cx-outerR,cy-outerR,outerR*2,outerR);
+    const sh=ctx.createLinearGradient(cx,cy+outerR*0.3,cx,cy+outerR);sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(1,`rgba(0,0,0,${0.1*warmth})`);
+    ctx.fillStyle=sh;ctx.fillRect(cx-outerR,cy,outerR*2,outerR);
+    drawHammered(ctx,cx,cy,innerR,outerR,35,seed);
+    ctx.restore();
+    ctx.strokeStyle=rgba(PAL.text3,0.12+warmth*0.08);ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,outerR,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle=rgba(PAL.text3,0.08+warmth*0.05);ctx.lineWidth=0.6;ctx.beginPath();ctx.arc(cx,cy,innerR,0,Math.PI*2);ctx.stroke();
+    const ls=ctx.createRadialGradient(cx,cy,innerR-5,cx,cy,innerR+1);ls.addColorStop(0,'rgba(0,0,0,0)');ls.addColorStop(0.6,`rgba(0,0,0,${sealed?0.04:0.08})`);ls.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=ls;ctx.beginPath();ctx.arc(cx,cy,innerR+1,0,Math.PI*2);ctx.arc(cx,cy,innerR-5,0,Math.PI*2,true);ctx.closePath();ctx.fill();
+  }
+
+
+
+  // ============================================
+  // PHASE 4 V3: CLEAN LOCK
+  // Offscreen static layers. 2-3 axes per phase.
+  // Single-curve overshoot. No CSS env shift.
+  // ============================================
+
+  const OPEN = {
+    warmth:0.22, glow:0.03, ringContract:0.0,
+    spokeWidth:1.8, spokeOpacity:0.18, stoneGlow:0.02, stoneRadius:30,
+    interiorDark:0.42, auraOpacity:0.0, auraRadius:0,
+    caseHighlight:0.04, caseShadowDepth:0.09,
+    highlightSharpness:0.6, interiorVignette:0.12,
+    shadowBlur:24, shadowAlpha:0.14, shadowOffY:6,
+    rimAlpha:0.14, rimWidth:2.2, coolWashAlpha:0.06,
+    stoneSpecAlpha:0.25, stoneSpecRadius:0.22, stoneEdge:0.08,
+    stoneVein:0.04, stoneTexture:0.012, stoneContact:0.12,
+    cornerDark:0.07, gapBreachAlpha:0.06, envDarken:0.0
+  };
+  const SEALED = {
+    warmth:0.9, glow:0.35, ringContract:1.0,
+    spokeWidth:6.5, spokeOpacity:0.65, stoneGlow:0.3, stoneRadius:40,
+    interiorDark:0.08, auraOpacity:0.09, auraRadius:7,
+    caseHighlight:0.22, caseShadowDepth:0.02,
+    highlightSharpness:1.0, interiorVignette:0.04,
+    shadowBlur:14, shadowAlpha:0.07, shadowOffY:4,
+    rimAlpha:0.38, rimWidth:2.8, coolWashAlpha:0.0,
+    stoneSpecAlpha:0.5, stoneSpecRadius:0.3, stoneEdge:0.12,
+    stoneVein:0.06, stoneTexture:0.018, stoneContact:0.08,
+    cornerDark:0.0, gapBreachAlpha:0.0, envDarken:0.04
+  };
+
+  // Phase timing
+  const P1=150, P2=500, P3=150, SILENCE=600, TOTAL=P1+P2+P3;
+
+  // Easing
+  function easeOutQuad(t){return 1-(1-t)*(1-t)}
+  function easeInOutCubic(t){return t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+
+  function phaseProgress(ms){
+    if(ms<=0) return {p1:0,p2:0,p3:0,phase:'open',overshoot:0};
+    if(ms<=P1) return {p1:easeOutQuad(ms/P1),p2:0,p3:0,phase:'initiation',overshoot:0};
+    const ms2=ms-P1;
+    if(ms2<=P2) return {p1:1,p2:easeInOutCubic(ms2/P2),p3:0,phase:'compression',overshoot:0};
+    const ms3=ms2-P2;
+    if(ms3<=P3){
+      const t3=ms3/P3;
+      // Single smooth overshoot: tension + clean settle
+      const overshoot = Math.sin(t3*Math.PI) * (1-t3) * 1.2;
+      return {p1:1,p2:1,p3:Math.min(1,t3),phase:'lock',overshoot};
+    }
+    return {p1:1,p2:1,p3:1,phase:'sealed',overshoot:0};
+  }
+
+  function lerp(a,b,t){return a+(b-a)*t}
+  function lerpHex(h1,h2,t){
+    const r1=parseInt(h1.slice(1,3),16),g1=parseInt(h1.slice(3,5),16),b1=parseInt(h1.slice(5,7),16);
+    const r2=parseInt(h2.slice(1,3),16),g2=parseInt(h2.slice(3,5),16),b2=parseInt(h2.slice(5,7),16);
+    return '#'+[lerp(r1,r2,t),lerp(g1,g2,t),lerp(b1,b2,t)].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+  }
+
+  // ============================================
+  // OFFSCREEN STATIC LAYERS
+  // These never change â€” render once, composite each frame
+  // ============================================
+  const C = document.getElementById('vault');
+  const W = C.width, H = C.height, CX = W/2, CY = H/2;
+  const caseW=300,caseH=340,caseCR=30,mechR=105,wellInset=22;
+
+  function makeCasePath(ctx,cx,cy){
+    const x=cx-caseW/2,y=cy-caseH/2;
+    ctx.beginPath();ctx.moveTo(x+caseCR,y);ctx.lineTo(x+caseW-caseCR,y);
+    ctx.quadraticCurveTo(x+caseW,y,x+caseW,y+caseCR);ctx.lineTo(x+caseW,y+caseH-caseCR);
+    ctx.quadraticCurveTo(x+caseW,y+caseH,x+caseW-caseCR,y+caseH);ctx.lineTo(x+caseCR,y+caseH);
+    ctx.quadraticCurveTo(x,y+caseH,x,y+caseH-caseCR);ctx.lineTo(x,y+caseCR);
+    ctx.quadraticCurveTo(x,y,x+caseCR,y);ctx.closePath();
+  }
+
+  // Static layer: hammered texture on case body (warm tint baked at neutral)
+  const hammerLayer = document.createElement('canvas');
+  hammerLayer.width=W; hammerLayer.height=H;
+  (function(){
+    const ctx=hammerLayer.getContext('2d');
+    const caseX=CX-caseW/2,caseY=CY-caseH/2;
+    const r=seededRandom(264);
+    for(let i=0;i<50;i++){const dx=caseX+r()*caseW,dy=caseY+r()*caseH,dr=5+r()*14;
+      const dg=ctx.createRadialGradient(dx-dr*0.2,dy-dr*0.2,0,dx,dy,dr);
+      dg.addColorStop(0,rgba(PAL.card,0.04+r()*0.04));dg.addColorStop(0.5,rgba(PAL.card,0));
+      dg.addColorStop(1,rgba(PAL.mineralDk,0.02+r()*0.025));
+      ctx.fillStyle=dg;ctx.beginPath();ctx.arc(dx,dy,dr,0,Math.PI*2);ctx.fill();}
+  })();
+
+  // Static layer: velvet nap
+  const velvetLayer = document.createElement('canvas');
+  velvetLayer.width=W; velvetLayer.height=H;
+  (function(){
+    const ctx=velvetLayer.getContext('2d');
+    const wellX=CX-caseW/2+wellInset, wellY=CY-caseH/2+wellInset;
+    const wellW=caseW-wellInset*2, wellH=caseH-wellInset*2;
+    const vr=seededRandom(311);
+    for(let i=0;i<250;i++){const px=wellX+vr()*wellW,py=wellY+vr()*wellH;
+      ctx.fillStyle=vr()>0.5?rgba(PAL.card,0.02+vr()*0.02):rgba(PAL.mineralDk,0.01+vr()*0.015);
+      ctx.fillRect(px,py,0.4+vr()*0.8,0.8+vr()*2);}
+  })();
+
+  // Static layer: stone texture dots
+  const stoneTexLayer = document.createElement('canvas');
+  stoneTexLayer.width=W; stoneTexLayer.height=H;
+  (function(){
+    const ctx=stoneTexLayer.getContext('2d');
+    const mechCY=CY+8;
+    const r=40; // max stone radius
+    const tR=seededRandom(7777);
+    ctx.globalAlpha=1;
+    for(let i=0;i<160;i++){const a=tR()*Math.PI*2,d=tR()*r*0.9;
+      ctx.fillStyle=tR()>0.5?rgba(PAL.text1,0.4):rgba(PAL.bg,0.5);
+      ctx.fillRect(CX+Math.cos(a)*d,mechCY+Math.sin(a)*d,tR()<0.8?1:1.4,tR()<0.8?1:1.4);}
+  })();
+
+  // Pre-compute stone outline (doesn't change with radius â€” we scale it)
+  const stoneOutline=[];
+  (function(){
+    for(let i=0;i<54;i++){const a=(i/54)*Math.PI*2;
+      const n=noise.get(Math.cos(a)*0.2+CX*0.001,Math.sin(a)*0.2+(CY+8)*0.001);
+      stoneOutline.push({cos:Math.cos(a)*(1+n*0.045),sin:Math.sin(a)*(1+n*0.045)});}
+  })();
+
+  // Pre-compute vein positions
+  const veinData=[];
+  (function(){
+    for(let i=0;i<6;i++){
+      const va=(i/6)*Math.PI*2+noise.get(i*0.6,CX*0.01)*2;
+      const vd=0.25+noise.get(i,1)*0.35;
+      const vs=0.1+noise.get(i,3)*0.08;
+      const vAspect=0.5+noise.get(i,4)*0.4;
+      veinData.push({va,vd,vs,vAspect});}
+  })();
+
+  // ============================================
+  // RING RENDERER (hoisted, no closures)
+  // ============================================
+  function drawRing(ctx,cx,cy,iR,oR,w,type,hlSharp,warmT){
+    ctx.save();ctx.filter='blur(4px)';ctx.fillStyle='rgba(0,0,0,0.04)';
+    ctx.beginPath();ctx.arc(cx+1,cy+1.5,(iR+oR)/2,0,Math.PI*2);ctx.fill();ctx.restore();
+    const m=mineralMetal;
+    const rg=ctx.createRadialGradient(cx-oR*0.08,cy-oR*0.08,iR,cx,cy,oR);
+    const ww=type==='warm'?w:type==='cool'?w*0.3:w*0.7;
+    rg.addColorStop(0,rgb(m(ww,type==='warm'?0.72:0.7)));
+    rg.addColorStop(0.4,rgb(m(ww,type==='warm'?0.58:type==='cool'?0.55:0.54)));
+    rg.addColorStop(1,rgb(m(ww,type==='warm'?0.42:type==='cool'?0.4:0.38)));
+    ctx.beginPath();ctx.arc(cx,cy,oR,0,Math.PI*2);ctx.arc(cx,cy,iR,0,Math.PI*2,true);ctx.closePath();ctx.fillStyle=rg;ctx.fill();
+    // Highlight
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,oR,0,Math.PI*2);ctx.arc(cx,cy,iR,0,Math.PI*2,true);ctx.closePath();ctx.clip();
+    const hlEnd=cy-oR*lerp(0.25,0.15,warmT);
+    const hlA=(type==='cool'?0.22:0.16)*w*hlSharp;
+    const hl=ctx.createLinearGradient(cx,cy-oR,cx,hlEnd);
+    hl.addColorStop(0,rgba(PAL.bg,hlA));hl.addColorStop(1,rgba(PAL.bg,0));
+    ctx.fillStyle=hl;ctx.fillRect(cx-oR,cy-oR,oR*2,oR);
+    const sh=ctx.createLinearGradient(cx,cy+oR*0.25,cx,cy+oR);
+    sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(1,`rgba(0,0,0,${0.06*w})`);
+    ctx.fillStyle=sh;ctx.fillRect(cx-oR,cy,oR*2,oR);
+    ctx.restore();
+    ctx.strokeStyle=rgba(PAL.bg,0.08*w);ctx.lineWidth=0.4;ctx.beginPath();ctx.arc(cx,cy,oR,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle=rgba(PAL.mineralDk,0.06*w);ctx.beginPath();ctx.arc(cx,cy,iR,0,Math.PI*2);ctx.stroke();
+  }
+
+  // ============================================
+  // DRAW FRAME
+  // Only animates: ring positions, spoke geometry, stone,
+  // glow/warmth, overshoot. Static layers composited.
+  // ============================================
+  let shimmerPhase=0;
+  let animating=false;
+
+  function drawFrame(ms, isOpen){
+    const ctx=C.getContext('2d');
+    const pp=phaseProgress(ms);
+
+    // SIMPLIFIED PHASE AXES:
+    // P1: glow spike + begin ring close (2 axes)
+    // P2: ring close + spoke thicken + stone grow (3 axes)
+    // P3: overshoot Y + hard stop (1 axis)
+    // Cross-phase: warmth and env darken follow a single global curve
+
+    const mechT = Math.min(1, pp.p1*0.3 + pp.p2*0.7);
+    const stoneT = Math.min(1, pp.p1*0.1 + pp.p2*0.7 + pp.p3*0.2);
+    const globalT = Math.min(1, pp.p2*0.6 + pp.p3*0.4); // single warmth curve
+    const glowSpike = pp.phase==='initiation' ? 0.1*pp.p1 :
+                      pp.phase==='compression' ? 0.1*Math.max(0,1-pp.p2) : 0;
+
+    // Interpolate
+    const rc = lerp(OPEN.ringContract, SEALED.ringContract, mechT);
+    const sw = lerp(OPEN.spokeWidth, SEALED.spokeWidth, mechT);
+    const so = lerp(OPEN.spokeOpacity, SEALED.spokeOpacity, mechT);
+    const w = lerp(OPEN.warmth, SEALED.warmth, globalT);
+    const glow = lerp(OPEN.glow, SEALED.glow, globalT) + glowSpike;
+    const stoneGlow = lerp(OPEN.stoneGlow, SEALED.stoneGlow, stoneT) + glowSpike;
+    const stoneR = lerp(OPEN.stoneRadius, SEALED.stoneRadius, stoneT);
+    const intDark = lerp(OPEN.interiorDark, SEALED.interiorDark, stoneT);
+    const hlSharp = lerp(OPEN.highlightSharpness, SEALED.highlightSharpness, globalT);
+    const caseHL = lerp(OPEN.caseHighlight, SEALED.caseHighlight, globalT);
+    const coolWash = lerp(OPEN.coolWashAlpha, SEALED.coolWashAlpha, globalT);
+    const rimA = lerp(OPEN.rimAlpha, SEALED.rimAlpha, globalT);
+    const rimW = lerp(OPEN.rimWidth, SEALED.rimWidth, globalT);
+    const auraOp = lerp(OPEN.auraOpacity, SEALED.auraOpacity, globalT);
+    const auraR = lerp(OPEN.auraRadius, SEALED.auraRadius, globalT);
+    const shBlur = Math.round(lerp(OPEN.shadowBlur, SEALED.shadowBlur, mechT));
+    const shAlpha = lerp(OPEN.shadowAlpha, SEALED.shadowAlpha, mechT);
+    const shOffY = lerp(OPEN.shadowOffY, SEALED.shadowOffY, mechT);
+    const csDep = lerp(OPEN.caseShadowDepth, SEALED.caseShadowDepth, stoneT);
+    const intVig = lerp(OPEN.interiorVignette, SEALED.interiorVignette, stoneT);
+    const gapA = lerp(OPEN.gapBreachAlpha, SEALED.gapBreachAlpha, mechT);
+    const cornDark = lerp(OPEN.cornerDark, SEALED.cornerDark, mechT);
+    const envDark = lerp(0, 0.04, globalT);
+
+    // Stone compression: quick dip, slow recover (asymmetric)
+    let stoneSM = 1.0;
+    if(pp.phase==='compression') stoneSM = 1.0 - 0.02 * easeOutQuad(pp.p2) * (1-pp.p2);
+
+    // Stone specular/vein interpolation
+    const ssA = lerp(OPEN.stoneSpecAlpha, SEALED.stoneSpecAlpha, stoneT);
+    const ssR = lerp(OPEN.stoneSpecRadius, SEALED.stoneSpecRadius, stoneT);
+    const ssE = lerp(OPEN.stoneEdge, SEALED.stoneEdge, stoneT);
+    const ssV = lerp(OPEN.stoneVein, SEALED.stoneVein, stoneT);
+    const ssTx = lerp(OPEN.stoneTexture, SEALED.stoneTexture, stoneT);
+    const ssCon = lerp(OPEN.stoneContact, SEALED.stoneContact, stoneT);
+
+    const stoneColors = {
+      hl: lerpHex('#E8E0D0','#F8F0DC',stoneT), mh: lerpHex('#DDD5C5','#EFE6D0',stoneT),
+      md: lerpHex('#CCC4B4','#E5D8C0',stoneT), ml: lerpHex('#B8B0A0','#D8CAB0',stoneT),
+      lo: lerpHex('#A49C8E','#C4B8A0',stoneT), sh: lerpHex('#8A887E','#AEA090',stoneT),
+      dp: lerpHex('#787870','#938A7D',stoneT), eg: lerpHex('#707068','#7D827E',stoneT)
+    };
+
+    // Overshoot Y
+    const oy = pp.overshoot;
+    const cx = CX, cy = CY + oy;
+    const mechCY = cy + 8;
+    const caseX = cx-caseW/2, caseY = cy-caseH/2;
+
+    // ===== BACKGROUND + ENV DARKEN =====
+    ctx.fillStyle = rgb(PAL.bg); ctx.fillRect(0,0,W,H);
+    if(envDark > 0.002){
+      ctx.fillStyle = `rgba(0,0,0,${envDark})`; ctx.fillRect(0,0,W,H);
+    }
+
+    // Ambient glow
+    const ag = ctx.createRadialGradient(cx,cy,0,cx,cy,W*0.45);
+    ag.addColorStop(0, rgba(PAL.honey, glow*0.25));
+    ag.addColorStop(1, rgba(PAL.sand, 0));
+    ctx.fillStyle = ag; ctx.fillRect(0,0,W,H);
+
+    // ===== SHADOW =====
+    ctx.save(); ctx.filter = `blur(${shBlur}px)`;
+    ctx.fillStyle = `rgba(0,0,0,${shAlpha})`;
+    ctx.fillRect(caseX+2, caseY+shOffY, caseW, caseH); ctx.restore();
+
+    // ===== CASE BODY =====
+    ctx.save(); makeCasePath(ctx,cx,cy); ctx.clip();
+    const cg = ctx.createLinearGradient(caseX,caseY,caseX+caseW*0.5,caseY+caseH);
+    const m=mineralMetal;
+    cg.addColorStop(0,rgb(m(w,0.62)));cg.addColorStop(0.3,rgb(m(w,0.54)));
+    cg.addColorStop(0.6,rgb(m(w,0.46)));cg.addColorStop(1,rgb(m(w,0.38)));
+    ctx.fillStyle=cg; ctx.fillRect(caseX,caseY,caseW,caseH);
+
+    // Single highlight â€” interpolated sharpness via gradient extent
+    const hlExtent = lerp(caseH*0.5, caseW*0.4, globalT);
+    const hlCX = lerp(caseX, caseX+caseW*0.22, globalT);
+    const hlCY = lerp(caseY, caseY+caseH*0.1, globalT);
+    if(globalT < 0.5){
+      // Flat â†’ crisp: linear
+      const ch=ctx.createLinearGradient(caseX,caseY,caseX,caseY+caseH*0.5);
+      ch.addColorStop(0,rgba(PAL.bg,caseHL));ch.addColorStop(1,rgba(PAL.bg,0));
+      ctx.fillStyle=ch;ctx.fillRect(caseX,caseY,caseW,caseH);
+    } else {
+      const ch=ctx.createRadialGradient(caseX+caseW*0.22,caseY+caseH*0.1,0,caseX+caseW*0.22,caseY+caseH*0.1,caseW*0.4);
+      ch.addColorStop(0,rgba(PAL.bg,caseHL));ch.addColorStop(0.3,rgba(PAL.bg,caseHL*0.3));ch.addColorStop(1,rgba(PAL.bg,0));
+      ctx.fillStyle=ch;ctx.fillRect(caseX,caseY,caseW,caseH);
+    }
+
+    // Composite static hammered texture
+    ctx.drawImage(hammerLayer, 0, oy);
+
+    // Cool wash
+    if(coolWash > 0.003){
+      const cw=ctx.createLinearGradient(caseX,caseY,caseX,caseY+caseH);
+      cw.addColorStop(0,`rgba(105,112,125,${coolWash})`);cw.addColorStop(1,`rgba(80,85,95,${coolWash*1.3})`);
+      ctx.fillStyle=cw;ctx.fillRect(caseX,caseY,caseW,caseH);
+    }
+    ctx.restore();
+
+    // Rim
+    makeCasePath(ctx,cx,cy);
+    ctx.strokeStyle=rgba(PAL.text3,rimA); ctx.lineWidth=rimW; ctx.stroke();
+
+    // ===== INTERIOR =====
+    const wellX=caseX+wellInset,wellY2=caseY+wellInset,wellW=caseW-wellInset*2,wellH2=caseH-wellInset*2,wellCR=caseCR-6;
+    ctx.save();
+    ctx.beginPath();ctx.moveTo(wellX+wellCR,wellY2);ctx.lineTo(wellX+wellW-wellCR,wellY2);
+    ctx.quadraticCurveTo(wellX+wellW,wellY2,wellX+wellW,wellY2+wellCR);ctx.lineTo(wellX+wellW,wellY2+wellH2-wellCR);
+    ctx.quadraticCurveTo(wellX+wellW,wellY2+wellH2,wellX+wellW-wellCR,wellY2+wellH2);ctx.lineTo(wellX+wellCR,wellY2+wellH2);
+    ctx.quadraticCurveTo(wellX,wellY2+wellH2,wellX,wellY2+wellH2-wellCR);ctx.lineTo(wellX,wellY2+wellCR);
+    ctx.quadraticCurveTo(wellX,wellY2,wellX+wellCR,wellY2);ctx.closePath();ctx.clip();
+
+    // Interior: warm gradient (sealed = warm & inviting, open = cool & empty)
+    // Instead of velvet void, this is a warm surface the stone sits on
+    const intWarmCenter = mix(mix(PAL.sand, PAL.honey, globalT*0.3), PAL.card, globalT*0.4);
+    const intWarmEdge = mix(PAL.sand, mix(PAL.mineralDk, PAL.sand, globalT*0.5), 0.3 + (1-globalT)*0.15);
+    const vg=ctx.createRadialGradient(cx,mechCY,0,cx,mechCY,wellW*0.65);
+    vg.addColorStop(0,rgb(intWarmCenter));
+    vg.addColorStop(0.5,rgb(mix(intWarmCenter,intWarmEdge,0.35)));
+    vg.addColorStop(1,rgb(intWarmEdge));
+    ctx.fillStyle=vg;ctx.fillRect(wellX,wellY2,wellW,wellH2);
+
+    // Interior depth
+    const vsh=ctx.createRadialGradient(cx,mechCY,wellW*0.08,cx,mechCY,wellW*0.6);
+    vsh.addColorStop(0,'rgba(0,0,0,0)');vsh.addColorStop(0.7,`rgba(0,0,0,${csDep})`);vsh.addColorStop(1,`rgba(0,0,0,${csDep*3})`);
+    ctx.fillStyle=vsh;ctx.fillRect(wellX,wellY2,wellW,wellH2);
+
+    if(intVig>0.03){
+      const vig=ctx.createRadialGradient(cx,mechCY,wellW*0.15,cx,mechCY,wellW*0.55);
+      vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(0.6,`rgba(0,0,0,${intVig*0.4})`);vig.addColorStop(1,`rgba(0,0,0,${intVig})`);
+      ctx.fillStyle=vig;ctx.fillRect(wellX,wellY2,wellW,wellH2);
+    }
+
+    // Corner darkening
+    if(cornDark>0.005){
+      [[wellX+12,wellY2+12],[wellX+wellW-12,wellY2+12],[wellX+12,wellY2+wellH2-12],[wellX+wellW-12,wellY2+wellH2-12]].forEach(([ccx,ccy])=>{
+        const cg2=ctx.createRadialGradient(ccx,ccy,0,ccx,ccy,55);
+        cg2.addColorStop(0,`rgba(0,0,0,${cornDark})`);cg2.addColorStop(0.6,`rgba(0,0,0,${cornDark*0.4})`);cg2.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=cg2;ctx.fillRect(wellX,wellY2,wellW,wellH2);
+      });
+    }
+
+    // Open shimmer â€” only when open and not animating
+    if(isOpen && !animating){
+      shimmerPhase += 0.015;
+      const shimAmt = 0.012*(0.5+0.5*Math.sin(shimmerPhase));
+      const shimG=ctx.createRadialGradient(cx+Math.sin(shimmerPhase*0.7)*8,mechCY+Math.cos(shimmerPhase*0.5)*5,0,cx,mechCY,wellW*0.4);
+      shimG.addColorStop(0,rgba(PAL.card,shimAmt));shimG.addColorStop(1,rgba(PAL.card,0));
+      ctx.fillStyle=shimG;ctx.fillRect(wellX,wellY2,wellW,wellH2);
+    }
+
+    // Stone casts warm light onto interior (scales with seal progress)
+    if(globalT > 0.1) {
+      const stLightA = globalT * 0.06;
+      const stLight=ctx.createRadialGradient(cx,mechCY,0,cx,mechCY,wellW*0.45);
+      stLight.addColorStop(0,rgba(PAL.honey,stLightA));
+      stLight.addColorStop(0.5,rgba(PAL.honey,stLightA*0.3));
+      stLight.addColorStop(1,rgba(PAL.honey,0));
+      ctx.fillStyle=stLight;ctx.fillRect(wellX,wellY2,wellW,wellH2);
+    }
+
+    // Composite static velvet
+    ctx.drawImage(velvetLayer, 0, oy);
+    ctx.restore();
+
+    // ===== MECHANISM =====
+    const recG=ctx.createRadialGradient(cx,mechCY,mechR*0.8,cx,mechCY,mechR+10);
+    recG.addColorStop(0,'rgba(0,0,0,0)');recG.addColorStop(0.8,'rgba(0,0,0,0.04)');recG.addColorStop(1,'rgba(0,0,0,0.1)');
+    ctx.fillStyle=recG;ctx.beginPath();ctx.arc(cx,mechCY,mechR+10,0,Math.PI*2);ctx.fill();
+
+    const mR=(mechR-24)+((mechR-30)-(mechR-24))*rc;
+    const iR=(mechR-48)+((mechR-56)-(mechR-48))*rc;
+
+    drawRing(ctx,cx,mechCY,mechR-5,mechR+5,w,'warm',hlSharp,globalT);
+    drawRing(ctx,cx,mechCY,mR-4,mR+4,w*0.85,'cool',hlSharp,globalT);
+    drawRing(ctx,cx,mechCY,iR-3,iR+3,w*0.9,'bronze',hlSharp,globalT);
+
+    // Gap breaches
+    if(gapA>0.003){
+      [[mR+4,mechR-5],[iR+3,mR-4]].forEach(([gi,go])=>{
+        const gf=ctx.createRadialGradient(cx,mechCY,gi,cx,mechCY,go);
+        gf.addColorStop(0,`rgba(100,105,115,${gapA})`);gf.addColorStop(0.5,`rgba(90,95,105,${gapA*0.65})`);gf.addColorStop(1,`rgba(100,105,115,${gapA})`);
+        ctx.fillStyle=gf;ctx.beginPath();ctx.arc(cx,mechCY,go,0,Math.PI*2);ctx.arc(cx,mechCY,gi,0,Math.PI*2,true);ctx.closePath();ctx.fill();
+      });
+    }
+
+    // Spokes
+    for(let i=0;i<8;i++){
+      const a=(i/8)*Math.PI*2-Math.PI/2;
+      const sI=iR+5, sO=mechR-7-(1-rc)*7;
+      ctx.save();ctx.translate(cx,mechCY);ctx.rotate(a);
+      const sg=ctx.createLinearGradient(0,-sw/2,0,sw/2);
+      sg.addColorStop(0,rgba(m(w,0.58),so*0.8));sg.addColorStop(0.5,rgba(m(w,0.46),so));sg.addColorStop(1,rgba(m(w,0.38),so*0.8));
+      ctx.fillStyle=sg;ctx.fillRect(sI,-sw/2,sO-sI,sw);
+      // Specular â€” only after globalT > 0.5
+      if(globalT>0.5){
+        ctx.fillStyle=rgba(PAL.bg,0.06*hlSharp*(globalT-0.5)*2);
+        ctx.fillRect(sI+2,-sw/2,sO-sI-4,0.6);
+      }
+      const capR=2.8+rc*2.2;
+      const bg2=ctx.createRadialGradient(sO-0.5,-0.5,0,sO,0,capR);
+      bg2.addColorStop(0,rgb(m(w,0.66)));bg2.addColorStop(1,rgb(m(w,0.38)));
+      ctx.fillStyle=bg2;ctx.beginPath();ctx.arc(sO,0,capR,0,Math.PI*2);ctx.fill();
+      if(globalT>0.8){
+        ctx.strokeStyle=rgba(PAL.mineralDk,0.12*(globalT-0.8)*5);
+        ctx.lineWidth=0.4;ctx.beginPath();ctx.arc(sO,0,capR,0,Math.PI*2);ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Center floor
+    const fl=mix(PAL.sand,PAL.text3,intDark),fd=mix(PAL.sand,PAL.mineralDk,intDark+0.2);
+    const dcg=ctx.createRadialGradient(cx,mechCY,0,cx,mechCY,iR-5);
+    dcg.addColorStop(0,rgb(fl));dcg.addColorStop(0.5,rgb(mix(fl,fd,0.4)));dcg.addColorStop(1,rgb(fd));
+    ctx.fillStyle=dcg;ctx.beginPath();ctx.arc(cx,mechCY,iR-4,0,Math.PI*2);ctx.fill();
+
+    // Open void
+    if(mechT<1){
+      const va=(1-mechT);
+      const ov=ctx.createRadialGradient(cx,mechCY,(iR-5)*0.3,cx,mechCY,iR-5);
+      ov.addColorStop(0,`rgba(0,0,0,${0.02*va})`);ov.addColorStop(0.5,`rgba(0,0,0,${0.06*va})`);ov.addColorStop(1,`rgba(0,0,0,${0.12*va})`);
+      ctx.fillStyle=ov;ctx.beginPath();ctx.arc(cx,mechCY,iR-4,0,Math.PI*2);ctx.fill();
+    }
+
+    const dsh=ctx.createRadialGradient(cx,mechCY,(iR-5)*0.4,cx,mechCY,iR-5);
+    dsh.addColorStop(0,'rgba(0,0,0,0)');dsh.addColorStop(0.7,`rgba(0,0,0,${csDep})`);dsh.addColorStop(1,`rgba(0,0,0,${csDep*2.5})`);
+    ctx.fillStyle=dsh;ctx.beginPath();ctx.arc(cx,mechCY,iR-4,0,Math.PI*2);ctx.fill();
+
+    // ===== BREATH STONE =====
+    const r = stoneR * stoneSM;
+    // Glow â€” organic, not a perfect radial gradient
+    // Base glow
+    const glowExtent = r * lerp(1.8, 2.8, stoneT);
+    const gg=ctx.createRadialGradient(cx,mechCY,r*0.3,cx,mechCY,glowExtent);
+    gg.addColorStop(0,rgba(PAL.honey,stoneGlow*0.3));gg.addColorStop(0.25,rgba(PAL.honey,stoneGlow*0.15));
+    gg.addColorStop(0.5,rgba(PAL.sand,stoneGlow*0.06));gg.addColorStop(1,rgba(PAL.sand,0));
+    ctx.fillStyle=gg;ctx.beginPath();ctx.arc(cx,mechCY,glowExtent,0,Math.PI*2);ctx.fill();
+    // Organic edge feathering â€” irregular noise-based spots
+    if(stoneGlow > 0.02) {
+      for(let i=0;i<20;i++){
+        const angle=(i/20)*Math.PI*2;
+        const nv=noise.get(Math.cos(angle)*1.8+0.3,Math.sin(angle)*1.8+0.3);
+        const dist=glowExtent*(0.45+nv*0.25);
+        const spotR=glowExtent*(0.08+Math.abs(nv)*0.07);
+        const spotA=stoneGlow*(0.08+nv*0.06);
+        if(spotA>0.003){
+          const spg=ctx.createRadialGradient(cx+Math.cos(angle)*dist,mechCY+Math.sin(angle)*dist,0,
+            cx+Math.cos(angle)*dist,mechCY+Math.sin(angle)*dist,spotR);
+          spg.addColorStop(0,rgba(PAL.honey,spotA));spg.addColorStop(1,rgba(PAL.honey,0));
+          ctx.fillStyle=spg;ctx.beginPath();
+          ctx.arc(cx+Math.cos(angle)*dist,mechCY+Math.sin(angle)*dist,spotR,0,Math.PI*2);ctx.fill();
+        }
+      }
+    }
+    // Outline
+    const pts=stoneOutline.map(p=>({x:cx+p.cos*r,y:mechCY+p.sin*r}));
+    function trace(){ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.closePath();}
+    // Contact shadow
+    ctx.save();ctx.translate(0,r*0.08);const cs=ctx.createRadialGradient(cx,mechCY,0,cx,mechCY,r*0.75);
+    cs.addColorStop(0,`rgba(28,26,24,${ssCon})`);cs.addColorStop(1,'rgba(28,26,24,0)');
+    ctx.fillStyle=cs;ctx.beginPath();ctx.arc(cx,mechCY,r*0.75,0,Math.PI*2);ctx.fill();ctx.restore();
+    // Body
+    const SC=stoneColors;
+    const bd=ctx.createRadialGradient(cx-r*0.28,mechCY-r*0.28,0,cx,mechCY,r*1.3);
+    bd.addColorStop(0,SC.hl);bd.addColorStop(0.12,SC.mh);bd.addColorStop(0.28,SC.md);bd.addColorStop(0.48,SC.ml);
+    bd.addColorStop(0.65,SC.lo);bd.addColorStop(0.80,SC.sh);bd.addColorStop(0.92,SC.dp);bd.addColorStop(1,SC.eg);
+    ctx.fillStyle=bd;trace();ctx.fill();
+    // Interior shadow
+    const ish=ctx.createRadialGradient(cx+r*0.3,mechCY+r*0.3,0,cx,mechCY,r);
+    ish.addColorStop(0,'rgba(28,26,24,0.16)');ish.addColorStop(0.5,'rgba(28,26,24,0.04)');ish.addColorStop(1,'rgba(28,26,24,0)');
+    ctx.fillStyle=ish;trace();ctx.fill();
+    // Specular
+    ctx.save();ctx.scale(1,0.6);
+    const hlG=ctx.createRadialGradient(cx-r*0.3,(mechCY-r*0.45)/0.6,0,cx-r*0.3,(mechCY-r*0.45)/0.6,r*ssR);
+    hlG.addColorStop(0,`rgba(251,248,244,${ssA})`);hlG.addColorStop(0.5,`rgba(251,248,244,${ssA*0.35})`);hlG.addColorStop(1,'rgba(251,248,244,0)');
+    ctx.fillStyle=hlG;ctx.beginPath();ctx.arc(cx-r*0.3,(mechCY-r*0.45)/0.6,r*ssR,0,Math.PI*2);ctx.fill();ctx.restore();
+    // Veins
+    ctx.globalAlpha=ssV;ctx.fillStyle=rgba(PAL.mineralDk,0.4);
+    veinData.forEach(v=>{
+      ctx.beginPath();ctx.ellipse(cx+Math.cos(v.va)*r*v.vd,mechCY+Math.sin(v.va)*r*v.vd,r*v.vs,r*v.vs*v.vAspect,v.va,0,Math.PI*2);ctx.fill();});
+    ctx.globalAlpha=1;
+    // Texture â€” composite static layer with alpha
+    ctx.globalAlpha=ssTx;
+    ctx.drawImage(stoneTexLayer, 0, oy);
+    ctx.globalAlpha=1;
+    // Edge
+    ctx.strokeStyle=rgba(PAL.text3,ssE);ctx.lineWidth=0.5;trace();ctx.stroke();
+
+    // ===== POST-STONE EFFECTS =====
+    // Inter-ring glow
+    if(globalT>0.2){
+      const gs=glow*0.1*Math.min(1,(globalT-0.2)/0.8);
+      [[mR+4,mechR-5],[iR+3,mR-4]].forEach(([a2,b2])=>{
+        const g=ctx.createRadialGradient(cx,mechCY,a2,cx,mechCY,b2);
+        g.addColorStop(0,rgba(PAL.honey,gs));g.addColorStop(0.5,rgba(PAL.honey,gs*0.5));g.addColorStop(1,rgba(PAL.honey,0));
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,mechCY,b2,0,Math.PI*2);ctx.arc(cx,mechCY,a2,0,Math.PI*2,true);ctx.closePath();ctx.fill();
+      });
+    }
+
+    // Aura
+    if(auraOp>0.004){
+      ctx.strokeStyle=rgba(PAL.honey,auraOp);ctx.lineWidth=0.6;
+      ctx.beginPath();ctx.arc(cx,mechCY,mechR+auraR,0,Math.PI*2);ctx.stroke();
+    }
+  }
+
+  // ============================================
+  // ============================================
+  // DESIGN PALETTE â€” CUSTOM RENDERS
+  // ============================================
+
+  // Render static Open and Sealed
+  drawFrame(0, true); // Open
+  // For sealed, we need to override â€” draw at ms=TOTAL
+  const sealedCanvas = document.getElementById('v-sealed');
+  const origC = C;
+
+  // Draw sealed on v-sealed canvas (swap canvas reference temporarily)
+  (function(){
+    const sc = document.getElementById('v-sealed');
+    const sctx = sc.getContext('2d');
+    // We'll draw sealed by calling drawFrame with TOTAL ms
+    // But drawFrame uses C directly. So we'll render open on v-open first,
+    // then re-render sealed using the anim canvas trick
+  })();
+
+  // Actually, let's just render both properly using direct state
+  // Open is already drawn. For sealed, trigger a single frame at TOTAL
+  function renderSealed(targetCanvas) {
+    const origRef = C;
+    // Temporarily monkey-patch â€” not ideal but works for static
+    const savedW = W, savedH = H;
+    // Just draw sealed via the animation approach
+    const pp = phaseProgress(TOTAL);
+    // All values at sealed state
+  }
+
+  // Simpler: use the anim canvas for the interactive demo
+  // and manually render open/sealed on the static canvases
+
+  // STATIC OPEN
+  (function(){
+    const c = document.getElementById('v-open');
+    const ctx = c.getContext('2d');
+    // Copy current vault canvas (which shows open)
+    ctx.drawImage(C, 0, 0);
+  })();
+
+  // For the animation demo, we'll use v-anim
+  const animC = document.getElementById('v-anim');
+
+  // Metal strip visualization
+  (function(){
+    const strip = document.getElementById('metalStrip');
+    const steps = 20;
+    for(let i=0; i<steps; i++){
+      const w = i/(steps-1);
+      const c = mineralMetal(w, 0.5);
+      const div = document.createElement('div');
+      div.style.background = rgb(c);
+      strip.appendChild(div);
+    }
+  })();
+
+  // Stone color strips
+  (function(){
+    const openColors = ['#E8E0D0','#DDD5C5','#CCC4B4','#B8B0A0','#A49C8E','#8A887E','#787870','#707068'];
+    const sealColors = ['#F8F0DC','#EFE6D0','#E5D8C0','#D8CAB0','#C4B8A0','#AEA090','#938A7D','#7D827E'];
+    const openStrip = document.getElementById('stoneOpen');
+    const sealStrip = document.getElementById('stoneSealed');
+    openColors.forEach(c => {const d=document.createElement('div');d.style.background=c;openStrip.appendChild(d);});
+    sealColors.forEach(c => {const d=document.createElement('div');d.style.background=c;sealStrip.appendChild(d);});
+  })();
+
+  // ANIMATION DEMO on v-anim
+  let animShimmer = 0, animAnimating = false, animSealed = false, animOpenRAF;
+
+  function drawOnCanvas(canvas, ms, isOpenState) {
+    // We need to temporarily redirect drawFrame to use a different canvas
+    // Since drawFrame is tightly bound to C, we'll do a canvas copy approach
+    drawFrame(ms, isOpenState);
+    if (canvas !== C) {
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(C, 0, 0);
+    }
+  }
+
+  function animOpenLoop() {
+    drawFrame(0, true);
+    const ctx = animC.getContext('2d');
+    ctx.drawImage(C, 0, 0);
+    animOpenRAF = requestAnimationFrame(animOpenLoop);
+  }
+
+  // Render sealed on v-sealed
+  function renderSealedStatic() {
+    drawFrame(TOTAL, false);
+    const ctx = document.getElementById('v-sealed').getContext('2d');
+    ctx.drawImage(C, 0, 0);
+    // Restore open on main canvas
+    drawFrame(0, true);
+  }
+  renderSealedStatic();
+
+  // Start open loop for anim demo
+  animOpenLoop();
+
+  function triggerAnimSeal() {
+    if(animAnimating || animSealed) return;
+    animAnimating = true;
+    cancelAnimationFrame(animOpenRAF);
+    document.getElementById('sealBtn').style.opacity = '0';
+    document.getElementById('sealBtn').style.pointerEvents = 'none';
+    let start = null;
+    function tick(ts) {
+      if(!start) start = ts;
+      const ms = ts - start;
+      drawFrame(Math.min(ms, TOTAL), false);
+      const ctx = animC.getContext('2d');
+      ctx.drawImage(C, 0, 0);
+      if(ms < TOTAL + SILENCE) requestAnimationFrame(tick);
+      else {
+        drawFrame(TOTAL, false);
+        const ctx2 = animC.getContext('2d');
+        ctx2.drawImage(C, 0, 0);
+        animSealed = true; animAnimating = false;
+        // Restore open on hidden C
+        drawFrame(0, true);
+        setTimeout(() => {
+          const btn = document.getElementById('sealBtn');
+          btn.textContent = 'Reset';
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        }, 600);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function resetAnim() {
+    animSealed = false;
+    const btn = document.getElementById('sealBtn');
+    btn.textContent = 'Seal';
+    animOpenLoop();
+  }
+
+  document.getElementById('sealBtn').addEventListener('click', () => {
+    if(animSealed) resetAnim(); else triggerAnimSeal();
+  });
+</script>
+</body>
+</html>

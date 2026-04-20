@@ -1,0 +1,4838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESSENCE - Voice Vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================
+       ESSENCE VOICE VAULT â€” MONETIZATION FLOW
+       7 Screens + Confirmation Overlay
+       Warm Luxury + Modern Dignity
+       ============================================ */
+
+    /* Reset */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* MINERAL & WARMTH Core Palette */
+      --cream: #F7F3EC;
+      --cream-warm: #FBF8F4;
+      --stone: #F4F2F0;
+      --oat: #F5F0EA;
+      --sand: #EBE4DC;
+      --honey: #E8DCC8;
+      --honey-deep: #E0D4BC;
+
+      /* ESSENCE Gold */
+      --gold-accent: #DCC9A3;
+      --gold-glow: rgba(232, 220, 200, 0.35);
+      --gold-halo: rgba(232, 220, 200, 0.40);
+      --gold-shimmer: rgba(232, 220, 200, 0.15);
+
+      /* Text Colors */
+      --charcoal: #1C1A18;
+      --graphite: #6B6B6B;
+      --ash: #ADA9A5;
+      --divider: #D9D6D2;
+
+      /* Mineral Accent */
+      --mineral: #7A8088;
+      --mineral-dark: #656B73;
+
+      /* Typography */
+      --font-serif: 'Spectral', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+
+      /* Shadows */
+      --shadow-warm: 0 8px 32px rgba(28, 26, 24, 0.08);
+      --shadow-warm-deep: 0 16px 48px rgba(28, 26, 24, 0.12);
+      --shadow-sharp: 0 4px 16px rgba(28, 26, 24, 0.10);
+
+      /* Easing */
+      --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+      --ease-drift: cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: #1A1715;
+      color: var(--charcoal);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ============================================
+       IPHONE PROTOTYPE FRAME
+       ============================================ */
+
+    .prototype-wrapper {
+      width: 350px;
+      height: 758px;
+      background: var(--cream);
+      border-radius: 44px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 10px #1A1715,
+        0 0 0 12px var(--mineral),
+        0 50px 100px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .phone-frame {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 54px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 28px 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--charcoal);
+      background: var(--cream);
+      position: relative;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    /* Dynamic Island */
+    .status-bar::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 28px;
+      background: #1A1715;
+      border-radius: 20px;
+    }
+
+    .status-indicators {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    /* ============================================
+       SCROLL CONTAINER WITH SNAP
+       ============================================ */
+
+    .scroll-container {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      position: relative;
+      overscroll-behavior: none;
+    }
+
+    .scroll-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* ============================================
+       SCREEN BASE STYLES
+       ============================================ */
+
+    .screen {
+      min-height: 100%;
+      height: 100%;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ============================================
+       SCENE BACKGROUNDS
+       ============================================ */
+
+    /* Warm Luxury â€” cream */
+    .screen--warm {
+      background: var(--cream);
+    }
+
+    /* Imagination â€” cream with vignette */
+    .screen--imagination {
+      background: var(--cream);
+    }
+
+    .screen--imagination::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        ellipse at center,
+        transparent 50%,
+        rgba(28, 26, 24, 0.06) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Modern Dignity â€” stone */
+    .screen--dignity {
+      background: var(--stone);
+      justify-content: flex-start;
+      padding-top: 40px;
+      padding-bottom: 40px;
+    }
+
+    /* Pricing â€” dignity + centered, generous spacing */
+    .screen--pricing {
+      justify-content: center;
+      padding-top: 36px;
+      padding-bottom: 24px;
+    }
+
+    /* Close â€” warm cream return */
+    .screen--close {
+      background: var(--cream);
+    }
+
+    /* Social proof â€” needs scrollable content */
+    .screen--social {
+      background: var(--cream);
+      justify-content: flex-start;
+      padding-top: 50px;
+      padding-bottom: 40px;
+    }
+
+    /* ============================================
+       CONTENT WRAPPER
+       ============================================ */
+
+    .screen__content {
+      width: 100%;
+      max-width: 342px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* ============================================
+       TYPOGRAPHY
+       ============================================ */
+
+    /* Headlines â€” Serif, line-by-line reveal */
+    .headline {
+      font-family: var(--font-serif);
+      font-size: 32px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--charcoal);
+      letter-spacing: -0.5px;
+      margin-bottom: 20px;
+    }
+
+    .headline-line {
+      display: block;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .headline-line {
+      opacity: 1;
+    }
+
+    /* Staggered headline lines â€” 200ms apart (tighter) */
+    .screen.visible .headline-line:nth-child(1) { transition-delay: 0ms; }
+    .screen.visible .headline-line:nth-child(2) { transition-delay: 200ms; }
+    .screen.visible .headline-line:nth-child(3) { transition-delay: 400ms; }
+
+    /* Subhead â€” Warm Luxury (italic serif) */
+    .subhead {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 400;
+      font-style: italic;
+      line-height: 1.55;
+      color: var(--graphite);
+      margin-bottom: 24px;
+      opacity: 0;
+      transition: opacity 450ms var(--ease-out-cubic);
+    }
+
+    /* After 3 headline lines */
+    .screen.visible .subhead {
+      opacity: 0.9;
+      transition-delay: 700ms;
+    }
+
+    /* Faster subhead for 2-line headlines */
+    .screen.visible .subhead--fast {
+      transition-delay: 500ms;
+    }
+
+    /* Body chunks after fast subhead */
+    .screen.visible .subhead--fast ~ .body-copy .body-chunk:nth-child(1) {
+      transition-delay: 800ms;
+    }
+    .screen.visible .subhead--fast ~ .body-copy .body-chunk:nth-child(2) {
+      transition-delay: 1050ms;
+    }
+    .screen.visible .subhead--fast ~ .body-copy .body-chunk:nth-child(3) {
+      transition-delay: 1300ms;
+    }
+
+    /* Body Copy */
+    .body-copy {
+      font-family: var(--font-sans);
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.75;
+      color: #555555;
+      max-width: 70ch;
+      margin-bottom: 32px;
+    }
+
+    /* Body chunk reveal â€” opacity only, no motion */
+    .body-chunk {
+      display: block;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+      margin-bottom: 0.5em;
+    }
+
+    .body-chunk:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Staggered body chunks â€” tighter timing */
+    .screen.visible .body-chunk:nth-child(1) {
+      opacity: 0.95;
+      transition-delay: 1000ms;
+    }
+    .screen.visible .body-chunk:nth-child(2) {
+      opacity: 0.95;
+      transition-delay: 1250ms;
+    }
+    .screen.visible .body-chunk:nth-child(3) {
+      opacity: 0.95;
+      transition-delay: 1500ms;
+    }
+
+    /* Key phrase emphasis */
+    .emphasis {
+      font-weight: 500;
+      color: var(--charcoal);
+    }
+
+    /* Coda â€” italic serif closing line */
+    .coda {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-style: italic;
+      color: var(--charcoal);
+      text-align: center;
+      margin-top: -8px;
+      margin-bottom: 24px;
+      opacity: 0;
+      transition: opacity 500ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .coda {
+      opacity: 0.95;
+      transition-delay: 1200ms;
+    }
+
+    /* Identity line â€” before final CTA */
+    .identity-line {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-style: italic;
+      color: var(--charcoal);
+      text-align: center;
+      margin: 8px 0 24px 0;
+      opacity: 0;
+      transition: opacity 500ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .identity-line {
+      opacity: 0.95;
+      transition-delay: 1600ms;
+    }
+
+    /* 30-day vault expiry indicator */
+    .vault-expiry {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--mineral);
+      text-align: center;
+      margin-bottom: 20px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition:
+        opacity 400ms var(--ease-out-cubic),
+        transform 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .vault-expiry {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 600ms;
+    }
+
+    /* Pricing hook â€” italic serif line above card */
+    .pricing-hook {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-style: italic;
+      font-weight: 400;
+      line-height: 1.5;
+      color: var(--charcoal);
+      text-align: center;
+      max-width: 280px;
+      margin: 0 auto 20px auto;
+      opacity: 0;
+      transform: translateY(10px);
+      transition:
+        opacity 450ms var(--ease-out-cubic),
+        transform 450ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .pricing-hook {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 800ms;
+    }
+
+    /* Cancel reassurance */
+    .cancel-reassurance {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      color: #555555;
+      text-align: center;
+      margin: 8px 0;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .cancel-reassurance {
+      opacity: 1;
+      transition-delay: 1400ms;
+    }
+
+    /* Closing line â€” social proof */
+    .closing-line {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      font-style: italic;
+      color: var(--mineral);
+      text-align: center;
+      margin-top: 8px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition:
+        opacity 400ms var(--ease-out-cubic),
+        transform 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .closing-line {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 800ms;
+    }
+
+    /* ============================================
+       BREATH STONE CANVAS CONTAINER
+       ============================================ */
+
+    .breath-stone-wrapper {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin-bottom: 48px;
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+      transition:
+        opacity 600ms var(--ease-out-cubic),
+        transform 600ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .breath-stone-wrapper {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .breath-stone-wrapper.hidden {
+      opacity: 0 !important;
+      transform: scale(0.9) !important;
+      transition:
+        opacity 550ms linear,
+        transform 550ms var(--ease-out-cubic);
+    }
+
+    .breath-stone-wrapper canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ============================================
+       VAULT CONTAINER (NEW)
+       Keepsake case â€” NOT tech
+       ============================================ */
+
+    .vault-container {
+      position: relative;
+      width: 180px;
+      height: 200px;
+      margin-bottom: 36px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition:
+        opacity 600ms var(--ease-out-cubic),
+        transform 600ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .vault-container {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .vault-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Vault dimmed state (Screen 5 â€” Loss Framing) */
+    /* Starts large and present, diminishes dramatically */
+    .vault-container--dimmed {
+      width: 260px;
+      height: 290px;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(20px) scale(1);
+      transition:
+        opacity 600ms var(--ease-out-cubic),
+        transform 600ms var(--ease-out-cubic),
+        width 2200ms var(--ease-drift) 600ms,
+        height 2200ms var(--ease-drift) 600ms;
+    }
+
+    .screen.visible .vault-container--dimmed {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .vault-container--dimmed.diminishing {
+      width: 110px;
+      height: 122px;
+      opacity: 0.35;
+      transition:
+        opacity 2500ms var(--ease-drift),
+        width 2500ms var(--ease-drift),
+        height 2500ms var(--ease-drift);
+    }
+
+    /* ============================================
+       WAVEFORM DISSOLVE (Screen 4 only)
+       ============================================ */
+
+    .waveform-dissolve-wrapper {
+      width: 300px;
+      height: 80px;
+      margin-bottom: 28px;
+      opacity: 0;
+      transition: opacity 500ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .waveform-dissolve-wrapper {
+      opacity: 1;
+      transition-delay: 600ms;
+    }
+
+    .waveform-dissolve-wrapper canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ============================================
+       SPARKLE DUST (Imagination screens)
+       ============================================ */
+
+    .sparkle-container {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 5;
+    }
+
+    .sparkle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: var(--gold-accent);
+      border-radius: 50%;
+      opacity: 0;
+    }
+
+    .screen.visible .sparkle {
+      animation: sparkleFloat 8s linear infinite;
+    }
+
+    .sparkle:nth-child(1) { left: 20%; bottom: 30%; animation-delay: 0s; }
+    .sparkle:nth-child(2) { left: 75%; bottom: 25%; animation-delay: 2s; }
+    .sparkle:nth-child(3) { left: 45%; bottom: 20%; animation-delay: 4s; }
+    .sparkle:nth-child(4) { left: 60%; bottom: 35%; animation-delay: 6s; }
+
+    @keyframes sparkleFloat {
+      0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.5);
+      }
+      10% {
+        opacity: 0.15;
+      }
+      90% {
+        opacity: 0.15;
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-120px) scale(1);
+      }
+    }
+
+    /* ============================================
+       PRICING TOGGLE (Screen 7)
+       ============================================ */
+
+    .pricing-toggle {
+      display: flex;
+      background: var(--sand);
+      border-radius: 20px;
+      padding: 3px;
+      margin-bottom: 24px;
+      position: relative;
+      align-self: center;
+    }
+
+    .screen.visible .pricing-toggle {
+      opacity: 1;
+    }
+
+    .pricing-toggle__option {
+      padding: 10px 20px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--graphite);
+      background: transparent;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      transition:
+        background 200ms var(--ease-out-cubic),
+        color 200ms var(--ease-out-cubic);
+      position: relative;
+      z-index: 2;
+    }
+
+    .pricing-toggle__option--active {
+      background: var(--mineral);
+      color: white;
+    }
+
+    .pricing-toggle__badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--gold-accent);
+      margin-left: 4px;
+    }
+
+    .pricing-toggle__option--active .pricing-toggle__badge {
+      color: var(--gold-accent);
+    }
+
+    /* ============================================
+       PRICING CARD
+       ============================================ */
+
+    .pricing-card {
+      width: 100%;
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow:
+        0 4px 24px rgba(28, 26, 24, 0.06),
+        0 0 0 1px rgba(220, 201, 163, 0.25);
+      border: 1px solid rgba(220, 201, 163, 0.35);
+      margin-bottom: 20px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;
+      transform: scale(0.97);
+      transition:
+        opacity 500ms var(--ease-out-cubic) 400ms,
+        transform 500ms var(--ease-out-cubic) 400ms;
+    }
+
+    .pricing-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: radial-gradient(
+        ellipse at center top,
+        rgba(220, 201, 163, 0.12) 0%,
+        transparent 60%
+      );
+      border-radius: 20px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .pricing-card::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(232, 220, 200, 0.15) 0%,
+        transparent 70%
+      );
+      border-radius: 20px;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 600ms var(--ease-out-cubic) 400ms;
+    }
+
+    .screen.visible .pricing-card {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .screen.visible .pricing-card::before {
+      opacity: 1;
+    }
+
+    .pricing-amount {
+      font-family: var(--font-sans);
+      font-size: 34px;
+      font-weight: 600;
+      color: var(--charcoal);
+      line-height: 1;
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+      text-align: center;
+    }
+
+    .pricing-period {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--mineral);
+      margin-bottom: 0;
+      letter-spacing: 0.01em;
+      text-align: center;
+    }
+
+    .pricing-divider {
+      width: 100%;
+      height: 1px;
+      background: var(--divider);
+      margin: 18px 0 14px;
+      opacity: 0;
+      transition: opacity 350ms var(--ease-out-cubic) 200ms;
+    }
+
+    .screen.visible .pricing-divider {
+      opacity: 1;
+    }
+
+    .pricing-features {
+      list-style: none;
+      text-align: left;
+      width: 100%;
+    }
+
+    .pricing-feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 8px 0;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      color: var(--charcoal);
+      line-height: 1.5;
+      opacity: 0;
+      transition: opacity 250ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .pricing-feature:nth-child(1) { transition-delay: 200ms; opacity: 1; }
+    .screen.visible .pricing-feature:nth-child(2) { transition-delay: 300ms; opacity: 1; }
+    .screen.visible .pricing-feature:nth-child(3) { transition-delay: 400ms; opacity: 1; }
+
+    .pricing-feature__check {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      color: var(--mineral);
+      margin-top: 1px;
+    }
+
+    /* ============================================
+       TESTIMONIALS (with tilt)
+       ============================================ */
+
+    .testimonials {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .testimonial-card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow-warm);
+      text-align: left;
+      opacity: 0;
+      transform: translateY(20px) rotate(0deg);
+      transition:
+        opacity 350ms var(--ease-out-cubic),
+        transform 350ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .testimonial-card {
+      opacity: 1;
+      transform: translateY(0) rotate(0deg);
+    }
+
+    .screen.visible .testimonial-card:nth-child(1) { transition-delay: 150ms; }
+    .screen.visible .testimonial-card:nth-child(2) { transition-delay: 300ms; }
+    .screen.visible .testimonial-card:nth-child(3) { transition-delay: 450ms; }
+
+    .testimonial-quote {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      font-style: italic;
+      color: var(--charcoal);
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .testimonial-waveform {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      height: 18px;
+    }
+
+    .waveform-bar {
+      width: 2.5px;
+      background: var(--gold-accent);
+      border-radius: 2px;
+      opacity: 0.15;
+      animation: waveformPulse 4s ease-in-out infinite;
+    }
+
+    .waveform-bar:nth-child(1) { height: 6px; animation-delay: 0s; }
+    .waveform-bar:nth-child(2) { height: 12px; animation-delay: 0.15s; }
+    .waveform-bar:nth-child(3) { height: 8px; animation-delay: 0.3s; }
+    .waveform-bar:nth-child(4) { height: 14px; animation-delay: 0.45s; }
+    .waveform-bar:nth-child(5) { height: 10px; animation-delay: 0.6s; }
+    .waveform-bar:nth-child(6) { height: 6px; animation-delay: 0.75s; }
+
+    @keyframes waveformPulse {
+      0%, 100% {
+        transform: scaleY(1);
+        opacity: 0.15;
+      }
+      50% {
+        transform: scaleY(1.4);
+        opacity: 0.25;
+      }
+    }
+
+    .testimonial-name {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--charcoal);
+    }
+
+    /* ============================================
+       BUTTONS
+       ============================================ */
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      margin-top: 32px;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .btn-group {
+      opacity: 1;
+      transition-delay: 1800ms;
+    }
+
+    .screen.visible .btn-group--fast {
+      transition-delay: 1200ms;
+    }
+
+    .screen--dignity.visible .btn-group {
+      transition-delay: 900ms;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 18px 32px;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--cream-warm);
+      background: var(--mineral);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition:
+        background 200ms var(--ease-out-cubic),
+        transform 200ms var(--ease-out-cubic),
+        box-shadow 200ms var(--ease-out-cubic);
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn-primary:hover {
+      background: var(--mineral-dark);
+      transform: scale(1.02);
+      box-shadow: var(--shadow-warm);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.99);
+    }
+
+    .btn-primary--large {
+      padding: 20px 36px;
+      font-size: 17px;
+    }
+
+    /* Warm pulse for Seal My Vault CTA */
+    .btn-primary--pulse {
+      animation: warmPulse 2.5s ease-in-out infinite;
+      animation-delay: 1.5s;
+    }
+
+    @keyframes warmPulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 20px rgba(28, 26, 24, 0.15);
+      }
+      50% {
+        transform: scale(1.03);
+        box-shadow: 0 6px 28px rgba(28, 26, 24, 0.22);
+      }
+    }
+
+    .btn-primary--pulse:hover {
+      animation-play-state: paused;
+      transform: scale(1.02);
+    }
+
+    /* Final CTA subtle pulse */
+    .btn-primary--final {
+      animation: finalPulse 6s ease-in-out infinite;
+    }
+
+    @keyframes finalPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.015); }
+    }
+
+    .btn-primary--final:hover {
+      animation: none;
+      transform: scale(1.02);
+    }
+
+    .btn-secondary {
+      display: block;
+      width: 100%;
+      padding: 16px 32px;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--mineral);
+      background: transparent;
+      border: 1.5px solid var(--divider);
+      border-radius: 12px;
+      cursor: pointer;
+      transition:
+        background 200ms var(--ease-out-cubic),
+        border-color 200ms var(--ease-out-cubic);
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn-secondary:hover {
+      background: var(--oat);
+      border-color: var(--sand);
+    }
+
+    /* Text button â€” dismiss/skip */
+    .btn-text {
+      display: inline-block;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--mineral);
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      padding: 8px 0;
+      margin-top: 8px;
+    }
+
+    .btn-text::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: var(--gold-accent);
+      transform: scaleX(0);
+      transform-origin: right;
+      transition: transform 300ms var(--ease-out-cubic);
+    }
+
+    .btn-text:hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+
+    /* ============================================
+       SCROLL AFFORDANCE â€” Bouncing Arrow
+       ============================================ */
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .scroll-hint {
+      animation: fadeInHint 400ms var(--ease-out-cubic) 1.8s forwards;
+    }
+
+    .screen.scrolled .scroll-hint {
+      opacity: 0 !important;
+      animation: none;
+    }
+
+    @keyframes fadeInHint {
+      to { opacity: 0.6; }
+    }
+
+    .scroll-hint__arrow {
+      width: 36px;
+      height: 36px;
+      color: var(--mineral);
+      animation: bounceArrow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes bounceArrow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
+
+    /* ============================================
+       CONFIRMATION OVERLAY
+       ============================================ */
+
+    .confirmation-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, #FBF8F2 0%, #F7F0E6 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 24px;
+      z-index: 200;
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity 700ms var(--ease-drift),
+        visibility 700ms;
+    }
+
+    .confirmation-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .confirmation-overlay .headline,
+    .confirmation-overlay .subhead,
+    .confirmation-overlay .body-copy,
+    .confirmation-overlay .btn-group {
+      opacity: 0;
+      transition: opacity 600ms var(--ease-drift);
+    }
+
+    .confirmation-overlay .vault-container {
+      opacity: 0;
+      margin-bottom: 32px;
+      transition: opacity 800ms var(--ease-drift);
+    }
+
+    /* Choreographed reveals â€” vault seals first, then content appears after the seal lands */
+    .confirmation-overlay.active .vault-container {
+      opacity: 1;
+      transition-delay: 0ms;
+    }
+
+    .confirmation-overlay.active .headline {
+      opacity: 1;
+      transition-delay: 2400ms;
+    }
+
+    .confirmation-overlay.active .subhead {
+      opacity: 0.9;
+      transition-delay: 3200ms;
+    }
+
+    .confirmation-overlay.active .body-copy {
+      opacity: 0.95;
+      transition-delay: 3200ms;
+    }
+
+    .confirmation-overlay.active .btn-group {
+      opacity: 1;
+      transition-delay: 4000ms;
+    }
+
+    /* ============================================
+       PAPER TEXTURE OVERLAY
+       ============================================ */
+
+    .texture-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0.08;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      mix-blend-mode: overlay;
+    }
+
+    /* ============================================
+       AMBIENT BACKGROUND MOTION
+       ============================================ */
+
+    .ambient-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background: radial-gradient(
+        ellipse at 30% 20%,
+        var(--gold-shimmer) 0%,
+        transparent 50%
+      );
+      animation: ambientDrift 20s linear infinite;
+    }
+
+    @keyframes ambientDrift {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(3px, 2px); }
+      50% { transform: translate(0, 3px); }
+      75% { transform: translate(-2px, 1px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    /* No ambient on dignity screens */
+    .screen--dignity .ambient-bg {
+      display: none;
+    }
+
+    /* ============================================
+       PLAYBACK CARD (Screen 4 â€” Proof Message)
+       Vertical layout: waveform above, play button below
+       ============================================ */
+
+    .playback-card {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(252, 249, 244, 0.95) 100%);
+      border-radius: 16px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(232, 220, 200, 0.25);
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      opacity: 0;
+      transform: scale(0.97);
+      transition: opacity 500ms var(--ease-out-cubic), transform 500ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .playback-card {
+      opacity: 1;
+      transform: scale(1);
+      transition-delay: 600ms;
+    }
+
+    .playback-waveform {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      height: 56px;
+      padding: 0 8px;
+    }
+
+    .playback-bar {
+      width: 2.5px;
+      background: var(--gold-accent);
+      border-radius: 2px;
+      opacity: 0.2;
+      transition: opacity 400ms ease, transform 400ms ease;
+    }
+
+    .playback-card--playing .playback-bar {
+      opacity: 0.45;
+      animation: playbackPulse 1.2s ease-in-out infinite;
+    }
+
+    .playback-card--playing .playback-bar:nth-child(odd) {
+      animation-duration: 0.9s;
+    }
+
+    .playback-card--playing .playback-bar:nth-child(3n) {
+      animation-duration: 1.4s;
+    }
+
+    /* Post-playback: bars settle to a warm resting state */
+    .playback-card--complete .playback-bar {
+      opacity: 0.35;
+      animation: none;
+    }
+
+    @keyframes playbackPulse {
+      0%, 100% { opacity: 0.3; transform: scaleY(1); }
+      50% { opacity: 0.6; transform: scaleY(1.25); }
+    }
+
+    /* Play button â€” circular gold-rimmed, premium feel */
+    .playback-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      padding: 0;
+      background: linear-gradient(145deg, #F7F3EC 0%, #EBE4DC 100%);
+      border: 2px solid rgba(220, 201, 163, 0.55);
+      border-radius: 50%;
+      cursor: pointer;
+      transition:
+        border-color 300ms var(--ease-out-cubic),
+        transform 200ms var(--ease-out-cubic),
+        box-shadow 300ms var(--ease-out-cubic);
+      box-shadow:
+        0 2px 12px rgba(28, 26, 24, 0.08),
+        0 0 0 4px rgba(220, 201, 163, 0.08);
+      animation: playBtnBreath 4s ease-in-out infinite;
+      position: relative;
+    }
+
+    @keyframes playBtnBreath {
+      0%, 100% {
+        box-shadow: 0 2px 12px rgba(28, 26, 24, 0.08), 0 0 0 4px rgba(220, 201, 163, 0.08);
+      }
+      50% {
+        box-shadow: 0 4px 16px rgba(28, 26, 24, 0.10), 0 0 0 6px rgba(220, 201, 163, 0.14);
+      }
+    }
+
+    .playback-btn:hover {
+      border-color: rgba(220, 201, 163, 0.8);
+      transform: scale(1.06);
+      box-shadow: 0 4px 20px rgba(28, 26, 24, 0.12), 0 0 0 6px rgba(220, 201, 163, 0.18);
+      animation: none;
+    }
+
+    .playback-btn:active {
+      transform: scale(0.97);
+    }
+
+    .playback-btn svg {
+      width: 22px;
+      height: 22px;
+      color: var(--charcoal);
+      flex-shrink: 0;
+      margin-left: 2px; /* optical center for play triangle */
+    }
+
+    .playback-btn--playing svg {
+      margin-left: 0;
+    }
+
+    .playback-btn__label {
+      display: none;
+    }
+
+    .playback-btn--playing {
+      border-color: rgba(220, 201, 163, 0.7);
+      animation: playBtnActive 2s ease-in-out infinite;
+    }
+
+    @keyframes playBtnActive {
+      0%, 100% {
+        box-shadow: 0 2px 12px rgba(28, 26, 24, 0.08), 0 0 0 4px rgba(220, 201, 163, 0.15);
+      }
+      50% {
+        box-shadow: 0 4px 20px rgba(28, 26, 24, 0.10), 0 0 0 8px rgba(220, 201, 163, 0.25);
+      }
+    }
+
+    .playback-btn--playing svg.icon-play { display: none; }
+    .playback-btn--playing svg.icon-pause { display: block; }
+    .playback-btn svg.icon-pause { display: none; }
+
+    /* ============================================
+       CLARITY BLOCK (Screen 6)
+       Single container, two stacked rows.
+       ============================================ */
+
+    .clarity-block {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 20px;
+      background: var(--stone);
+      border-radius: 14px;
+      border: 1px solid var(--divider);
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .clarity-block {
+      opacity: 1;
+      transition-delay: 200ms;
+    }
+
+    .clarity-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 12px 18px;
+    }
+
+    .clarity-row--with {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(252, 249, 244, 0.5) 100%);
+    }
+
+    .clarity-divider {
+      height: 1px;
+      background: var(--divider);
+      margin: 0 18px;
+    }
+
+    .clarity-row__label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .clarity-row--without .clarity-row__label {
+      color: var(--ash);
+    }
+
+    .clarity-row--with .clarity-row__label {
+      color: var(--gold-accent);
+    }
+
+    .clarity-row__value {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    .clarity-row--without .clarity-row__value {
+      color: var(--graphite);
+    }
+
+    .clarity-row--with .clarity-row__value {
+      color: var(--charcoal);
+      font-weight: 500;
+    }
+
+    /* Trust line â€” above paywall CTA */
+    .paywall-trust-line {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--ash);
+      text-align: center;
+      margin: 0 0 10px;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .paywall-trust-line {
+      opacity: 1;
+      transition-delay: 800ms;
+    }
+
+    /* Not now on paywall â€” single quiet dismiss line */
+    .screen--pricing .btn-text {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--ash);
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen--pricing.visible .btn-text {
+      opacity: 0.7;
+      transition-delay: 1000ms;
+    }
+
+    .playback-body {
+      opacity: 0;
+      transition: opacity 700ms var(--ease-out-cubic);
+    }
+
+    .playback-body.revealed {
+      opacity: 0.95;
+    }
+
+    /* Post-playback: card gets subtle gold acknowledgment */
+    .playback-card--complete {
+      border-color: rgba(220, 201, 163, 0.45);
+      box-shadow:
+        0 6px 24px rgba(0, 0, 0, 0.05),
+        0 2px 8px rgba(0, 0, 0, 0.03),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 0 0 1px rgba(220, 201, 163, 0.2);
+      transition: border-color 1200ms var(--ease-drift), box-shadow 1200ms var(--ease-drift);
+    }
+
+    /* ============================================
+       CEREMONIAL VAULT REVEAL (Screen 4)
+       Choreographed 7-beat reveal. 3.5s total.
+       Elevated register. Time is part of the design.
+       ============================================ */
+
+    .screen--reveal {
+      background: var(--cream);
+      padding: 0;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .reveal-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 28px;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Beat 2: Vault keepsake â€” settles into place with weight */
+    .reveal-object {
+      width: 180px;
+      height: 200px;
+      margin-bottom: 24px;
+      opacity: 0;
+      transform: translateY(-8px) scale(0.97);
+      transition:
+        opacity 450ms var(--ease-out-cubic),
+        transform 570ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .screen.visible .reveal-object {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      transition-delay: 400ms;
+    }
+
+    .reveal-object canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Beat 3: Headline â€” the naming */
+    .reveal-headline {
+      font-family: var(--font-serif);
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--charcoal);
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      margin-bottom: 12px;
+      opacity: 0;
+      transition: opacity 500ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .reveal-headline {
+      opacity: 1;
+      transition-delay: 1200ms;
+    }
+
+    /* Beat 4: Subline â€” declarative */
+    .reveal-subline {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 400;
+      font-style: italic;
+      color: var(--graphite);
+      line-height: 1.5;
+      margin-bottom: 0;
+      opacity: 0;
+      transition: opacity 450ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .reveal-subline {
+      opacity: 0.9;
+      transition-delay: 1800ms;
+    }
+
+    /* Beat 5: Breath â€” a soft presence, not a UI divider */
+    .reveal-breath {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--ash);
+      margin: 28px 0;
+      opacity: 0;
+      transition: opacity 350ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .reveal-breath {
+      opacity: 0.4;
+      transition-delay: 2400ms;
+    }
+
+    /* Beat 6: Hold line */
+    .reveal-hold {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 400;
+      font-style: italic;
+      color: var(--graphite);
+      line-height: 1.5;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .reveal-hold {
+      opacity: 0.85;
+      transition-delay: 2800ms;
+    }
+
+    /* Beat 7: Scroll cue */
+    .reveal-scroll-cue {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .reveal-scroll-cue {
+      opacity: 0.45;
+      transition-delay: 3500ms;
+    }
+
+    .reveal-scroll-arrow {
+      width: 28px;
+      height: 28px;
+      color: var(--ash);
+      animation: revealBounce 1.8s ease-in-out infinite;
+      animation-delay: 4s;
+    }
+
+    @keyframes revealBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    /* ============================================
+       PERFORMANCE PAYWALL (Screen 5)
+       Single card. Everything inside. Tight rhythm.
+       ============================================ */
+
+    .screen--perf-paywall {
+      background: var(--cream);
+      padding: 0;
+      justify-content: flex-start;
+      align-items: stretch;
+    }
+
+    .perf-inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 18px 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Headline */
+    .perf-headline {
+      font-family: var(--font-serif);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--charcoal);
+      letter-spacing: -0.3px;
+      line-height: 1.2;
+      margin-bottom: 6px;
+      text-align: center;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .perf-headline {
+      opacity: 1;
+      transition-delay: 150ms;
+    }
+
+    /* Subhead */
+    .perf-subhead {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--graphite);
+      line-height: 1.5;
+      margin-bottom: 16px;
+      max-width: 260px;
+      text-align: center;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .perf-subhead {
+      opacity: 0.85;
+      transition-delay: 300ms;
+    }
+
+    /* === THE CARD === */
+    .perf-card {
+      width: 100%;
+      background: white;
+      border-radius: 16px;
+      padding: 22px 18px 20px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.04),
+        0 4px 14px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+      opacity: 0;
+      transform: translateY(6px);
+      transition:
+        opacity 450ms var(--ease-out-cubic),
+        transform 450ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .perf-card {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 400ms;
+    }
+
+    /* Toggle */
+    .perf-toggle {
+      display: flex;
+      background: var(--oat);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .perf-toggle__opt {
+      padding: 8px 16px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--graphite);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition:
+        background 200ms var(--ease-out-cubic),
+        color 200ms var(--ease-out-cubic),
+        box-shadow 200ms var(--ease-out-cubic);
+    }
+
+    .perf-toggle__opt--active {
+      background: white;
+      color: var(--charcoal);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .perf-toggle__save {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6B8F71;
+      margin-left: 3px;
+    }
+
+    /* Price */
+    .perf-price {
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .perf-price__main {
+      font-family: var(--font-sans);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--charcoal);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .perf-price__period {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--mineral);
+      margin-bottom: 2px;
+    }
+
+    .perf-price__alt {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--mineral);
+    }
+
+    /* Card divider */
+    .perf-card__divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.06);
+      margin: 10px 0;
+    }
+
+    /* Bullets â€” compact, inside card */
+    .perf-bullets {
+      list-style: none;
+      width: 100%;
+      text-align: left;
+      margin-bottom: 0;
+    }
+
+    .perf-bullet {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--graphite);
+      line-height: 1.3;
+    }
+
+    .perf-bullet__check {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      color: #B0A48E;
+      opacity: 0.8;
+    }
+
+    /* CTA â€” loudest element, inside card at bottom */
+    .perf-cta {
+      display: block;
+      width: 100%;
+      padding: 16px 32px;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      background: #6B7078;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow:
+        0 2px 4px rgba(28, 26, 24, 0.12),
+        0 4px 12px rgba(28, 26, 24, 0.08);
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+      transition:
+        background 200ms var(--ease-out-cubic),
+        transform 150ms var(--ease-out-cubic),
+        box-shadow 200ms var(--ease-out-cubic);
+    }
+
+    .perf-cta:hover {
+      background: #5E646C;
+      box-shadow:
+        0 2px 4px rgba(28, 26, 24, 0.15),
+        0 6px 16px rgba(28, 26, 24, 0.12);
+    }
+
+    .perf-cta:active {
+      transform: scale(0.985);
+      background: #535960;
+    }
+
+    /* Reassurance â€” inside card, beneath CTA */
+    .perf-reassurance {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--ash);
+      text-align: center;
+    }
+
+    /* === END CARD === */
+
+    /* Dismiss â€” outside card, alone */
+    .perf-dismiss {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--ash);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 0;
+      flex-shrink: 0;
+      opacity: 0;
+      transition:
+        opacity 400ms var(--ease-out-cubic),
+        color 200ms var(--ease-out-cubic);
+    }
+
+    .screen.visible .perf-dismiss {
+      opacity: 0.55;
+      transition-delay: 700ms;
+    }
+
+    .perf-dismiss:hover {
+      color: var(--mineral);
+    }
+
+    /* ============================================
+       SCREEN 4 v4: VAULT REVEAL (overrides)
+       230px vault, anchored upward
+       ============================================ */
+    .screen--reveal {
+      background: var(--cream);
+      padding: 0;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .reveal-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 32px;
+      padding-top: 80px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .reveal-object {
+      width: 230px;
+      height: 230px;
+      margin-bottom: 28px;
+      opacity: 0;
+      transition: opacity 800ms var(--ease-drift);
+    }
+    .reveal-object.visible { opacity: 1; }
+    .reveal-object canvas { display: block; width: 100%; height: 100%; }
+
+    .reveal-headline {
+      font-family: var(--font-serif);
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--charcoal);
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      opacity: 0;
+      transition: opacity 600ms var(--ease-drift);
+    }
+    .reveal-headline.visible { opacity: 1; }
+
+    .reveal-subline {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 400;
+      font-style: italic;
+      color: var(--graphite);
+      line-height: 1.5;
+      margin-bottom: 0;
+      opacity: 0;
+      transition: opacity 500ms var(--ease-drift);
+    }
+    .reveal-subline.visible { opacity: 0.85; }
+
+    .reveal-breath {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--ash);
+      margin: 32px 0;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-drift);
+    }
+    .reveal-breath.visible { opacity: 0.35; }
+
+    .reveal-hold {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--ash);
+      line-height: 1.5;
+      text-align: center;
+      letter-spacing: 0.01em;
+      opacity: 0;
+      transition: opacity 450ms var(--ease-drift);
+    }
+    .reveal-hold.visible { opacity: 0.7; }
+
+    .reveal-scroll-cue {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 800ms var(--ease-drift);
+    }
+    .reveal-scroll-cue.visible { opacity: 0.25; }
+    .reveal-scroll-arrow { width: 24px; height: 24px; color: var(--ash); }
+
+    /* ============================================
+       SCREEN 6 v4: LOSS FRAMING CINEMA
+       ============================================ */
+    .screen--loss-cinema {
+      background: #F7F3EC;
+      padding: 0;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .s6-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .s6-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 32px;
+      padding-top: 80px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .s6-vault-container {
+      width: 230px;
+      height: 230px;
+      margin-bottom: 20px;
+      opacity: 0;
+      transition: opacity 600ms var(--ease-drift);
+    }
+    .s6-vault-container.visible { opacity: 1; }
+    .s6-vault-container canvas { display: block; width: 100%; height: 100%; }
+
+    .s6-waveform-container {
+      width: 280px;
+      height: 56px;
+      margin-bottom: 28px;
+      opacity: 0;
+      transition: opacity 500ms var(--ease-drift);
+    }
+    .s6-waveform-container.visible { opacity: 1; }
+    .s6-waveform-container canvas { display: block; width: 100%; height: 100%; }
+
+    .s6-headline {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--charcoal);
+      letter-spacing: -0.2px;
+      line-height: 1.25;
+      margin-bottom: 14px;
+      opacity: 0;
+      transition: opacity 600ms var(--ease-drift);
+    }
+    .s6-headline.visible { opacity: 0.88; }
+
+    .s6-body {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 400;
+      font-style: italic;
+      color: var(--graphite);
+      line-height: 1.55;
+      opacity: 0;
+      transition: opacity 500ms var(--ease-drift);
+    }
+    .s6-body.visible { opacity: 0.68; }
+
+    /* ============================================
+       SCREEN 7 v4: FINAL CTA
+       Copy is the star. Vault is grounding presence.
+       ============================================ */
+    .screen--s7-final {
+      background: var(--cream);
+      padding: 0;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .s7-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 36px 28px 0;
+      position: relative;
+      z-index: 10;
+      width: 100%;
+    }
+
+    .s7-vault-container {
+      width: 170px;
+      height: 170px;
+      margin-bottom: 24px;
+      opacity: 0;
+      transition: opacity 700ms var(--ease-drift);
+    }
+    .s7-vault-container.visible { opacity: 1; }
+    .s7-vault-container canvas { display: block; width: 100%; height: 100%; }
+
+    .s7-headline {
+      font-family: var(--font-serif);
+      font-size: 30px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--charcoal);
+      letter-spacing: -0.5px;
+      margin-bottom: 16px;
+    }
+
+    .s7-headline-line {
+      display: block;
+      opacity: 0;
+      transition: opacity 450ms var(--ease-drift);
+    }
+
+    .s7-subhead {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 400;
+      font-style: italic;
+      line-height: 1.55;
+      color: var(--graphite);
+      margin-bottom: 24px;
+      opacity: 0;
+      transition: opacity 450ms var(--ease-drift);
+    }
+
+    .s7-body-copy {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.65;
+      color: var(--charcoal);
+      margin-top: 12px;
+      margin-bottom: 24px;
+    }
+
+    .s7-body-chunk {
+      display: block;
+      margin-bottom: 4px;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-drift);
+    }
+
+    .s7-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      padding: 0 28px;
+      padding-bottom: 32px;
+      opacity: 0;
+      transition: opacity 400ms var(--ease-drift);
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="prototype-wrapper">
+    <div class="phone-frame">
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-indicators">
+          <span>5G</span>
+          <span>100%</span>
+        </div>
+      </div>
+
+      <!-- Scroll Container -->
+      <div class="scroll-container" id="scrollContainer">
+
+        <!-- ==========================================
+             SCREEN 1: Recognition
+             "That's my voice."
+             ========================================== -->
+        <section class="screen screen--warm" data-scene="recognition" data-stone-state="recognition">
+          <div class="ambient-bg"></div>
+          <div class="texture-overlay"></div>
+          <div class="screen__content">
+            <div class="breath-stone-wrapper" id="stoneWrapper">
+              <canvas id="breathStoneCanvas" width="320" height="320"></canvas>
+            </div>
+            <h1 class="headline">
+              <span class="headline-line">Your voice.</span>
+              <span class="headline-line">Clear, warm,</span>
+              <span class="headline-line">unmistakably yours.</span>
+            </h1>
+            <p class="subhead">Not a recording. Not a memory. Your voice, captured as it is today.</p>
+          </div>
+          <div class="scroll-hint">
+            <svg class="scroll-hint__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SCREEN 2: Settle
+             Pivot from self to others.
+             ========================================== -->
+        <section class="screen screen--warm" data-scene="recognition" data-stone-state="recognition-deep">
+          <div class="ambient-bg"></div>
+          <div class="texture-overlay"></div>
+          <div class="screen__content">
+            <h1 class="headline">
+              <span class="headline-line">Take a breath.</span>
+              <span class="headline-line">Let it settle.</span>
+            </h1>
+            <p class="body-copy">
+              <span class="body-chunk">This is the voice your family knows.</span>
+              <span class="body-chunk">The one they hear when they think of you. The one they would want to keep.</span>
+            </p>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SCREEN 3 removed â€” Vault Reveal is now 
+             merged into the Cinematic Vault Paywall (Screen 4)
+             ========================================== -->
+
+        <!-- ==========================================
+             SCREEN 3: Proof Message â­
+             Passive listen. Plants utility before protection.
+             "This is how your voice will sound when someone needs it."
+             ========================================== -->
+        <section class="screen screen--imagination" data-scene="proof" data-stone-state="imagination">
+          <div class="ambient-bg"></div>
+          <div class="texture-overlay"></div>
+          <div class="sparkle-container">
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+          </div>
+          <div class="screen__content">
+            <h1 class="headline">
+              <span class="headline-line">Hear your voice</span>
+              <span class="headline-line">speak.</span>
+            </h1>
+            <p class="subhead subhead--fast">This is how your voice will sound when someone needs it.</p>
+
+            <!-- Playback Card â€” vertical: waveform + button -->
+            <div class="playback-card" id="playbackCard">
+              <div class="playback-waveform" id="playbackWaveform">
+                <!-- Bars generated by JS -->
+              </div>
+              <button class="playback-btn" id="playBtn">
+                <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <polygon points="8,5 19,12 8,19"/>
+                </svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                  <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Body revealed after playback -->
+            <p class="body-copy playback-body" id="playbackBody" style="margin-bottom: 0;">
+              <span class="body-chunk" style="opacity: inherit; transform: none; transition: none;">That's you. Clear, steady, familiar.</span>
+            </p>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SCREEN 4: Ceremonial Vault Reveal â­
+             Museum placard. Stone resolves as single event.
+             ========================================== -->
+        <section class="screen screen--reveal" data-scene="vault-reveal" data-stone-state="vault-reveal" id="screenReveal">
+          <div class="texture-overlay"></div>
+          <div class="reveal-inner">
+            <div class="reveal-object" id="revealObject">
+              <canvas id="s4VaultCanvas" width="460" height="460"></canvas>
+            </div>
+            <h1 class="reveal-headline" id="revealHeadline">Your Voice Vault</h1>
+            <p class="reveal-subline" id="revealSubline">This is where your voice is preserved.</p>
+            <div class="reveal-breath" id="revealBreath"></div>
+            <p class="reveal-hold" id="revealHold">For now, it's being kept with care.</p>
+          </div>
+          <div class="reveal-scroll-cue" id="revealScrollCue">
+            <svg class="reveal-scroll-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SCREEN 5: Performance Paywall â­
+             Single contained card. Headline above. Dismiss below.
+             ========================================== -->
+        <section class="screen screen--perf-paywall" data-scene="paywall" data-stone-state="hidden" id="screenPaywall">
+          <div class="texture-overlay"></div>
+          <div class="perf-inner">
+
+            <!-- Headline + subhead above the card -->
+            <h1 class="perf-headline">Preserve Your Voice<br>Long-Term</h1>
+            <p class="perf-subhead">Keep your voice available for the people who matter most.</p>
+
+            <!-- === THE CARD â€” one decision unit === -->
+            <div class="perf-card">
+
+              <!-- Billing toggle -->
+              <div class="perf-toggle" id="perfToggle">
+                <button class="perf-toggle__opt" data-plan="monthly" id="toggleMonthly">Monthly</button>
+                <button class="perf-toggle__opt perf-toggle__opt--active" data-plan="annual" id="toggleAnnual">Annual <span class="perf-toggle__save">Save 24%</span></button>
+              </div>
+
+              <!-- Price block -->
+              <div class="perf-price">
+                <p class="perf-price__main" id="perfPriceMain">$119</p>
+                <p class="perf-price__period" id="perfPricePeriod">per year</p>
+                <p class="perf-price__alt" id="perfPriceAlt">or $12.99 per month</p>
+              </div>
+
+              <div class="perf-card__divider"></div>
+
+              <!-- Value bullets â€” compact, inside card -->
+              <ul class="perf-bullets">
+                <li class="perf-bullet">
+                  <svg class="perf-bullet__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  1 preserved voice profile
+                </li>
+                <li class="perf-bullet">
+                  <svg class="perf-bullet__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  3 lifetime messages included
+                </li>
+                <li class="perf-bullet">
+                  <svg class="perf-bullet__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  Secure long-term storage
+                </li>
+                <li class="perf-bullet">
+                  <svg class="perf-bullet__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  Private and encrypted
+                </li>
+              </ul>
+
+              <div class="perf-card__divider"></div>
+
+              <!-- CTA + reassurance â€” inside card, at bottom -->
+              <button class="perf-cta" id="sealBtnPaywall">Start 7-Day Trial</button>
+              <p class="perf-reassurance">7 days free. Cancel anytime.</p>
+
+            </div>
+            <!-- === END CARD === -->
+
+            <!-- Dismiss â€” outside card, alone -->
+            <button class="perf-dismiss" data-scroll-next>Not now</button>
+
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SCREEN 6: Loss Framing â€” Cinematic v4
+             Sequential cinema. Slow. Slower. Sharp. Still.
+             ========================================== -->
+        <section class="screen screen--loss-cinema" data-scene="loss-framing" data-stone-state="loss-framing" id="screenLoss">
+          <div class="s6-vignette" id="s6Vignette"></div>
+          <div class="s6-inner">
+            <div class="s6-vault-container" id="s6VaultContainer">
+              <canvas id="s6VaultCanvas" width="460" height="460"></canvas>
+            </div>
+            <div class="s6-waveform-container" id="s6WaveformContainer">
+              <canvas id="s6WaveformCanvas" width="560" height="112"></canvas>
+            </div>
+            <h1 class="s6-headline" id="s6Headline">Without protection, your preserved voice won't remain available.</h1>
+            <p class="s6-body" id="s6Body">Your trial lets you hear it. Protection keeps it available.</p>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SCREEN 7: Final CTA â€” Copy is the star
+             Vault is grounding presence (170px, warmer)
+             ========================================== -->
+        <section class="screen screen--s7-final" data-scene="close" data-stone-state="vault-final" id="screenFinalCTA">
+          <div class="s7-content">
+            <div class="s7-vault-container" id="s7VaultContainer">
+              <canvas id="s7VaultCanvas" width="340" height="340"></canvas>
+            </div>
+            <h1 class="s7-headline">
+              <span class="s7-headline-line" id="s7HL1">Your voice deserves</span>
+              <span class="s7-headline-line" id="s7HL2">to be kept safe.</span>
+            </h1>
+            <p class="s7-subhead" id="s7Sub">All it takes is one step.</p>
+            <p class="s7-body-copy">
+              <span class="s7-body-chunk" id="s7B1">This is how you stay present.</span>
+              <span class="s7-body-chunk" id="s7B2">This is how you show up for the people who love you most.</span>
+              <span class="s7-body-chunk" id="s7B3">This is how your voice endures.</span>
+            </p>
+          </div>
+          <div class="s7-btn-group" id="s7BtnGroup">
+            <button class="btn-primary btn-primary--large btn-primary--final" id="sealBtnFinal">Seal My Vault</button>
+            <button class="btn-text">Maybe later</button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ==========================================
+           Confirmation Overlay
+           Triggered by "Seal My Vault" on Screen 6 or 7
+           ========================================== -->
+      <div class="confirmation-overlay" id="confirmationOverlay">
+        <div class="screen__content" style="justify-content: center;">
+          <h1 class="headline" style="margin-bottom: 16px;">
+            <span class="headline-line" style="opacity: inherit; transform: none; transition: none;">Your voice is protected.</span>
+          </h1>
+          <p class="subhead" style="margin-bottom: 20px;">Your Voice Vault is sealed. Your preserved voice is protected.</p>
+          <p class="body-copy" style="margin-bottom: 0;">
+            <span class="body-chunk" style="opacity: inherit; transform: none; transition: none;">Take your time. When you're ready, you can create a message for someone you love. Your voice will be there.</span>
+          </p>
+          <div class="btn-group" style="margin-top: 36px;">
+            <button class="btn-primary btn-primary--large">Create a message</button>
+            <button class="btn-secondary">Go to Home</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // BREATH STONE CANVAS RENDERER (Screens 1-3)
+    // ============================================
+    class BreathStone {
+      constructor(canvas, options = {}) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.size = options.size || 160;
+        this.centerX = canvas.width / 2;
+        this.centerY = canvas.height / 2;
+        this.baseRadius = (Math.min(canvas.width, canvas.height) / 2) - 40;
+        this.time = 0;
+        this.breathPhase = 0;
+        this.state = options.initialState || 'recognition';
+        this.isHidden = false;
+        this.perm = this.generatePermutation();
+        this.edgeOffsets = this.generateStaticEdge();
+        this.textureParticles = this.generateTextureParticles();
+        this.veining = this.generateVeining();
+
+        this.states = {
+          'recognition':      { glowIntensity: 0.35, breathDuration: 7000,  breathAmplitude: 0.03,  shimmer: 0,    haloRadius: 30, stoneScale: 1.0 },
+          'recognition-deep': { glowIntensity: 0.40, breathDuration: 7000,  breathAmplitude: 0.03,  shimmer: 0.05, haloRadius: 32, stoneScale: 1.0 },
+          'imagination':      { glowIntensity: 0.50, breathDuration: 9000,  breathAmplitude: 0.035, shimmer: 0.12, haloRadius: 35, stoneScale: 1.0 },
+          'first-message':    { glowIntensity: 0.45, breathDuration: 7000,  breathAmplitude: 0.03,  shimmer: 0.08, haloRadius: 30, stoneScale: 1.0 },
+          'hidden':           { glowIntensity: 0,    breathDuration: 7000,  breathAmplitude: 0,     shimmer: 0,    haloRadius: 0,  stoneScale: 0.8 },
+          'close':            { glowIntensity: 0.45, breathDuration: 8000,  breathAmplitude: 0.03,  shimmer: 0.10, haloRadius: 32, stoneScale: 1.0 },
+          'vault-reveal':     { glowIntensity: 0.55, breathDuration: 8000,  breathAmplitude: 0.035, shimmer: 0.20, haloRadius: 40, stoneScale: 1.0 },
+          'loss-framing':     { glowIntensity: 0.25, breathDuration: 10000, breathAmplitude: 0.02,  shimmer: 0.0,  haloRadius: 20, stoneScale: 0.95 },
+          'vault-final':      { glowIntensity: 0.60, breathDuration: 7000,  breathAmplitude: 0.04,  shimmer: 0.25, haloRadius: 42, stoneScale: 1.0 },
+          'vault-sealed':     { glowIntensity: 0.65, breathDuration: 6000,  breathAmplitude: 0.03,  shimmer: 0.30, haloRadius: 45, stoneScale: 1.0 }
+        };
+
+        this.currentConfig = { ...this.states[this.state] };
+        this.targetConfig = { ...this.states[this.state] };
+        this.paused = false;
+        this.animate();
+      }
+
+      generateStaticEdge() {
+        const segments = 72;
+        const offsets = [];
+        for (let i = 0; i <= segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          const noiseVal = this.noise(Math.cos(angle) * 2, Math.sin(angle) * 2);
+          offsets.push(noiseVal * 0.8);
+        }
+        return offsets;
+      }
+
+      generateTextureParticles() {
+        const particles = [];
+        for (let i = 0; i < 200; i++) {
+          particles.push({ x: Math.random(), y: Math.random(), size: Math.random() * 1.2 + 0.4, light: Math.random() > 0.5 });
+        }
+        return particles;
+      }
+
+      generateVeining() {
+        const veins = [];
+        for (let i = 0; i < 5; i++) {
+          const vein = { startX: (Math.random() - 0.5), startY: (Math.random() - 0.5), points: [] };
+          let vx = 0, vy = 0;
+          for (let j = 0; j < 8; j++) {
+            vx += (Math.random() - 0.5) * 0.15;
+            vy += (Math.random() - 0.5) * 0.15;
+            vein.points.push({ x: vx, y: vy });
+          }
+          veins.push(vein);
+        }
+        return veins;
+      }
+
+      generatePermutation() {
+        const p = [];
+        for (let i = 0; i < 256; i++) p[i] = i;
+        for (let i = 255; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [p[i], p[j]] = [p[j], p[i]];
+        }
+        return [...p, ...p];
+      }
+
+      fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+      lerp(a, b, t) { return a + t * (b - a); }
+      grad(hash, x, y) {
+        const h = hash & 3;
+        const u = h < 2 ? x : y;
+        const v = h < 2 ? y : x;
+        return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+      }
+
+      noise(x, y) {
+        const X = Math.floor(x) & 255;
+        const Y = Math.floor(y) & 255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        const u = this.fade(x);
+        const v = this.fade(y);
+        const A = this.perm[X] + Y;
+        const B = this.perm[X + 1] + Y;
+        return this.lerp(
+          this.lerp(this.grad(this.perm[A], x, y), this.grad(this.perm[B], x - 1, y), u),
+          this.lerp(this.grad(this.perm[A + 1], x, y - 1), this.grad(this.perm[B + 1], x - 1, y - 1), u), v
+        );
+      }
+
+      setState(newState) {
+        if (this.states[newState]) {
+          this.state = newState;
+          this.targetConfig = { ...this.states[newState] };
+          this.isHidden = newState === 'hidden';
+        }
+      }
+
+      animate() {
+        if (this.paused) return;
+        const lerpSpeed = 0.03;
+        for (const key in this.targetConfig) {
+          this.currentConfig[key] = this.lerp(this.currentConfig[key], this.targetConfig[key], lerpSpeed);
+        }
+        this.time += 16;
+        const breathSpeed = 1 / (this.currentConfig.breathDuration / 1000);
+        this.breathPhase += 0.016 * breathSpeed;
+        this.draw();
+        requestAnimationFrame(() => this.animate());
+      }
+
+      draw() {
+        const ctx = this.ctx;
+        const { glowIntensity, breathAmplitude, shimmer, haloRadius, stoneScale } = this.currentConfig;
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        if (this.isHidden || glowIntensity < 0.01) return;
+
+        const breathCycle = (Math.sin(this.breathPhase * Math.PI * 2) + 1) / 2;
+        const scale = stoneScale * (1 + breathCycle * breathAmplitude);
+        const currentRadius = this.baseRadius * scale;
+        const opacity = 0.9 + breathCycle * 0.1;
+        ctx.globalAlpha = opacity;
+
+        // Golden halo
+        const haloSize = currentRadius + haloRadius;
+        const haloGradient = ctx.createRadialGradient(this.centerX, this.centerY, currentRadius * 0.6, this.centerX, this.centerY, haloSize);
+        haloGradient.addColorStop(0, 'rgba(232, 220, 200, ' + glowIntensity + ')');
+        haloGradient.addColorStop(0.5, 'rgba(232, 220, 200, ' + (glowIntensity * 0.5) + ')');
+        haloGradient.addColorStop(1, 'rgba(232, 220, 200, 0)');
+        ctx.beginPath();
+        ctx.arc(this.centerX, this.centerY, haloSize, 0, Math.PI * 2);
+        ctx.fillStyle = haloGradient;
+        ctx.fill();
+
+        // Stone body
+        ctx.save();
+        ctx.beginPath();
+        const segments = this.edgeOffsets.length - 1;
+        for (let i = 0; i <= segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          const radiusOffset = currentRadius + this.edgeOffsets[i];
+          const x = this.centerX + Math.cos(angle) * radiusOffset;
+          const y = this.centerY + Math.sin(angle) * radiusOffset;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.clip();
+
+        // 7-stop mineral gradient
+        const sg = ctx.createRadialGradient(this.centerX - currentRadius * 0.3, this.centerY - currentRadius * 0.3, 0, this.centerX, this.centerY, currentRadius * 1.2);
+        sg.addColorStop(0, '#F8F0DC'); sg.addColorStop(0.12, '#EFE6D0'); sg.addColorStop(0.28, '#E5D8C0');
+        sg.addColorStop(0.45, '#D8CAB0'); sg.addColorStop(0.62, '#C4B8A0'); sg.addColorStop(0.78, '#AEA090'); sg.addColorStop(1, '#7D827E');
+        ctx.fillStyle = sg;
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Ceramic texture
+        ctx.globalAlpha = 0.025;
+        for (const p of this.textureParticles) {
+          ctx.fillStyle = p.light ? '#FBF8F4' : '#1C1A18';
+          ctx.beginPath(); ctx.arc(p.x * this.canvas.width, p.y * this.canvas.height, p.size, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = opacity;
+
+        // Veining
+        ctx.globalAlpha = 0.035; ctx.strokeStyle = '#8A7A6A'; ctx.lineWidth = 0.5;
+        for (const vein of this.veining) {
+          ctx.beginPath();
+          const sx = this.centerX + vein.startX * currentRadius;
+          const sy = this.centerY + vein.startY * currentRadius;
+          ctx.moveTo(sx, sy);
+          for (const pt of vein.points) ctx.lineTo(sx + pt.x * currentRadius, sy + pt.y * currentRadius);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = opacity;
+
+        // Inner shadow
+        const is = ctx.createRadialGradient(this.centerX + currentRadius * 0.2, this.centerY + currentRadius * 0.2, currentRadius * 0.3, this.centerX, this.centerY, currentRadius);
+        is.addColorStop(0, 'rgba(28, 26, 24, 0)'); is.addColorStop(0.7, 'rgba(28, 26, 24, 0.06)'); is.addColorStop(1, 'rgba(28, 26, 24, 0.15)');
+        ctx.fillStyle = is; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Highlight gloss
+        const hl = ctx.createRadialGradient(this.centerX - currentRadius * 0.35, this.centerY - currentRadius * 0.35, 0, this.centerX - currentRadius * 0.35, this.centerY - currentRadius * 0.35, currentRadius * 0.5);
+        hl.addColorStop(0, 'rgba(251, 248, 244, 0.4)'); hl.addColorStop(0.5, 'rgba(251, 248, 244, 0.12)'); hl.addColorStop(1, 'rgba(251, 248, 244, 0)');
+        ctx.fillStyle = hl; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Shimmer
+        if (shimmer > 0) {
+          const sc = (Math.sin(this.time * 0.001) + 1) / 2;
+          ctx.globalAlpha = shimmer * sc * 0.3;
+          const shg = ctx.createRadialGradient(this.centerX - currentRadius * 0.15, this.centerY - currentRadius * 0.15, 0, this.centerX, this.centerY, currentRadius);
+          shg.addColorStop(0, '#DCC9A3'); shg.addColorStop(0.4, 'rgba(220, 201, 163, 0.2)'); shg.addColorStop(1, 'rgba(220, 201, 163, 0)');
+          ctx.fillStyle = shg; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+
+    // Initialize BreathStone for screens 1-3
+    const scrollContainer = document.getElementById('scrollContainer');
+    const screens = document.querySelectorAll('.screen');
+    const stoneWrapper = document.getElementById('stoneWrapper');
+    const mainCanvas = document.getElementById('breathStoneCanvas');
+    const mainStone = new BreathStone(mainCanvas, { initialState: 'recognition' });
+
+    // ============================================
+    // SCREEN 4: VAULT ENGINE (namespaced)
+    // ============================================
+    var S4 = (function() {
+      var ns = {};
+
+// ============================================
+// VAULT ENGINE â€” MUSEUM PLACARD
+// Philosophy: vault is already present and still.
+// Stone resolves as the single meaningful event.
+// ============================================
+
+function seededRandom(seed) {
+  var s = seed;
+  return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function PerlinNoise() { this.g = {}; this.m = {}; }
+PerlinNoise.prototype.rv = function() { var t = Math.random() * Math.PI * 2; return { x: Math.cos(t), y: Math.sin(t) }; };
+PerlinNoise.prototype.dp = function(x, y, vx, vy) { var k = vx + ',' + vy; if (!this.g[k]) this.g[k] = this.rv(); return (x - vx) * this.g[k].x + (y - vy) * this.g[k].y; };
+PerlinNoise.prototype.sm = function(x) { return 6 * Math.pow(x, 5) - 15 * Math.pow(x, 4) + 10 * Math.pow(x, 3); };
+PerlinNoise.prototype.lr = function(x, a, b) { return a + this.sm(x) * (b - a); };
+PerlinNoise.prototype.get = function(x, y) {
+  var k = x + ',' + y; if (this.m[k]) return this.m[k];
+  var xf = Math.floor(x), yf = Math.floor(y);
+  var v = this.lr(y - yf, this.lr(x - xf, this.dp(x, y, xf, yf), this.dp(x, y, xf + 1, yf)),
+    this.lr(x - xf, this.dp(x, y, xf, yf + 1), this.dp(x, y, xf + 1, yf + 1)));
+  this.m[k] = v; return v;
+};
+var noise = new PerlinNoise();
+
+var PAL = {
+  bg: [251, 248, 244], card: [245, 240, 234], sand: [235, 228, 220], honey: [232, 220, 200],
+  mineral: [122, 128, 136], mineralDk: [101, 107, 115], text1: [28, 26, 24], text2: [107, 107, 107], text3: [173, 169, 165]
+};
+
+function mix(a, b, t) { return [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)]; }
+function rgb(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+function rgba(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpHex(h1, h2, t) {
+  var r1 = parseInt(h1.slice(1, 3), 16), g1 = parseInt(h1.slice(3, 5), 16), b1 = parseInt(h1.slice(5, 7), 16);
+  var r2 = parseInt(h2.slice(1, 3), 16), g2 = parseInt(h2.slice(3, 5), 16), b2 = parseInt(h2.slice(5, 7), 16);
+  return '#' + Math.round(lerp(r1, r2, t)).toString(16).padStart(2, '0') +
+    Math.round(lerp(g1, g2, t)).toString(16).padStart(2, '0') +
+    Math.round(lerp(b1, b2, t)).toString(16).padStart(2, '0');
+}
+
+function mineralMetal(warmth, lightness) {
+  var cool = PAL.mineral, warm = [188, 178, 158];
+  var base = mix(cool, warm, warmth * 0.6);
+  var light = [235, 228, 218], dark = [85, 88, 94];
+  return lightness >= 0.5 ? mix(base, light, (lightness - 0.5) * 2) : mix(dark, base, lightness * 2);
+}
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+// --- STATE ---
+var OPEN = {
+  warmth: 0.22, glow: 0.03, ringContract: 0.0,
+  spokeWidth: 1.8, spokeOpacity: 0.14, stoneGlow: 0.02, stoneRadius: 44,
+  interiorDark: 0.42, caseShadowDepth: 0.09,
+  caseHighlight: 0.04, highlightSharpness: 0.45, interiorVignette: 0.12,
+  shadowBlur: 24, shadowAlpha: 0.14, shadowOffY: 6,
+  rimAlpha: 0.10, rimWidth: 2.2, coolWashAlpha: 0.06,
+  stoneSpecAlpha: 0.25, stoneSpecRadius: 0.22, stoneEdge: 0.08,
+  stoneVein: 0.04, stoneTexture: 0.012, stoneContact: 0.12,
+  cornerDark: 0.07, gapBreachAlpha: 0.04
+};
+
+// --- CANVAS ---
+var C = document.getElementById('s4VaultCanvas');
+var W = C.width, H = C.height, CX = W / 2, CY = H / 2;
+var SF = W / 600;
+
+var caseW = Math.round(300 * SF), caseH = Math.round(340 * SF), caseCR = Math.round(30 * SF);
+var mechR = Math.round(105 * SF), wellInset = Math.round(22 * SF);
+var mechCYBase = CY + Math.round(8 * SF);
+
+function makeCasePath(ctx, cx, cy) {
+  var x = cx - caseW / 2, y = cy - caseH / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + caseCR, y); ctx.lineTo(x + caseW - caseCR, y);
+  ctx.quadraticCurveTo(x + caseW, y, x + caseW, y + caseCR);
+  ctx.lineTo(x + caseW, y + caseH - caseCR);
+  ctx.quadraticCurveTo(x + caseW, y + caseH, x + caseW - caseCR, y + caseH);
+  ctx.lineTo(x + caseCR, y + caseH);
+  ctx.quadraticCurveTo(x, y + caseH, x, y + caseH - caseCR);
+  ctx.lineTo(x, y + caseCR);
+  ctx.quadraticCurveTo(x, y, x + caseCR, y); ctx.closePath();
+}
+
+// --- STATIC TEXTURES ---
+var hammerLayer = document.createElement('canvas');
+hammerLayer.width = W; hammerLayer.height = H;
+(function() {
+  var ctx = hammerLayer.getContext('2d');
+  var cx = CX - caseW / 2, cy = CY - caseH / 2;
+  var r = seededRandom(264);
+  for (var i = 0; i < 50; i++) {
+    var dx = cx + r() * caseW, dy = cy + r() * caseH, dr = (5 + r() * 14) * SF;
+    var dg = ctx.createRadialGradient(dx - dr * 0.2, dy - dr * 0.2, 0, dx, dy, dr);
+    dg.addColorStop(0, rgba(PAL.card, 0.04 + r() * 0.04));
+    dg.addColorStop(0.5, rgba(PAL.card, 0));
+    dg.addColorStop(1, rgba(PAL.mineralDk, 0.02 + r() * 0.025));
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(dx, dy, dr, 0, Math.PI * 2); ctx.fill();
+  }
+})();
+
+var velvetLayer = document.createElement('canvas');
+velvetLayer.width = W; velvetLayer.height = H;
+(function() {
+  var ctx = velvetLayer.getContext('2d');
+  var wx = CX - caseW / 2 + wellInset, wy = CY - caseH / 2 + wellInset;
+  var ww = caseW - wellInset * 2, wh = caseH - wellInset * 2;
+  var vr = seededRandom(311);
+  for (var i = 0; i < 250; i++) {
+    var px = wx + vr() * ww, py = wy + vr() * wh;
+    ctx.fillStyle = vr() > 0.5 ? rgba(PAL.card, 0.02 + vr() * 0.02) : rgba(PAL.mineralDk, 0.01 + vr() * 0.015);
+    ctx.fillRect(px, py, (0.4 + vr() * 0.8) * SF, (0.8 + vr() * 2) * SF);
+  }
+})();
+
+var stoneTexLayer = document.createElement('canvas');
+stoneTexLayer.width = W; stoneTexLayer.height = H;
+(function() {
+  var ctx = stoneTexLayer.getContext('2d');
+  var r = 40 * SF;
+  var tR = seededRandom(7777);
+  for (var i = 0; i < 160; i++) {
+    var a = tR() * Math.PI * 2, d = tR() * r * 0.9;
+    ctx.fillStyle = tR() > 0.5 ? rgba(PAL.text1, 0.4) : rgba(PAL.bg, 0.5);
+    ctx.fillRect(CX + Math.cos(a) * d, mechCYBase + Math.sin(a) * d, tR() < 0.8 ? 1 : 1.4, tR() < 0.8 ? 1 : 1.4);
+  }
+})();
+
+var stoneOutline = [];
+(function() {
+  for (var i = 0; i < 54; i++) {
+    var a = (i / 54) * Math.PI * 2;
+    var n = noise.get(Math.cos(a) * 0.2 + CX * 0.001, Math.sin(a) * 0.2 + mechCYBase * 0.001);
+    stoneOutline.push({ cos: Math.cos(a) * (1 + n * 0.045), sin: Math.sin(a) * (1 + n * 0.045) });
+  }
+})();
+
+var veinData = [];
+(function() {
+  for (var i = 0; i < 6; i++) {
+    var va = (i / 6) * Math.PI * 2 + noise.get(i * 0.6, CX * 0.01) * 2;
+    veinData.push({ va: va, vd: 0.25 + noise.get(i, 1) * 0.35, vs: 0.1 + noise.get(i, 3) * 0.08, vAspect: 0.5 + noise.get(i, 4) * 0.4 });
+  }
+})();
+
+// --- RING ---
+function drawRing(ctx, cx, cy, iR, oR, w, type, hlSharp, warmT) {
+  ctx.save(); ctx.filter = 'blur(4px)'; ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.beginPath(); ctx.arc(cx + 1, cy + 1.5, (iR + oR) / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  var m = mineralMetal;
+  var ww = type === 'warm' ? w : type === 'cool' ? w * 0.3 : w * 0.7;
+  var rg = ctx.createRadialGradient(cx - oR * 0.08, cy - oR * 0.08, iR, cx, cy, oR);
+  rg.addColorStop(0, rgb(m(ww, type === 'warm' ? 0.72 : 0.7)));
+  rg.addColorStop(0.4, rgb(m(ww, type === 'warm' ? 0.58 : type === 'cool' ? 0.55 : 0.54)));
+  rg.addColorStop(1, rgb(m(ww, type === 'warm' ? 0.42 : type === 'cool' ? 0.4 : 0.38)));
+  ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.arc(cx, cy, iR, 0, Math.PI * 2, true); ctx.closePath();
+  ctx.fillStyle = rg; ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.arc(cx, cy, iR, 0, Math.PI * 2, true); ctx.closePath(); ctx.clip();
+  var hlEnd = cy - oR * lerp(0.25, 0.15, warmT);
+  var hlA = (type === 'cool' ? 0.22 : 0.16) * w * hlSharp;
+  var hl = ctx.createLinearGradient(cx, cy - oR, cx, hlEnd);
+  hl.addColorStop(0, rgba(PAL.bg, hlA)); hl.addColorStop(1, rgba(PAL.bg, 0));
+  ctx.fillStyle = hl; ctx.fillRect(cx - oR, cy - oR, oR * 2, oR);
+  var sh = ctx.createLinearGradient(cx, cy + oR * 0.25, cx, cy + oR);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,' + (0.06 * w) + ')');
+  ctx.fillStyle = sh; ctx.fillRect(cx - oR, cy, oR * 2, oR);
+  ctx.restore();
+  ctx.strokeStyle = rgba(PAL.bg, 0.08 * w); ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = rgba(PAL.mineralDk, 0.06 * w);
+  ctx.beginPath(); ctx.arc(cx, cy, iR, 0, Math.PI * 2); ctx.stroke();
+}
+
+// --- DRAW FRAME ---
+// Museum placard: vault is static infrastructure.
+// Only two animated axes: stoneAlpha (0â†’1) and warmShift (0â†’1).
+// ringTighten is a response (0â†’1 maps to 0â†’5%).
+
+function drawFrame(ctx, stoneAlpha, ringTighten, warmShift) {
+  var w = OPEN.warmth + warmShift * 0.07;
+  var rc = OPEN.ringContract + ringTighten * 0.05;
+  var sw = OPEN.spokeWidth + ringTighten * 0.3;
+  var so = OPEN.spokeOpacity + ringTighten * 0.03;
+  var stoneR = OPEN.stoneRadius * SF;
+  var intDark = OPEN.interiorDark - warmShift * 0.04;
+  var coolWash = OPEN.coolWashAlpha - warmShift * 0.03;
+  var cornDark = OPEN.cornerDark - warmShift * 0.02;
+  var rimA = OPEN.rimAlpha + ringTighten * 0.03;
+  var gapA = OPEN.gapBreachAlpha - ringTighten * 0.015;
+  var m = mineralMetal;
+  var cx = CX, cy = CY, mechCY = mechCYBase;
+  var caseX = cx - caseW / 2, caseY = cy - caseH / 2;
+  var wellX = caseX + wellInset, wellY = caseY + wellInset;
+  var wellW = caseW - wellInset * 2, wellH = caseH - wellInset * 2;
+  var wellCR = Math.max(4, caseCR - Math.round(6 * SF));
+
+  // ===== BACKGROUND =====
+  ctx.fillStyle = rgb(PAL.bg); ctx.fillRect(0, 0, W, H);
+
+  // Ambient halo â€” deepens with warmShift (light as meaning)
+  var haloA = 0.008 + warmShift * 0.06;
+  var ag = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.48);
+  ag.addColorStop(0, rgba(PAL.honey, haloA));
+  ag.addColorStop(0.6, rgba(PAL.honey, haloA * 0.3));
+  ag.addColorStop(1, rgba(PAL.sand, 0));
+  ctx.fillStyle = ag; ctx.fillRect(0, 0, W, H);
+
+  // ===== SHADOW =====
+  ctx.save(); ctx.filter = 'blur(' + Math.round(OPEN.shadowBlur * SF) + 'px)';
+  ctx.fillStyle = 'rgba(0,0,0,' + OPEN.shadowAlpha + ')';
+  ctx.fillRect(caseX + 2, caseY + OPEN.shadowOffY * SF, caseW, caseH); ctx.restore();
+
+  // ===== CASE =====
+  ctx.save(); makeCasePath(ctx, cx, cy); ctx.clip();
+  var cg = ctx.createLinearGradient(caseX, caseY, caseX + caseW * 0.5, caseY + caseH);
+  cg.addColorStop(0, rgb(m(w, 0.62))); cg.addColorStop(0.3, rgb(m(w, 0.54)));
+  cg.addColorStop(0.6, rgb(m(w, 0.46))); cg.addColorStop(1, rgb(m(w, 0.38)));
+  ctx.fillStyle = cg; ctx.fillRect(caseX, caseY, caseW, caseH);
+  var ch = ctx.createLinearGradient(caseX, caseY, caseX, caseY + caseH * 0.5);
+  ch.addColorStop(0, rgba(PAL.bg, OPEN.caseHighlight)); ch.addColorStop(1, rgba(PAL.bg, 0));
+  ctx.fillStyle = ch; ctx.fillRect(caseX, caseY, caseW, caseH);
+  ctx.drawImage(hammerLayer, 0, 0);
+  if (coolWash > 0.003) {
+    var cw = ctx.createLinearGradient(caseX, caseY, caseX, caseY + caseH);
+    cw.addColorStop(0, 'rgba(105,112,125,' + coolWash + ')');
+    cw.addColorStop(1, 'rgba(80,85,95,' + (coolWash * 1.3) + ')');
+    ctx.fillStyle = cw; ctx.fillRect(caseX, caseY, caseW, caseH);
+  }
+  ctx.restore();
+
+  // Rim
+  makeCasePath(ctx, cx, cy);
+  ctx.strokeStyle = rgba(PAL.text3, rimA); ctx.lineWidth = OPEN.rimWidth * SF; ctx.stroke();
+
+  // ===== INTERIOR =====
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(wellX + wellCR, wellY); ctx.lineTo(wellX + wellW - wellCR, wellY);
+  ctx.quadraticCurveTo(wellX + wellW, wellY, wellX + wellW, wellY + wellCR);
+  ctx.lineTo(wellX + wellW, wellY + wellH - wellCR);
+  ctx.quadraticCurveTo(wellX + wellW, wellY + wellH, wellX + wellW - wellCR, wellY + wellH);
+  ctx.lineTo(wellX + wellCR, wellY + wellH);
+  ctx.quadraticCurveTo(wellX, wellY + wellH, wellX, wellY + wellH - wellCR);
+  ctx.lineTo(wellX, wellY + wellCR);
+  ctx.quadraticCurveTo(wellX, wellY, wellX + wellCR, wellY);
+  ctx.closePath(); ctx.clip();
+
+  var intCenter = mix(mix(PAL.sand, PAL.honey, warmShift * 0.1), PAL.card, warmShift * 0.05);
+  var intEdge = mix(PAL.sand, mix(PAL.mineralDk, PAL.sand, 0), 0.45 - warmShift * 0.03);
+  var vg = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, wellW * 0.65);
+  vg.addColorStop(0, rgb(intCenter));
+  vg.addColorStop(0.5, rgb(mix(intCenter, intEdge, 0.35)));
+  vg.addColorStop(1, rgb(intEdge));
+  ctx.fillStyle = vg; ctx.fillRect(wellX, wellY, wellW, wellH);
+
+  var vsh = ctx.createRadialGradient(cx, mechCY, wellW * 0.08, cx, mechCY, wellW * 0.6);
+  vsh.addColorStop(0, 'rgba(0,0,0,0)');
+  vsh.addColorStop(0.7, 'rgba(0,0,0,' + OPEN.caseShadowDepth + ')');
+  vsh.addColorStop(1, 'rgba(0,0,0,' + (OPEN.caseShadowDepth * 3) + ')');
+  ctx.fillStyle = vsh; ctx.fillRect(wellX, wellY, wellW, wellH);
+
+  if (OPEN.interiorVignette > 0.03) {
+    var vig = ctx.createRadialGradient(cx, mechCY, wellW * 0.15, cx, mechCY, wellW * 0.55);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(0.6, 'rgba(0,0,0,' + (OPEN.interiorVignette * 0.4) + ')');
+    vig.addColorStop(1, 'rgba(0,0,0,' + OPEN.interiorVignette + ')');
+    ctx.fillStyle = vig; ctx.fillRect(wellX, wellY, wellW, wellH);
+  }
+
+  if (cornDark > 0.005) {
+    var corners = [
+      [wellX + 12 * SF, wellY + 12 * SF], [wellX + wellW - 12 * SF, wellY + 12 * SF],
+      [wellX + 12 * SF, wellY + wellH - 12 * SF], [wellX + wellW - 12 * SF, wellY + wellH - 12 * SF]
+    ];
+    for (var ci = 0; ci < corners.length; ci++) {
+      var cg2 = ctx.createRadialGradient(corners[ci][0], corners[ci][1], 0, corners[ci][0], corners[ci][1], 55 * SF);
+      cg2.addColorStop(0, 'rgba(0,0,0,' + cornDark + ')');
+      cg2.addColorStop(0.6, 'rgba(0,0,0,' + (cornDark * 0.4) + ')');
+      cg2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = cg2; ctx.fillRect(wellX, wellY, wellW, wellH);
+    }
+  }
+
+  // Stone warm light on interior â€” only after stone exists
+  if (stoneAlpha > 0.3) {
+    var stLA = (stoneAlpha - 0.3) * 0.12;
+    var stL = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, wellW * 0.45);
+    stL.addColorStop(0, rgba(PAL.honey, stLA));
+    stL.addColorStop(0.5, rgba(PAL.honey, stLA * 0.3));
+    stL.addColorStop(1, rgba(PAL.honey, 0));
+    ctx.fillStyle = stL; ctx.fillRect(wellX, wellY, wellW, wellH);
+  }
+
+  ctx.drawImage(velvetLayer, 0, 0);
+  ctx.restore();
+
+  // ===== MECHANISM =====
+  var recG = ctx.createRadialGradient(cx, mechCY, mechR * 0.8, cx, mechCY, mechR + 10 * SF);
+  recG.addColorStop(0, 'rgba(0,0,0,0)'); recG.addColorStop(0.8, 'rgba(0,0,0,0.04)'); recG.addColorStop(1, 'rgba(0,0,0,0.1)');
+  ctx.fillStyle = recG; ctx.beginPath(); ctx.arc(cx, mechCY, mechR + 10 * SF, 0, Math.PI * 2); ctx.fill();
+
+  var mR = (mechR - 24 * SF) + ((mechR - 30 * SF) - (mechR - 24 * SF)) * rc;
+  var iR = (mechR - 48 * SF) + ((mechR - 56 * SF) - (mechR - 48 * SF)) * rc;
+
+  drawRing(ctx, cx, mechCY, mechR - 5 * SF, mechR + 5 * SF, w, 'warm', OPEN.highlightSharpness, 0);
+  drawRing(ctx, cx, mechCY, mR - 4 * SF, mR + 4 * SF, w * 0.85, 'cool', OPEN.highlightSharpness, 0);
+  drawRing(ctx, cx, mechCY, iR - 3 * SF, iR + 3 * SF, w * 0.9, 'bronze', OPEN.highlightSharpness, 0);
+
+  if (gapA > 0.003) {
+    var gaps = [[mR + 4 * SF, mechR - 5 * SF], [iR + 3 * SF, mR - 4 * SF]];
+    for (var gi = 0; gi < gaps.length; gi++) {
+      var gf = ctx.createRadialGradient(cx, mechCY, gaps[gi][0], cx, mechCY, gaps[gi][1]);
+      gf.addColorStop(0, 'rgba(100,105,115,' + gapA + ')'); gf.addColorStop(0.5, 'rgba(90,95,105,' + (gapA * 0.65) + ')');
+      gf.addColorStop(1, 'rgba(100,105,115,' + gapA + ')');
+      ctx.fillStyle = gf; ctx.beginPath(); ctx.arc(cx, mechCY, gaps[gi][1], 0, Math.PI * 2);
+      ctx.arc(cx, mechCY, gaps[gi][0], 0, Math.PI * 2, true); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  for (var si = 0; si < 8; si++) {
+    var a = (si / 8) * Math.PI * 2 - Math.PI / 2;
+    var sI = iR + 5 * SF, sO = mechR - 7 * SF - (1 - rc) * 7 * SF;
+    ctx.save(); ctx.translate(cx, mechCY); ctx.rotate(a);
+    var sg = ctx.createLinearGradient(0, -sw * SF / 2, 0, sw * SF / 2);
+    sg.addColorStop(0, rgba(m(w, 0.58), so * 0.8));
+    sg.addColorStop(0.5, rgba(m(w, 0.46), so));
+    sg.addColorStop(1, rgba(m(w, 0.38), so * 0.8));
+    ctx.fillStyle = sg; ctx.fillRect(sI, -sw * SF / 2, sO - sI, sw * SF);
+    var capR = (2.8 + rc * 2.2) * SF;
+    var bg2 = ctx.createRadialGradient(sO - 0.5, -0.5, 0, sO, 0, capR);
+    bg2.addColorStop(0, rgb(m(w, 0.66))); bg2.addColorStop(1, rgb(m(w, 0.38)));
+    ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(sO, 0, capR, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Center floor
+  var fl = mix(PAL.sand, PAL.text3, intDark);
+  var fd = mix(PAL.sand, PAL.mineralDk, intDark + 0.2);
+  var dcg = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, iR - 5 * SF);
+  dcg.addColorStop(0, rgb(fl)); dcg.addColorStop(0.5, rgb(mix(fl, fd, 0.4))); dcg.addColorStop(1, rgb(fd));
+  ctx.fillStyle = dcg; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+
+  var va = 1 - rc;
+  if (va > 0.01) {
+    var ov = ctx.createRadialGradient(cx, mechCY, (iR - 5 * SF) * 0.3, cx, mechCY, iR - 5 * SF);
+    ov.addColorStop(0, 'rgba(0,0,0,' + (0.02 * va) + ')'); ov.addColorStop(0.5, 'rgba(0,0,0,' + (0.06 * va) + ')');
+    ov.addColorStop(1, 'rgba(0,0,0,' + (0.12 * va) + ')');
+    ctx.fillStyle = ov; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+  }
+
+  var dsh = ctx.createRadialGradient(cx, mechCY, (iR - 5 * SF) * 0.4, cx, mechCY, iR - 5 * SF);
+  dsh.addColorStop(0, 'rgba(0,0,0,0)'); dsh.addColorStop(0.7, 'rgba(0,0,0,' + OPEN.caseShadowDepth + ')');
+  dsh.addColorStop(1, 'rgba(0,0,0,' + (OPEN.caseShadowDepth * 2.5) + ')');
+  ctx.fillStyle = dsh; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+
+  // ===== STONE =====
+  if (stoneAlpha > 0.005) {
+    var r = stoneR;
+
+    // Single glow â€” tightens with stone, no bloom
+    var glowR = r * lerp(2.2, 1.8, stoneAlpha);
+    var glowA = lerp(0.02, OPEN.stoneGlow + 0.08, stoneAlpha);
+    var gg = ctx.createRadialGradient(cx, mechCY, r * 0.2, cx, mechCY, glowR);
+    gg.addColorStop(0, rgba(PAL.honey, glowA * 0.35));
+    gg.addColorStop(0.3, rgba(PAL.honey, glowA * 0.15));
+    gg.addColorStop(0.6, rgba(PAL.sand, glowA * 0.05));
+    gg.addColorStop(1, rgba(PAL.sand, 0));
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(cx, mechCY, glowR, 0, Math.PI * 2); ctx.fill();
+
+    ctx.globalAlpha = stoneAlpha;
+
+    var pts = [];
+    for (var pi = 0; pi < stoneOutline.length; pi++) {
+      pts.push({ x: cx + stoneOutline[pi].cos * r, y: mechCY + stoneOutline[pi].sin * r });
+    }
+    function trace() {
+      ctx.beginPath();
+      for (var ti = 0; ti < pts.length; ti++) { ti === 0 ? ctx.moveTo(pts[ti].x, pts[ti].y) : ctx.lineTo(pts[ti].x, pts[ti].y); }
+      ctx.closePath();
+    }
+
+    // Contact shadow
+    ctx.save(); ctx.translate(0, r * 0.08);
+    var cs = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, r * 0.75);
+    cs.addColorStop(0, 'rgba(28,26,24,' + OPEN.stoneContact + ')'); cs.addColorStop(1, 'rgba(28,26,24,0)');
+    ctx.fillStyle = cs; ctx.beginPath(); ctx.arc(cx, mechCY, r * 0.75, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+    // Body
+    var stAlpha = stoneAlpha * 0.2;
+    var SC = {
+      hl: lerpHex('#E8E0D0', '#F8F0DC', stAlpha), mh: lerpHex('#DDD5C5', '#EFE6D0', stAlpha),
+      md: lerpHex('#CCC4B4', '#E5D8C0', stAlpha), ml: lerpHex('#B8B0A0', '#D8CAB0', stAlpha),
+      lo: lerpHex('#A49C8E', '#C4B8A0', stAlpha), sh: lerpHex('#8A887E', '#AEA090', stAlpha),
+      dp: lerpHex('#787870', '#938A7D', stAlpha), eg: lerpHex('#707068', '#7D827E', stAlpha)
+    };
+    var bd = ctx.createRadialGradient(cx - r * 0.28, mechCY - r * 0.28, 0, cx, mechCY, r * 1.3);
+    bd.addColorStop(0, SC.hl); bd.addColorStop(0.12, SC.mh); bd.addColorStop(0.28, SC.md);
+    bd.addColorStop(0.48, SC.ml); bd.addColorStop(0.65, SC.lo); bd.addColorStop(0.80, SC.sh);
+    bd.addColorStop(0.92, SC.dp); bd.addColorStop(1, SC.eg);
+    ctx.fillStyle = bd; trace(); ctx.fill();
+
+    // Interior shadow
+    var ish = ctx.createRadialGradient(cx + r * 0.3, mechCY + r * 0.3, 0, cx, mechCY, r);
+    ish.addColorStop(0, 'rgba(28,26,24,0.16)'); ish.addColorStop(0.5, 'rgba(28,26,24,0.04)'); ish.addColorStop(1, 'rgba(28,26,24,0)');
+    ctx.fillStyle = ish; trace(); ctx.fill();
+
+    // Specular
+    ctx.save(); ctx.scale(1, 0.6);
+    var hlG = ctx.createRadialGradient(cx - r * 0.3, (mechCY - r * 0.45) / 0.6, 0, cx - r * 0.3, (mechCY - r * 0.45) / 0.6, r * OPEN.stoneSpecRadius);
+    hlG.addColorStop(0, 'rgba(251,248,244,' + OPEN.stoneSpecAlpha + ')');
+    hlG.addColorStop(0.5, 'rgba(251,248,244,' + (OPEN.stoneSpecAlpha * 0.35) + ')');
+    hlG.addColorStop(1, 'rgba(251,248,244,0)');
+    ctx.fillStyle = hlG; ctx.beginPath(); ctx.arc(cx - r * 0.3, (mechCY - r * 0.45) / 0.6, r * OPEN.stoneSpecRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Texture â€” only after stone is mostly solid
+    if (stoneAlpha > 0.7) {
+      ctx.globalAlpha = OPEN.stoneTexture * ((stoneAlpha - 0.7) / 0.3);
+      ctx.drawImage(stoneTexLayer, 0, 0);
+    }
+
+    ctx.globalAlpha = stoneAlpha;
+    ctx.strokeStyle = rgba(PAL.text3, OPEN.stoneEdge); ctx.lineWidth = 0.5; trace(); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Inter-ring glow â€” only after stone, driven by warmShift
+  if (stoneAlpha > 0.5) {
+    var gs = (0.02 + warmShift * 0.04) * (stoneAlpha - 0.5) * 2;
+    var glowPairs = [[mR + 4 * SF, mechR - 5 * SF], [iR + 3 * SF, mR - 4 * SF]];
+    for (var gpi = 0; gpi < glowPairs.length; gpi++) {
+      var g = ctx.createRadialGradient(cx, mechCY, glowPairs[gpi][0], cx, mechCY, glowPairs[gpi][1]);
+      g.addColorStop(0, rgba(PAL.honey, gs)); g.addColorStop(0.5, rgba(PAL.honey, gs * 0.5)); g.addColorStop(1, rgba(PAL.honey, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, mechCY, glowPairs[gpi][1], 0, Math.PI * 2);
+      ctx.arc(cx, mechCY, glowPairs[gpi][0], 0, Math.PI * 2, true); ctx.closePath(); ctx.fill();
+    }
+  }
+}
+
+
+// ============================================
+// MUSEUM PLACARD CHOREOGRAPHY
+// ============================================
+// 0ms:           nothing
+// 200ms:         vault fades in (CSS opacity only â€” no scale, no translate)
+//                vault is already "there," just becoming visible
+// 200â€“800ms:     empty vault, still, present
+// 800â€“1400ms:    stone resolves (single event: alpha 0â†’1, glow tightens)
+// 1200â€“1600ms:   ring tighten 2% + interior warm shift (response to stone)
+// 1600ms:        headline
+// 1850ms:        subline
+// 2200ms:        breath + hold
+// 2600ms:        scroll cue
+
+var revealObject = document.getElementById('revealObject');
+var revealHeadline = document.getElementById('revealHeadline');
+var revealSubline = document.getElementById('revealSubline');
+var revealBreath = document.getElementById('revealBreath');
+var revealHold = document.getElementById('revealHold');
+var revealScrollCue = document.getElementById('revealScrollCue');
+
+var startTime = null;
+var active = false;
+
+function start() {
+  startTime = null;
+  active = true;
+
+  revealObject.classList.remove('visible');
+  revealHeadline.classList.remove('visible');
+  revealSubline.classList.remove('visible');
+  revealBreath.classList.remove('visible');
+  revealHold.classList.remove('visible');
+  revealScrollCue.classList.remove('visible');
+
+  // Draw initial frame: empty vault, no stone
+  drawFrame(C.getContext('2d'), 0, 0, 0);
+
+  requestAnimationFrame(loop);
+}
+
+function loop(ts) {
+  if (!active) return;
+  if (startTime === null) startTime = ts;
+  var t = ts - startTime;
+
+  // Vault appears at 200ms
+  if (t >= 200 && !revealObject.classList.contains('visible')) {
+    revealObject.classList.add('visible');
+  }
+
+  // Stone: 800â€“1350ms (550ms resolve)
+  var stoneAlpha = 0;
+  if (t >= 800) {
+    stoneAlpha = easeOutCubic(Math.min(1, (t - 800) / 550));
+  }
+
+  // Ring tighten + warm shift: 1150â€“1550ms (overlaps tail of stone)
+  var ringTighten = 0;
+  var warmShift = 0;
+  if (t >= 1150) {
+    var responseT = easeInOutCubic(Math.min(1, (t - 1150) / 400));
+    ringTighten = responseT;
+    warmShift = responseT;
+  }
+
+  drawFrame(C.getContext('2d'), stoneAlpha, ringTighten, warmShift);
+
+  // Text â€” 400ms silence after stone before headline
+  if (t >= 1750 && !revealHeadline.classList.contains('visible')) revealHeadline.classList.add('visible');
+  if (t >= 2000 && !revealSubline.classList.contains('visible')) revealSubline.classList.add('visible');
+  if (t >= 2400 && !revealBreath.classList.contains('visible')) revealBreath.classList.add('visible');
+  if (t >= 2400 && !revealHold.classList.contains('visible')) revealHold.classList.add('visible');
+  if (t >= 2800 && !revealScrollCue.classList.contains('visible')) revealScrollCue.classList.add('visible');
+
+  // Render until everything is resolved, then one final still frame
+  if (t < 1600) {
+    requestAnimationFrame(loop);
+  } else {
+    // Final frame: full stone, full response. Still. Heavy. Done.
+    drawFrame(C.getContext('2d'), 1, 1, 1);
+  }
+}
+
+// (auto-start removed â€” triggered by observer)
+
+      ns.start = start;
+      ns.active = false;
+      ns.setActive = function(v) { active = v; ns.active = v; };
+      return ns;
+    })();
+
+    // ============================================
+    // SCREEN 6: LOSS CINEMA ENGINE (namespaced)
+    // ============================================
+    var S6 = (function() {
+      var ns = {};
+
+// ============================================
+// SCREEN 6 v4: SEQUENTIAL CINEMA
+//
+// Luxury is contrast. One thing at a time.
+// Slow. Slower. Sharp. Still.
+//
+// Timing:
+// 0â€“400ms:      fade in
+// 400â€“2200ms:   slow dissolve (edges nibble inward)
+// 2200â€“3400ms:  accelerate dissolve (waveform loses authority then dies)
+// 3400â€“3600ms:  empty stillness â€” inhale before death
+// 3600â€“3850ms:  micro-black SNAP â€” not ease, cut
+// 3850â€“4800ms:  cold hold â€” silence
+// ============================================
+
+function seededRandom(seed) {
+  var s = seed;
+  return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function PerlinNoise() { this.g = {}; this.m = {}; }
+PerlinNoise.prototype.rv = function() { var t = Math.random() * Math.PI * 2; return { x: Math.cos(t), y: Math.sin(t) }; };
+PerlinNoise.prototype.dp = function(x, y, vx, vy) { var k = vx + ',' + vy; if (!this.g[k]) this.g[k] = this.rv(); return (x - vx) * this.g[k].x + (y - vy) * this.g[k].y; };
+PerlinNoise.prototype.sm = function(x) { return 6 * Math.pow(x, 5) - 15 * Math.pow(x, 4) + 10 * Math.pow(x, 3); };
+PerlinNoise.prototype.lr = function(x, a, b) { return a + this.sm(x) * (b - a); };
+PerlinNoise.prototype.get = function(x, y) {
+  var k = x + ',' + y; if (this.m[k]) return this.m[k];
+  var xf = Math.floor(x), yf = Math.floor(y);
+  var v = this.lr(y - yf, this.lr(x - xf, this.dp(x, y, xf, yf), this.dp(x, y, xf + 1, yf)),
+    this.lr(x - xf, this.dp(x, y, xf, yf + 1), this.dp(x, y, xf + 1, yf + 1)));
+  this.m[k] = v; return v;
+};
+var noise = new PerlinNoise();
+
+var PAL = {
+  bg: [251, 248, 244], card: [245, 240, 234], sand: [235, 228, 220], honey: [232, 220, 200],
+  mineral: [122, 128, 136], mineralDk: [101, 107, 115], text1: [28, 26, 24], text2: [107, 107, 107], text3: [173, 169, 165]
+};
+
+function mix(a, b, t) { t = Math.max(0, Math.min(1, t)); return [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)]; }
+function rgb(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+function rgba(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)) + ')'; }
+function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+function lerpHex(h1, h2, t) {
+  t = Math.max(0, Math.min(1, t));
+  var r1 = parseInt(h1.slice(1, 3), 16), g1 = parseInt(h1.slice(3, 5), 16), b1 = parseInt(h1.slice(5, 7), 16);
+  var r2 = parseInt(h2.slice(1, 3), 16), g2 = parseInt(h2.slice(3, 5), 16), b2 = parseInt(h2.slice(5, 7), 16);
+  return '#' + Math.round(lerp(r1, r2, t)).toString(16).padStart(2, '0') +
+    Math.round(lerp(g1, g2, t)).toString(16).padStart(2, '0') +
+    Math.round(lerp(b1, b2, t)).toString(16).padStart(2, '0');
+}
+
+function mineralMetal(warmth, lightness) {
+  var cool = PAL.mineral, warm = [188, 178, 158];
+  var base = mix(cool, warm, warmth * 0.6);
+  var light = [235, 228, 218], dark = [85, 88, 94];
+  return lightness >= 0.5 ? mix(base, light, (lightness - 0.5) * 2) : mix(dark, base, lightness * 2);
+}
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+
+// ============================================
+// ROOM â€” lags behind waveform. Heavier vignette.
+// ============================================
+var screenEl = document.getElementById('screenLoss');
+var vignetteEl = document.getElementById('s6Vignette');
+var currentRoomLight = 0.85;
+
+function updateRoom(targetLight, dt) {
+  // Slow chase â€” warmth lingers
+  var speed = 0.0006;
+  if (currentRoomLight > targetLight) {
+    currentRoomLight = Math.max(targetLight, currentRoomLight - speed * dt);
+  } else {
+    currentRoomLight = Math.min(targetLight, currentRoomLight + speed * dt * 2);
+  }
+  var L = currentRoomLight;
+
+  // Background delta pushed harder
+  var warmBg = [247, 243, 236];
+  var coldBg = [226, 223, 218]; // pushed colder
+  var bg = mix(warmBg, coldBg, 1 - L);
+  screenEl.style.background = rgb(bg);
+  document.querySelector('.status-bar').style.background = rgb(bg);
+
+  // Vignette: narrower ellipse, heavier max, feels like air draining
+  var vigA = lerp(0.0, 0.14, 1 - L);
+  vignetteEl.style.background = 'radial-gradient(ellipse 60% 50% at 50% 45%, transparent 35%, rgba(35,33,30,' + vigA + ') 100%)';
+}
+
+// Force-set room (no lag) for final states
+function setRoom(L) {
+  currentRoomLight = L;
+  var warmBg = [247, 243, 236];
+  var coldBg = [226, 223, 218];
+  var bg = mix(warmBg, coldBg, 1 - L);
+  screenEl.style.background = rgb(bg);
+  document.querySelector('.status-bar').style.background = rgb(bg);
+  var vigA = lerp(0.0, 0.14, 1 - L);
+  vignetteEl.style.background = 'radial-gradient(ellipse 60% 50% at 50% 45%, transparent 35%, rgba(35,33,30,' + vigA + ') 100%)';
+}
+
+
+// ============================================
+// VAULT ENGINE
+// ============================================
+var C = document.getElementById('s6VaultCanvas');
+var vCtx = C.getContext('2d');
+var W = C.width, H = C.height, CX = W / 2, CY = H / 2;
+var SF = W / 600;
+
+var caseW = Math.round(300 * SF), caseH = Math.round(340 * SF), caseCR = Math.round(30 * SF);
+var mechR = Math.round(105 * SF), wellInset = Math.round(22 * SF);
+var mechCYBase = CY + Math.round(8 * SF);
+
+function makeCasePath(ctx, cx, cy) {
+  var x = cx - caseW / 2, y = cy - caseH / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + caseCR, y); ctx.lineTo(x + caseW - caseCR, y);
+  ctx.quadraticCurveTo(x + caseW, y, x + caseW, y + caseCR);
+  ctx.lineTo(x + caseW, y + caseH - caseCR);
+  ctx.quadraticCurveTo(x + caseW, y + caseH, x + caseW - caseCR, y + caseH);
+  ctx.lineTo(x + caseCR, y + caseH);
+  ctx.quadraticCurveTo(x, y + caseH, x, y + caseH - caseCR);
+  ctx.lineTo(x, y + caseCR);
+  ctx.quadraticCurveTo(x, y, x + caseCR, y); ctx.closePath();
+}
+
+var hammerLayer = document.createElement('canvas');
+hammerLayer.width = W; hammerLayer.height = H;
+(function() {
+  var ctx = hammerLayer.getContext('2d');
+  var cx = CX - caseW / 2, cy = CY - caseH / 2;
+  var r = seededRandom(264);
+  for (var i = 0; i < 50; i++) {
+    var dx = cx + r() * caseW, dy = cy + r() * caseH, dr = (5 + r() * 14) * SF;
+    var dg = ctx.createRadialGradient(dx - dr * 0.2, dy - dr * 0.2, 0, dx, dy, dr);
+    dg.addColorStop(0, rgba(PAL.card, 0.03 + r() * 0.03));
+    dg.addColorStop(0.5, rgba(PAL.card, 0));
+    dg.addColorStop(1, rgba(PAL.mineralDk, 0.015 + r() * 0.02));
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(dx, dy, dr, 0, Math.PI * 2); ctx.fill();
+  }
+})();
+
+var velvetLayer = document.createElement('canvas');
+velvetLayer.width = W; velvetLayer.height = H;
+(function() {
+  var ctx = velvetLayer.getContext('2d');
+  var wx = CX - caseW / 2 + wellInset, wy = CY - caseH / 2 + wellInset;
+  var ww = caseW - wellInset * 2, wh = caseH - wellInset * 2;
+  var vr = seededRandom(311);
+  for (var i = 0; i < 140; i++) {
+    var px = wx + vr() * ww, py = wy + vr() * wh;
+    ctx.fillStyle = vr() > 0.5 ? rgba(PAL.card, 0.015 + vr() * 0.015) : rgba(PAL.mineralDk, 0.008 + vr() * 0.01);
+    ctx.fillRect(px, py, (0.4 + vr() * 0.8) * SF, (0.8 + vr() * 2) * SF);
+  }
+})();
+
+var stoneTexLayer = document.createElement('canvas');
+stoneTexLayer.width = W; stoneTexLayer.height = H;
+(function() {
+  var ctx = stoneTexLayer.getContext('2d');
+  var r = 44 * SF;
+  var tR = seededRandom(7777);
+  for (var i = 0; i < 160; i++) {
+    var a = tR() * Math.PI * 2, d = tR() * r * 0.9;
+    ctx.fillStyle = tR() > 0.5 ? rgba(PAL.text1, 0.4) : rgba(PAL.bg, 0.5);
+    ctx.fillRect(CX + Math.cos(a) * d, mechCYBase + Math.sin(a) * d, tR() < 0.8 ? 1 : 1.4, tR() < 0.8 ? 1 : 1.4);
+  }
+})();
+
+var stoneOutline = [];
+(function() {
+  for (var i = 0; i < 54; i++) {
+    var a = (i / 54) * Math.PI * 2;
+    var n = noise.get(Math.cos(a) * 0.2 + CX * 0.001, Math.sin(a) * 0.2 + mechCYBase * 0.001);
+    stoneOutline.push({ cos: Math.cos(a) * (1 + n * 0.045), sin: Math.sin(a) * (1 + n * 0.045) });
+  }
+})();
+
+var condensationLayer = document.createElement('canvas');
+condensationLayer.width = W; condensationLayer.height = H;
+(function() {
+  var ctx = condensationLayer.getContext('2d');
+  var cr = seededRandom(9191);
+  var wellCX = CX, wellCY = mechCYBase;
+  var wellR = (caseW - wellInset * 2) * 0.45;
+  for (var i = 0; i < 30; i++) {
+    var angle = cr() * Math.PI * 2;
+    var dist = cr() * wellR * 0.8;
+    var bx = wellCX + Math.cos(angle) * dist;
+    var by = wellCY + Math.sin(angle) * dist;
+    var br = (15 + cr() * 35) * SF;
+    var ba = 0.02 + cr() * 0.035;
+    var bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+    bg.addColorStop(0, rgba([235, 233, 228], ba));
+    bg.addColorStop(0.5, rgba([235, 233, 228], ba * 0.5));
+    bg.addColorStop(1, 'rgba(235,233,228,0)');
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
+  }
+})();
+
+function drawRing(ctx, cx, cy, iR, oR, w, type, hlSharp, warmT) {
+  ctx.save(); ctx.filter = 'blur(4px)'; ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.beginPath(); ctx.arc(cx + 1, cy + 1.5, (iR + oR) / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  var m = mineralMetal;
+  var ww = type === 'warm' ? w : type === 'cool' ? w * 0.3 : w * 0.7;
+  var rg = ctx.createRadialGradient(cx - oR * 0.08, cy - oR * 0.08, iR, cx, cy, oR);
+  rg.addColorStop(0, rgb(m(ww, type === 'warm' ? 0.72 : 0.7)));
+  rg.addColorStop(0.4, rgb(m(ww, type === 'warm' ? 0.58 : type === 'cool' ? 0.55 : 0.54)));
+  rg.addColorStop(1, rgb(m(ww, type === 'warm' ? 0.42 : type === 'cool' ? 0.4 : 0.38)));
+  ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.arc(cx, cy, iR, 0, Math.PI * 2, true); ctx.closePath();
+  ctx.fillStyle = rg; ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.arc(cx, cy, iR, 0, Math.PI * 2, true); ctx.closePath(); ctx.clip();
+  var hlEnd = cy - oR * lerp(0.25, 0.15, warmT);
+  var hlA = (type === 'cool' ? 0.22 : 0.16) * w * hlSharp;
+  var hl = ctx.createLinearGradient(cx, cy - oR, cx, hlEnd);
+  hl.addColorStop(0, rgba(PAL.bg, hlA)); hl.addColorStop(1, rgba(PAL.bg, 0));
+  ctx.fillStyle = hl; ctx.fillRect(cx - oR, cy - oR, oR * 2, oR);
+  var sh = ctx.createLinearGradient(cx, cy + oR * 0.25, cx, cy + oR);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,' + (0.06 * w) + ')');
+  ctx.fillStyle = sh; ctx.fillRect(cx - oR, cy, oR * 2, oR);
+  ctx.restore();
+  ctx.strokeStyle = rgba(PAL.bg, 0.08 * w); ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = rgba(PAL.mineralDk, 0.06 * w);
+  ctx.beginPath(); ctx.arc(cx, cy, iR, 0, Math.PI * 2); ctx.stroke();
+}
+
+
+// ============================================
+// VAULT DRAW â€” lightLevel + microBlack + mechDrift
+// ============================================
+var currentVaultLight = 0.85;
+
+function drawVault(ctx, targetLight, microBlack, microBlackFlat, mechDrift, dt) {
+  var vaultSpeed = 0.0005;
+  if (currentVaultLight > targetLight) {
+    currentVaultLight = Math.max(targetLight, currentVaultLight - vaultSpeed * dt);
+  } else {
+    currentVaultLight = Math.min(targetLight, currentVaultLight + vaultSpeed * dt * 2);
+  }
+  var L = currentVaultLight;
+
+  var w =       lerp(0.05,  0.18,  L);
+  var coolWash= lerp(0.18,  0.04,  L);
+  var caseHL =  lerp(0.01,  0.05,  L);
+  var hlSharp = lerp(0.22,  0.40,  L);
+  var intDark = lerp(0.55,  0.40,  L);
+  var intVig =  lerp(0.28,  0.10,  L);
+  var stAlpha = lerp(0.10,  0.28,  L);
+  var stGlow =  lerp(0.0,   0.04,  L);
+  var cornDark= lerp(0.12,  0.05,  L);
+  var csd =     lerp(0.12,  0.08,  L);
+  var spokeOp = lerp(0.08,  0.13,  L);
+  var rimA =    lerp(0.05,  0.10,  L);
+  var condA =   lerp(0.09,  0.02,  L);
+
+  var sw = 1.8;
+  var m = mineralMetal;
+  var cx = CX, cy = CY, mechCY = mechCYBase;
+  var caseX = cx - caseW / 2, caseY = cy - caseH / 2;
+  var wellX = caseX + wellInset, wellY = caseY + wellInset;
+  var wellW = caseW - wellInset * 2, wellH = caseH - wellInset * 2;
+  var wellCR = Math.max(4, caseCR - Math.round(6 * SF));
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Halo
+  var haloC = mix(PAL.mineralDk, PAL.honey, L);
+  var haloA = lerp(0.003, 0.03, L);
+  var ag = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.48);
+  ag.addColorStop(0, rgba(haloC, haloA));
+  ag.addColorStop(0.6, rgba(haloC, haloA * 0.3));
+  ag.addColorStop(1, 'rgba(120,120,120,0)');
+  ctx.fillStyle = ag; ctx.fillRect(0, 0, W, H);
+
+  // Shadow
+  var shBlur = lerp(28, 22, L);
+  var shAlpha = lerp(0.18, 0.13, L);
+  ctx.save(); ctx.filter = 'blur(' + Math.round(shBlur * SF) + 'px)';
+  ctx.fillStyle = 'rgba(0,0,0,' + shAlpha + ')';
+  ctx.fillRect(caseX + 2, caseY + 7 * SF, caseW, caseH); ctx.restore();
+
+  // Case
+  ctx.save(); makeCasePath(ctx, cx, cy); ctx.clip();
+  var cg = ctx.createLinearGradient(caseX, caseY, caseX + caseW * 0.5, caseY + caseH);
+  cg.addColorStop(0, rgb(m(w, 0.60))); cg.addColorStop(0.3, rgb(m(w, 0.52)));
+  cg.addColorStop(0.6, rgb(m(w, 0.44))); cg.addColorStop(1, rgb(m(w, 0.36)));
+  ctx.fillStyle = cg; ctx.fillRect(caseX, caseY, caseW, caseH);
+  var ch = ctx.createLinearGradient(caseX, caseY, caseX, caseY + caseH * 0.5);
+  ch.addColorStop(0, rgba(PAL.bg, caseHL)); ch.addColorStop(1, rgba(PAL.bg, 0));
+  ctx.fillStyle = ch; ctx.fillRect(caseX, caseY, caseW, caseH);
+  ctx.drawImage(hammerLayer, 0, 0);
+  if (coolWash > 0.003) {
+    var cw2 = ctx.createLinearGradient(caseX, caseY, caseX, caseY + caseH);
+    cw2.addColorStop(0, 'rgba(105,112,125,' + coolWash + ')');
+    cw2.addColorStop(1, 'rgba(80,85,95,' + (coolWash * 1.3) + ')');
+    ctx.fillStyle = cw2; ctx.fillRect(caseX, caseY, caseW, caseH);
+  }
+  ctx.restore();
+
+  makeCasePath(ctx, cx, cy);
+  ctx.strokeStyle = rgba(PAL.text3, rimA); ctx.lineWidth = 2.2 * SF; ctx.stroke();
+
+  // Interior
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(wellX + wellCR, wellY); ctx.lineTo(wellX + wellW - wellCR, wellY);
+  ctx.quadraticCurveTo(wellX + wellW, wellY, wellX + wellW, wellY + wellCR);
+  ctx.lineTo(wellX + wellW, wellY + wellH - wellCR);
+  ctx.quadraticCurveTo(wellX + wellW, wellY + wellH, wellX + wellW - wellCR, wellY + wellH);
+  ctx.lineTo(wellX + wellCR, wellY + wellH);
+  ctx.quadraticCurveTo(wellX, wellY + wellH, wellX, wellY + wellH - wellCR);
+  ctx.lineTo(wellX, wellY + wellCR);
+  ctx.quadraticCurveTo(wellX, wellY, wellX + wellCR, wellY);
+  ctx.closePath(); ctx.clip();
+
+  var intWarm = mix(PAL.sand, PAL.honey, L * 0.12);
+  var intCold = mix([220, 217, 212], PAL.mineralDk, 0.35);
+  var intCenter = mix(intCold, intWarm, L);
+  var intEdge = mix(PAL.mineralDk, mix(PAL.sand, PAL.mineralDk, 0.3), L * 0.4);
+  var vg = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, wellW * 0.65);
+  vg.addColorStop(0, rgb(intCenter));
+  vg.addColorStop(0.5, rgb(mix(intCenter, intEdge, 0.4)));
+  vg.addColorStop(1, rgb(intEdge));
+  ctx.fillStyle = vg; ctx.fillRect(wellX, wellY, wellW, wellH);
+
+  var vsh = ctx.createRadialGradient(cx, mechCY, wellW * 0.08, cx, mechCY, wellW * 0.6);
+  vsh.addColorStop(0, 'rgba(0,0,0,0)');
+  vsh.addColorStop(0.7, 'rgba(0,0,0,' + csd + ')');
+  vsh.addColorStop(1, 'rgba(0,0,0,' + (csd * 3) + ')');
+  ctx.fillStyle = vsh; ctx.fillRect(wellX, wellY, wellW, wellH);
+
+  if (intVig > 0.03) {
+    var vig = ctx.createRadialGradient(cx, mechCY, wellW * 0.12, cx, mechCY, wellW * 0.52);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(0.5, 'rgba(0,0,0,' + (intVig * 0.35) + ')');
+    vig.addColorStop(1, 'rgba(0,0,0,' + intVig + ')');
+    ctx.fillStyle = vig; ctx.fillRect(wellX, wellY, wellW, wellH);
+  }
+
+  if (cornDark > 0.005) {
+    var corners = [
+      [wellX + 12 * SF, wellY + 12 * SF], [wellX + wellW - 12 * SF, wellY + 12 * SF],
+      [wellX + 12 * SF, wellY + wellH - 12 * SF], [wellX + wellW - 12 * SF, wellY + wellH - 12 * SF]
+    ];
+    for (var ci = 0; ci < corners.length; ci++) {
+      var cg2 = ctx.createRadialGradient(corners[ci][0], corners[ci][1], 0, corners[ci][0], corners[ci][1], 55 * SF);
+      cg2.addColorStop(0, 'rgba(0,0,0,' + cornDark + ')');
+      cg2.addColorStop(0.6, 'rgba(0,0,0,' + (cornDark * 0.4) + ')');
+      cg2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = cg2; ctx.fillRect(wellX, wellY, wellW, wellH);
+    }
+  }
+
+  if (L > 0.05) {
+    var warmCastA = L * 0.10;
+    var warmCast = ctx.createRadialGradient(cx, mechCY + wellH * 0.15, 0, cx, mechCY, wellW * 0.5);
+    warmCast.addColorStop(0, rgba(PAL.honey, warmCastA));
+    warmCast.addColorStop(0.5, rgba(PAL.honey, warmCastA * 0.3));
+    warmCast.addColorStop(1, rgba(PAL.honey, 0));
+    ctx.fillStyle = warmCast; ctx.fillRect(wellX, wellY, wellW, wellH);
+  }
+
+  ctx.drawImage(velvetLayer, 0, 0);
+
+  if (condA > 0.005) {
+    ctx.globalAlpha = condA;
+    ctx.drawImage(condensationLayer, 0, 0);
+    ctx.globalAlpha = 1;
+  }
+
+  // Micro-black â€” two-phase: flat charcoal snap, then radial hold
+  if (microBlack > 0.01) {
+    if (microBlackFlat) {
+      // Phase A: FLAT near-charcoal fill â€” power failure silhouette
+      var flatA = microBlack * 0.18;
+      ctx.fillStyle = 'rgba(30,28,26,' + flatA + ')';
+      ctx.fillRect(wellX, wellY, wellW, wellH);
+    } else {
+      // Phase B: radial hold â€” settled darkness
+      var mbA = microBlack * 0.22;
+      var mbDark = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, wellW * 0.55);
+      mbDark.addColorStop(0, 'rgba(22,20,18,' + mbA + ')');
+      mbDark.addColorStop(0.4, 'rgba(22,20,18,' + (mbA * 0.75) + ')');
+      mbDark.addColorStop(1, 'rgba(22,20,18,' + (mbA * 0.4) + ')');
+      ctx.fillStyle = mbDark; ctx.fillRect(wellX, wellY, wellW, wellH);
+    }
+  }
+
+  ctx.restore();
+
+  // ===== MECHANISM â€” with rotational drift =====
+  ctx.save();
+  // Apply mechanism drift: quiet off-axis rotation during final 20%
+  if (mechDrift > 0) {
+    var driftAngle = mechDrift * 0.007; // ~0.4 degrees max â€” subconscious, not visible
+    ctx.translate(cx, mechCY);
+    ctx.rotate(driftAngle);
+    ctx.translate(-cx, -mechCY);
+  }
+
+  var recG = ctx.createRadialGradient(cx, mechCY, mechR * 0.8, cx, mechCY, mechR + 10 * SF);
+  recG.addColorStop(0, 'rgba(0,0,0,0)'); recG.addColorStop(0.8, 'rgba(0,0,0,0.04)'); recG.addColorStop(1, 'rgba(0,0,0,0.1)');
+  ctx.fillStyle = recG; ctx.beginPath(); ctx.arc(cx, mechCY, mechR + 10 * SF, 0, Math.PI * 2); ctx.fill();
+
+  var mR = mechR - 24 * SF;
+  var iR = mechR - 48 * SF;
+
+  drawRing(ctx, cx, mechCY, mechR - 5 * SF, mechR + 5 * SF, w, 'warm', hlSharp, 0);
+  drawRing(ctx, cx, mechCY, mR - 4 * SF, mR + 4 * SF, w * 0.85, 'cool', hlSharp, 0);
+  drawRing(ctx, cx, mechCY, iR - 3 * SF, iR + 3 * SF, w * 0.9, 'bronze', hlSharp, 0);
+
+  var gapA = lerp(0.01, 0.03, L);
+  if (gapA > 0.003) {
+    var gaps = [[mR + 4 * SF, mechR - 5 * SF], [iR + 3 * SF, mR - 4 * SF]];
+    for (var gi = 0; gi < gaps.length; gi++) {
+      var gf = ctx.createRadialGradient(cx, mechCY, gaps[gi][0], cx, mechCY, gaps[gi][1]);
+      gf.addColorStop(0, 'rgba(100,105,115,' + gapA + ')');
+      gf.addColorStop(0.5, 'rgba(90,95,105,' + (gapA * 0.65) + ')');
+      gf.addColorStop(1, 'rgba(100,105,115,' + gapA + ')');
+      ctx.fillStyle = gf; ctx.beginPath(); ctx.arc(cx, mechCY, gaps[gi][1], 0, Math.PI * 2);
+      ctx.arc(cx, mechCY, gaps[gi][0], 0, Math.PI * 2, true); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  for (var si = 0; si < 8; si++) {
+    var a = (si / 8) * Math.PI * 2 - Math.PI / 2;
+    var spokeAngle = a;
+    var thisSpokeOp = spokeOp;
+    if (si === 3) { spokeAngle += 0.02; thisSpokeOp *= 0.55; }
+    var sI = iR + 5 * SF, sO = mechR - 14 * SF;
+    ctx.save(); ctx.translate(cx, mechCY); ctx.rotate(spokeAngle);
+    var sg = ctx.createLinearGradient(0, -sw * SF / 2, 0, sw * SF / 2);
+    sg.addColorStop(0, rgba(m(w, 0.58), thisSpokeOp * 0.8));
+    sg.addColorStop(0.5, rgba(m(w, 0.46), thisSpokeOp));
+    sg.addColorStop(1, rgba(m(w, 0.38), thisSpokeOp * 0.8));
+    ctx.fillStyle = sg; ctx.fillRect(sI, -sw * SF / 2, sO - sI, sw * SF);
+    var capR = 2.8 * SF;
+    var bg2 = ctx.createRadialGradient(sO - 0.5, -0.5, 0, sO, 0, capR);
+    bg2.addColorStop(0, rgb(m(w, 0.66))); bg2.addColorStop(1, rgb(m(w, 0.38)));
+    ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(sO, 0, capR, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Center floor
+  var fl = mix(mix([220, 217, 212], PAL.sand, L), PAL.text3, lerp(0.55, 0.40, L));
+  var fd = mix(mix([210, 207, 202], PAL.sand, L), PAL.mineralDk, lerp(0.70, 0.60, L));
+  var dcg = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, iR - 5 * SF);
+  dcg.addColorStop(0, rgb(fl)); dcg.addColorStop(0.5, rgb(mix(fl, fd, 0.4))); dcg.addColorStop(1, rgb(fd));
+  ctx.fillStyle = dcg; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+
+  if (microBlack > 0.01) {
+    var mbFloor = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, iR - 5 * SF);
+    mbFloor.addColorStop(0, 'rgba(22,20,18,' + (microBlack * 0.24) + ')');
+    mbFloor.addColorStop(0.6, 'rgba(22,20,18,' + (microBlack * 0.16) + ')');
+    mbFloor.addColorStop(1, 'rgba(22,20,18,' + (microBlack * 0.06) + ')');
+    ctx.fillStyle = mbFloor; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+  }
+
+  var dsh = ctx.createRadialGradient(cx, mechCY, (iR - 5 * SF) * 0.4, cx, mechCY, iR - 5 * SF);
+  dsh.addColorStop(0, 'rgba(0,0,0,0)'); dsh.addColorStop(0.7, 'rgba(0,0,0,' + csd + ')');
+  dsh.addColorStop(1, 'rgba(0,0,0,' + (csd * 2.5) + ')');
+  ctx.fillStyle = dsh; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+
+  // Stone
+  var finalStoneAlpha = stAlpha;
+  if (microBlack > 0.01) finalStoneAlpha *= (1 - microBlack * 0.6);
+
+  if (finalStoneAlpha > 0.005) {
+    var r = 44 * SF;
+    if (stGlow > 0.005) {
+      var glowR = r * 2.0;
+      var gg = ctx.createRadialGradient(cx, mechCY, r * 0.2, cx, mechCY, glowR);
+      gg.addColorStop(0, rgba(PAL.honey, stGlow * 0.4));
+      gg.addColorStop(0.3, rgba(PAL.honey, stGlow * 0.15));
+      gg.addColorStop(1, rgba(PAL.sand, 0));
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(cx, mechCY, glowR, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.globalAlpha = finalStoneAlpha;
+    var pts = [];
+    for (var pi = 0; pi < stoneOutline.length; pi++) {
+      pts.push({ x: cx + stoneOutline[pi].cos * r, y: mechCY + stoneOutline[pi].sin * r });
+    }
+    function trace() {
+      ctx.beginPath();
+      for (var ti = 0; ti < pts.length; ti++) { ti === 0 ? ctx.moveTo(pts[ti].x, pts[ti].y) : ctx.lineTo(pts[ti].x, pts[ti].y); }
+      ctx.closePath();
+    }
+
+    ctx.save(); ctx.translate(0, r * 0.08);
+    var cs = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, r * 0.75);
+    cs.addColorStop(0, 'rgba(28,26,24,0.06)'); cs.addColorStop(1, 'rgba(28,26,24,0)');
+    ctx.fillStyle = cs; ctx.beginPath(); ctx.arc(cx, mechCY, r * 0.75, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+    var warmS = { hl: '#DDD8CE', mh: '#D4D0C6', md: '#C8C5BB', ml: '#BAB7AE', lo: '#AAA7A0', sh: '#989690', dp: '#868480', eg: '#7A7A78' };
+    var coldS = { hl: '#C8C6C2', mh: '#BFBDBA', md: '#B4B2AF', ml: '#A7A6A3', lo: '#999897', sh: '#8A8988', dp: '#7B7A7A', eg: '#6E6E6E' };
+    var SC = {};
+    var keys = ['hl','mh','md','ml','lo','sh','dp','eg'];
+    for (var ki = 0; ki < keys.length; ki++) SC[keys[ki]] = lerpHex(coldS[keys[ki]], warmS[keys[ki]], L);
+
+    var bd = ctx.createRadialGradient(cx - r * 0.28, mechCY - r * 0.28, 0, cx, mechCY, r * 1.3);
+    bd.addColorStop(0, SC.hl); bd.addColorStop(0.12, SC.mh); bd.addColorStop(0.28, SC.md);
+    bd.addColorStop(0.48, SC.ml); bd.addColorStop(0.65, SC.lo); bd.addColorStop(0.80, SC.sh);
+    bd.addColorStop(0.92, SC.dp); bd.addColorStop(1, SC.eg);
+    ctx.fillStyle = bd; trace(); ctx.fill();
+
+    var ish = ctx.createRadialGradient(cx + r * 0.3, mechCY + r * 0.3, 0, cx, mechCY, r);
+    ish.addColorStop(0, 'rgba(28,26,24,0.08)'); ish.addColorStop(0.5, 'rgba(28,26,24,0.02)'); ish.addColorStop(1, 'rgba(28,26,24,0)');
+    ctx.fillStyle = ish; trace(); ctx.fill();
+
+    var specA = lerp(0.04, 0.12, L);
+    ctx.save(); ctx.scale(1, 0.6);
+    var hlG = ctx.createRadialGradient(cx - r * 0.3, (mechCY - r * 0.45) / 0.6, 0, cx - r * 0.3, (mechCY - r * 0.45) / 0.6, r * 0.2);
+    hlG.addColorStop(0, 'rgba(251,248,244,' + specA + ')');
+    hlG.addColorStop(0.5, 'rgba(251,248,244,' + (specA * 0.35) + ')');
+    hlG.addColorStop(1, 'rgba(251,248,244,0)');
+    ctx.fillStyle = hlG; ctx.beginPath(); ctx.arc(cx - r * 0.3, (mechCY - r * 0.45) / 0.6, r * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = rgba(PAL.text3, lerp(0.03, 0.06, L)); ctx.lineWidth = 0.4; trace(); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore(); // end mechanism drift transform
+}
+
+
+// ============================================
+// WAVEFORM â€” thin elegant lines, not chunky bars
+// Voice trace aesthetic. Lots of air between lines.
+// Background matches room color for seamless integration.
+// ============================================
+var WC = document.getElementById('s6WaveformCanvas');
+var wCtx = WC.getContext('2d');
+var WW = WC.width, WH = WC.height;
+
+// Desaturated amber â€” dignified, Scandinavian
+var AMBER = {
+  bright: [185, 158, 108],
+  mid:    [172, 145, 98],
+  edge:   [155, 132, 92],
+  hl:     [205, 185, 142],
+  dead:   [135, 140, 148]
+};
+
+// More bars, much thinner â€” voice trace not bar chart
+var NUM_BARS = 80;
+var BAR_THICKNESS = 1.8; // thin elegant lines at 2x canvas
+var waveformBars = [];
+(function() {
+  var wr = seededRandom(4422);
+  for (var i = 0; i < NUM_BARS; i++) {
+    var t = i / NUM_BARS;
+    // Organic voice envelope with natural variation
+    var env = Math.sin(t * Math.PI) * 0.55 + 0.45;
+    var variation = 0.35 + wr() * 0.65;
+    var emphasis = wr() < 0.10 ? 1.25 : 1.0;
+    // Occasional quiet gaps (breath pauses in speech)
+    var breath = wr() < 0.06 ? 0.3 : 1.0;
+    waveformBars.push(Math.min(1, Math.max(0.06, env * variation * emphasis * breath)));
+  }
+})();
+
+var particles = [];
+var particlesGenerated = false;
+
+function generateParticles() {
+  particles = [];
+  var pr = seededRandom(5533);
+  var spacing = (WW - 60) / NUM_BARS;
+  var startX = 30;
+
+  for (var i = 0; i < NUM_BARS; i++) {
+    var barH = waveformBars[i] * (WH * 0.58);
+    var bx = startX + i * spacing + spacing * 0.5;
+    var by = WH / 2;
+    var centerDist = Math.abs(i - NUM_BARS / 2) / (NUM_BARS / 2);
+    var barDelay = (1 - centerDist) * 0.45;
+
+    // Fewer particles per bar since bars are thinner â€” 3-5
+    var count = 3 + Math.floor(pr() * 3);
+    for (var j = 0; j < count; j++) {
+      particles.push({
+        x: bx + (pr() - 0.5) * spacing * 0.5,
+        y: by + (pr() - 0.5) * barH,
+        vx: (pr() - 0.5) * 0.6,
+        vy: 0.10 + pr() * 0.35,
+        size: 0.8 + pr() * 1.6, // smaller particles for thinner bars
+        life: 1.0,
+        decay: 0.004 + pr() * 0.005,
+        warmth: 1.0 - centerDist * 0.4,
+        delay: barDelay + pr() * 0.08,
+        barIndex: i,
+        active: false
+      });
+    }
+  }
+  particlesGenerated = true;
+}
+
+function particleColor(warmth, life) {
+  return mix(AMBER.dead, AMBER.bright, warmth * life);
+}
+
+var barDissolve = new Array(NUM_BARS).fill(0);
+
+function updateBarDissolve(dissolveT) {
+  for (var i = 0; i < NUM_BARS; i++) {
+    var centerDist = Math.abs(i - NUM_BARS / 2) / (NUM_BARS / 2);
+    var barStart = (1 - centerDist) * 0.40;
+    var barEnd = barStart + 0.35;
+    if (dissolveT < barStart) barDissolve[i] = 0;
+    else if (dissolveT > barEnd) barDissolve[i] = 1;
+    else barDissolve[i] = (dissolveT - barStart) / (barEnd - barStart);
+  }
+}
+
+function drawWaveform(dissolveT) {
+  // Transparent canvas â€” screen background shows through naturally
+  wCtx.clearRect(0, 0, WW, WH);
+
+  if (!particlesGenerated) generateParticles();
+  updateBarDissolve(dissolveT);
+
+  var spacing = (WW - 60) / NUM_BARS;
+  var startX = 30;
+
+  // Mid-sequence power shift
+  var powerShift = Math.max(0, Math.min(1, (dissolveT - 0.35) / 0.25));
+  var brightnessMultiplier = lerp(1.0, 0.65, powerShift);
+  var highlightMultiplier = lerp(1.0, 0.0, powerShift);
+  var glowMultiplier = lerp(1.0, 0.35, powerShift);
+
+  // Glow â€” soft ambient behind bars, no opaque fill
+  var totalAlive = 0;
+  for (var gi = 0; gi < barDissolve.length; gi++) totalAlive += (1 - barDissolve[gi]);
+  var glowLevel = (totalAlive / barDissolve.length) * glowMultiplier;
+
+  if (glowLevel > 0.02) {
+    var glowRadius = WW * lerp(0.28, 0.40, 1 - powerShift);
+    var glowG = wCtx.createRadialGradient(WW / 2, WH / 2, 0, WW / 2, WH / 2, glowRadius);
+    glowG.addColorStop(0, rgba(AMBER.bright, glowLevel * 0.10));
+    glowG.addColorStop(0.5, rgba(AMBER.mid, glowLevel * 0.04));
+    glowG.addColorStop(1, rgba(AMBER.bright, 0));
+    wCtx.fillStyle = glowG;
+    wCtx.fillRect(0, 0, WW, WH);
+  }
+
+  // Draw bars â€” thin lines with rounded caps
+  for (var i = 0; i < NUM_BARS; i++) {
+    var barAlpha = 1 - barDissolve[i];
+    if (barAlpha < 0.01) continue;
+
+    var barH = waveformBars[i] * (WH * 0.58);
+    var effectiveH = barH * (0.25 + 0.75 * barAlpha);
+    var bx = startX + i * spacing + spacing * 0.5;
+    var topY = WH / 2 - effectiveH / 2;
+    var botY = WH / 2 + effectiveH / 2;
+
+    var centerDist = Math.abs(i - NUM_BARS / 2) / (NUM_BARS / 2);
+    var barColor = mix(AMBER.edge, AMBER.bright, 1 - centerDist * 0.5);
+    barColor = mix(AMBER.dead, barColor, 0.3 + 0.7 * barAlpha);
+
+    var bAlpha = barAlpha * 0.85 * brightnessMultiplier;
+
+    wCtx.beginPath();
+    wCtx.moveTo(bx, topY + BAR_THICKNESS / 2);
+    wCtx.lineTo(bx, botY - BAR_THICKNESS / 2);
+    wCtx.strokeStyle = rgba(barColor, bAlpha);
+    wCtx.lineWidth = BAR_THICKNESS;
+    wCtx.lineCap = 'round';
+    wCtx.stroke();
+
+    // Center highlight â€” thin bright core
+    if (barAlpha > 0.4 && highlightMultiplier > 0.05) {
+      var hlH = effectiveH * 0.30;
+      var hlTop = WH / 2 - hlH / 2;
+      var hlBot = WH / 2 + hlH / 2;
+      wCtx.beginPath();
+      wCtx.moveTo(bx, hlTop);
+      wCtx.lineTo(bx, hlBot);
+      wCtx.strokeStyle = rgba(AMBER.hl, barAlpha * 0.20 * highlightMultiplier);
+      wCtx.lineWidth = BAR_THICKNESS * 0.6;
+      wCtx.lineCap = 'round';
+      wCtx.stroke();
+    }
+  }
+
+  // Particles â€” coherent lateral air drift (room has air, not just gravity)
+  var airDrift = 0.06; // slow consistent rightward drift â€” same for all particles
+  for (var pi = 0; pi < particles.length; pi++) {
+    var p = particles[pi];
+    if (!p.active && barDissolve[p.barIndex] > 0.15) p.active = true;
+    if (!p.active) continue;
+
+    p.life -= p.decay;
+    if (p.life <= 0) continue;
+
+    p.x += p.vx + airDrift; // coherent air current
+    p.y += p.vy;
+    p.vy += 0.006;
+    p.vx *= 0.998;
+
+    var currentSize = p.size * Math.max(0.08, p.life);
+    var c = particleColor(p.warmth, p.life);
+    var alpha = p.life * 0.50 * brightnessMultiplier;
+
+    if (alpha > 0.01 && currentSize > 0.1) {
+      wCtx.fillStyle = rgba(c, alpha);
+      wCtx.beginPath();
+      wCtx.arc(p.x, p.y, currentSize / 2, 0, Math.PI * 2);
+      wCtx.fill();
+    }
+  }
+
+  // Vertical fade mask â€” waveform floats in air, not boxed
+  // Top and bottom edges fade to transparent
+  var fadeH = WH * 0.22;
+  // Top fade
+  var topFade = wCtx.createLinearGradient(0, 0, 0, fadeH);
+  topFade.addColorStop(0, 'rgba(0,0,0,1)');
+  topFade.addColorStop(1, 'rgba(0,0,0,0)');
+  wCtx.save();
+  wCtx.globalCompositeOperation = 'destination-out';
+  wCtx.fillStyle = topFade;
+  wCtx.fillRect(0, 0, WW, fadeH);
+  // Bottom fade
+  var botFade = wCtx.createLinearGradient(0, WH - fadeH, 0, WH);
+  botFade.addColorStop(0, 'rgba(0,0,0,0)');
+  botFade.addColorStop(1, 'rgba(0,0,0,1)');
+  wCtx.fillStyle = botFade;
+  wCtx.fillRect(0, WH - fadeH, WW, fadeH);
+  wCtx.restore();
+}
+
+
+// ============================================
+// CHOREOGRAPHY â€” sequential, one thing at a time
+// ============================================
+//
+// Rhythm: Slow. Slower. Sharp. Still.
+//
+// 0â€“400ms:      fade in vault + waveform
+// 400â€“2200ms:   slow dissolve phase (flat middle plateau)
+// 2200â€“3400ms:  accelerate dissolve + mechanism drift
+// 1800ms:       headline (loss has breathed first)
+// 2200ms:       body
+// 3400â€“3600ms:  empty stillness â€” cold vault, no waveform, no micro-black yet
+// 3600â€“3720ms:  micro-black SNAP (120ms fast ramp)
+// 3720â€“3850ms:  micro-black HOLD (130ms)
+// 3850â€“4800ms:  cold hold â€” silence. Nothing changes.
+// Then transition.
+
+var vaultContainer = document.getElementById('s6VaultContainer');
+var waveformContainer = document.getElementById('s6WaveformContainer');
+var lossHeadline = document.getElementById('s6Headline');
+var lossBody = document.getElementById('s6Body');
+var skipTarget = document.getElementById('screenLoss');
+
+var startTime = null;
+var prevTs = null;
+var active = false;
+var skipped = false;
+
+// Dissolve curve: flat middle plateau creates tension
+function dissolveCurve(t) {
+  // t: 0â†’1 linear time over 3000ms (400â†’3400)
+  if (t < 0.15) {
+    // Quick initial nibble from edges: 0â†’0.08
+    return (t / 0.15) * 0.08;
+  } else if (t < 0.60) {
+    // PLATEAU: 0.08â†’0.30 over 45% of time
+    // Barely changing. Tension builds. Visually almost still.
+    var plateauT = (t - 0.15) / 0.45;
+    return 0.08 + plateauT * 0.22;
+  } else {
+    // ACCELERATE: 0.30â†’1.0 over last 40%
+    var accelT = (t - 0.60) / 0.40;
+    var eased = accelT * accelT; // ease-in: gets faster
+    return 0.30 + eased * 0.70;
+  }
+}
+
+var DISSOLVE_START_MS = 400;
+var DISSOLVE_END_MS = 3400;
+var DISSOLVE_DURATION = DISSOLVE_END_MS - DISSOLVE_START_MS; // 3000ms
+
+function start() {
+  startTime = null;
+  prevTs = null;
+  active = true;
+  skipped = false;
+  currentRoomLight = 0.85;
+  currentVaultLight = 0.85;
+
+  vaultContainer.classList.remove('visible');
+  waveformContainer.classList.remove('visible');
+  lossHeadline.classList.remove('visible');
+  lossBody.classList.remove('visible');
+
+  particlesGenerated = false;
+  generateParticles();
+  barDissolve = new Array(NUM_BARS).fill(0);
+
+  setRoom(0.85);
+  drawVault(vCtx, 0.85, 0, false, 0, 0);
+  drawWaveform(0);
+
+  requestAnimationFrame(loop);
+}
+
+function loop(ts) {
+  if (!active) return;
+  if (startTime === null) { startTime = ts; prevTs = ts; }
+  var t = ts - startTime;
+  var dt = Math.min(ts - prevTs, 50);
+  prevTs = ts;
+
+  // Phase 1: Fade in
+  if (t >= 200 && !vaultContainer.classList.contains('visible')) vaultContainer.classList.add('visible');
+  if (t >= 300 && !waveformContainer.classList.contains('visible')) waveformContainer.classList.add('visible');
+
+  // Dissolve
+  var dissolveT = 0;
+  var rawT = 0;
+  if (t >= DISSOLVE_START_MS && t <= DISSOLVE_END_MS) {
+    rawT = (t - DISSOLVE_START_MS) / DISSOLVE_DURATION;
+    dissolveT = dissolveCurve(rawT);
+  } else if (t > DISSOLVE_END_MS) {
+    rawT = 1;
+    dissolveT = 1;
+  }
+
+  // Light level from dissolve
+  var waveformLight = Math.max(0, 1 - dissolveT);
+  var targetLight = waveformLight * 0.85;
+
+  // Fix 2: Plateau room drift â€” during plateau (rawT 0.15â€“0.60),
+  // vignette tightens and bg cools slightly even though waveform barely changes.
+  // This keeps viewer subconsciously engaged while waveform "refuses to die."
+  var plateauDrift = 0;
+  if (rawT >= 0.15 && rawT <= 0.60) {
+    plateauDrift = (rawT - 0.15) / 0.45; // 0â†’1 across plateau
+  } else if (rawT > 0.60) {
+    plateauDrift = 1;
+  }
+  // Nudge targetLight down slightly during plateau (a few RGB points of cooling)
+  targetLight = targetLight - plateauDrift * 0.06;
+
+  // Fix 4: Mechanism drift â€” last 13% of dissolve, max ~0.4 degrees
+  var mechDrift = 0;
+  if (dissolveT > 0.87) {
+    mechDrift = (dissolveT - 0.87) / 0.13;
+    mechDrift = Math.min(1, mechDrift);
+  }
+
+  // Fix 3: Micro-black â€” two-phase snap
+  // Phase A (3600â€“3720ms): flat near-charcoal fill â€” power failure
+  // Phase B (3720+): return to radial micro-black hold
+  var microBlack = 0;
+  var microBlackFlat = false;
+  if (t >= 3600 && t < 3720) {
+    microBlack = Math.min(1, (t - 3600) / 100); // 100ms snap â€” very fast
+    microBlackFlat = true; // flat fill mode
+  } else if (t >= 3720) {
+    microBlack = 1;
+    microBlackFlat = false; // radial hold mode
+  }
+
+  // Draw waveform (only during dissolve + stillness phases)
+  if (t < 3600) {
+    drawWaveform(dissolveT);
+  } else {
+    // Waveform gone â€” transparent canvas, screen bg shows through
+    wCtx.clearRect(0, 0, WW, WH);
+  }
+
+  // Room updates (sequential â€” room follows waveform with lag)
+  updateRoom(targetLight, dt);
+
+  // Vault (also lags)
+  drawVault(vCtx, targetLight, microBlack, microBlackFlat, mechDrift, dt);
+
+  // Text â€” after loss has breathed
+  if (t >= 1800 && !lossHeadline.classList.contains('visible')) lossHeadline.classList.add('visible');
+  if (t >= 2200 && !lossBody.classList.contains('visible')) lossBody.classList.add('visible');
+
+  // Keep rendering until cold hold stabilizes
+  if (t < 4000) {
+    requestAnimationFrame(loop);
+  } else {
+    // Final still frame: everything at absolute coldest
+    setRoom(0);
+    currentVaultLight = 0;
+    drawVault(vCtx, 0, 1, false, 1, 0);
+    wCtx.clearRect(0, 0, WW, WH);
+
+    // Silence. No indicator. No arrow. Just cold.
+    // Auto-advance to Screen 7 after hold
+    setTimeout(function() {
+      var nextScreen = document.getElementById('screenLoss').nextElementSibling;
+      if (nextScreen && nextScreen.classList.contains('screen')) {
+        nextScreen.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 800);
+  }
+}
+
+// Tap anywhere to skip to Screen 7
+skipTarget.addEventListener('click', function() {
+  if (skipped) return;
+  skipped = true;
+  active = false;
+  setRoom(0);
+  currentVaultLight = 0;
+  drawVault(vCtx, 0, 1, false, 1, 0);
+  wCtx.clearRect(0, 0, WW, WH);
+  // Scroll to Screen 7
+  var nextScreen = skipTarget.nextElementSibling;
+  if (nextScreen && nextScreen.classList.contains('screen')) {
+    nextScreen.scrollIntoView({ behavior: 'smooth' });
+  }
+});
+
+// (auto-start removed)
+
+      ns.start = start;
+      ns.active = false;
+      ns.setActive = function(v) { active = v; ns.active = v; };
+      return ns;
+    })();
+
+    // ============================================
+    // SCREEN 7: FINAL CTA ENGINE (namespaced)
+    // ============================================
+    var S7Engine = (function() {
+      var ns = {};
+
+// ============================================
+// VAULT ENGINE â€” Same as Screen 4 v4
+// Tuned for Screen 7: quieter, warmer, smaller
+// ============================================
+
+function seededRandom(seed) {
+  var s = seed;
+  return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function PerlinNoise() { this.g = {}; this.m = {}; }
+PerlinNoise.prototype.rv = function() { var t = Math.random() * Math.PI * 2; return { x: Math.cos(t), y: Math.sin(t) }; };
+PerlinNoise.prototype.dp = function(x, y, vx, vy) { var k = vx + ',' + vy; if (!this.g[k]) this.g[k] = this.rv(); return (x - vx) * this.g[k].x + (y - vy) * this.g[k].y; };
+PerlinNoise.prototype.sm = function(x) { return 6 * Math.pow(x, 5) - 15 * Math.pow(x, 4) + 10 * Math.pow(x, 3); };
+PerlinNoise.prototype.lr = function(x, a, b) { return a + this.sm(x) * (b - a); };
+PerlinNoise.prototype.get = function(x, y) {
+  var k = x + ',' + y; if (this.m[k]) return this.m[k];
+  var xf = Math.floor(x), yf = Math.floor(y);
+  var v = this.lr(y - yf, this.lr(x - xf, this.dp(x, y, xf, yf), this.dp(x, y, xf + 1, yf)),
+    this.lr(x - xf, this.dp(x, y, xf, yf + 1), this.dp(x, y, xf + 1, yf + 1)));
+  this.m[k] = v; return v;
+};
+var noise = new PerlinNoise();
+
+var PAL = {
+  bg: [251, 248, 244], card: [245, 240, 234], sand: [235, 228, 220], honey: [232, 220, 200],
+  mineral: [122, 128, 136], mineralDk: [101, 107, 115], text1: [28, 26, 24], text2: [107, 107, 107], text3: [173, 169, 165]
+};
+
+function mix(a, b, t) { return [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)]; }
+function rgb(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+function rgba(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpHex(h1, h2, t) {
+  var r1 = parseInt(h1.slice(1, 3), 16), g1 = parseInt(h1.slice(3, 5), 16), b1 = parseInt(h1.slice(5, 7), 16);
+  var r2 = parseInt(h2.slice(1, 3), 16), g2 = parseInt(h2.slice(3, 5), 16), b2 = parseInt(h2.slice(5, 7), 16);
+  return '#' + Math.round(lerp(r1, r2, t)).toString(16).padStart(2, '0') +
+    Math.round(lerp(g1, g2, t)).toString(16).padStart(2, '0') +
+    Math.round(lerp(b1, b2, t)).toString(16).padStart(2, '0');
+}
+
+function mineralMetal(warmth, lightness) {
+  var cool = PAL.mineral, warm = [188, 178, 158];
+  var base = mix(cool, warm, warmth * 0.6);
+  var light = [235, 228, 218], dark = [85, 88, 94];
+  return lightness >= 0.5 ? mix(base, light, (lightness - 0.5) * 2) : mix(dark, base, lightness * 2);
+}
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+// --- SCREEN 7 STATE ---
+// Warmer than Screen 4's OPEN. The vault has been waiting.
+// Stone is already present. Mechanism slightly tighter.
+// This is the "offered one last time" state.
+var S7 = {
+  warmth: 0.30,         // warmer than OPEN (0.22)
+  glow: 0.05,           // slightly more glow
+  ringContract: 0.05,   // slightly tighter than OPEN (0)
+  spokeWidth: 2.1,      // slightly thicker
+  spokeOpacity: 0.16,   // quiet (matched to v4)
+  stoneGlow: 0.10,      // stone is present and warm
+  stoneRadius: 44,       // same as v4
+  interiorDark: 0.38,   // slightly warmer interior
+  caseShadowDepth: 0.08,
+  caseHighlight: 0.06,  // slightly more highlight
+  highlightSharpness: 0.45,
+  interiorVignette: 0.10,
+  shadowBlur: 22, shadowAlpha: 0.12, shadowOffY: 5,
+  rimAlpha: 0.12, rimWidth: 2.2, coolWashAlpha: 0.04,
+  stoneSpecAlpha: 0.28, stoneSpecRadius: 0.24, stoneEdge: 0.07,
+  stoneTexture: 0.014, stoneContact: 0.10,
+  cornerDark: 0.05, gapBreachAlpha: 0.03
+};
+
+// --- CANVAS ---
+var C = document.getElementById('s7VaultCanvas');
+var W = C.width, H = C.height, CX = W / 2, CY = H / 2;
+var SF = W / 600;
+
+var caseW = Math.round(300 * SF), caseH = Math.round(340 * SF), caseCR = Math.round(30 * SF);
+var mechR = Math.round(105 * SF), wellInset = Math.round(22 * SF);
+var mechCYBase = CY + Math.round(8 * SF);
+
+function makeCasePath(ctx, cx, cy) {
+  var x = cx - caseW / 2, y = cy - caseH / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + caseCR, y); ctx.lineTo(x + caseW - caseCR, y);
+  ctx.quadraticCurveTo(x + caseW, y, x + caseW, y + caseCR);
+  ctx.lineTo(x + caseW, y + caseH - caseCR);
+  ctx.quadraticCurveTo(x + caseW, y + caseH, x + caseW - caseCR, y + caseH);
+  ctx.lineTo(x + caseCR, y + caseH);
+  ctx.quadraticCurveTo(x, y + caseH, x, y + caseH - caseCR);
+  ctx.lineTo(x, y + caseCR);
+  ctx.quadraticCurveTo(x, y, x + caseCR, y); ctx.closePath();
+}
+
+// --- STATIC TEXTURES ---
+var hammerLayer = document.createElement('canvas');
+hammerLayer.width = W; hammerLayer.height = H;
+(function() {
+  var ctx = hammerLayer.getContext('2d');
+  var cx = CX - caseW / 2, cy = CY - caseH / 2;
+  var r = seededRandom(264);
+  for (var i = 0; i < 50; i++) {
+    var dx = cx + r() * caseW, dy = cy + r() * caseH, dr = (5 + r() * 14) * SF;
+    var dg = ctx.createRadialGradient(dx - dr * 0.2, dy - dr * 0.2, 0, dx, dy, dr);
+    dg.addColorStop(0, rgba(PAL.card, 0.04 + r() * 0.04));
+    dg.addColorStop(0.5, rgba(PAL.card, 0));
+    dg.addColorStop(1, rgba(PAL.mineralDk, 0.02 + r() * 0.025));
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(dx, dy, dr, 0, Math.PI * 2); ctx.fill();
+  }
+})();
+
+var velvetLayer = document.createElement('canvas');
+velvetLayer.width = W; velvetLayer.height = H;
+(function() {
+  var ctx = velvetLayer.getContext('2d');
+  var wx = CX - caseW / 2 + wellInset, wy = CY - caseH / 2 + wellInset;
+  var ww = caseW - wellInset * 2, wh = caseH - wellInset * 2;
+  var vr = seededRandom(311);
+  for (var i = 0; i < 250; i++) {
+    var px = wx + vr() * ww, py = wy + vr() * wh;
+    ctx.fillStyle = vr() > 0.5 ? rgba(PAL.card, 0.02 + vr() * 0.02) : rgba(PAL.mineralDk, 0.01 + vr() * 0.015);
+    ctx.fillRect(px, py, (0.4 + vr() * 0.8) * SF, (0.8 + vr() * 2) * SF);
+  }
+})();
+
+var stoneTexLayer = document.createElement('canvas');
+stoneTexLayer.width = W; stoneTexLayer.height = H;
+(function() {
+  var ctx = stoneTexLayer.getContext('2d');
+  var r = 44 * SF;
+  var tR = seededRandom(7777);
+  for (var i = 0; i < 160; i++) {
+    var a = tR() * Math.PI * 2, d = tR() * r * 0.9;
+    ctx.fillStyle = tR() > 0.5 ? rgba(PAL.text1, 0.4) : rgba(PAL.bg, 0.5);
+    ctx.fillRect(CX + Math.cos(a) * d, mechCYBase + Math.sin(a) * d, tR() < 0.8 ? 1 : 1.4, tR() < 0.8 ? 1 : 1.4);
+  }
+})();
+
+var stoneOutline = [];
+(function() {
+  for (var i = 0; i < 54; i++) {
+    var a = (i / 54) * Math.PI * 2;
+    var n = noise.get(Math.cos(a) * 0.2 + CX * 0.001, Math.sin(a) * 0.2 + mechCYBase * 0.001);
+    stoneOutline.push({ cos: Math.cos(a) * (1 + n * 0.045), sin: Math.sin(a) * (1 + n * 0.045) });
+  }
+})();
+
+// --- RING ---
+function drawRing(ctx, cx, cy, iR, oR, w, type, hlSharp, warmT) {
+  ctx.save(); ctx.filter = 'blur(4px)'; ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.beginPath(); ctx.arc(cx + 1, cy + 1.5, (iR + oR) / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  var m = mineralMetal;
+  var ww = type === 'warm' ? w : type === 'cool' ? w * 0.3 : w * 0.7;
+  var rg = ctx.createRadialGradient(cx - oR * 0.08, cy - oR * 0.08, iR, cx, cy, oR);
+  rg.addColorStop(0, rgb(m(ww, type === 'warm' ? 0.72 : 0.7)));
+  rg.addColorStop(0.4, rgb(m(ww, type === 'warm' ? 0.58 : type === 'cool' ? 0.55 : 0.54)));
+  rg.addColorStop(1, rgb(m(ww, type === 'warm' ? 0.42 : type === 'cool' ? 0.4 : 0.38)));
+  ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.arc(cx, cy, iR, 0, Math.PI * 2, true); ctx.closePath();
+  ctx.fillStyle = rg; ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.arc(cx, cy, iR, 0, Math.PI * 2, true); ctx.closePath(); ctx.clip();
+  var hlEnd = cy - oR * lerp(0.25, 0.15, warmT);
+  var hlA = (type === 'cool' ? 0.22 : 0.16) * w * hlSharp;
+  var hl = ctx.createLinearGradient(cx, cy - oR, cx, hlEnd);
+  hl.addColorStop(0, rgba(PAL.bg, hlA)); hl.addColorStop(1, rgba(PAL.bg, 0));
+  ctx.fillStyle = hl; ctx.fillRect(cx - oR, cy - oR, oR * 2, oR);
+  var sh = ctx.createLinearGradient(cx, cy + oR * 0.25, cx, cy + oR);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,' + (0.06 * w) + ')');
+  ctx.fillStyle = sh; ctx.fillRect(cx - oR, cy, oR * 2, oR);
+  ctx.restore();
+  ctx.strokeStyle = rgba(PAL.bg, 0.08 * w); ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.arc(cx, cy, oR, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = rgba(PAL.mineralDk, 0.06 * w);
+  ctx.beginPath(); ctx.arc(cx, cy, iR, 0, Math.PI * 2); ctx.stroke();
+}
+
+// --- DRAW FRAME ---
+// warmAck: 0â†’1, the slight warmth acknowledgment on scroll-in
+function drawFrame(ctx, warmAck) {
+  var P = S7;
+  var w = P.warmth + warmAck * 0.04;
+  var rc = P.ringContract + warmAck * 0.02;
+  var sw = P.spokeWidth;
+  var so = P.spokeOpacity;
+  var stoneR = P.stoneRadius * SF;
+  var intDark = P.interiorDark - warmAck * 0.02;
+  var coolWash = P.coolWashAlpha - warmAck * 0.01;
+  var cornDark = P.cornerDark;
+  var rimA = P.rimAlpha;
+  var gapA = P.gapBreachAlpha;
+  var m = mineralMetal;
+  var cx = CX, cy = CY, mechCY = mechCYBase;
+  var caseX = cx - caseW / 2, caseY = cy - caseH / 2;
+  var wellX = caseX + wellInset, wellY = caseY + wellInset;
+  var wellW = caseW - wellInset * 2, wellH = caseH - wellInset * 2;
+  var wellCR = Math.max(4, caseCR - Math.round(6 * SF));
+
+  // Background â€” transparent, screen cream shows through
+  ctx.clearRect(0, 0, W, H);
+
+  // Halo â€” warmer than Screen 4, deepens with acknowledgment
+  var haloA = 0.025 + warmAck * 0.04;
+  var ag = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.48);
+  ag.addColorStop(0, rgba(PAL.honey, haloA));
+  ag.addColorStop(0.6, rgba(PAL.honey, haloA * 0.3));
+  ag.addColorStop(1, rgba(PAL.sand, 0));
+  ctx.fillStyle = ag; ctx.fillRect(0, 0, W, H);
+
+  // Shadow
+  ctx.save(); ctx.filter = 'blur(' + Math.round(P.shadowBlur * SF) + 'px)';
+  ctx.fillStyle = 'rgba(0,0,0,' + P.shadowAlpha + ')';
+  ctx.fillRect(caseX + 2, caseY + P.shadowOffY * SF, caseW, caseH); ctx.restore();
+
+  // Case
+  ctx.save(); makeCasePath(ctx, cx, cy); ctx.clip();
+  var cg = ctx.createLinearGradient(caseX, caseY, caseX + caseW * 0.5, caseY + caseH);
+  cg.addColorStop(0, rgb(m(w, 0.62))); cg.addColorStop(0.3, rgb(m(w, 0.54)));
+  cg.addColorStop(0.6, rgb(m(w, 0.46))); cg.addColorStop(1, rgb(m(w, 0.38)));
+  ctx.fillStyle = cg; ctx.fillRect(caseX, caseY, caseW, caseH);
+  var ch = ctx.createLinearGradient(caseX, caseY, caseX, caseY + caseH * 0.5);
+  ch.addColorStop(0, rgba(PAL.bg, P.caseHighlight)); ch.addColorStop(1, rgba(PAL.bg, 0));
+  ctx.fillStyle = ch; ctx.fillRect(caseX, caseY, caseW, caseH);
+  ctx.drawImage(hammerLayer, 0, 0);
+  if (coolWash > 0.003) {
+    var cw = ctx.createLinearGradient(caseX, caseY, caseX, caseY + caseH);
+    cw.addColorStop(0, 'rgba(105,112,125,' + coolWash + ')');
+    cw.addColorStop(1, 'rgba(80,85,95,' + (coolWash * 1.3) + ')');
+    ctx.fillStyle = cw; ctx.fillRect(caseX, caseY, caseW, caseH);
+  }
+  ctx.restore();
+
+  // Rim
+  makeCasePath(ctx, cx, cy);
+  ctx.strokeStyle = rgba(PAL.text3, rimA); ctx.lineWidth = P.rimWidth * SF; ctx.stroke();
+
+  // Interior
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(wellX + wellCR, wellY); ctx.lineTo(wellX + wellW - wellCR, wellY);
+  ctx.quadraticCurveTo(wellX + wellW, wellY, wellX + wellW, wellY + wellCR);
+  ctx.lineTo(wellX + wellW, wellY + wellH - wellCR);
+  ctx.quadraticCurveTo(wellX + wellW, wellY + wellH, wellX + wellW - wellCR, wellY + wellH);
+  ctx.lineTo(wellX + wellCR, wellY + wellH);
+  ctx.quadraticCurveTo(wellX, wellY + wellH, wellX, wellY + wellH - wellCR);
+  ctx.lineTo(wellX, wellY + wellCR);
+  ctx.quadraticCurveTo(wellX, wellY, wellX + wellCR, wellY);
+  ctx.closePath(); ctx.clip();
+
+  var intCenter = mix(mix(PAL.sand, PAL.honey, 0.08 + warmAck * 0.06), PAL.card, 0.05);
+  var intEdge = mix(PAL.sand, mix(PAL.mineralDk, PAL.sand, 0.05), 0.42);
+  var vg = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, wellW * 0.65);
+  vg.addColorStop(0, rgb(intCenter));
+  vg.addColorStop(0.5, rgb(mix(intCenter, intEdge, 0.35)));
+  vg.addColorStop(1, rgb(intEdge));
+  ctx.fillStyle = vg; ctx.fillRect(wellX, wellY, wellW, wellH);
+
+  var vsh = ctx.createRadialGradient(cx, mechCY, wellW * 0.08, cx, mechCY, wellW * 0.6);
+  vsh.addColorStop(0, 'rgba(0,0,0,0)');
+  vsh.addColorStop(0.7, 'rgba(0,0,0,' + P.caseShadowDepth + ')');
+  vsh.addColorStop(1, 'rgba(0,0,0,' + (P.caseShadowDepth * 3) + ')');
+  ctx.fillStyle = vsh; ctx.fillRect(wellX, wellY, wellW, wellH);
+
+  if (P.interiorVignette > 0.03) {
+    var vig = ctx.createRadialGradient(cx, mechCY, wellW * 0.15, cx, mechCY, wellW * 0.55);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(0.6, 'rgba(0,0,0,' + (P.interiorVignette * 0.4) + ')');
+    vig.addColorStop(1, 'rgba(0,0,0,' + P.interiorVignette + ')');
+    ctx.fillStyle = vig; ctx.fillRect(wellX, wellY, wellW, wellH);
+  }
+
+  if (cornDark > 0.005) {
+    var corners = [
+      [wellX + 12 * SF, wellY + 12 * SF], [wellX + wellW - 12 * SF, wellY + 12 * SF],
+      [wellX + 12 * SF, wellY + wellH - 12 * SF], [wellX + wellW - 12 * SF, wellY + wellH - 12 * SF]
+    ];
+    for (var ci = 0; ci < corners.length; ci++) {
+      var cg2 = ctx.createRadialGradient(corners[ci][0], corners[ci][1], 0, corners[ci][0], corners[ci][1], 55 * SF);
+      cg2.addColorStop(0, 'rgba(0,0,0,' + cornDark + ')');
+      cg2.addColorStop(0.6, 'rgba(0,0,0,' + (cornDark * 0.4) + ')');
+      cg2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = cg2; ctx.fillRect(wellX, wellY, wellW, wellH);
+    }
+  }
+
+  // Stone warm light on interior â€” always present here
+  var stLA = 0.08 + warmAck * 0.04;
+  var stL = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, wellW * 0.45);
+  stL.addColorStop(0, rgba(PAL.honey, stLA));
+  stL.addColorStop(0.5, rgba(PAL.honey, stLA * 0.3));
+  stL.addColorStop(1, rgba(PAL.honey, 0));
+  ctx.fillStyle = stL; ctx.fillRect(wellX, wellY, wellW, wellH);
+
+  ctx.drawImage(velvetLayer, 0, 0);
+  ctx.restore();
+
+  // Mechanism
+  var recG = ctx.createRadialGradient(cx, mechCY, mechR * 0.8, cx, mechCY, mechR + 10 * SF);
+  recG.addColorStop(0, 'rgba(0,0,0,0)'); recG.addColorStop(0.8, 'rgba(0,0,0,0.04)'); recG.addColorStop(1, 'rgba(0,0,0,0.1)');
+  ctx.fillStyle = recG; ctx.beginPath(); ctx.arc(cx, mechCY, mechR + 10 * SF, 0, Math.PI * 2); ctx.fill();
+
+  var mR = (mechR - 24 * SF) + ((mechR - 30 * SF) - (mechR - 24 * SF)) * rc;
+  var iR = (mechR - 48 * SF) + ((mechR - 56 * SF) - (mechR - 48 * SF)) * rc;
+
+  drawRing(ctx, cx, mechCY, mechR - 5 * SF, mechR + 5 * SF, w, 'warm', P.highlightSharpness, 0);
+  drawRing(ctx, cx, mechCY, mR - 4 * SF, mR + 4 * SF, w * 0.85, 'cool', P.highlightSharpness, 0);
+  drawRing(ctx, cx, mechCY, iR - 3 * SF, iR + 3 * SF, w * 0.9, 'bronze', P.highlightSharpness, 0);
+
+  if (gapA > 0.003) {
+    var gaps = [[mR + 4 * SF, mechR - 5 * SF], [iR + 3 * SF, mR - 4 * SF]];
+    for (var gi = 0; gi < gaps.length; gi++) {
+      var gf = ctx.createRadialGradient(cx, mechCY, gaps[gi][0], cx, mechCY, gaps[gi][1]);
+      gf.addColorStop(0, 'rgba(100,105,115,' + gapA + ')'); gf.addColorStop(0.5, 'rgba(90,95,105,' + (gapA * 0.65) + ')');
+      gf.addColorStop(1, 'rgba(100,105,115,' + gapA + ')');
+      ctx.fillStyle = gf; ctx.beginPath(); ctx.arc(cx, mechCY, gaps[gi][1], 0, Math.PI * 2);
+      ctx.arc(cx, mechCY, gaps[gi][0], 0, Math.PI * 2, true); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  for (var si = 0; si < 8; si++) {
+    var a = (si / 8) * Math.PI * 2 - Math.PI / 2;
+    var sI = iR + 5 * SF, sO = mechR - 7 * SF - (1 - rc) * 7 * SF;
+    ctx.save(); ctx.translate(cx, mechCY); ctx.rotate(a);
+    var sg = ctx.createLinearGradient(0, -sw * SF / 2, 0, sw * SF / 2);
+    sg.addColorStop(0, rgba(m(w, 0.58), so * 0.8));
+    sg.addColorStop(0.5, rgba(m(w, 0.46), so));
+    sg.addColorStop(1, rgba(m(w, 0.38), so * 0.8));
+    ctx.fillStyle = sg; ctx.fillRect(sI, -sw * SF / 2, sO - sI, sw * SF);
+    var capR = (2.8 + rc * 2.2) * SF;
+    var bg2 = ctx.createRadialGradient(sO - 0.5, -0.5, 0, sO, 0, capR);
+    bg2.addColorStop(0, rgb(m(w, 0.66))); bg2.addColorStop(1, rgb(m(w, 0.38)));
+    ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(sO, 0, capR, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Center floor
+  var fl = mix(PAL.sand, PAL.text3, intDark);
+  var fd = mix(PAL.sand, PAL.mineralDk, intDark + 0.2);
+  var dcg = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, iR - 5 * SF);
+  dcg.addColorStop(0, rgb(fl)); dcg.addColorStop(0.5, rgb(mix(fl, fd, 0.4))); dcg.addColorStop(1, rgb(fd));
+  ctx.fillStyle = dcg; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+
+  var dsh = ctx.createRadialGradient(cx, mechCY, (iR - 5 * SF) * 0.4, cx, mechCY, iR - 5 * SF);
+  dsh.addColorStop(0, 'rgba(0,0,0,0)'); dsh.addColorStop(0.7, 'rgba(0,0,0,' + P.caseShadowDepth + ')');
+  dsh.addColorStop(1, 'rgba(0,0,0,' + (P.caseShadowDepth * 2.5) + ')');
+  ctx.fillStyle = dsh; ctx.beginPath(); ctx.arc(cx, mechCY, iR - 4 * SF, 0, Math.PI * 2); ctx.fill();
+
+  // ===== STONE â€” always present, full alpha =====
+  var r = stoneR;
+
+  // Glow â€” tighter than Screen 4's open, warmer
+  var glowR = r * 1.8;
+  var glowA = P.stoneGlow + warmAck * 0.03;
+  var gg = ctx.createRadialGradient(cx, mechCY, r * 0.2, cx, mechCY, glowR);
+  gg.addColorStop(0, rgba(PAL.honey, glowA * 0.4));
+  gg.addColorStop(0.3, rgba(PAL.honey, glowA * 0.18));
+  gg.addColorStop(0.6, rgba(PAL.sand, glowA * 0.06));
+  gg.addColorStop(1, rgba(PAL.sand, 0));
+  ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(cx, mechCY, glowR, 0, Math.PI * 2); ctx.fill();
+
+  // Stone body
+  var pts = [];
+  for (var pi = 0; pi < stoneOutline.length; pi++) {
+    pts.push({ x: cx + stoneOutline[pi].cos * r, y: mechCY + stoneOutline[pi].sin * r });
+  }
+  function trace() {
+    ctx.beginPath();
+    for (var ti = 0; ti < pts.length; ti++) { ti === 0 ? ctx.moveTo(pts[ti].x, pts[ti].y) : ctx.lineTo(pts[ti].x, pts[ti].y); }
+    ctx.closePath();
+  }
+
+  // Contact shadow
+  ctx.save(); ctx.translate(0, r * 0.08);
+  var cs = ctx.createRadialGradient(cx, mechCY, 0, cx, mechCY, r * 0.75);
+  cs.addColorStop(0, 'rgba(28,26,24,' + P.stoneContact + ')'); cs.addColorStop(1, 'rgba(28,26,24,0)');
+  ctx.fillStyle = cs; ctx.beginPath(); ctx.arc(cx, mechCY, r * 0.75, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+  // Body gradient â€” warmer than Screen 4
+  var SC = {
+    hl: '#F0E8D4', mh: '#E8DEC8', md: '#DDD4BE', ml: '#D0C6B0',
+    lo: '#BEB4A0', sh: '#AAA090', dp: '#908878', eg: '#7D827E'
+  };
+  var bd = ctx.createRadialGradient(cx - r * 0.28, mechCY - r * 0.28, 0, cx, mechCY, r * 1.3);
+  bd.addColorStop(0, SC.hl); bd.addColorStop(0.12, SC.mh); bd.addColorStop(0.28, SC.md);
+  bd.addColorStop(0.48, SC.ml); bd.addColorStop(0.65, SC.lo); bd.addColorStop(0.80, SC.sh);
+  bd.addColorStop(0.92, SC.dp); bd.addColorStop(1, SC.eg);
+  ctx.fillStyle = bd; trace(); ctx.fill();
+
+  // Interior shadow
+  var ish = ctx.createRadialGradient(cx + r * 0.3, mechCY + r * 0.3, 0, cx, mechCY, r);
+  ish.addColorStop(0, 'rgba(28,26,24,0.14)'); ish.addColorStop(0.5, 'rgba(28,26,24,0.04)'); ish.addColorStop(1, 'rgba(28,26,24,0)');
+  ctx.fillStyle = ish; trace(); ctx.fill();
+
+  // Specular
+  ctx.save(); ctx.scale(1, 0.6);
+  var hlG = ctx.createRadialGradient(cx - r * 0.3, (mechCY - r * 0.45) / 0.6, 0, cx - r * 0.3, (mechCY - r * 0.45) / 0.6, r * P.stoneSpecRadius);
+  hlG.addColorStop(0, 'rgba(251,248,244,' + P.stoneSpecAlpha + ')');
+  hlG.addColorStop(0.5, 'rgba(251,248,244,' + (P.stoneSpecAlpha * 0.35) + ')');
+  hlG.addColorStop(1, 'rgba(251,248,244,0)');
+  ctx.fillStyle = hlG; ctx.beginPath(); ctx.arc(cx - r * 0.3, (mechCY - r * 0.45) / 0.6, r * P.stoneSpecRadius, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // Texture
+  ctx.globalAlpha = P.stoneTexture;
+  ctx.drawImage(stoneTexLayer, 0, 0);
+  ctx.globalAlpha = 1;
+
+  // Edge
+  ctx.strokeStyle = rgba(PAL.text3, P.stoneEdge); ctx.lineWidth = 0.5; trace(); ctx.stroke();
+
+  // Inter-ring glow â€” always present, quiet
+  var gs = 0.025 + warmAck * 0.015;
+  var glowPairs = [[mR + 4 * SF, mechR - 5 * SF], [iR + 3 * SF, mR - 4 * SF]];
+  for (var gpi = 0; gpi < glowPairs.length; gpi++) {
+    var g = ctx.createRadialGradient(cx, mechCY, glowPairs[gpi][0], cx, mechCY, glowPairs[gpi][1]);
+    g.addColorStop(0, rgba(PAL.honey, gs)); g.addColorStop(0.5, rgba(PAL.honey, gs * 0.5)); g.addColorStop(1, rgba(PAL.honey, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, mechCY, glowPairs[gpi][1], 0, Math.PI * 2);
+    ctx.arc(cx, mechCY, glowPairs[gpi][0], 0, Math.PI * 2, true); ctx.closePath(); ctx.fill();
+  }
+}
+
+
+// ============================================
+// SCREEN 7 CHOREOGRAPHY
+// ============================================
+// No cinematic entrance. Vault is already there.
+// Slight warmth acknowledgment over 500ms on arrival.
+// Text reveals are the main event.
+
+var vaultContainer = document.getElementById('s7VaultContainer');
+var screen7 = document.getElementById('screenFinalCTA');
+var startTime = null;
+var active = false;
+
+function start() {
+  startTime = null;
+  active = true;
+
+  vaultContainer.classList.remove('visible');
+  // screen visible handled by observer
+
+  // Draw initial frame â€” vault at base warmth, no acknowledgment yet
+  drawFrame(C.getContext('2d'), 0);
+
+  requestAnimationFrame(loop);
+}
+
+function loop(ts) {
+  if (!active) return;
+  if (startTime === null) startTime = ts;
+  var t = ts - startTime;
+
+  // Vault + screen become visible at 100ms
+  if (t >= 100 && !vaultContainer.classList.contains('visible')) {
+    vaultContainer.classList.add('visible');
+    screen7.classList.add('visible');
+  }
+
+  // Warm acknowledgment: 300â€“800ms (500ms ease)
+  var warmAck = 0;
+  if (t >= 300) {
+    warmAck = easeOutCubic(Math.min(1, (t - 300) / 500));
+  }
+
+  drawFrame(C.getContext('2d'), warmAck);
+
+  // Render until acknowledgment completes, then stop
+  if (t < 850) {
+    requestAnimationFrame(loop);
+  } else {
+    // Final still frame
+    drawFrame(C.getContext('2d'), 1);
+  }
+}
+
+// (auto-start removed)
+
+      ns.start = start;
+      ns.active = false;
+      ns.setActive = function(v) { active = v; ns.active = v; };
+      return ns;
+    })();
+
+    // ============================================
+    // BILLING TOGGLE (Performance Paywall â€” Screen 5)
+    // ============================================
+
+    const toggleMonthly = document.getElementById('toggleMonthly');
+    const toggleAnnual = document.getElementById('toggleAnnual');
+    const perfPriceMain = document.getElementById('perfPriceMain');
+    const perfPricePeriod = document.getElementById('perfPricePeriod');
+    const perfPriceAlt = document.getElementById('perfPriceAlt');
+
+    function setPlan(plan) {
+      if (plan === 'annual') {
+        toggleAnnual.classList.add('perf-toggle__opt--active');
+        toggleMonthly.classList.remove('perf-toggle__opt--active');
+        perfPriceMain.textContent = '$119';
+        perfPricePeriod.textContent = 'per year';
+        perfPriceAlt.textContent = 'or $12.99 per month';
+      } else {
+        toggleMonthly.classList.add('perf-toggle__opt--active');
+        toggleAnnual.classList.remove('perf-toggle__opt--active');
+        perfPriceMain.textContent = '$12.99';
+        perfPricePeriod.textContent = 'per month';
+        perfPriceAlt.textContent = 'or $119 per year â€” save 24%';
+      }
+    }
+
+    toggleMonthly.addEventListener('click', function() { setPlan('monthly'); });
+    toggleAnnual.addEventListener('click', function() { setPlan('annual'); });
+
+    // ============================================
+    // PLAYBACK CARD (Screen 3)
+    // ============================================
+
+    const playbackWaveform = document.getElementById('playbackWaveform');
+    const barCountPB = 36;
+    for (let i = 0; i < barCountPB; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'playback-bar';
+      const t = i / barCountPB;
+      const envelope = Math.sin(t * Math.PI);
+      const speechRhythm = 0.4 + 0.6 * Math.abs(Math.sin(t * Math.PI * 3.7 + 0.5));
+      const microVariation = 0.6 + Math.random() * 0.4;
+      const barHeight = envelope * speechRhythm * microVariation * 44 + 4;
+      bar.style.height = Math.max(3, barHeight) + 'px';
+      bar.style.animationDelay = (i * 0.033) + 's';
+      playbackWaveform.appendChild(bar);
+    }
+
+    const playBtn = document.getElementById('playBtn');
+    const playbackCard = document.getElementById('playbackCard');
+    const playbackBody = document.getElementById('playbackBody');
+    let isPlaying = false;
+    let playbackTimer = null;
+
+    playBtn.addEventListener('click', function() {
+      if (!isPlaying) {
+        isPlaying = true;
+        playBtn.classList.add('playback-btn--playing');
+        playbackCard.classList.add('playback-card--playing');
+        playbackTimer = setTimeout(function() {
+          isPlaying = false;
+          playBtn.classList.remove('playback-btn--playing');
+          playbackCard.classList.remove('playback-card--playing');
+          playbackCard.classList.add('playback-card--complete');
+          setTimeout(function() { playbackBody.classList.add('revealed'); }, 600);
+        }, 4000);
+      } else {
+        isPlaying = false;
+        clearTimeout(playbackTimer);
+        playBtn.classList.remove('playback-btn--playing');
+        playbackCard.classList.remove('playback-card--playing');
+      }
+    });
+
+    // ============================================
+    // INTERSECTION OBSERVER â€” SCREEN TRANSITIONS
+    // ============================================
+
+    let currentScreenIndex = 0;
+    let s4Triggered = false;
+    let s6Triggered = false;
+    let s7Triggered = false;
+
+    const screenObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        const scene = entry.target.dataset.scene;
+
+        if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+          entry.target.classList.add('visible');
+
+          const stoneState = entry.target.dataset.stoneState;
+          if (stoneState) {
+            mainStone.setState(stoneState);
+            if (scene === 'recognition') {
+              stoneWrapper.classList.remove('hidden');
+            } else {
+              stoneWrapper.classList.add('hidden');
+            }
+          }
+
+          // Screen 4: Vault Reveal choreography
+          if (scene === 'vault-reveal' && !s4Triggered) {
+            s4Triggered = true;
+            S4.start();
+          }
+
+          // Screen 6: Loss Cinema choreography
+          if (scene === 'loss-framing' && !s6Triggered) {
+            s6Triggered = true;
+            S6.start();
+          }
+
+          // Screen 7: Final CTA choreography
+          if (scene === 'close' && !s7Triggered) {
+            s7Triggered = true;
+            // S7 reveals text via its own choreography
+            S7Engine.start();
+            // Also trigger the text reveals that depend on .visible class
+            setTimeout(function() {
+              document.getElementById('s7HL1').style.opacity = '1';
+              document.getElementById('s7HL1').style.transitionDelay = '200ms';
+            }, 100);
+            setTimeout(function() {
+              document.getElementById('s7HL2').style.opacity = '1';
+            }, 400);
+            setTimeout(function() {
+              document.getElementById('s7Sub').style.opacity = '0.85';
+            }, 600);
+            setTimeout(function() {
+              document.getElementById('s7B1').style.opacity = '0.95';
+            }, 800);
+            setTimeout(function() {
+              document.getElementById('s7B2').style.opacity = '0.95';
+            }, 1000);
+            setTimeout(function() {
+              document.getElementById('s7B3').style.opacity = '0.95';
+            }, 1200);
+            setTimeout(function() {
+              document.getElementById('s7BtnGroup').style.opacity = '1';
+            }, 1800);
+          }
+
+          currentScreenIndex = Array.from(screens).indexOf(entry.target);
+
+        } else if (!entry.isIntersecting) {
+          // Could pause off-screen engines here for perf
+        }
+      });
+    }, {
+      root: scrollContainer,
+      threshold: [0, 0.5]
+    });
+
+    screens.forEach(function(screen) { screenObserver.observe(screen); });
+
+    setTimeout(function() {
+      scrollContainer.scrollTop = 0;
+      screens[0].classList.add('visible');
+    }, 100);
+
+    // ============================================
+    // SCROLL HINT + SCROLL-NEXT
+    // ============================================
+
+    let scrollTimeout;
+    scrollContainer.addEventListener('scroll', function() {
+      screens.forEach(function(s) { s.classList.add('scrolled'); });
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(function() {
+        var current = screens[currentScreenIndex];
+        if (current) current.classList.remove('scrolled');
+      }, 3000);
+    });
+
+    document.querySelectorAll('[data-scroll-next]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var currentScreen = btn.closest('.screen');
+        var nextScreen = currentScreen.nextElementSibling;
+        if (nextScreen && nextScreen.classList.contains('screen')) {
+          nextScreen.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+
+    // ============================================
+    // CONFIRMATION OVERLAY
+    // ============================================
+
+    const confirmationOverlay = document.getElementById('confirmationOverlay');
+    const sealBtnPaywall = document.getElementById('sealBtnPaywall');
+    const sealBtnFinal = document.getElementById('sealBtnFinal');
+
+    function triggerSeal() {
+      confirmationOverlay.classList.add('active');
+    }
+
+    sealBtnPaywall.addEventListener('click', triggerSeal);
+    sealBtnFinal.addEventListener('click', triggerSeal);
+
+    // ============================================
+    // TOUCH FEEDBACK
+    // ============================================
+
+    document.querySelectorAll('button').forEach(function(btn) {
+      btn.addEventListener('touchstart', function() { this.style.opacity = '0.9'; }, { passive: true });
+      btn.addEventListener('touchend', function() { this.style.opacity = ''; }, { passive: true });
+    });
+</script>
+
+</body>
+</html>
