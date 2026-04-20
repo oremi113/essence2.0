@@ -727,12 +727,17 @@
 
   /* ---- transient phrases: in, hold, out ----
      Each phrase declares its position via the --phrase-index inline
-     style (1-based). Stagger is 1500ms; the first phrase fires at
-     2500ms (≈500ms after the final body line composes). Adding a
-     phrase = bumping --phrase-index, no new CSS rule. */
+     style (1-based). The first phrase fires --conveyor-intro after
+     mount; successive phrases are offset by --conveyor-stagger. Both
+     custom properties are set inline from Screen2.tsx and sourced from
+     ONBOARDING_TIMING in src/lib/config/onboarding-timing.ts — tune
+     from there; the fallbacks here are just for non-JS safety. */
   .onboarding-conveyor__phrase {
     animation: onb-conveyor-pass 1900ms cubic-bezier(0.4, 0.0, 0.2, 1)
-      calc(1000ms + var(--phrase-index, 1) * 1500ms) both;
+      calc(
+        var(--conveyor-intro, 1000ms)
+        + var(--phrase-index, 1) * var(--conveyor-stagger, 1500ms)
+      ) both;
   }
 
   /* ---- terminal phrase: lands on the conveyor line and stays ----

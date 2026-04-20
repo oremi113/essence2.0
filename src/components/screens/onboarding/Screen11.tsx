@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from '@/lib/animation/useReducedMotion';
+import { ONBOARDING_TIMING } from '@/lib/config/onboarding-timing';
 import { StepShell, StoneSlot } from './chrome';
 
-// ─── SCREEN 11 — Priming moment (3500ms button unlock) ────────────
-// The CTA is locked for the first 3500ms so the user spends that time
-// breathing with the stone rather than tapping through. We use
+// ─── SCREEN 11 — Priming moment (button locked during the stone's breath) ──
+// The CTA is locked for SCREEN11_BUTTON_UNLOCK_MS so the user spends that
+// time breathing with the stone rather than tapping through. We use
 // aria-disabled + tabIndex={-1} rather than the native `disabled`
 // attribute so the button stays in the accessibility tree and screen
 // readers announce its dimmed/locked state (the native `disabled`
@@ -27,7 +28,10 @@ export function Screen11Priming({ onNext }: { onNext: () => void }) {
 
   useEffect(() => {
     if (reducedMotion) return;
-    const t = setTimeout(() => setTimerFired(true), 3500);
+    const t = setTimeout(
+      () => setTimerFired(true),
+      ONBOARDING_TIMING.SCREEN11_BUTTON_UNLOCK_MS
+    );
     return () => clearTimeout(t);
   }, [reducedMotion]);
 

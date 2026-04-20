@@ -3,15 +3,16 @@
 import { useCallback, useState } from 'react';
 import { PrimaryButton } from '@/components/ui';
 import { ClockIcon } from '@/components/icons';
+import { ONBOARDING_TIMING } from '@/lib/config/onboarding-timing';
 import { StepShell, StoneSlot } from './chrome';
 
 // ─── SCREEN 6 — How this works (journey + time badge) ─────────────
 
 export function Screen6({ onNext }: { onNext: () => void }) {
   // Phase-transition choreography to Screen 7 — see DESIGN BRIEF 002.
-  //   0ms   tap → haptic + button depress (scale 0.97)
-  //   80ms  release, begin step exit (fade to 85%, drift left 12px)
-  //   250ms call onNext → Screen 7 mounts with phase-enter animation
+  //   0ms                        tap → haptic + button depress (scale 0.97)
+  //   SCREEN6_PRESS_RELEASE_MS   release, begin step exit (fade to 85%, drift left 12px)
+  //   SCREEN6_ADVANCE_MS         call onNext → Screen 7 mounts with phase-enter animation
   const [pressing, setPressing] = useState(false);
   const [exiting, setExiting] = useState(false);
 
@@ -25,10 +26,10 @@ export function Screen6({ onNext }: { onNext: () => void }) {
     window.setTimeout(() => {
       setPressing(false);
       setExiting(true);
-    }, 80);
+    }, ONBOARDING_TIMING.SCREEN6_PRESS_RELEASE_MS);
     window.setTimeout(() => {
       onNext();
-    }, 250);
+    }, ONBOARDING_TIMING.SCREEN6_ADVANCE_MS);
   }, [exiting, onNext]);
 
   return (

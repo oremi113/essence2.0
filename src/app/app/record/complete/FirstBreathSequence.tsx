@@ -1,28 +1,21 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type CSSProperties,
-} from 'react';
+import { useCallback, useRef, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { track } from '@/lib/analytics/client';
+import { useReducedMotion } from '@/lib/animation/useReducedMotion';
+import { useCopyCrossfade } from '@/lib/animation/useCopyCrossfade';
 import {
-  useSequenceTimeline,
-  type SequencePhase,
-} from '@/lib/animation/useSequenceTimeline';
+  useFirstBreathPhases,
+  type FirstBreathPhase,
+  RING_DISSIPATE_MS,
+  RING_FIRE_AT_MS,
+  STONE_ENTRANCE_MS,
+  TEXT_REVEAL_DELAY_MS,
+} from './useFirstBreathPhases';
 
-type Phase = 'forming' | 'crystallize' | 'preserved' | 'detail';
-
-// Sub-phases inside preserved let the timeline drive the revealTone beat
-// (lands on bloom + ring peak) and the text/CTA reveal without sibling
-// setTimeouts. Visually all three map to the 'preserved' Phase above.
-type TimelinePhase = 'forming' | 'crystallize' | 'preserved' | 'revealTone' | 'revealed';
+type Phase = FirstBreathPhase;
 
 interface PhaseConfig {
   state: BreathStoneState;
@@ -36,34 +29,10 @@ const PHASE_CONFIG: Record<Phase, PhaseConfig> = {
   detail:      { state: 'shimmer', size: 200 },
 };
 
-// North-star beat timings. Forming runs a full 5s (particles rise, halo
-// pulses, copy settles in). Crystallize runs 2.5s (fragments converge, caption
-// fades in late). Reveal begins at 7.5s.
-const CRYSTALLIZE_AT_MS = 5000;
-const PRESERVED_AT_MS = 7500;
-const SKIP_VISIBLE_AT_MS = 1000;
-
-// Preserved entrance choreography. The stone blooms over 2.5s, bloom
-// overlay peaks at 1250ms (50% of entrance). Gold ring delay is tuned so
-// its own 12%-peak lands on the SAME frame as the bloom peak — delay
-// (1000ms) + 12% of 2200ms (264ms) ≈ 1264ms. Cause-and-effect, not two
-// unrelated pulses near each other. Text + CTA fade in only after the
-// bloom has settled, so the stone owns its entrance.
-const STONE_ENTRANCE_MS = 2500;
-const RING_FIRE_AT_MS = 1000;
-const RING_DISSIPATE_MS = 2200;
-const TEXT_REVEAL_DELAY_MS = 1800;
-
 // Crystallize caption fades in "late" — observational whisper rather than
 // label — roughly one beat after fragments start converging.
 const CRYSTALLIZE_CAPTION_DELAY_MS = 900;
 const FORMING_CAPTION_DELAY_MS = 300;
-
-// Detail CTA hangs back until the chip cascade settles. Chips stagger
-// 0ms / 120ms / 240ms with a 600ms fade each, so the last chip lands at
-// ~840ms. 1200ms gives a ~360ms breath before Continue appears — user
-// experiences what they just earned before being offered the next step.
-const DETAIL_CTA_DELAY_MS = 1200;
 
 // ─── Warm-on-dark text colors — unique to this screen, not global tokens ────
 const TEXT_WARM = '#F5F0EA';
@@ -77,37 +46,13 @@ const TEXT_WARM_MUTED = 'rgba(245,240,234,0.55)';
 const BG_DARK =
   'linear-gradient(180deg, #15120F 0%, #1E1915 50%, #2A241E 100%)';
 
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-
-function subscribeReducedMotion(callback: () => void) {
-  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
-  mq.addEventListener('change', callback);
-  return () => mq.removeEventListener('change', callback);
-}
-
-function getReducedMotionSnapshot() {
-  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
-}
-
-function getReducedMotionServerSnapshot() {
-  return false;
-}
-
-function usePrefersReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    getReducedMotionSnapshot,
-    getReducedMotionServerSnapshot
-  );
-}
-
 interface FirstBreathSequenceProps {
   voiceProfileId: string;
 }
 
 export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps) {
   const router = useRouter();
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotion = useReducedMotion();
 
   // ─── Audio scaffolding ──────────────────────────────────────────────
   // The three tracks below are placeholders documenting the intended audio
@@ -135,133 +80,19 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   const audioCrystallizeRef = useRef<HTMLAudioElement>(null);
   const audioRevealRef = useRef<HTMLAudioElement>(null);
 
-  const [userPhase, setUserPhase] = useState<Phase | null>(null);
-  const [skipRevealed, setSkipRevealed] = useState<boolean>(false);
-  const [detailRevealed, setDetailRevealed] = useState<boolean>(false);
-  // Copy crossfade: two-slot pattern so the old beat fades out while the
-  // new one fades in, instead of the old content being ripped from the DOM.
-  const [enteringCopyPhase, setEnteringCopyPhase] = useState<Phase>('forming');
-  const [exitingCopyPhase, setExitingCopyPhase] = useState<Phase | null>(null);
-  const prevCopyPhaseRef = useRef<Phase>('forming');
+  const {
+    phase,
+    skipVisible,
+    ctaVisible,
+    detailRevealed,
+    preservedReady,
+    entranceActive,
+    skipToPreserved,
+    goToDetail,
+  } = useFirstBreathPhases({ voiceProfileId, prefersReducedMotion });
 
-  const timelinePhases = useMemo<SequencePhase<TimelinePhase>[]>(
-    () => [
-      { key: 'forming', duration: CRYSTALLIZE_AT_MS },
-      {
-        key: 'crystallize',
-        duration: PRESERVED_AT_MS - CRYSTALLIZE_AT_MS,
-        onEnter: () => {
-          // TODO: audio — audioCrystallizeRef.current?.play() (harmonic swell)
-        },
-      },
-      { key: 'preserved', duration: RING_FIRE_AT_MS },
-      {
-        key: 'revealTone',
-        duration: TEXT_REVEAL_DELAY_MS - RING_FIRE_AT_MS,
-        onEnter: () => {
-          // TODO: audio — audioRevealRef.current?.play() (low resonant bell)
-          //   lands on bloom + ring peak.
-        },
-      },
-      {
-        key: 'revealed',
-        duration: 0,
-        onEnter: () => {
-          track('breath_stone_sequence_completed', { voiceProfileId });
-        },
-      },
-    ],
-    [voiceProfileId]
-  );
-
-  const { currentPhase: timelinePhase, skipTo: timelineSkipTo } =
-    useSequenceTimeline(timelinePhases, {
-      paused: prefersReducedMotion,
-    });
-
-  const autoVisualPhase: Phase =
-    timelinePhase === 'forming' || timelinePhase === 'crystallize'
-      ? timelinePhase
-      : 'preserved';
-
-  const phase: Phase = userPhase ?? (prefersReducedMotion ? 'preserved' : autoVisualPhase);
-  const preservedRevealed = timelinePhase === 'revealed';
-  const ctaRevealed = preservedRevealed;
-  const ctaVisible = ctaRevealed || prefersReducedMotion || phase !== 'forming';
-  const skipVisible = skipRevealed || prefersReducedMotion;
-  // During the preserved entrance (2.5s bloom + ring), copy and CTA stay
-  // hidden so the stone owns the reveal. They fade in after TEXT_REVEAL_DELAY_MS.
-  const preservedReady =
-    phase !== 'preserved' || preservedRevealed || prefersReducedMotion;
-  const entranceActive = phase === 'preserved' && !prefersReducedMotion;
-
-  // Fire-and-forget funnel start. Effect scope (not render scope) so React's
-  // Strict Mode double-render in dev doesn't double-emit.
-  useEffect(() => {
-    track('breath_stone_sequence_started', {
-      voiceProfileId,
-      reducedMotion: prefersReducedMotion,
-    });
-    // Intentionally empty deps — sequence_started is a single mount event.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Skip affordance fades in shortly after mount, independent of the main
-  // beat progression so it's available during both forming and crystallize.
-  useEffect(() => {
-    if (prefersReducedMotion) return;
-    // TODO: audio — fire audioAmbientRef.current?.play() on first user gesture.
-    const t = setTimeout(() => setSkipRevealed(true), SKIP_VISIBLE_AT_MS);
-    return () => clearTimeout(t);
-  }, [prefersReducedMotion]);
-
-  // Detail CTA holds back until the chip cascade has settled. Reset on
-  // exit so a re-entry (restart flows in future) fires the delay again.
-  useEffect(() => {
-    if (phase !== 'detail') {
-      setDetailRevealed(false);
-      return;
-    }
-    if (prefersReducedMotion) {
-      setDetailRevealed(true);
-      return;
-    }
-    const t = setTimeout(() => setDetailRevealed(true), DETAIL_CTA_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [phase, prefersReducedMotion]);
-
-  // Drive the copy crossfade whenever the phase changes. We stamp the old
-  // phase as "exiting" (rendered position: absolute so it doesn't hold
-  // layout) while the new phase begins its fade-in. Exit unmounts after
-  // the fade-out completes (500ms).
-  useEffect(() => {
-    if (phase === prevCopyPhaseRef.current) return;
-    if (prefersReducedMotion) {
-      setEnteringCopyPhase(phase);
-      setExitingCopyPhase(null);
-      prevCopyPhaseRef.current = phase;
-      return;
-    }
-    setExitingCopyPhase(prevCopyPhaseRef.current);
-    setEnteringCopyPhase(phase);
-    prevCopyPhaseRef.current = phase;
-    const t = setTimeout(() => setExitingCopyPhase(null), 500);
-    return () => clearTimeout(t);
-  }, [phase, prefersReducedMotion]);
-
-  const skipToPreserved = useCallback(() => {
-    track('breath_stone_skip_tapped', { voiceProfileId });
-    // Delay reveal even on skip so the user still gets the stone's entrance.
-    // The timeline auto-advances preserved → revealTone → revealed over
-    // TEXT_REVEAL_DELAY_MS, which flips the reveal flags and fires the
-    // completed event.
-    timelineSkipTo('preserved');
-  }, [voiceProfileId, timelineSkipTo]);
-
-  const goToDetail = useCallback(() => {
-    track('breath_stone_cta_tapped', { voiceProfileId, phase: 'preserved' });
-    setUserPhase('detail');
-  }, [voiceProfileId]);
+  const { entering: enteringCopyPhase, exiting: exitingCopyPhase } =
+    useCopyCrossfade<Phase>(phase, { disabled: prefersReducedMotion });
 
   const handleExit = useCallback(() => {
     track('breath_stone_cta_tapped', { voiceProfileId, phase: 'detail' });

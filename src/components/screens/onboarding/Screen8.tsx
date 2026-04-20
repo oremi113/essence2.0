@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { PrimaryButton } from '@/components/ui';
 import { US_STATES } from '@/lib/us-states';
+import { ONBOARDING_TIMING } from '@/lib/config/onboarding-timing';
 import { StepShell, StoneSlot } from './chrome';
 import type { ProfileFormField, ProfileFormState } from './state';
 
@@ -69,7 +70,10 @@ export function Screen8({
 
   // Auto-focus the first empty field after the slide settles.
   useEffect(() => {
-    const t = setTimeout(() => firstRef.current?.focus(), 400);
+    const t = setTimeout(
+      () => firstRef.current?.focus(),
+      ONBOARDING_TIMING.SCREEN8_AUTOFOCUS_DELAY_MS
+    );
     return () => clearTimeout(t);
   }, []);
 
