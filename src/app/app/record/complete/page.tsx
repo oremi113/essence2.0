@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { FirstBreathSequence } from "./FirstBreathSequence";
+import { FirstBreathSequence } from "@/components/screens/FirstBreathSequence";
 
 export default async function RecordCompletePage() {
   const supabase = await createSupabaseServerClient();

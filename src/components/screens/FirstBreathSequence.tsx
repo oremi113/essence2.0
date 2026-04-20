@@ -13,7 +13,7 @@ import {
   RING_FIRE_AT_MS,
   STONE_ENTRANCE_MS,
   TEXT_REVEAL_DELAY_MS,
-} from './useFirstBreathPhases';
+} from './FirstBreathSequence.phases';
 
 type Phase = FirstBreathPhase;
 
