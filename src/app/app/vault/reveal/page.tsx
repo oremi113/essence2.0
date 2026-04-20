@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getSubscriptionStatus } from '@/lib/subscription/get-status';
 import { RevealActions } from './actions';
 
 export default async function VaultRevealPage() {
@@ -9,10 +10,10 @@ export default async function VaultRevealPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/auth/sign-in?next=/app/vault/reveal');
 
-  // PLACEHOLDER_7b: route guard redirects to /app/home when
-  // profile.subscription_status is 'active' or 'trial'. That column lands
-  // in 7b alongside the Stripe integration; for 7a the mocked checkout
-  // doesn't persist anything, so there's no state to re-enter into.
+  const sub = await getSubscriptionStatus(user.id);
+  if (sub.status === 'trial' || sub.status === 'active') {
+    redirect('/app/record');
+  }
 
   return <RevealActions />;
 }

@@ -8,7 +8,7 @@ export function SealedActions() {
   return (
     <VaultSealedScreen
       onCreateMessage={() => router.push('/app/messages/new')}
-      onGoHome={() => router.push('/app/home')}
+      onGoHome={() => router.push('/app/record')}
     />
   );
 }

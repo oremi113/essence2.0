@@ -12,6 +12,7 @@ export type SubscriptionStatus =
   | 'none'        // User has never captured a card
   | 'trial'       // Card captured, 7-day trial active
   | 'active'      // Trial converted or paid directly
+  | 'past_due'    // Payment failed; Stripe is retrying
   | 'lapsed'      // Trial ended without conversion, or payment failed past retry ceiling
   | 'cancelled';  // User voluntarily cancelled
 

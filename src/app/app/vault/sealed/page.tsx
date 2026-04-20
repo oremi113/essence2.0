@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getSubscriptionStatus } from '@/lib/subscription/get-status';
 import { SealedActions } from './actions';
 
 export default async function VaultSealedPage({
@@ -15,12 +16,26 @@ export default async function VaultSealedPage({
 
   const params = await searchParams;
 
-  // PLACEHOLDER_7b: If session_id is present, validate it with Stripe and
-  // write subscription_status = 'trial' to profiles. Then kick off voice
-  // processing. For 7a, we only accept users arriving via ?mock=true
-  // (from the in-flow CTAs). Any other arrival routes back to the start.
-  if (!params.mock && !params.session_id) {
-    redirect('/app/vault/reveal');
+  if (params.session_id) {
+    // Real Stripe return: the browser usually beats the webhook back to our
+    // server, so poll the subscriptions table for up to 3s waiting for the
+    // row to land. Rendering anyway after the window protects the seal
+    // animation from being blocked by webhook lag — 7c adds reconciliation
+    // for the edge case where the webhook never fires.
+    const maxAttempts = 6;
+    for (let i = 0; i < maxAttempts; i++) {
+      const sub = await getSubscriptionStatus(user.id);
+      if (sub.status === 'trial' || sub.status === 'active') break;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  } else if (params.mock === 'true') {
+    // 7a mock fallback (flag off). Render immediately, no DB check.
+  } else {
+    // Direct navigation — only allow if the user actually has a subscription.
+    const sub = await getSubscriptionStatus(user.id);
+    if (sub.status !== 'trial' && sub.status !== 'active') {
+      redirect('/app/vault/reveal');
+    }
   }
 
   return <SealedActions />;

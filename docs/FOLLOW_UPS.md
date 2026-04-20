@@ -112,3 +112,18 @@ Flagged explicitly in the B2 Terminal doc's "Out of scope" section with a soluti
 
 ### 20. ~~Stone state-change timing during the 400ms screen crossfade (6 → 7)~~ — RESOLVED 2026-04-20
 Declared explicitly in the B3 Terminal doc's new §8: **t=0 of the crossfade** (synchronous with `setCurrentScreen(n)`), then `settleDelay` (500ms default, 600ms on Screen 11) before the engine begins lerping. Sequence table and rationale recorded in-doc. Same trigger moment under reduced motion; engine snaps instead of lerps. Applies to all cross-screen stone-state flips, not just 6 → 7.
+
+## Supabase migrations (from Session 7b, 2026-04-20)
+
+### 21. Duplicate migration version IDs block CLI `db push`
+`supabase/migrations/` contains multiple files sharing the same date-only version: three with `20260214_*` and two with `20260412_*`. Supabase's `supabase_migrations.schema_migrations` table uses `version` as the primary key, so only one row per version can exist. Running `npx supabase migration repair --status applied <version>` marks one file per version as applied; the remaining files with the same version show an empty Remote column in `migration list`. On the next `db push`, the CLI tries to re-apply those "unmatched" files, whose DDL has already been run against the remote DB — a collision. Worked around in 7b by running the new `20260420_add_subscriptions.sql` via Dashboard SQL Editor and then repairing it as applied.
+
+**Affected files:**
+- `20260214_allow_failed_to_collecting_retry.sql`
+- `20260214_phase8_hardening.sql`
+- `20260214_phase8b_duration_ms.sql`
+- `20260412_01_add_name_and_state.sql`
+- `20260412_add_date_of_birth.sql`
+
+**Fix:** rename each duplicated file to a unique 14-digit timestamp (e.g., `20260214000000_...`, `20260214000001_...`, `20260214000002_...`), then `migration repair --status applied <new_version>` for each. Use `git mv` so history survives. Also consider renaming `RUN_IN_DASHBOARD_voice_profiles_attempt_tracking.sql` to match the `<timestamp>_name.sql` pattern so the CLI stops skipping it.
+**Pick up when:** next session that otherwise touches `supabase/migrations/` (e.g., Session 7c, or any schema-change session). Not blocking 7b, 7c, or deploy — the DB is in the correct state; only the CLI's bookkeeping is out of sync.

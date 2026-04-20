@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getSubscriptionStatus } from '@/lib/subscription/get-status';
 import { SealActions } from './actions';
 import type { BillingPlan } from '@/lib/vault';
 
@@ -14,7 +15,10 @@ export default async function VaultSealPage({
   } = await supabase.auth.getUser();
   if (!user) redirect('/auth/sign-in?next=/app/vault/seal');
 
-  // PLACEHOLDER_7b: subscription_status route guard — see reveal/page.tsx.
+  const sub = await getSubscriptionStatus(user.id);
+  if (sub.status === 'trial' || sub.status === 'active') {
+    redirect('/app/record');
+  }
 
   const params = await searchParams;
   const plan: BillingPlan = params.plan === 'monthly' ? 'monthly' : 'annual';
