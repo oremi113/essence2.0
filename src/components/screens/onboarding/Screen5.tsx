@@ -10,14 +10,14 @@ export function Screen5({ onNext }: { onNext: () => void }) {
     <StepShell>
       <StoneSlot />
 
-      <h1 className="onboarding-title">No one else sounds like you.</h1>
+      <h1 className="onboarding-title">There are things only your voice can carry.</h1>
 
       <div className="onboarding-body">
         <p>The way you say someone&apos;s name.</p>
         <p>The rhythm of how you tell a story.</p>
         <p>The warmth in your laugh.</p>
         <p className="onboarding-body__emphasis">
-          These things can&apos;t be written down. But they can be preserved.
+          These things can&apos;t be written down. But they can be kept.
         </p>
       </div>
 

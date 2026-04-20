@@ -474,12 +474,19 @@
     min-height: 100%;
   }
 
-  /* Vertically centers content for screens without much copy */
+  /* Vertically centers content for screens without much copy. The
+     default `.onboarding-ctas { margin-top: auto }` bottom-anchors the
+     CTA, which overrides justify-content; reset it here so the whole
+     group (heading + CTAs) clusters in the vertical center. */
   .onboarding-step--centered {
     justify-content: center;
     align-items: center;
     text-align: center;
     padding-block: 60px;
+  }
+
+  .onboarding-step--centered .onboarding-ctas {
+    margin-top: 0;
   }
 
   .onboarding-eyebrow {
@@ -665,31 +672,11 @@
   /* ---- terminal phrase: lands on the conveyor line and stays ----
      Uses the default `.onboarding-conveyor__phrase` positioning
      (inset: 0) so the text lands in the exact same place each
-     transient phrase was displayed — no vertical shift. */
+     transient phrase was displayed — no vertical shift.
+     animation-delay is set inline from Screen2.tsx (finalLandMs) so it
+     recomputes with the phrase count. */
   .onboarding-conveyor__phrase--final {
-    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) 11500ms both;
-  }
-
-  /* Their timeline — a separate element directly beneath the conveyor.
-     Fades/slides in after "Your voice." has settled. Styled to match
-     the conveyor phrases so both lines read as a single pair. The
-     animation-delay is set inline from JSX (CONVEYOR_TAIL_LAND_MS)
-     so phrase-count changes propagate without touching CSS. The base
-     reveal stagger is now --reveal-index based, so this rule is no
-     longer at risk of having its delay clobbered by an nth-child
-     rule (the original "Their timeline appears at page load" bug). */
-  .onboarding-step > .onboarding-conveyor-tail {
-    font-family: var(--font-body);
-    font-size: var(--text-body);
-    font-style: italic;
-    color: var(--color-text-tertiary);
-    text-align: center;
-    max-width: 340px;
-    margin: 0 auto 32px;
-    opacity: 0;
-    transform: translateX(16px);
     animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    pointer-events: none;
   }
 
   @keyframes onb-conveyor-pass {
@@ -704,10 +691,11 @@
     to   { opacity: 1; transform: translateX(0); }
   }
 
-  /* The CTA waits until the bottom terminal line has landed
-     before fading in. Delay ≈ bottom-final finish + a breath. */
+  /* The CTA waits until the final phrase has landed before fading in.
+     animation-delay is set inline from Screen2.tsx (ctaLandMs) so it
+     recomputes with the phrase count. */
   .onboarding-ctas--delayed {
-    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) 14300ms both;
+    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) both;
   }
 
   /* ─── ONBOARDING — BODY EMPHASIS ──────────────────────────
@@ -917,7 +905,7 @@
      • .onboarding-conveyor   — has its own cinematic phrase sequence.
      • .onboarding-ctas--delayed — waits for the conveyor to land. */
 
-  .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-conveyor-tail):not(.onboarding-ctas--delayed) {
+  .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed) {
     opacity: 0;
     transform: translateY(10px);
     animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -927,11 +915,7 @@
   /* Section-by-section stagger. nth-child(1) is the stone-slot;
      content begins at nth-child(2). nth-child rules SET the custom
      property --reveal-index (not animation-delay directly) so that
-     elements with their own animation rules — like .onboarding-
-     conveyor-tail — are unaffected. Earlier this CSS file set
-     animation-delay (longhand) here, which silently overrode any
-     animation shorthand on excluded children and caused the
-     "Their timeline" race regression. */
+     elements with their own animation rules remain unaffected. */
   .onboarding-step > *:nth-child(2) { --reveal-index: 1; }
   .onboarding-step > *:nth-child(3) { --reveal-index: 2; }
   .onboarding-step > *:nth-child(4) { --reveal-index: 3; }
