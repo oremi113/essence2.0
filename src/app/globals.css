@@ -464,6 +464,17 @@
     cursor: not-allowed;
   }
 
+  .btn-link--soft {
+    font-size: var(--text-small);
+    color: var(--color-text-tertiary);
+    font-weight: 400;
+  }
+
+  .btn-link--soft:hover:not(:disabled) {
+    color: var(--color-text-secondary);
+    text-decoration: underline;
+  }
+
   /* ─── ONBOARDING ─────────────────────────────────────────── */
 
   .onboarding-step {
@@ -1445,24 +1456,26 @@
     word-break: break-word;
   }
 
-  .onboarding-review-card__edit {
-    align-self: flex-end;
-    background: none;
-    border: none;
-    padding: 6px 0 0;
-    margin-top: 4px;
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text-secondary);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    cursor: pointer;
-    min-height: auto;
-    transition: color 200ms ease;
+  .onboarding-review-card__header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-sm);
   }
 
-  .onboarding-review-card__edit:hover {
+  .onboarding-review-card__change {
+    background: none;
+    border: none;
+    padding: var(--space-xs) var(--space-sm);
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    min-height: auto;
+    transition: color var(--duration-micro) var(--ease-essence);
+  }
+
+  .onboarding-review-card__change:hover {
     color: var(--color-text-primary);
   }
 

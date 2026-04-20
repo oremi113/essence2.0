@@ -1,14 +1,27 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PrimaryButton } from '@/components/ui';
 import { US_STATES } from '@/lib/us-states';
 import { StepShell, StoneSlot } from './chrome';
 import type { ProfileFormField, ProfileFormState } from './state';
 
 // ─── SCREEN 8 — About you (combined form) ─────────────────────────
-// Fields: first/last name, DOB (native <input type="date">), city, state.
+// Fields: first/last name, DOB (month/day/year selects), city, state.
 // Continue enables when all are valid.
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function parseDob(iso: string): { month: string; day: string; year: string } {
+  if (iso && iso.length === 10) {
+    const [y, m, d] = iso.split('-');
+    return { month: String(parseInt(m, 10)), day: String(parseInt(d, 10)), year: y };
+  }
+  return { month: '', day: '', year: '1960' };
+}
 
 export function Screen8({
   form,
@@ -28,6 +41,25 @@ export function Screen8({
   }, []);
 
   const { firstName, lastName, dob, city, stateCode } = form;
+
+  // Local mirrors of the three date parts. Seeded from form.dob so that
+  // returning to Screen 8 via Screen 9's "Change" link shows the values
+  // the user previously entered. Year defaults to 1960 when empty.
+  const [dobMonth, setDobMonth] = useState(() => parseDob(dob).month);
+  const [dobDay, setDobDay] = useState(() => parseDob(dob).day);
+  const [dobYear, setDobYear] = useState(() => parseDob(dob).year);
+
+  // Emit upstream only when all three parts are set; otherwise clear so
+  // `dob.length === 10` in the validity check stays correct.
+  const emitDob = (month: string, day: string, year: string) => {
+    if (month && day && year) {
+      const composed = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      if (composed !== dob) onChange('dob', composed);
+    } else if (dob !== '') {
+      onChange('dob', '');
+    }
+  };
+
   const isValid =
     firstName.trim().length >= 1 &&
     lastName.trim().length >= 1 &&
@@ -63,7 +95,6 @@ export function Screen8({
               className="onboarding-input"
               value={firstName}
               onChange={(e) => onChange('firstName', e.target.value)}
-              placeholder="First"
               autoComplete="given-name"
               maxLength={50}
             />
@@ -78,7 +109,6 @@ export function Screen8({
               className="onboarding-input"
               value={lastName}
               onChange={(e) => onChange('lastName', e.target.value)}
-              placeholder="Last"
               autoComplete="family-name"
               maxLength={80}
             />
@@ -86,18 +116,61 @@ export function Screen8({
         </div>
 
         <div className="onboarding-field">
-          <label className="onboarding-field__label" htmlFor="onb-dob">
-            Date of birth
-          </label>
-          <input
-            id="onb-dob"
-            type="date"
-            className="onboarding-input"
-            value={dob}
-            onChange={(e) => onChange('dob', e.target.value)}
-            max={new Date().toISOString().slice(0, 10)}
-            min="1900-01-01"
-          />
+          <span className="onboarding-field__label">Date of birth</span>
+          <div className="onboarding-field-row">
+            <div className="onboarding-field onboarding-field--fixed">
+              <select
+                id="onb-dob-month"
+                className="onboarding-input onboarding-input--select"
+                aria-label="Birth month"
+                value={dobMonth}
+                onChange={(e) => {
+                  setDobMonth(e.target.value);
+                  emitDob(e.target.value, dobDay, dobYear);
+                }}
+              >
+                <option value="">Month</option>
+                {MONTHS.map((name, i) => (
+                  <option key={name} value={i + 1}>{name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="onboarding-field onboarding-field--fixed">
+              <select
+                id="onb-dob-day"
+                className="onboarding-input onboarding-input--select"
+                aria-label="Birth day"
+                value={dobDay}
+                onChange={(e) => {
+                  setDobDay(e.target.value);
+                  emitDob(dobMonth, e.target.value, dobYear);
+                }}
+              >
+                <option value="">Day</option>
+                {Array.from({ length: 31 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                ))}
+              </select>
+            </div>
+            <div className="onboarding-field onboarding-field--grow">
+              <select
+                id="onb-dob-year"
+                className="onboarding-input onboarding-input--select"
+                aria-label="Birth year"
+                value={dobYear}
+                onChange={(e) => {
+                  setDobYear(e.target.value);
+                  emitDob(dobMonth, dobDay, e.target.value);
+                }}
+              >
+                <option value="">Year</option>
+                {Array.from({ length: 86 }, (_, i) => {
+                  const year = 2010 - i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className="onboarding-field-row">
@@ -111,7 +184,6 @@ export function Screen8({
               className="onboarding-input"
               value={city}
               onChange={(e) => onChange('city', e.target.value)}
-              placeholder="Where you live"
               autoComplete="address-level2"
               maxLength={80}
             />
