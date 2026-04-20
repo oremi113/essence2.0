@@ -370,6 +370,13 @@ button, a, [role="button"] { min-height: 44px; }
     0 6px 18px rgba(80, 60, 30, 0.12);
   animation: stone-breath 4500ms var(--ease-essence) infinite;
   transform-origin: center;
+  /* Smooth the glow hand-off between state variants so B2 wash calibration
+     lands against a stone that is itself mid-transition — prototype-only
+     stand-in for the production engine's per-field lerp. Matches the
+     400ms screen crossfade + 600ms bg warm so the three signals (bg warm,
+     stone glow warm, wash beat) arrive as a coordinated moment rather
+     than three independent flips. */
+  transition: box-shadow 600ms var(--ease-essence);
   -webkit-mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
           mask-image: radial-gradient(circle, black 0%, black 80%, transparent 98%);
 }
@@ -1335,16 +1342,110 @@ button, a, [role="button"] { min-height: 44px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Reduced motion — gentle fades only
+   Reduced motion — destination states, no oscillation, no translate
+   Matches the user's baseline expectation of software under this setting
+   (macOS Reduce Motion / iOS Reduce Motion / Windows "Show animations" off).
+   Companion block in `src/app/globals.css`; the production BreathStone
+   engine gates its own per-frame overlays via the `reducedMotion` prop.
    ═══════════════════════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  .breath-stone { animation: none; }
-  .screen--active .onboarding-step > *,
-  .screen--active .onboarding-body > *,
-  .screen--active .onboarding-conveyor__phrase,
+  /* Breath stone body — freeze the CSS-approximated breath cycle AND the
+     glow transition, so state changes snap instead of lerping. The `::after`
+     pseudo-element is the sheen highlight; no animation is attached to it
+     today, so the `animation: none` is defensive. The production canvas
+     engine (not pseudo-element based — verified against BreathStone.tsx)
+     snaps to the target state and halts its rAF loop under the same flag. */
+  .breath-stone,
+  .breath-stone::after {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* Persistent-stone reveal — no blur / scale-up. Keep the horizontal
+     centering transform so the stone stays aligned over the slot. */
+  .onboarding-persistent-stone {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: translateX(-50%) !important;
+    animation: none !important;
+  }
+
+  /* Collapse staggered content reveals to their destination state. The
+     children arrive composed, not mid-keyframe. `!important` is needed
+     because the default rules set `animation-name` + inline
+     `animation-delay` at higher specificity than a bare property. */
+  .screen--active .onboarding-step > *:not(.onboarding-stone-slot),
+  .screen--active .onboarding-body > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Screen-level crossfade: opacity only, shorter duration, no translate.
+     Preserves the "screen arrived" signal without vestibular load. */
+  .screen--active {
+    animation: onb-frame-crossfade-reduced 200ms var(--ease-essence) both;
+  }
+
+  @keyframes onb-frame-crossfade-reduced {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Screen 2 conveyor: suppress entirely. The body paragraphs above it
+     already carry the screen's meaning. The conveyor is pure decoration. */
+  .onboarding-conveyor {
+    display: none;
+  }
+
+  /* Screen 2 delayed CTA: render immediately with no fade-in, no delay.
+     The multi-second animation-delay only makes sense if the conveyor plays. */
   .screen--active .onboarding-ctas--delayed {
-    animation-duration: 400ms;
-    transform: none;
+    animation: none !important;
+    animation-delay: 0ms !important;
+    opacity: 1 !important;
+  }
+
+  /* Screen 11 priming hint: suppress entirely. The hint is motion-paired
+     ("Breathe with the stone for a moment") and has no meaning without
+     the stone's breath cycle. The 3500ms JS lock is also bypassed in
+     the prototype's startPrimingUnlock() so the button mounts active. */
+  .onboarding-priming-hint {
+    display: none;
+  }
+
+  /* Screen 11 priming CTA: skip the lock state visually. Belt-and-
+     suspenders for the frame between mount and the JS bypass. */
+  .onboarding-ctas--locked .btn-primary {
+    opacity: 1 !important;
+    transition: none !important;
+  }
+
+  /* ─── Screen 10 (Bucket B1) photo control ─────────────────────────────
+     Ring + photo fade-in + success confirmation + replace link + error
+     copy all default to animated reveals. Under reduced motion they
+     collapse to their destination states; the ring holds at dim static
+     opacity so the "uploading" signal remains visible without oscillation.
+     The stone's photo-success beat still fires (idle → ready → idle over
+     1200ms); the production engine snaps between states rather than
+     lerping, which is the correct motion-free read. */
+  .onboarding-photo__ring {
+    animation: none !important;
+    opacity: 0.25;
+    transform: none !important;
+  }
+
+  .onboarding-photo__img {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  .onboarding-photo-confirmation,
+  .onboarding-photo__replace,
+  .onboarding-photo-error {
+    animation: none !important;
+    opacity: 1 !important;
   }
 }
 
@@ -1385,7 +1486,7 @@ button, a, [role="button"] { min-height: 44px; }
 
 <div class="chrome">
   <h1 class="chrome__title">Onboarding Flow — prototype</h1>
-  <p class="chrome__hint">← / → to step. Number keys 1–9 jump. P opens the privacy sheet on Screen 4. Mirrors src/components/screens/OnboardingScreen.tsx.</p>
+  <p class="chrome__hint">← / → to step. Number keys 1–9 jump. P opens the privacy sheet on Screen 4. Mirrors src/components/screens/OnboardingScreen.tsx. To preview the reduced-motion variant (Bucket B3), toggle macOS System Settings → Accessibility → Display → Reduce motion (or DevTools → Command Menu → &ldquo;Emulate CSS prefers-reduced-motion&rdquo;) and step through all 12 screens.</p>
   <div class="stage-nav">
     <button class="stage-nav__btn" id="prevBtn" aria-label="Previous screen">←</button>
     <div class="stage-nav__label" id="stageLabel">1 / 12</div>
@@ -2062,6 +2163,25 @@ function startPrimingUnlock() {
   const ctas = document.getElementById('primingCtas');
   const btn  = document.getElementById('primingBtn');
   if (!ctas || !btn) return;
+
+  /* Prototype reads matchMedia directly. Production Screen11.tsx consumes
+     the shared `useReducedMotion` hook at
+     `src/lib/animation/useReducedMotion.ts` (a `useSyncExternalStore`
+     wrapper that also handles SSR + mid-session toggles). Keep the two
+     call sites in sync when the RM contract changes. */
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Reduced motion: the lock is meaningless without the stone's breath
+     cue, so the button mounts active. The priming hint is hidden via CSS
+     in the same mode — see the @media block above. Mirrors Screen11.tsx. */
+  if (reducedMotion) {
+    ctas.classList.remove('onboarding-ctas--locked');
+    ctas.classList.add('onboarding-ctas--unlocked');
+    btn.setAttribute('aria-disabled', 'false');
+    btn.setAttribute('tabindex', '0');
+    return;
+  }
+
   ctas.classList.remove('onboarding-ctas--unlocked');
   ctas.classList.add('onboarding-ctas--locked');
   btn.setAttribute('aria-disabled', 'true');

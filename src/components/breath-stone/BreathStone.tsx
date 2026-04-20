@@ -13,6 +13,13 @@ interface BreathStoneProps {
   className?: string;
   /** Called when celebrate animation completes and stone returns to idle */
   onCelebrateEnd?: () => void;
+  /** When true, freezes breath amplitude to 0 and suppresses all overlay
+   *  animations (sheen sweeps, bloom expansion, shimmer rotations, ember
+   *  pulses, ripple rings). Static properties (glow, color temp, spark)
+   *  still reflect the target state. Pair with
+   *  `useReducedMotion` so the canvas honors
+   *  `(prefers-reduced-motion: reduce)` alongside CSS animations. */
+  reducedMotion?: boolean;
 }
 
 export function BreathStone({
@@ -20,6 +27,7 @@ export function BreathStone({
   size = 280,
   className = '',
   onCelebrateEnd,
+  reducedMotion = false,
 }: BreathStoneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<BreathStoneEngine | null>(null);
@@ -31,7 +39,7 @@ export function BreathStone({
 
     const engine = new BreathStoneEngine(canvas);
     engine.resize(size, size);
-    engine.setState(state, onCelebrateEnd);
+    engine.setState(state, { onCelebrateEnd, reducedMotion });
     engine.start();
     engineRef.current = engine;
 
@@ -42,10 +50,12 @@ export function BreathStone({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // State changes
+  // State + reduced-motion changes. Bundled so toggling the system setting
+  // mid-session re-enters setState's branch that snaps to target and halts
+  // the loop (or resumes it).
   useEffect(() => {
-    engineRef.current?.setState(state, onCelebrateEnd);
-  }, [state, onCelebrateEnd]);
+    engineRef.current?.setState(state, { onCelebrateEnd, reducedMotion });
+  }, [state, onCelebrateEnd, reducedMotion]);
 
   // Size changes
   useEffect(() => {
