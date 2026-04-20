@@ -937,54 +937,204 @@ button, a, [role="button"] { min-height: 44px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Screen 10 — Photo circle
+   Screen 10 — Photo circle (single-commit upload)
+   Tap circle → native picker → upload → photo fills circle → stone beats
+   `ready` for 1200ms → CTA swaps to "Continue." See the JS state machine
+   below for the six states (empty / uploading / success / filled /
+   error / replacing). Mirrors src/app/globals.css.
    ═══════════════════════════════════════════════════════════════════════════ */
+.onboarding-photo-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
 .onboarding-photo {
+  position: relative;
   width: 110px;
   height: 110px;
   border-radius: 50%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  background: var(--color-bg-neutral);
-  border: 2px dashed var(--color-surface-warm);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-warm);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   margin-inline: auto;
+  overflow: hidden;
   transition:
-    background 300ms var(--ease-essence),
+    box-shadow 300ms var(--ease-essence),
     border-color 300ms var(--ease-essence);
 }
-.onboarding-photo:hover { border-color: var(--color-mineral); }
-.onboarding-photo__label { font-family: var(--font-body); font-size: 12px; font-weight: 500; }
-.onboarding-photo--filled {
-  background: radial-gradient(circle at 30% 28%, #E8DCC8, #D4C6A8 60%, #C4B8A0 100%);
-  border: 2px solid transparent;
-  color: transparent;
+
+.onboarding-photo:hover {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.06);
 }
+
+.onboarding-photo:focus-within {
+  outline: none;
+}
+
+.onboarding-photo:has(:focus-visible) {
+  outline: 2px solid var(--color-mineral);
+  outline-offset: 3px;
+}
+
+/* Visually-hidden file input — native focus/keyboard behavior preserved
+   while the styled label is the hit target. */
+.onboarding-photo__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.onboarding-photo__label {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  letter-spacing: -0.01em;
+  transition: opacity 200ms var(--ease-essence);
+}
+
+.onboarding-photo--uploading .onboarding-photo__label,
+.onboarding-photo--filled .onboarding-photo__label {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.onboarding-photo__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  animation: onb-photo-fade-in 300ms var(--ease-essence) forwards;
+  transition: opacity 200ms var(--ease-essence);
+}
+
+.onboarding-photo--filled .onboarding-photo__img {
+  opacity: 1;
+  animation: none;
+}
+
+@keyframes onb-photo-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Breathing mineral ring around the circle while an upload is
+   in flight. 400ms minimum visibility enforced by the JS. */
+.onboarding-photo__ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--color-mineral);
+  opacity: 0;
+  animation: onb-ring-breath 1400ms var(--ease-essence) infinite;
+  pointer-events: none;
+}
+
+@keyframes onb-ring-breath {
+  0%   { opacity: 0;   transform: scale(1); }
+  50%  { opacity: 0.3; transform: scale(1.03); }
+  100% { opacity: 0;   transform: scale(1); }
+}
+
+.onboarding-photo__replace {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-mineral-dark);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 200ms var(--ease-essence);
+  min-height: auto;
+  opacity: 0;
+  animation: onb-photo-replace-fade-in 200ms var(--ease-essence) 200ms forwards;
+}
+
+.onboarding-photo__replace:hover {
+  text-decoration: underline;
+  color: var(--color-text-primary);
+}
+
+.onboarding-photo__replace:focus-visible {
+  outline: 2px solid var(--color-mineral);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes onb-photo-replace-fade-in {
+  to { opacity: 1; }
+}
+
 .onboarding-photo-confirmation {
   text-align: center;
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--color-status-success);
-  margin-top: 12px;
+  margin-top: var(--space-md);
   opacity: 0;
-  transition: opacity 300ms ease;
+  animation: onb-photo-confirmation-fade-in 200ms var(--ease-essence) 400ms forwards;
 }
-.onboarding-photo-confirmation--visible { opacity: 1; }
 
-/* Surfaces server-side validation failures (mime, size, network) when
-   the upload fails. Stays visible until the user picks a different file. */
+.onboarding-photo-confirmation--visible {
+  opacity: 1;
+}
+
+@keyframes onb-photo-confirmation-fade-in {
+  to { opacity: 1; }
+}
+
+/* Surfaces client-side validation (mime, size) and simulated failures.
+   Stays visible until the user picks a different file. */
 .onboarding-photo-error {
   text-align: center;
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--color-status-error);
-  margin: 8px auto 0;
+  margin: var(--space-sm) auto 0;
   max-width: 320px;
   line-height: 1.5;
+  opacity: 0;
+  animation: onb-photo-error-fade-in 200ms var(--ease-essence) forwards;
+}
+
+@keyframes onb-photo-error-fade-in {
+  to { opacity: 1; }
+}
+
+/* Tailwind's .sr-only utility — shipped pulls it from Tailwind 4;
+   inlined here since the prototype has no build step. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1631,24 +1781,42 @@ button, a, [role="button"] { min-height: 44px; }
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       SCREEN 10 — Photo upload (optional)
+       SCREEN 10 — Photo upload (optional) — single-commit flow
        Stone: idle · Bg: warm-phase
-       Tap circle to toggle filled state. Filled state swaps the CTA copy
-       and reveals "Continue without photo" link below.
+       Tap circle → native picker → (simulated) upload → photo fills
+       the circle → stone beats `ready` for 1200ms → CTA swaps to
+       "Continue." No confirm step. The JS state machine below drives
+       the six states: empty / uploading / success / filled / error /
+       replacing. Mirrors src/components/screens/onboarding/Screen10.tsx.
+
+       Simulating failure in the prototype: pick a file whose filename
+       contains the word "fail" to exercise the generic error branch
+       (type/size errors fire from real client validation).
        ═══════════════════════════════════════════════════════════════════ -->
   <section class="screen" data-screen="10" data-stone="idle" data-bg="warm-phase">
     <div class="onboarding-step">
       <div class="onboarding-stone-slot"></div>
       <h1 class="onboarding-title">Add a photo if you&rsquo;d like.</h1>
       <p class="onboarding-subtitle">It helps your messages feel more personal. Completely optional.</p>
-      <button type="button" class="onboarding-photo js-photo-toggle" aria-label="Add photo">
-        <svg id="photoIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-          <circle cx="12" cy="13" r="4"/>
-        </svg>
-        <span class="onboarding-photo__label" id="photoLabel">Tap to add</span>
-      </button>
-      <p class="onboarding-photo-confirmation" id="photoConfirmation">Looking good ✓</p>
+
+      <div class="onboarding-photo-wrapper" id="photoWrapper">
+        <label class="onboarding-photo" id="photoCircle" for="onboarding-photo-input" aria-label="Add a photo">
+          <input
+            id="onboarding-photo-input"
+            class="onboarding-photo__input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+          />
+          <!-- label span, img, and ring are created/removed per-state by the state machine -->
+        </label>
+
+        <!-- replace button, confirmation, and error are inserted here per-state.
+             Only the sr-only status node is permanent so the live region stays
+             mounted for assistive tech. Matches Screen10.tsx JSX structure. -->
+
+        <p class="sr-only" role="status" aria-live="polite" id="photoSrStatus"></p>
+      </div>
+
       <div class="onboarding-ctas" id="photoCtas">
         <button class="btn-primary js-next" id="photoPrimary">Continue without photo</button>
       </div>
@@ -1789,7 +1957,7 @@ const SCREEN_META = {
   7:  { title: 'Identity setup intro (PHASE)',      note: 'Background warms cream → oat over 600ms. Stone leads title by 80ms with a 380ms ease-out. No subtitle — just the phase eyebrow + h1 ("Now, the part that\'s about you."). Centered step layout so the single line anchors.' },
   8:  { title: 'About you (form card)',             note: 'Cream form card lifts off the warm-phase oat. First-name autofocuses 400ms after settle. DOB is three selects (Month/Day/Year) — Year shows "Year" placeholder, no pre-selection. Continue is ALWAYS pressable; validation runs on press. Per-field error copy renders below the failing input; typing clears that field\'s error only. No shake/bounce.' },
   9:  { title: 'Review',                            note: '"Change" sits in a header row at the top-right and returns to Screen 8 with form state preserved. Review rows are LEFT-aligned with a 120px fixed label column so long names wrap gracefully. Optional avatar circle appears above the rows when the user uploaded a photo on Screen 10.' },
-  10: { title: 'Photo upload (optional)',           note: 'Tap circle to toggle filled state. When filled, primary CTA copy swaps to "Save photo" and "Continue without photo" link appears below.' },
+  10: { title: 'Photo upload (optional)',           note: 'Single-commit flow: tap circle → picker → (simulated) upload → photo fills circle → stone beats `ready` for 1200ms → primary CTA swaps to "Continue." Ring enforces a 400ms minimum so fast uploads don\u2019t flash. Client-side validation covers type + size (2MB); filenames containing "fail" simulate a generic upload error.' },
   11: { title: 'Priming moment (3500ms unlock)',    note: 'Stone steps to priming (slow, deep, balanced inhale/exhale). Hint fades in at 2500ms. Primary CTA unlocks at 3500ms. Lock uses aria-disabled="true" + tabindex="-1" (NOT native `disabled`, which would hide it from screen readers); click + keydown guards block Enter/Space during the lock.' },
   12: { title: 'Ready to begin',                    note: 'Three body items + italic closer ("What you record today will be kept for whenever it\'s needed."). "Begin recording" calls onComplete in production: persists profile to Supabase, navigates to /app/record. "I need more time" is a soft pause affordance (btn-link--soft).' },
 };
@@ -1906,21 +2074,222 @@ function startPrimingUnlock() {
   }, 3500);
 }
 
+/* ─── Screen 10 photo state machine ──────────────────────────────────
+   Mirrors usePhotoUpload.ts: empty → uploading → success → filled,
+   with replacing and error branches. The ring's minimum visibility
+   (PHOTO_MIN_RING_MS) matches the shipped hook so fast simulated
+   uploads don't flash. The stone beats `ready` for PHOTO_BEAT_MS
+   after success, then releases back to the screen's data-stone.
+   ────────────────────────────────────────────────────────────────── */
+const PHOTO_ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+const PHOTO_MAX_BYTES    = 2 * 1024 * 1024; // 2MB
+const PHOTO_UPLOAD_MS    = 900;   // simulated upload duration
+const PHOTO_MIN_RING_MS  = 400;   // minimum ring visibility
+const PHOTO_BEAT_MS      = 1200;  // stone 'ready' hold
+
+const PHOTO_ERROR_COPY = {
+  generic: "That photo didn\u2019t come through. Try another, or continue without one.",
+  type:    'We can hold JPG, PNG, or WebP photos. Try another, or continue without one.',
+  size:    'That photo is a bit large. Try a smaller one, or continue without one.',
+};
+
+let photoState = 'empty'; // 'empty' | 'uploading' | 'success' | 'filled' | 'error' | 'replacing'
+let photoPreviewUrl = null;
+let photoUploadTimer = null;
+let photoStoneTimer = null;
+
 function resetPhoto() {
-  const photo   = document.querySelector('.onboarding-photo');
-  const label   = document.getElementById('photoLabel');
-  const icon    = document.getElementById('photoIcon');
-  const confirm = document.getElementById('photoConfirmation');
-  const primary = document.getElementById('photoPrimary');
-  if (!photo) return;
-  photo.classList.remove('onboarding-photo--filled');
-  if (icon) icon.style.display = '';
-  if (label) label.style.display = '';
-  confirm.classList.remove('onboarding-photo-confirmation--visible');
-  primary.textContent = 'Continue without photo';
-  /* Remove any extra link button added on previous toggle */
-  const extra = document.getElementById('photoSkipLink');
-  if (extra) extra.remove();
+  if (photoUploadTimer) { clearTimeout(photoUploadTimer); photoUploadTimer = null; }
+  if (photoStoneTimer)  { clearTimeout(photoStoneTimer);  photoStoneTimer  = null; }
+  if (photoPreviewUrl)  { URL.revokeObjectURL(photoPreviewUrl); photoPreviewUrl = null; }
+  /* Release any lingering ready-beat on the persistent stone */
+  releaseStoneBeat();
+  setPhotoState('empty');
+}
+
+function setPhotoState(next) {
+  photoState = next;
+
+  const wrapper   = document.getElementById('photoWrapper');
+  const circle    = document.getElementById('photoCircle');
+  const input     = document.getElementById('onboarding-photo-input');
+  const srStatus  = document.getElementById('photoSrStatus');
+  const primary   = document.getElementById('photoPrimary');
+  if (!circle) return;
+
+  const inFlight     = next === 'uploading' || next === 'replacing';
+  const photoVisible = (next === 'success' || next === 'filled' || next === 'replacing') && !!photoPreviewUrl;
+
+  /* Class list on the label mirrors Screen10.tsx's className array */
+  circle.classList.toggle('onboarding-photo--uploading', inFlight);
+  circle.classList.toggle('onboarding-photo--filled',    photoVisible);
+  circle.classList.toggle('onboarding-photo--replacing', next === 'replacing');
+
+  circle.setAttribute('aria-label',
+    photoVisible ? 'Profile photo. Tap Replace to change.' : 'Add a photo');
+  input.disabled = inFlight;
+
+  /* Label span — only when empty or error (mirrors JSX conditional) */
+  let labelSpan = circle.querySelector('.onboarding-photo__label');
+  const wantLabel = next === 'empty' || next === 'error';
+  if (wantLabel && !labelSpan) {
+    labelSpan = document.createElement('span');
+    labelSpan.className = 'onboarding-photo__label';
+    labelSpan.textContent = 'Add a photo';
+    circle.appendChild(labelSpan);
+  } else if (!wantLabel && labelSpan) {
+    labelSpan.remove();
+  }
+
+  /* Image — only when a preview/url exists AND state isn't error */
+  let img = circle.querySelector('.onboarding-photo__img');
+  if (photoVisible) {
+    if (!img) {
+      img = document.createElement('img');
+      img.className = 'onboarding-photo__img';
+      img.alt = '';
+      circle.appendChild(img);
+    }
+    if (photoPreviewUrl && img.src !== photoPreviewUrl) img.src = photoPreviewUrl;
+    /* Inline opacity during replace — matches the shipped inline style
+       on Screen10.tsx so the --filled CSS rule doesn't override it. */
+    img.style.opacity = next === 'replacing' ? '0.4' : '';
+  } else if (img) {
+    img.remove();
+  }
+
+  /* Ring — only when an upload is in flight */
+  let ring = circle.querySelector('.onboarding-photo__ring');
+  if (inFlight && !ring) {
+    ring = document.createElement('span');
+    ring.className = 'onboarding-photo__ring';
+    ring.setAttribute('aria-hidden', 'true');
+    circle.appendChild(ring);
+  } else if (!inFlight && ring) {
+    ring.remove();
+  }
+
+  /* Replace button — rendered only in success or filled states.
+     Fresh mount each time so the fade-in animation replays after replace. */
+  let replaceBtn = wrapper.querySelector('.onboarding-photo__replace');
+  const wantReplace = next === 'success' || next === 'filled';
+  if (wantReplace && !replaceBtn) {
+    replaceBtn = document.createElement('button');
+    replaceBtn.type = 'button';
+    replaceBtn.className = 'onboarding-photo__replace';
+    replaceBtn.textContent = 'Replace';
+    /* Insert after the circle so DOM order matches shipped JSX */
+    circle.insertAdjacentElement('afterend', replaceBtn);
+  } else if (!wantReplace && replaceBtn) {
+    replaceBtn.remove();
+  }
+
+  /* Confirmation — rendered only on success. Fresh mount replays the
+     400ms-delay fade-in on every success transition (including after
+     replace), matching the shipped React unmount/remount. */
+  let confirmEl = wrapper.querySelector('.onboarding-photo-confirmation');
+  if (next === 'success' && !confirmEl) {
+    confirmEl = document.createElement('p');
+    confirmEl.className = 'onboarding-photo-confirmation onboarding-photo-confirmation--visible';
+    confirmEl.textContent = 'Looking good';
+    /* Insert before the sr-only status node (end of wrapper on shipped) */
+    wrapper.insertBefore(confirmEl, srStatus);
+  } else if (next !== 'success' && confirmEl) {
+    confirmEl.remove();
+  }
+
+  /* Error — rendered only in error state (fresh mount = fresh fade-in) */
+  let errorEl = wrapper.querySelector('.onboarding-photo-error');
+  if (next === 'error' && !errorEl) {
+    errorEl = document.createElement('p');
+    errorEl.className = 'onboarding-photo-error';
+    errorEl.setAttribute('role', 'alert');
+    errorEl.textContent = PHOTO_ERROR_COPY[photoErrorKey] || PHOTO_ERROR_COPY.generic;
+    wrapper.insertBefore(errorEl, srStatus);
+  } else if (next !== 'error' && errorEl) {
+    errorEl.remove();
+  } else if (errorEl && next === 'error') {
+    errorEl.textContent = PHOTO_ERROR_COPY[photoErrorKey] || PHOTO_ERROR_COPY.generic;
+  }
+
+  /* Live-region announcement matches shipping ("Profile photo added.") */
+  srStatus.textContent = next === 'success' ? 'Profile photo added.' : '';
+
+  /* Primary CTA copy mirrors shipped ctaLabel logic */
+  primary.textContent =
+    (next === 'success' || next === 'filled' || next === 'replacing')
+      ? 'Continue'
+      : 'Continue without photo';
+  primary.disabled = inFlight;
+}
+
+let photoErrorKey = null;
+
+function validatePhotoFile(file) {
+  if (!PHOTO_ALLOWED_MIME.includes(file.type)) return 'type';
+  if (file.size > PHOTO_MAX_BYTES) return 'size';
+  return null;
+}
+
+function beatStoneReady() {
+  if (!stone) return;
+  if (photoStoneTimer) clearTimeout(photoStoneTimer);
+  stone.dataset.state = 'ready';
+  stoneStateLabel.textContent = 'ready (beat)';
+  notesStone.textContent = 'ready (beat)';
+  photoStoneTimer = setTimeout(() => {
+    photoStoneTimer = null;
+    releaseStoneBeat();
+  }, PHOTO_BEAT_MS);
+}
+
+function releaseStoneBeat() {
+  if (!stone) return;
+  /* Fall back to whatever the currently active screen says */
+  const active = screens[current - 1];
+  const state = active ? (active.dataset.stone || 'idle') : 'idle';
+  stone.dataset.state = state;
+  stoneStateLabel.textContent = state;
+  notesStone.textContent = state;
+}
+
+function handlePhotoFile(file) {
+  const failureReason = validatePhotoFile(file);
+  if (failureReason) {
+    photoErrorKey = failureReason;
+    if (photoPreviewUrl) { URL.revokeObjectURL(photoPreviewUrl); photoPreviewUrl = null; }
+    setPhotoState('error');
+    return;
+  }
+
+  /* Fresh preview — revoke any prior URL */
+  if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+  photoPreviewUrl = URL.createObjectURL(file);
+  photoErrorKey = null;
+
+  const isReplacing = photoState === 'success' || photoState === 'filled' || photoState === 'replacing';
+  setPhotoState(isReplacing ? 'replacing' : 'uploading');
+
+  const simulateFailure = /fail/i.test(file.name);
+  const startedAt = Date.now();
+
+  if (photoUploadTimer) clearTimeout(photoUploadTimer);
+  photoUploadTimer = setTimeout(() => {
+    photoUploadTimer = null;
+    const elapsed = Date.now() - startedAt;
+    const pad = Math.max(0, PHOTO_MIN_RING_MS - elapsed);
+
+    setTimeout(() => {
+      if (simulateFailure) {
+        photoErrorKey = 'generic';
+        if (photoPreviewUrl) { URL.revokeObjectURL(photoPreviewUrl); photoPreviewUrl = null; }
+        setPhotoState('error');
+        return;
+      }
+      setPhotoState('success');
+      beatStoneReady();
+    }, pad);
+  }, PHOTO_UPLOAD_MS);
 }
 
 /* ─── Wiring ───────────────────────────────────────────────────────── */
@@ -2059,38 +2428,20 @@ function closePrivacy() { privacyModal.classList.remove('privacy-modal--open'); 
 document.querySelectorAll('.js-open-privacy').forEach((b) => b.addEventListener('click', openPrivacy));
 document.querySelectorAll('.js-close-privacy').forEach((b) => b.addEventListener('click', closePrivacy));
 
-/* Photo toggle */
-document.querySelector('.js-photo-toggle')?.addEventListener('click', () => {
-  const photo   = document.querySelector('.onboarding-photo');
-  const label   = document.getElementById('photoLabel');
-  const icon    = document.getElementById('photoIcon');
-  const confirm = document.getElementById('photoConfirmation');
-  const primary = document.getElementById('photoPrimary');
-  const ctas    = document.getElementById('photoCtas');
+/* Screen 10 photo — file input drives the state machine (resetPhoto +
+   handlePhotoFile defined above). The Replace button is re-created per
+   state, so its click is handled via event delegation on the wrapper. */
+document.getElementById('onboarding-photo-input')?.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  handlePhotoFile(file);
+  /* Clear the input value so picking the same file twice still fires change */
+  e.target.value = '';
+});
 
-  const filled = photo.classList.toggle('onboarding-photo--filled');
-  if (filled) {
-    photo.setAttribute('aria-label', 'Remove photo');
-    if (icon) icon.style.display = 'none';
-    if (label) label.style.display = 'none';
-    confirm.classList.add('onboarding-photo-confirmation--visible');
-    primary.textContent = 'Save photo';
-    if (!document.getElementById('photoSkipLink')) {
-      const skip = document.createElement('button');
-      skip.id = 'photoSkipLink';
-      skip.className = 'btn-link btn--full js-next';
-      skip.textContent = 'Continue without photo';
-      skip.addEventListener('click', () => goTo(current + 1));
-      ctas.appendChild(skip);
-    }
-  } else {
-    photo.setAttribute('aria-label', 'Add photo');
-    if (icon) icon.style.display = '';
-    if (label) label.style.display = '';
-    confirm.classList.remove('onboarding-photo-confirmation--visible');
-    primary.textContent = 'Continue without photo';
-    const extra = document.getElementById('photoSkipLink');
-    if (extra) extra.remove();
+document.getElementById('photoWrapper')?.addEventListener('click', (e) => {
+  if (e.target.closest('.onboarding-photo__replace')) {
+    document.getElementById('onboarding-photo-input')?.click();
   }
 });
 
