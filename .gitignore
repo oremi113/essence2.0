@@ -48,6 +48,9 @@ next-env.d.ts
 # Cursor IDE
 .cursor/
 
+# Claude Code — commit project defaults, ignore per-user overrides
+.claude/settings.local.json
+
 
 # Playwright
 /test-results/
