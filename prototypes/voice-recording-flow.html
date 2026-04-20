@@ -19,7 +19,7 @@
      "MOMENT 5 OF 25"). Warm, inviting phrasing.
    • Italic is reserved for human asides / coaching notes (instruction,
      subtitle italic). Functional microcopy like "11–14 minutes" is non-italic.
-   • Red = var(--color-status-error) (#9C3528). Never raw #C84545.
+   • Red = var(--color-status-error) (#9C3528). Never raw hex.
    • Inactive text uses var(--color-text-secondary) (#6B6B6B) — not tertiary
      (#ADA9A5, which fails contrast for small elements).
    • Screen titles use var(--text-title) = 28px (Spectral 600 / line 1.4) —
@@ -37,10 +37,10 @@
 :root {
   --color-bg-neutral:     #FBF8F4;
   --color-bg-warm-phase:  #F2EDE4;
-  --color-bg-warm-1:      #F9F3E8;
-  --color-bg-warm-2:      #F6F0E5;
-  --color-bg-gold:        #F2E8D6;
-  --color-bg-rich:        #EDE3D0;
+  --color-bg-warm-1:      #FBF6ED;
+  --color-bg-warm-2:      #F2E8D2;
+  --color-bg-gold:        #E8D8B3;
+  --color-bg-rich:        #D9C28E;
   --color-bg-primary:     #FBF8F4;
   --color-surface-card:   #F6F0E5;
   --color-surface-warm:   #EDE3D0;
@@ -100,22 +100,18 @@
   --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
   --ease-breath:  cubic-bezier(0.4, 0.0, 0.2, 1);
   --ease-press:   cubic-bezier(0.2, 0.0, 0.0, 1);
-  /* Cinematic screen entrance — earns its own curve because every page
-     and every staggered child on a page uses it. Distinct from ease-essence
-     (which is the universal state-transition curve). Not yet in the repo;
-     propose upstreaming alongside --duration-page. */
+  /* Cinematic screen entrance — every page + staggered child uses this.
+     Distinct from ease-essence (universal state-transition curve). */
   --ease-page:    cubic-bezier(0.22, 1, 0.36, 1);
 
-  --duration-micro:  200ms;
-  --duration-small:  400ms;
-  --duration-medium: 800ms;
-  --duration-large:  1200ms;
-  --duration-breath: 3000ms;
-  /* Page-level transitions — 700ms is the signature screen-entrance length
-     the whole flow is composed on top of. Propose upstreaming. */
+  --duration-micro:      200ms;
+  --duration-small:      400ms;
+  --duration-medium:     800ms;
+  --duration-large:      1200ms;
+  --duration-breath:     3000ms;
+  /* Page-level transitions — signature screen-entrance length. */
   --duration-page:       700ms;
-  /* Ceremonial one-shots — shimmer pulse, celebration swells. Long enough
-     to feel ritual, short enough not to drag. Propose upstreaming. */
+  /* Ceremonial one-shots — shimmer pulse, celebration swells. */
   --duration-ceremonial: 2000ms;
 }
 

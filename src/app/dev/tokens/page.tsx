@@ -78,13 +78,18 @@ const EASINGS = [
   },
   {
     name: "--ease-breath",
-    value: "cubic-bezier(0.4, 0.0, 0.2, 1)",
-    note: "breathing animations (same as essence in current tokens)",
+    value: "cubic-bezier(0.37, 0, 0.63, 1)",
+    note: "symmetric pendulum — breath-stone resting rhythm",
   },
   {
     name: "--ease-press",
     value: "cubic-bezier(0.2, 0.0, 0.0, 1)",
     note: "button press — snappier",
+  },
+  {
+    name: "--ease-page",
+    value: "cubic-bezier(0.22, 1, 0.36, 1)",
+    note: "cinematic screen entrance — every page + staggered child",
   },
 ];
 
@@ -401,9 +406,7 @@ export default function DesignTokensPage() {
               marginBottom: "var(--space-lg)",
             }}
           >
-            Hover each box to see its easing curve. Note: --ease-essence and
-            --ease-breath are currently defined as the same cubic-bezier, so
-            they will animate identically.
+            Hover each box to see its easing curve.
           </p>
           <div
             style={{

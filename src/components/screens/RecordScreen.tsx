@@ -247,7 +247,7 @@ function EntryView({
       <div className="record-ctas">
         <PrimaryButton onClick={onContinue}>Begin</PrimaryButton>
         <LinkButton onClick={onDoLater}>
-          I&apos;ll do this later
+          I&rsquo;ll do this later
         </LinkButton>
       </div>
     </div>
@@ -268,7 +268,7 @@ function GroundingView({ onContinue }: { onContinue: () => void }) {
       </div>
 
       <div className="record-ctas">
-        <PrimaryButton onClick={onContinue}>I&apos;m ready</PrimaryButton>
+        <PrimaryButton onClick={onContinue}>I&rsquo;m ready</PrimaryButton>
       </div>
     </div>
   );
@@ -707,7 +707,7 @@ function PausedView({ onReturnHome }: { onReturnHome: () => void }) {
     <div className="record-step record-step--centered">
       <div className="record-eyebrow">PAUSED</div>
       <h1 className="record-title">Your voice is waiting.</h1>
-      <p className="record-subtitle">Continue whenever you&apos;re ready.</p>
+      <p className="record-subtitle">Continue whenever you&rsquo;re ready.</p>
 
       {/* Stone state: guidance because the system is holding space for
           the user, not resting. idle reads as "nothing happening" — wrong

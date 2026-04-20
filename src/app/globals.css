@@ -52,6 +52,7 @@
   --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg:            0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-mineral:       0 4px 12px rgba(74, 107, 126, 0.3); /* recording button — mineral-tinted */
+  --shadow-terracotta:    0 4px 12px rgba(156, 53, 40, 0.3);  /* anchored on --color-status-error — recording button (terracotta state) */
 
   /* ─── TYPOGRAPHY ──────────────────────────────────── */
   --font-display: 'Spectral', Georgia, serif;
@@ -95,16 +96,19 @@
   --radius-full: 9999px;
 
   /* ─── EASING ──────────────────────────────────────── */
-  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
-  --ease-breath:  cubic-bezier(0.4, 0.0, 0.2, 1);
-  --ease-press:   cubic-bezier(0.2, 0.0, 0.0, 1);
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);   /* universal state-transition curve */
+  --ease-breath:  cubic-bezier(0.37, 0, 0.63, 1);   /* symmetric pendulum — breath-stone resting rhythm */
+  --ease-press:   cubic-bezier(0.2, 0.0, 0.0, 1);   /* tactile press — aggressive out, smooth in */
+  --ease-page:    cubic-bezier(0.22, 1, 0.36, 1);   /* cinematic screen entrance — every page + staggered child */
 
   /* ─── TIMING ──────────────────────────────────────── */
-  --duration-micro:  200ms;
-  --duration-small:  400ms;
-  --duration-medium: 800ms;
-  --duration-large:  1200ms;
-  --duration-breath: 3000ms;
+  --duration-micro:      200ms;
+  --duration-small:      400ms;
+  --duration-medium:     800ms;
+  --duration-large:      1200ms;
+  --duration-breath:     3000ms;
+  --duration-page:       700ms;  /* signature screen-entrance length the flow is composed on */
+  --duration-ceremonial: 2000ms; /* shimmer pulse, celebration swells — ritual one-shots */
 }
 
 @layer base {
@@ -313,19 +317,19 @@
   .page-transition > * > .record-title { animation-delay: 160ms; }
   .page-transition > * > .record-subtitle { animation-delay: 200ms; }
   .page-transition > * > .record-instruction { animation-delay: 220ms; }
-  .page-transition > * > .record-stage-map { animation-delay: 240ms; }
-  .page-transition > * > .record-stone { animation-delay: 260ms; }
-  .page-transition > * > .record-prompt-card { animation-delay: 240ms; }
-  .page-transition > * > .record-waveform { animation-delay: 300ms; }
-  .page-transition > * > .record-button { animation-delay: 320ms; }
-  .page-transition > * > .record-label { animation-delay: 340ms; }
-  .page-transition > * > .record-timer { animation-delay: 360ms; }
-  .page-transition > * > .record-rerecord-hint { animation-delay: 380ms; }
-  .page-transition > * > .record-body { animation-delay: 280ms; }
-  .page-transition > * > .record-microcopy { animation-delay: 320ms; }
-  .page-transition > * > .record-checklist { animation-delay: 280ms; }
+  .page-transition > * > .record-prompt-card { animation-delay: 260ms; }
+  .page-transition > * > .record-stage-map { animation-delay: 280ms; }
+  .page-transition > * > .record-stone { animation-delay: 340ms; }
+  .page-transition > * > .record-waveform { animation-delay: 400ms; }
+  .page-transition > * > .record-button { animation-delay: 440ms; }
+  .page-transition > * > .record-label { animation-delay: 500ms; }
+  .page-transition > * > .record-timer { animation-delay: 540ms; }
+  .page-transition > * > .record-rerecord-hint { animation-delay: 580ms; }
+  .page-transition > * > .record-body { animation-delay: 300ms; }
+  .page-transition > * > .record-microcopy { animation-delay: 340ms; }
+  .page-transition > * > .record-checklist { animation-delay: 260ms; }
   .page-transition > * > .record-checklist-anchor { animation-delay: 1700ms; }
-  .page-transition > * > .record-ctas { animation-delay: 380ms; }
+  .page-transition > * > .record-ctas { animation-delay: 620ms; }
   /* Checklist view: CTA follows all items + extra beat. Higher specificity
      than the generic rule above, so this wins only when .record-checklist
      is present as a preceding sibling. Delay = initial(300) + 3×stagger(400)
@@ -568,10 +572,10 @@
     pointer-events: none;
     opacity: 0;
     filter: blur(12px);
-    animation: onb-stone-reveal 1500ms cubic-bezier(0.22, 1, 0.36, 1) 100ms forwards;
+    animation: onb-stone-reveal 1500ms var(--ease-page) 100ms forwards;
     /* Position/scale lerp reserved for future per-screen variants. */
     transition:
-      top 600ms cubic-bezier(0.22, 1, 0.36, 1);
+      top 600ms var(--ease-page);
   }
 
   /* Ground shadow — proportionally matched to the 144px stone
@@ -687,7 +691,7 @@
      animation-delay is set inline from Screen2.tsx (finalLandMs) so it
      recomputes with the phrase count. */
   .onboarding-conveyor__phrase--final {
-    animation: onb-conveyor-land 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: onb-conveyor-land 650ms var(--ease-page) both;
   }
 
   @keyframes onb-conveyor-pass {
@@ -706,7 +710,7 @@
      animation-delay is set inline from Screen2.tsx (ctaLandMs) so it
      recomputes with the phrase count. */
   .onboarding-ctas--delayed {
-    animation: onb-fade-up 700ms cubic-bezier(0.4, 0.0, 0.2, 1) both;
+    animation: onb-fade-up var(--duration-page) var(--ease-essence) both;
   }
 
   /* ─── ONBOARDING — BODY EMPHASIS ──────────────────────────
@@ -895,7 +899,7 @@
      text begins to compose. */
   .onboarding-slide-forward,
   .onboarding-slide-back {
-    animation: onb-frame-crossfade 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: onb-frame-crossfade var(--duration-small) var(--ease-page) both;
   }
 
   @keyframes onb-frame-crossfade {
@@ -919,7 +923,7 @@
   .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed) {
     opacity: 0;
     transform: translateY(10px);
-    animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: onb-reveal var(--duration-page) var(--ease-page) both;
     animation-delay: calc(var(--reveal-index, 0) * 500ms);
   }
 
@@ -945,7 +949,7 @@
   .onboarding-body > * {
     opacity: 0;
     transform: translateY(10px);
-    animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: onb-reveal var(--duration-page) var(--ease-page) both;
     /* Base offset is the body container's own delay (1000ms = body as
        3rd child of step). --body-base lets per-screen overrides shift
        this if the body sits at a different child position. Per-paragraph
@@ -1889,7 +1893,7 @@
       rgba(232, 220, 200, 0.15) 68%,
       transparent 80%
     );
-    animation: shimmer-pulse-enhanced 2000ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation: shimmer-pulse-enhanced var(--duration-ceremonial) var(--ease-essence) both;
     pointer-events: none;
     filter: blur(4px);
   }
@@ -2131,11 +2135,11 @@
 
   .record-prompt-card__text {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 600;
     color: var(--color-text-primary);
     text-align: center;
-    line-height: 1.8;
+    line-height: 1.55;
     letter-spacing: -0.01em;
     margin: 0;
   }
@@ -2256,7 +2260,12 @@
 
   .record-waveform {
     display: flex;
-    align-items: center;
+    /* Baseline-anchored: bar bottoms stay on a fixed line, only tops breathe.
+       Center-aligned bars make the bottom edges oscillate toward the record
+       button below, which reads as the button being rhythmically pressed.
+       flex-end also matches how real amplitude meters render (rising from
+       a baseline, not expanding from a midline). */
+    align-items: flex-end;
     justify-content: center;
     gap: 4px;
     height: 24px;
@@ -2276,19 +2285,58 @@
     flex: 1;
     max-width: 4px;
     background: var(--color-surface-warm);
-    border-radius: 2px;
+    /* Fully-rounded pill caps (radius = ½ width). Reads as a waveform
+       tick, not a bar-chart bar — the canonical shape in premium voice
+       UIs (Voice Memos, Otter, etc.). */
+    border-radius: 1.5px;
     transform-origin: center;
+    /* 100ms is real-time audio response, deliberately below --duration-micro
+       (200ms). Each bar snaps to the volume envelope of the live waveform —
+       tokenizing would introduce perceptible lag between voice and bar. */
     transition: height 100ms ease-out;
   }
 
   .record-waveform--active .record-waveform__bar {
     background: var(--color-mineral);
-    animation: record-waveform-bounce 1.2s ease-in-out infinite;
+    /* Ambient infinite loop — off-token intentionally. Loops aren't state
+       transitions, and the baseline bar cadence (~1.2s) is tuned to sit
+       just above a resting breath pulse. Per-bar duration + delay
+       overrides below break the uniform cadence so the eye can't latch
+       onto a loop period. Easing is a symmetric organic curve —
+       ease-in-out reads as a pendulum. */
+    animation: record-waveform-bounce 1.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
   }
+
+  /* Per-bar phase offsets + durations — intentionally non-sequential so
+     the bars read as independent voices, not as a progress-bar sweep.
+     A left-to-right delay ramp (0, 0.1, 0.2…) reads as a waveform
+     scanning across; jumbled delays + prime-ish durations read as
+     "each bar has its own rhythm" and the combined loop period is
+     long enough that the pattern never repeats perceptibly. */
+  .record-waveform--active .record-waveform__bar:nth-child(1) { animation-delay: 0.00s; animation-duration: 1.10s; }
+  .record-waveform--active .record-waveform__bar:nth-child(2) { animation-delay: 0.15s; animation-duration: 1.40s; }
+  .record-waveform--active .record-waveform__bar:nth-child(3) { animation-delay: 0.08s; animation-duration: 0.95s; }
+  .record-waveform--active .record-waveform__bar:nth-child(4) { animation-delay: 0.22s; animation-duration: 1.25s; }
+  .record-waveform--active .record-waveform__bar:nth-child(5) { animation-delay: 0.05s; animation-duration: 1.15s; }
+  .record-waveform--active .record-waveform__bar:nth-child(6) { animation-delay: 0.18s; animation-duration: 1.35s; }
+  .record-waveform--active .record-waveform__bar:nth-child(7) { animation-delay: 0.11s; animation-duration: 1.05s; }
+  .record-waveform--active .record-waveform__bar:nth-child(8) { animation-delay: 0.25s; animation-duration: 1.20s; }
+
+  /* Symmetric per-bar peaks — mid-bars travel higher than edges so the
+     silhouette stays rounded. Matches how voice energy clusters in
+     mid-frequencies rather than rendering as a uniform block. */
+  .record-waveform__bar:nth-child(1),
+  .record-waveform__bar:nth-child(8) { --peak-height: 14px; }
+  .record-waveform__bar:nth-child(2),
+  .record-waveform__bar:nth-child(7) { --peak-height: 18px; }
+  .record-waveform__bar:nth-child(3),
+  .record-waveform__bar:nth-child(6) { --peak-height: 22px; }
+  .record-waveform__bar:nth-child(4),
+  .record-waveform__bar:nth-child(5) { --peak-height: 24px; }
 
   @keyframes record-waveform-bounce {
     0%, 100% { height: 6px; }
-    50% { height: 22px; }
+    50%      { height: var(--peak-height, 22px); }
   }
 
   /* ─── Record Button ──────────────────────────────────────── */
@@ -2492,7 +2540,7 @@
     gap: var(--space-md);
     opacity: 0;
     transform: translateY(8px);
-    animation: onb-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: onb-reveal var(--duration-page) var(--ease-page) both;
     animation-delay: calc(300ms + var(--checklist-index, 0) * 400ms);
   }
 

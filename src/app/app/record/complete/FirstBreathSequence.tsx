@@ -323,7 +323,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
 
   const stoneWrapperStyle: CSSProperties = entranceActive
     ? {
-        animation: `stoneEntrance ${STONE_ENTRANCE_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both`,
+        animation: `stoneEntrance ${STONE_ENTRANCE_MS}ms var(--ease-page) both`,
         transformOrigin: 'center',
         willChange: 'transform, opacity',
       }
