@@ -59,7 +59,7 @@ export default function VaultDevSandbox() {
 
       <Section label="2. Vault Protect — /app/vault/protect">
         <VaultProtectScreen
-          initialPlan={plan}
+          plan={plan}
           onPlanChange={(p) => {
             setPlan(p);
             log(`plan → ${p}`);
