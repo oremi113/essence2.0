@@ -14,24 +14,40 @@ export function ProtectActions() {
   const plan = readPlan(new URLSearchParams(searchParams.toString()));
 
   const handlePlanChange = (next: BillingPlan) => {
-    // Write the toggle to the URL so the choice survives refresh and
-    // forwards through continuity → seal. `replace` avoids a history entry
-    // per click; `scroll: false` keeps the card in place on mobile.
     const params = new URLSearchParams(searchParams.toString());
     params.set('plan', next);
     router.replace(`/app/vault/protect?${params.toString()}`, { scroll: false });
   };
 
-  const handleCheckout = (selected: BillingPlan) => {
-    // PLACEHOLDER_7b: POST to /api/stripe/create-checkout-session and
-    // redirect to the returned Stripe Checkout URL. For 7a we route
-    // directly to the mock sealed screen.
-    router.push(`/app/vault/sealed?mock=true&plan=${selected}`);
+  const handleCheckout = async (selected: BillingPlan) => {
+    const res = await fetch('/api/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: selected }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data?.redirect) {
+        router.push(data.redirect);
+        return;
+      }
+      console.error('[protect] checkout failed', data);
+      return;
+    }
+
+    const { checkoutUrl } = (await res.json()) as { checkoutUrl: string };
+
+    // External Stripe URL: use a full page navigation. Internal mock path:
+    // router.push keeps the SPA nav.
+    if (/^https?:\/\//.test(checkoutUrl)) {
+      window.location.assign(checkoutUrl);
+    } else {
+      router.push(checkoutUrl);
+    }
   };
 
   const handleDismiss = () => {
-    // Forward the current plan so the seal screen lands with the user's
-    // actual choice (not the default).
     router.push(`/app/vault/continuity?plan=${plan}`);
   };
 

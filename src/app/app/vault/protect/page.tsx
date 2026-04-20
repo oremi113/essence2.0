@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getSubscriptionStatus } from '@/lib/subscription/get-status';
 import { ProtectActions } from './actions';
 
 export default async function VaultProtectPage() {
@@ -9,7 +10,10 @@ export default async function VaultProtectPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/auth/sign-in?next=/app/vault/protect');
 
-  // PLACEHOLDER_7b: subscription_status route guard — see reveal/page.tsx.
+  const sub = await getSubscriptionStatus(user.id);
+  if (sub.status === 'trial' || sub.status === 'active') {
+    redirect('/app/record');
+  }
 
   return <ProtectActions />;
 }
