@@ -593,6 +593,38 @@
     pointer-events: none;
   }
 
+  /* Act-transition wash — one-shot overlay on the persistent stone during
+     the Screen 6 → 7 crossfade. Layered via mix-blend-mode so the
+     underlying body gradient and engine-driven glow read through.
+     Mineral-tinted (not warm) because the warmth shift is already carried
+     by the bg transition on the phone wrapper; the cool overlay on the
+     warm ceramic reads as "quality of light changing," not "stone got
+     warmer." Mount is React-gated on prev===6 && current===7 &&
+     !reducedMotion; animation unmounts on completion via onAnimationEnd. */
+  .onb-act-wash {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at center,
+      rgba(122, 128, 136, 0.18) 0%,
+      rgba(122, 128, 136, 0.08) 40%,
+      transparent 70%
+    );
+    opacity: 0;
+    pointer-events: none;
+    mix-blend-mode: soft-light;
+    animation: onb-act-wash-beat 900ms var(--ease-essence) forwards;
+    will-change: opacity;
+  }
+
+  @keyframes onb-act-wash-beat {
+    0%   { opacity: 0; }
+    20%  { opacity: 1; }
+    50%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
   .onboarding-body {
     display: flex;
     flex-direction: column;
