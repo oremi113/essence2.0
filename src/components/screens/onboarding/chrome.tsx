@@ -127,25 +127,39 @@ export function StoneSlot() {
 // from its current params toward the new high-amplitude target, which
 // reads as a rubberband — especially on first mount or when advancing
 // from idle-heavy early screens into ready/guidance/priming.
+//
+// Override: a screen can push a short-lived stone state (e.g. Screen 10
+// pulses `ready` on photo upload). Override applies immediately — no
+// settle delay — because the user just acted, so there is no rubberband
+// risk. Pass `null` to release.
 
-export function PersistentStone({ currentScreen }: { currentScreen: number }) {
+export function PersistentStone({
+  currentScreen,
+  override,
+}: {
+  currentScreen: number;
+  override?: BreathStoneState | null;
+}) {
   const config = SCREEN_CONFIG[currentScreen];
   const target = config?.stone ?? 'idle';
   const delay = config?.settleDelay ?? DEFAULT_SETTLE_DELAY_MS;
-  const [state, setState] = useState<BreathStoneState>('idle');
+  // Settled target for the current screen — the config target after
+  // any settle delay has elapsed. The override is layered on top as
+  // pure derivation so it applies synchronously without setState-in-
+  // effect and releases naturally when the parent passes null.
+  const [settled, setSettled] = useState<BreathStoneState>('idle');
 
   useEffect(() => {
-    // Idle target applies immediately; non-idle waits for settle delay
-    // so the engine doesn't rubberband from its current params toward
-    // the new high-amplitude target on the first render of a new screen.
     const effectiveDelay = target === 'idle' ? 0 : delay;
-    const t = window.setTimeout(() => setState(target), effectiveDelay);
+    const t = window.setTimeout(() => setSettled(target), effectiveDelay);
     return () => window.clearTimeout(t);
   }, [target, delay]);
 
+  const display: BreathStoneState = override ?? settled;
+
   return (
     <div className="onboarding-persistent-stone" aria-hidden="true">
-      <BreathStone state={state} size={144} />
+      <BreathStone state={display} size={144} />
     </div>
   );
 }

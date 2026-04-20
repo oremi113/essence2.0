@@ -1217,46 +1217,153 @@
     display: none;
   }
 
-  /* ─── ONBOARDING — PHOTO CIRCLE (Screen 9) ──────────────── */
+  /* ─── ONBOARDING — PHOTO CIRCLE (Screen 10) ─────────────── */
+  /* Single-commit photo upload: tap circle → picker → upload →
+     photo fills circle → stone beats `ready` → CTA swaps to
+     "Continue." See Screen10.tsx for the state machine. */
+
+  .onboarding-photo-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+  }
 
   .onboarding-photo {
+    position: relative;
     width: 110px;
     height: 110px;
     border-radius: 50%;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    background: var(--color-bg-neutral);
-    border: 2px dashed var(--color-surface-warm);
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-warm);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.03),
+      0 1px 2px rgba(0, 0, 0, 0.04);
     cursor: pointer;
-    color: var(--color-text-tertiary);
+    color: var(--color-text-secondary);
     margin-inline: auto;
+    overflow: hidden;
     transition:
-      background 300ms cubic-bezier(0.4, 0.0, 0.2, 1),
-      border-color 300ms cubic-bezier(0.4, 0.0, 0.2, 1);
+      box-shadow 300ms var(--ease-essence),
+      border-color 300ms var(--ease-essence);
   }
 
   .onboarding-photo:hover {
-    border-color: var(--color-mineral);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.03),
+      0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .onboarding-photo:focus-within {
+    outline: none;
+  }
+
+  .onboarding-photo:has(:focus-visible) {
+    outline: 2px solid var(--color-mineral);
+    outline-offset: 3px;
+  }
+
+  /* Visually-hidden file input — keeps native focus/keyboard behavior
+     while the styled label acts as the hit target. */
+  .onboarding-photo__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .onboarding-photo__label {
     font-family: var(--font-body);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
+    color: var(--color-text-secondary);
+    letter-spacing: -0.01em;
+    transition: opacity 200ms var(--ease-essence);
   }
 
-  .onboarding-photo--filled {
-    background: radial-gradient(
-      circle at 30% 28%,
-      #E8DCC8,
-      #D4C6A8 60%,
-      #C4B8A0 100%
-    );
-    border: 2px solid transparent;
-    color: transparent;
+  .onboarding-photo--uploading .onboarding-photo__label,
+  .onboarding-photo--filled .onboarding-photo__label {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .onboarding-photo__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0;
+    animation: onb-photo-fade-in 300ms var(--ease-essence) forwards;
+    transition: opacity 200ms var(--ease-essence);
+  }
+
+  .onboarding-photo--filled .onboarding-photo__img {
+    opacity: 1;
+    animation: none;
+  }
+
+  @keyframes onb-photo-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Breathing mineral ring around the circle while an upload is
+     in flight. Minimum 400ms visibility is enforced by the hook. */
+  .onboarding-photo__ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--color-mineral);
+    opacity: 0;
+    animation: onb-ring-breath 1400ms var(--ease-essence) infinite;
+    pointer-events: none;
+  }
+
+  @keyframes onb-ring-breath {
+    0%   { opacity: 0;   transform: scale(1); }
+    50%  { opacity: 0.3; transform: scale(1.03); }
+    100% { opacity: 0;   transform: scale(1); }
+  }
+
+  .onboarding-photo__replace {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-mineral-dark);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 200ms var(--ease-essence);
+    min-height: auto;
+    opacity: 0;
+    animation: onb-photo-replace-fade-in 200ms var(--ease-essence) 200ms forwards;
+  }
+
+  .onboarding-photo__replace:hover {
+    text-decoration: underline;
+    color: var(--color-text-primary);
+  }
+
+  .onboarding-photo__replace:focus-visible {
+    outline: 2px solid var(--color-mineral);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  @keyframes onb-photo-replace-fade-in {
+    to { opacity: 1; }
   }
 
   .onboarding-photo-confirmation {
@@ -1264,25 +1371,35 @@
     font-family: var(--font-body);
     font-size: 14px;
     color: var(--color-status-success);
-    margin-top: 12px;
+    margin-top: var(--space-md);
     opacity: 0;
-    transition: opacity 300ms ease;
+    animation: onb-photo-confirmation-fade-in 200ms var(--ease-essence) 400ms forwards;
   }
 
   .onboarding-photo-confirmation--visible {
     opacity: 1;
   }
 
-  /* Surfaces server-side validation failures (mime, size, network).
-     Stays visible until the user picks a different file. */
+  @keyframes onb-photo-confirmation-fade-in {
+    to { opacity: 1; }
+  }
+
+  /* Surfaces client-side validation (mime, size) and server/network
+     failures. Stays visible until the user picks a different file. */
   .onboarding-photo-error {
     text-align: center;
     font-family: var(--font-body);
     font-size: 14px;
     color: var(--color-status-error);
-    margin: 8px auto 0;
+    margin: var(--space-sm) auto 0;
     max-width: 320px;
     line-height: 1.5;
+    opacity: 0;
+    animation: onb-photo-error-fade-in 200ms var(--ease-essence) forwards;
+  }
+
+  @keyframes onb-photo-error-fade-in {
+    to { opacity: 1; }
   }
 
   /* Round photo on the review card — sits above the data rows so the

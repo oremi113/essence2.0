@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import type { BreathStoneState } from '@/components/breath-stone';
 import type {
   OnboardingScreenData,
   OnCompleteOnboarding,
@@ -75,6 +76,15 @@ export function OnboardingScreen({
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  // Short-lived override for the persistent stone. Screens (today: 10)
+  // can push `'ready'` to acknowledge an in-screen action and release
+  // with `null` to fall back to SCREEN_CONFIG. The screen wrapper below
+  // uses `key={currentScreen}`, so Screen 10 unmounts on navigation
+  // and its hook releases the override in cleanup — no belt-and-
+  // suspenders effect needed here.
+  const [stoneOverride, setStoneOverride] = useState<BreathStoneState | null>(
+    null
+  );
 
   // ─── Navigation ────────────────────────────────────────────
   const goNext = useCallback(() => {
@@ -136,7 +146,7 @@ export function OnboardingScreen({
     <div className={wrapperClass}>
       <ProgressDots current={currentScreen} />
       <BackButton visible={currentScreen > 1} onBack={goBack} disabled={isSubmitting} />
-      <PersistentStone currentScreen={currentScreen} />
+      <PersistentStone currentScreen={currentScreen} override={stoneOverride} />
 
       {/* Keyed wrapper: force remount on screen change so the slide
           animation replays and sub-screen `useEffect` timers reset
@@ -169,6 +179,7 @@ export function OnboardingScreen({
             avatarUrl={form.avatarUrl}
             onUpload={onUploadAvatar}
             onAvatarChange={setAvatarUrl}
+            onStoneStateChange={setStoneOverride}
             onNext={goNext}
           />
         )}
