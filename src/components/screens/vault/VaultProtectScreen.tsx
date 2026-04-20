@@ -1,28 +1,24 @@
 'use client';
 
-import { useState } from 'react';
 import { VAULT_BULLETS, VAULT_PRICING, type BillingPlan } from '@/lib/vault';
 
 interface VaultProtectScreenProps {
-  initialPlan?: BillingPlan;
+  /** Current plan. The screen is fully controlled; the URL in the page layer
+   *  is the source of truth so the choice survives refresh, back-button,
+   *  and forwarding through continuity → seal. */
+  plan: BillingPlan;
+  onPlanChange: (plan: BillingPlan) => void;
   onCheckoutInitiate: (plan: BillingPlan) => void;
   onDismiss: () => void;
-  onPlanChange?: (plan: BillingPlan) => void;
 }
 
 export function VaultProtectScreen({
-  initialPlan = 'annual',
+  plan,
+  onPlanChange,
   onCheckoutInitiate,
   onDismiss,
-  onPlanChange,
 }: VaultProtectScreenProps) {
-  const [plan, setPlan] = useState<BillingPlan>(initialPlan);
   const pricing = VAULT_PRICING[plan];
-
-  const selectPlan = (next: BillingPlan) => {
-    setPlan(next);
-    onPlanChange?.(next);
-  };
 
   return (
     <section className="vault-screen vault-screen--protect">
@@ -46,7 +42,7 @@ export function VaultProtectScreen({
               className={`vault-card__toggle-opt${
                 plan === 'monthly' ? ' vault-card__toggle-opt--active' : ''
               }`}
-              onClick={() => selectPlan('monthly')}
+              onClick={() => onPlanChange('monthly')}
             >
               Monthly
             </button>
@@ -57,7 +53,7 @@ export function VaultProtectScreen({
               className={`vault-card__toggle-opt${
                 plan === 'annual' ? ' vault-card__toggle-opt--active' : ''
               }`}
-              onClick={() => selectPlan('annual')}
+              onClick={() => onPlanChange('annual')}
             >
               Annual
               {plan === 'annual' && (
