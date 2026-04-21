@@ -9,6 +9,8 @@ export interface CreateCheckoutSessionResult {
 
 export type CreateCheckoutSessionErrorCode =
   | 'unauthenticated'
+  | 'profile_missing'
+  | 'profile_lookup_failed'
   | 'missing_price_id'
   | 'stripe_error';
 
@@ -27,13 +29,33 @@ export async function createCheckoutSession(
     });
   }
 
-  const { data: profile } = await supabase
+  // Fail loudly BEFORE any Stripe call if the user has no profile row.
+  // Without this, the webhook's subscriptions insert would FK-fail post-charge.
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('stripe_customer_id')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
-  let customerId = profile?.stripe_customer_id as string | null | undefined;
+  if (profileError) {
+    console.error('[createCheckoutSession] profile lookup failed', profileError);
+    throw Object.assign(new Error('Profile lookup failed'), {
+      code: 'profile_lookup_failed' satisfies CreateCheckoutSessionErrorCode,
+    });
+  }
+
+  if (!profile) {
+    console.error(
+      '[createCheckoutSession] missing profile row for authenticated user',
+      user.id,
+    );
+    throw Object.assign(
+      new Error('Account setup incomplete. Please contact support.'),
+      { code: 'profile_missing' satisfies CreateCheckoutSessionErrorCode },
+    );
+  }
+
+  let customerId = profile.stripe_customer_id as string | null | undefined;
 
   // The stored customer ID can go stale if the customer was deleted in
   // Stripe (dashboard cleanup, support action). Validate before using —

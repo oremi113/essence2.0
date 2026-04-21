@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type VoiceProfileStatus =
   | "created"
   | "collecting"
-  | "queued"
+  | "queued"       // added by RUN_IN_DASHBOARD_voice_profiles_attempt_tracking
   | "processing"
   | "ready"
   | "failed"
