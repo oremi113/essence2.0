@@ -35,6 +35,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (code === 'profile_missing' || code === 'profile_lookup_failed') {
+      return NextResponse.json(
+        { error: 'Account setup incomplete. Please contact support.', code },
+        { status: 500 },
+      );
+    }
+
     console.error('[create-checkout-session]', err);
     return NextResponse.json(
       { error: 'Failed to create checkout session' },

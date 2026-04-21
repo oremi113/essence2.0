@@ -179,6 +179,23 @@ async function upsertSubscription(
   };
 
   const supabase = createSupabaseServiceClient();
+
+  // Defense in depth: ensure the FK target exists before the subscriptions
+  // upsert. createCheckoutSession validates profile existence at the gate,
+  // but this self-heals for edge paths (manual event replay, race during
+  // backfill, future code that bypasses the server-action flow).
+  const { error: profileEnsureError } = await supabase
+    .from('profiles')
+    .upsert(
+      { user_id: userId },
+      { onConflict: 'user_id', ignoreDuplicates: true },
+    );
+
+  if (profileEnsureError) {
+    console.error('[stripe-webhook] profile ensure failed', profileEnsureError);
+    throw profileEnsureError;
+  }
+
   const { error } = await supabase
     .from('subscriptions')
     .upsert(row, { onConflict: 'stripe_subscription_id' });
