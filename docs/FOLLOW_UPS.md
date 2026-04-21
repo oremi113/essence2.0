@@ -165,3 +165,30 @@ After Smart Retries exhausts its attempts, Stripe fires `customer.subscription.d
 - Confirm the "preserve previous billing_period" rule is product-correct.
 - Decide whether the restore screen's CTA label should change when the action is "start a new subscription" vs "update your card" — may read more appropriately as "Restart your vault" for lapsed vs "Update my card" for past_due.
 - Confirm the new subscription inherits any trial remnants or starts fresh (fresh is the simpler, likely-correct default).
+
+## Voice-creation → First Breath handoff (from Session 8 planning, 2026-04-21)
+
+These two entries capture the orphaned-First-Breath gap discovered while scoping Session 8. The polling infra, success state, First Breath screen, and guards all exist — what's undecided is routing. Both are explicit "connection pass" work, deliberately deferred so Sessions 8/9/10 can build surfaces in isolation.
+
+### 24. `VoiceCreationView` success state routes to `/app/messages/new` instead of First Breath
+`src/components/voice/VoiceCreationView.tsx:243` — on `status === 'ready'`, the success screen's primary CTA pushes to `/app/messages/new`, skipping the ceremonial First Breath Stone moment at `/app/record/complete` entirely.
+
+**Affected file:** `src/components/voice/VoiceCreationView.tsx` — the `onClick={() => router.push("/app/messages/new")}` in the success branch (~line 243–246).
+
+**Fix shape:** one-line change — swap the push target to `/app/record/complete`. First Breath's server-side guards at `src/app/app/record/complete/page.tsx:14–36` already admit `ready`/`processing`/`queued` profiles, so routing there on success is safe.
+
+**Open question tied to FU-25:** if VoiceCreationView success routes *into* First Breath, FU-25's exit destination question becomes load-bearing.
+
+**Pick up when:** connection pass after Sessions 8/9/10 land the surfaces. Grep-verify that nothing else routes to `/app/messages/new` directly from the voice-creation flow at that time.
+
+### 25. `FirstBreathSequence` exits to `/app/record/complete/stub` — decide final destination
+`src/components/screens/FirstBreathSequence.tsx:100` — the CTA handler pushes to `/app/record/complete/stub` with an inline TODO (`// TODO: replace with router.push('/app/checkout') when Session 7 is complete`). Session 7 is complete (7a/7b/7c shipped), but the stub hasn't been replaced because the destination is still a design decision.
+
+**Candidates:**
+- `/app/messages/new` — the Session 8 surface. First Breath → immediate message creation.
+- Dedicated "vault sealed" screen — ceremonial closure before returning to app surfaces. Fits the arc but adds a screen to build.
+- `/home` / `/app` — neutral return. Simplest, but discards the narrative momentum First Breath builds.
+
+**Why deferred:** depends on how Session 8's message-creation flow feels in context. A user who just witnessed the First Breath ceremony may or may not want to immediately type a message — the right next step isn't obvious until Session 8 ships.
+
+**Pick up when:** connection pass, after Session 8 (`/app/messages/new`) is testable end-to-end.
