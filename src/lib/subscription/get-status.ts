@@ -8,6 +8,7 @@ export interface SubscriptionRecord {
   currentPeriodEnd: string | null;
   billingPeriod: BillingPlan | null;
   cancelAtPeriodEnd: boolean;
+  lastFailedAttemptCount: number;
 }
 
 export async function getSubscriptionStatus(userId: string): Promise<SubscriptionRecord> {
@@ -15,7 +16,9 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('status, trial_ends_at, current_period_end, billing_period, cancel_at_period_end')
+    .select(
+      'status, trial_ends_at, current_period_end, billing_period, cancel_at_period_end, last_failed_attempt_count',
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -28,6 +31,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
       currentPeriodEnd: null,
       billingPeriod: null,
       cancelAtPeriodEnd: false,
+      lastFailedAttemptCount: 0,
     };
   }
 
@@ -37,5 +41,6 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     currentPeriodEnd: data.current_period_end,
     billingPeriod: data.billing_period as BillingPlan | null,
     cancelAtPeriodEnd: data.cancel_at_period_end,
+    lastFailedAttemptCount: data.last_failed_attempt_count ?? 0,
   };
 }

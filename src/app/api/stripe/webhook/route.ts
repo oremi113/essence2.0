@@ -74,6 +74,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const sub = await stripe.subscriptions.retrieve(subscriptionId);
   const plan = (session.metadata.billing_period as BillingPlan | undefined) ?? 'monthly';
   await upsertSubscription(sub, session.metadata.user_id, plan);
+
+  // NOTE: Session 7c spec called for a voice-processing trigger here
+  // (flip voice_profiles.status from 'collecting' to 'processing' on paid
+  // checkout). Removed before shipping because this codebase's 'processing'
+  // status semantically means "ElevenLabs is currently running" — flipping
+  // it without actually invoking /api/voice-profiles/[id]/start would leave
+  // the profile stuck and trip the staleness check in that route. Whether
+  // /start should gate on payment at all is a separate product question,
+  // not a webhook concern. Do not re-add this trigger without resolving
+  // the semantic gap first.
 }
 
 async function handleSubscriptionChange(sub: Stripe.Subscription) {
@@ -89,39 +99,65 @@ async function handleSubscriptionChange(sub: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
+  // Stripe fires customer.subscription.deleted for BOTH retry-exhaustion
+  // lapses and voluntary cancellations. Distinguish via
+  // cancellation_details.reason so the restore screen + analytics can
+  // tell a pause from a choice.
+  const reason = sub.cancellation_details?.reason;
+  const status: 'lapsed' | 'cancelled' = reason === 'payment_failed' ? 'lapsed' : 'cancelled';
+
   const supabase = createSupabaseServiceClient();
   const { error } = await supabase
     .from('subscriptions')
     .update({
-      status: 'cancelled',
+      status,
       cancelled_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', sub.id);
 
   if (error) {
-    console.error('[stripe-webhook] Failed to mark cancelled', error);
+    console.error('[stripe-webhook] Failed to mark deleted', error);
     throw error;
   }
+
+  console.log(
+    `[stripe-webhook] subscription deleted, status=${status}, reason=${reason ?? 'unknown'}, sub ${sub.id}`,
+  );
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   // In API 2026-03-25.dahlia the subscription ref moved to
   // invoice.parent.subscription_details.subscription.
-  const subRef = invoice.parent?.subscription_details?.subscription;
-  if (!subRef) return;
+  const subRef =
+    invoice.parent?.type === 'subscription_details'
+      ? invoice.parent.subscription_details?.subscription
+      : null;
+
+  if (!subRef) {
+    console.warn('[stripe-webhook] invoice.payment_failed missing subscription id', invoice.id);
+    return;
+  }
 
   const subscriptionId = typeof subRef === 'string' ? subRef : subRef.id;
+  const attemptCount = invoice.attempt_count ?? 0;
 
   const supabase = createSupabaseServiceClient();
   const { error } = await supabase
     .from('subscriptions')
-    .update({ status: 'past_due' })
+    .update({
+      status: 'past_due',
+      last_failed_attempt_count: attemptCount,
+    })
     .eq('stripe_subscription_id', subscriptionId);
 
   if (error) {
     console.error('[stripe-webhook] Failed to mark past_due', error);
     throw error;
   }
+
+  console.log(
+    `[stripe-webhook] marked past_due, attempt ${attemptCount}, sub ${subscriptionId}`,
+  );
 }
 
 async function upsertSubscription(
