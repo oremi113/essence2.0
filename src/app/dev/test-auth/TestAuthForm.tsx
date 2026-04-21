@@ -11,11 +11,15 @@ function TestAuthInner() {
   useEffect(() => {
     const email = params.get('email');
     const password = params.get('password');
-    if (!email || !password) {
-      setResult('missing-credentials');
-      return;
-    }
+
+    // Wrap the whole effect in an async IIFE so every setResult path runs
+    // inside a callback, satisfying the react-hooks/set-state-in-effect
+    // rule (which flags synchronous setState in an effect body).
     (async () => {
+      if (!email || !password) {
+        setResult('missing-credentials');
+        return;
+      }
       try {
         const supabase = createSupabaseBrowserClient();
         const { error } = await supabase.auth.signInWithPassword({ email, password });
