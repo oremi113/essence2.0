@@ -127,3 +127,19 @@ Declared explicitly in the B3 Terminal doc's new §8: **t=0 of the crossfade** (
 
 **Fix:** rename each duplicated file to a unique 14-digit timestamp (e.g., `20260214000000_...`, `20260214000001_...`, `20260214000002_...`), then `migration repair --status applied <new_version>` for each. Use `git mv` so history survives. Also consider renaming `RUN_IN_DASHBOARD_voice_profiles_attempt_tracking.sql` to match the `<timestamp>_name.sql` pattern so the CLI stops skipping it.
 **Pick up when:** next session that otherwise touches `supabase/migrations/` (e.g., Session 7c, or any schema-change session). Not blocking 7b, 7c, or deploy — the DB is in the correct state; only the CLI's bookkeeping is out of sync.
+
+## Voice-creation payment gate (from Session 7c Chunk 1, 2026-04-21)
+
+### 22. Should `/api/voice-profiles/[id]/start` gate on paid status?
+Session 7c's spec called for a "voice processing trigger" on `checkout.session.completed` (Site A) and on the `created → collecting` transition (Site B), so that paid users would land in `voice_profiles.status = 'processing'`. Both sites were **dropped from 7c** because the repo's `'processing'` status semantically means "ElevenLabs is currently running," and flipping to it without invoking ElevenLabs would leave profiles stuck (the `/start` route's 3-minute staleness check would eventually treat them as timed out).
+
+The real underlying question is a product one: **should voice creation require a paid subscription before ElevenLabs is invoked?**
+
+**Current state:** `/api/voice-profiles/[id]/start` has zero payment gating. Any authenticated user with enough clips can trigger ElevenLabs on their voice profile. Voice creation and payment are entirely decoupled.
+
+**Options if this gets addressed:**
+- **(a)** Add a payment check inside `/start`; 401/402 if the user isn't on `trial`/`active`. Simple, but forecloses any "free preview" product decisions.
+- **(b)** Keep `/start` open; rely on storage/retention gates downstream (e.g., voice profiles for unpaid users are deleted after N days). More product work, more leeway.
+- **(c)** Keep status quo — voice creation is free, only vault storage/delivery gates on payment.
+
+**Pick up when:** product decides how strongly payment should gate voice creation. Not blocking 7c, 7d, or deploy — vault surfaces already gate on subscription state. This is about ElevenLabs cost exposure, not user-facing flow integrity.
