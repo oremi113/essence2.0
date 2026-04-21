@@ -1,58 +1,24 @@
-'use client';
+import { notFound } from 'next/navigation';
+import { TestAuthForm } from './TestAuthForm';
 
 /**
- * Dev-only bootstrap route for Playwright tests.
+ * Dev-only bootstrap for Playwright password sign-in.
  *
- * Calls Supabase's browser signInWithPassword so the SSR auth cookie
- * lands in the format @supabase/ssr expects. Real users never see this
- * route — the UI has no password form. Password auth is programmatic-only,
- * used exclusively by automated tests against the test account.
+ * Two env-var gates. Both must be true for this route to render:
+ *   1. ENABLE_DEV_ROUTES — gates the whole /dev/* segment (see layout.tsx)
+ *   2. ENABLE_DEV_AUTH — specifically allows this credential-accepting route
  *
- * Protected by a development-mode gate. Do not link to it from anywhere.
+ * Separated because a future engineer flipping ENABLE_DEV_ROUTES on in
+ * production for an unrelated debugging task should NOT also expose a
+ * plaintext-credential endpoint. Opt-in to both, or this route 404s.
+ *
+ * Server-rendered check runs before the client component mounts, so
+ * query params don't enter server-rendered HTML and the form never
+ * loads client-side when disabled.
  */
-
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-
-function TestAuthInner() {
-  const params = useSearchParams();
-  const [result, setResult] = useState<string>('working');
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'production') {
-      setResult('disabled-in-production');
-      return;
-    }
-    const email = params.get('email');
-    const password = params.get('password');
-    if (!email || !password) {
-      setResult('missing-credentials');
-      return;
-    }
-    (async () => {
-      try {
-        const supabase = createSupabaseBrowserClient();
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        setResult(error ? `error: ${error.message}` : 'ok');
-      } catch (err) {
-        setResult(`error: ${(err as Error).message}`);
-      }
-    })();
-  }, [params]);
-
-  return (
-    <main style={{ padding: '2rem', fontFamily: 'monospace' }}>
-      <h1>test-auth bootstrap</h1>
-      <p data-testid="test-auth-result">{result}</p>
-    </main>
-  );
-}
-
 export default function TestAuthPage() {
-  return (
-    <Suspense fallback={<p>loading…</p>}>
-      <TestAuthInner />
-    </Suspense>
-  );
+  if (process.env.ENABLE_DEV_AUTH !== 'true') {
+    notFound();
+  }
+  return <TestAuthForm />;
 }
