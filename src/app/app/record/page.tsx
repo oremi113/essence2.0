@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { RecordScreen } from "@/components/screens/RecordScreen";
 import type { RecordScreenData } from "@/components/screens/RecordScreen.types";
 import { RecordPageShell } from "./RecordPageShell";
+import { RecordPageBannerWrapper } from "./RecordPageBannerWrapper";
+import { getSubscriptionStatus } from "@/lib/subscription/get-status";
 
 /**
  * Server component for the voice training record page.
@@ -27,6 +29,14 @@ export default async function RecordPage({
     redirect("/auth/sign-in?next=/app/record");
   }
 
+  // Past-due banner: shown above all record-page content when Stripe's
+  // retry cycle is in progress. Variant picked by attempt count.
+  const sub = await getSubscriptionStatus(user.id);
+  const banner =
+    sub.status === "past_due" ? (
+      <RecordPageBannerWrapper attemptCount={sub.lastFailedAttemptCount} />
+    ) : null;
+
   // --- Fetch the user's voice profile (most recent, non-archived) ---
   const { data: voiceProfile } = await supabase
     .from("voice_profiles")
@@ -47,6 +57,7 @@ export default async function RecordPage({
 
     return (
       <>
+        {banner}
         <nav style={{ marginBottom: 16, fontSize: 14 }}>
           <a href="/app/shelf">Memory Shelf</a>
           <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
@@ -111,5 +122,10 @@ export default async function RecordPage({
     voiceProfileId: voiceProfile.id,
   };
 
-  return <RecordScreen data={data} />;
+  return (
+    <>
+      {banner}
+      <RecordScreen data={data} />
+    </>
+  );
 }

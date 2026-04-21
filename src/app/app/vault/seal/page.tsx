@@ -19,6 +19,9 @@ export default async function VaultSealPage({
   if (sub.status === 'trial' || sub.status === 'active') {
     redirect('/app/record');
   }
+  if (sub.status === 'lapsed' || sub.status === 'cancelled') {
+    redirect('/app/vault/restore');
+  }
 
   const params = await searchParams;
   const plan: BillingPlan = params.plan === 'monthly' ? 'monthly' : 'annual';

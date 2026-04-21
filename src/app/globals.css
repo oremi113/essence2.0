@@ -3286,4 +3286,136 @@
       transform: none;
     }
   }
+
+  /* ─── Past-due banner (session 7c) ──────────────────────────────────── */
+  /* Quiet, non-alarming surface rendered at the top of /app/record when
+     subscriptions.status = 'past_due'. Warm background signals "attention"
+     without the red-alert register of a typical SaaS billing banner. */
+  .vault-past-due-banner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg) var(--space-xl);
+    background-color: var(--color-bg-warm-2);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .vault-past-due-banner__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .vault-past-due-banner__header {
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .vault-past-due-banner__body {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .vault-past-due-banner__cta {
+    align-self: flex-start;
+    background-color: var(--color-mineral);
+    color: var(--color-bg-neutral);
+    font-family: var(--font-body);
+    font-size: var(--text-ui);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-xl);
+    min-height: 44px;
+    cursor: pointer;
+    transition: background-color var(--duration-micro) var(--ease-essence);
+  }
+  .vault-past-due-banner__cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-past-due-banner__cta:active { transform: translateY(1px); }
+
+  @media (min-width: 768px) {
+    .vault-past-due-banner {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-xl);
+    }
+    .vault-past-due-banner__content { flex: 1; }
+    .vault-past-due-banner__cta { align-self: center; flex-shrink: 0; }
+  }
+
+  /* ─── Restore screen (session 7c) ───────────────────────────────────── */
+  /* Elevated register, not operational. Centered, quiet, ceremonial.
+     No banner, no chrome. The vault is paused — the screen holds the user. */
+  .vault-restore-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4xl) var(--space-lg);
+    background-color: var(--color-bg-neutral);
+  }
+
+  .vault-restore-screen__inner {
+    max-width: 32rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4xl);
+    text-align: center;
+  }
+
+  .vault-restore-screen__header {
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .vault-restore-screen__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .vault-restore-screen__body p {
+    font-family: var(--font-body);
+    font-size: var(--text-body-lg);
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .vault-restore-screen__cta {
+    background-color: var(--color-mineral);
+    color: var(--color-bg-neutral);
+    font-family: var(--font-body);
+    font-size: var(--text-ui);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg) var(--space-2xl);
+    min-width: 220px;
+    min-height: 52px;
+    cursor: pointer;
+    transition: background-color var(--duration-micro) var(--ease-essence);
+    box-shadow: var(--shadow-mineral);
+  }
+  .vault-restore-screen__cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-restore-screen__cta:active { transform: translateY(1px); }
+  .vault-restore-screen__cta:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }

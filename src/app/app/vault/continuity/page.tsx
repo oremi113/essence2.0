@@ -14,6 +14,9 @@ export default async function VaultContinuityPage() {
   if (sub.status === 'trial' || sub.status === 'active') {
     redirect('/app/record');
   }
+  if (sub.status === 'lapsed' || sub.status === 'cancelled') {
+    redirect('/app/vault/restore');
+  }
 
   return <ContinuityActions />;
 }
