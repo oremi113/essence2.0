@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isFeatureEnabled } from '@/lib/feature-flags';
@@ -12,7 +11,7 @@ import { isFeatureEnabled } from '@/lib/feature-flags';
  * Dashboard → Settings → Billing → Customer portal. Otherwise Stripe
  * returns "No such default configuration" and this route 500s.
  */
-export async function POST(_req: NextRequest) {
+export async function POST() {
   if (!isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
     return NextResponse.json({ error: 'Stripe disabled' }, { status: 503 });
   }

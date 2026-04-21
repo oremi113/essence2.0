@@ -26,7 +26,6 @@ import {
   clearSubscriptions,
   setProfileCustomerId,
   clearTrainingClips,
-  type SubscriptionStatus,
 } from './helpers/db';
 
 const user = getTestUser();
@@ -237,7 +236,7 @@ test.describe('portal session endpoint', () => {
     'Requires VAULT_STRIPE_ENABLED=true',
   );
 
-  test('returns a portal URL for a user with stripe_customer_id', async ({ page, request }) => {
+  test('returns a portal URL for a user with stripe_customer_id', async ({ page }) => {
     await seedSubscription(user.userId, { status: 'past_due', lastFailedAttemptCount: 1 });
     // Use a real test-mode customer ID. If the user never checked out, they
     // don't have one — seed a placeholder. Stripe will reject unknown IDs,
