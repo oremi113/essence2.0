@@ -143,3 +143,25 @@ The real underlying question is a product one: **should voice creation require a
 - **(c)** Keep status quo — voice creation is free, only vault storage/delivery gates on payment.
 
 **Pick up when:** product decides how strongly payment should gate voice creation. Not blocking 7c, 7d, or deploy — vault surfaces already gate on subscription state. This is about ElevenLabs cost exposure, not user-facing flow integrity.
+
+## Stripe / restore surface (from Session 7c, 2026-04-21)
+
+### 23. Customer Portal cannot resurrect a deleted subscription — restore screen dead-ends for lapsed users
+After Smart Retries exhausts its attempts, Stripe fires `customer.subscription.deleted` with `cancellation_details.reason = 'payment_failed'`, and our webhook writes `status = 'lapsed'`. A lapsed user who lands on `/app/vault/restore` and taps "Bring my vault back" opens the Customer Portal. The Portal lets them update their card — but Stripe does **not** automatically recreate a deleted subscription. Card update has no effect on a fully-lapsed user. They land back on `/app/vault/restore` still in `status = 'lapsed'`, confused about why nothing changed.
+
+`past_due` users (subscription still exists, retry cycle still active) are fine — Portal → update card → next retry succeeds → webhook flips status back to `active`. The gap is specifically the lapsed/cancelled case.
+
+**Affected file:** `src/app/app/vault/restore/actions.tsx` — always opens Portal; no branch on status.
+
+**Recommended fix (for a future session):**
+- Branch CTA on `sub.status`:
+  - `past_due` → Portal (existing behavior)
+  - `lapsed` or `cancelled` → `/api/stripe/create-checkout-session` — create a new subscription on the existing customer
+- **Do NOT silently force monthly** on re-checkout. Query the previous (lapsed) `subscriptions.billing_period` and default to what the user had before. Fall back to monthly only if no prior row found. A user who paid for annual, lapsed, and comes back should not silently find themselves on monthly — that's a financial decision masquerading as a UX default.
+
+**Why deferred rather than in-7c patch:** pre-launch lapse volume is ~0. Building the wrong fix under time pressure and living with it later is worse than designing it properly later. Shipping 7c without the fix is acceptable because no lapsed users exist yet.
+
+**Pick up when:** a) before public launch, or b) first real lapsed user surfaces in dashboards, whichever comes first. Requires the following questions resolved:
+- Confirm the "preserve previous billing_period" rule is product-correct.
+- Decide whether the restore screen's CTA label should change when the action is "start a new subscription" vs "update your card" — may read more appropriately as "Restart your vault" for lapsed vs "Update my card" for past_due.
+- Confirm the new subscription inherits any trial remnants or starts fresh (fresh is the simpler, likely-correct default).
