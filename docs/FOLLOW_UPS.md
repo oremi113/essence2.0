@@ -192,3 +192,22 @@ These two entries capture the orphaned-First-Breath gap discovered while scoping
 **Why deferred:** depends on how Session 8's message-creation flow feels in context. A user who just witnessed the First Breath ceremony may or may not want to immediately type a message — the right next step isn't obvious until Session 8 ships.
 
 **Pick up when:** connection pass, after Session 8 (`/app/messages/new`) is testable end-to-end.
+
+## Supabase generated types not wired up (from Session 8 micro-pass, 2026-04-21)
+
+### 26. DB enum types are hand-written unions; no generated types file
+This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced by `supabase gen types typescript`. TS files that need DB enum types currently hand-write string-literal unions that mirror the Postgres enums.
+
+**Current instance:** `src/lib/messageTemplates.ts:26` defines `MessageCategory` as an inline union with a comment pinning it to `supabase/migrations/20260421120000_messages_category.sql`. Same pattern will repeat for future DB-typed work unless the generation workflow lands.
+
+**Risk:** enum drift. If someone adds a value to a DB enum via migration but forgets to update the matching TS union, `tsc` won't catch it — the mismatch surfaces only at runtime when the server tries to insert an enum value the DB accepts but the TS narrower rejects (or vice versa).
+
+**Blocker:** the Supabase CLI auth is currently broken — `npx supabase login` fails with `permission denied to alter role "cli_login_postgres"` (encountered during Session 8 Pass 0's migration repair step). That blocks both `supabase gen types` and `supabase db push` / `migration repair` from running. Worked around by running migrations directly via the Dashboard SQL Editor and inserting bookkeeping rows into `supabase_migrations.schema_migrations` by hand.
+
+**Fix shape:**
+1. Restore CLI auth. Likely paths: `supabase logout` + fresh `supabase login`; if that still fails, regenerate the access token in Dashboard → Settings → Access Tokens; if *that* still fails, the project owner may need to re-grant CLI access.
+2. Once CLI works: `npx supabase gen types typescript --project-id <id> > src/lib/supabase/types.ts` (or `--local` if a local Supabase is running).
+3. Swap hand-written enum unions to `Database['public']['Enums']['<name>']`. Start with `MessageCategory` in `src/lib/messageTemplates.ts`.
+4. Add a CI check (or a pre-commit hook) that regenerates types and fails if `src/lib/supabase/types.ts` would change — catches drift before merge.
+
+**Pick up when:** next time the CLI auth needs to work for a separate reason (migration repair, local Supabase spin-up), or when a second DB enum union is about to be hand-written — whichever comes first. Not blocking Session 8; the hand-written `MessageCategory` is type-safe within the codebase, it just can't catch schema-drift.
