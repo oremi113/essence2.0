@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ESSENCE · Step 5 · A5 Generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════╗
+  ║  NOTE FOR CODE ARCHITECT — A5 Generation                              ║
+  ║                                                                       ║
+  ║  Stage progression in production:                                     ║
+  ║   1. "Shaping your message." (0–4s)                                   ║
+  ║   2. "Listening for the right tone." (4–9s if still pending)          ║
+  ║   3. "Almost there." (9s+ if still pending)                           ║
+  ║   → routes to A6 Preview when LLM + ElevenLabs both return            ║
+  ║                                                                       ║
+  ║  Atmosphere stack (ceremonial mode):                                  ║
+  ║   - 3-stop warm gradient background with hue shift                    ║
+  ║   - Ambient radial glow, 13s loop, independent of stone halo          ║
+  ║   - Vignette at corners                                               ║
+  ║   - Stone halo 6s + stone body 6s = three-harmonic breathing          ║
+  ║                                                                       ║
+  ║  Failed state copy/CTA depends on whether user provided a note:       ║
+  ║   - With note: primary "Try again" → re-runs generation               ║
+  ║                secondary link "Adjust your note" → routes back to A4  ║
+  ║                (primary = fastest recovery path, edit is fallback)    ║
+  ║   - Without note: primary "Try again" → re-runs generation            ║
+  ║                                                                       ║
+  ║  Failed stage shifts to task-oriented: smaller stone (--stone-md),    ║
+  ║  content pushed higher in frame so actions sit above fold.            ║
+  ║                                                                       ║
+  ║  Stone state: cooler "working" tone throughout. Returns to honey      ║
+  ║  "ready" tone only on failed state.                                   ║
+  ║                                                                       ║
+  ║  No backbar — generation is in flight, can't be cancelled or backed   ║
+  ║  out of without losing the request.                                   ║
+  ║                                                                       ║
+  ║  BACKLOG (V2):                                                        ║
+  ║   - Long-latency state (>30s) beyond beat 3                           ║
+  ║   - Success-out transition to A6 (stone persistence / cross-fade)     ║
+  ║   - Repeat-view treatment (compressed copy beats on retry)            ║
+  ║   - Screen reader: aria-live on failed title, autofocus on primary    ║
+  ╚═══════════════════════════════════════════════════════════════════════╝
+-->
+
+<style>
+:root {
+  --color-bg-neutral: #FBF8F4;
+  --color-bg-warm-1: #F9F3E8;
+  --color-bg-warm-2: #F6F0E5;
+  --color-bg-warm-phase: #F2EDE4;
+  --color-bg-gold: #F2E8D6;
+  --color-bg-rich: #EDE3D0;
+  --color-surface-card: #F6F0E5;
+  --color-surface-warm: #EDE3D0;
+  --color-surface-honey: #F2E8D6;
+  --color-mineral: #7A8088;
+  --color-mineral-dark: #656B73;
+  --color-text-primary: #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #ADA9A5;
+  --color-border: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
+
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --text-h1: 36px;
+  --text-title: 28px;
+  --text-body-lg: 18px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-caption: 12px;
+  --line-height-title: 1.4;
+  --line-height-hero: 1.25;
+
+  /* Text sizing — 16px floor for 45-70 audience */
+  --text-descriptor: var(--text-body);
+  --text-meta: var(--text-body);
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-press: cubic-bezier(0.2, 0.0, 0.0, 1);
+  --duration-micro: 200ms;
+  --duration-small: 400ms;
+  --duration-medium: 800ms;
+  --duration-large: 1200ms;
+  --duration-breath: 3000ms;
+
+  --size-avatar: 44px;
+  --size-control-md: 52px;
+  --stone-sm: 120px;
+  --stone-md: 160px;
+  --stone-lg: 180px;
+  --stone-xl: 200px;
+  --pip-w-rest: 6px;
+  --pip-w-active: 20px;
+  --scale-press: 0.98;
+  --scale-press-subtle: 0.99;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background: #1C1A18;
+  background-image: radial-gradient(ellipse at center, #2a2622 0%, #1C1A18 70%);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 12px 60px; gap: 24px;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Freeze looping atmospheric breath at mid-frame, keep composition */
+  .phone::before,
+  .stone::before,
+  .stone::after,
+  .stone__body {
+    animation-play-state: paused !important;
+  }
+  /* Entrance animations collapse to instant (user already on screen) */
+  .crumb-wrap,
+  .stone,
+  .gen-title,
+  .gen-aside {
+    animation-duration: 0.01ms !important;
+  }
+  /* Copy beat transitions stay, softened, so the screen doesn't freeze silent */
+  .gen-title, .gen-aside {
+    transition-duration: 800ms !important;
+  }
+}
+button { font-family: inherit; }
+
+.prototype-wrapper {
+  width: 390px; height: 812px;
+  border-radius: 48px; overflow: hidden;
+  box-shadow: 0 0 0 10px #1A1715, 0 0 0 12px var(--color-mineral), 0 50px 100px rgba(0,0,0,0.45);
+  position: relative; flex-shrink: 0;
+  background: var(--color-bg-warm-phase);
+}
+@media (max-width: 440px) {
+  .prototype-wrapper { transform: scale(0.88); transform-origin: top center; }
+}
+
+/* ════════════════════════════════════════════════
+   ATMOSPHERE STACK (ceremonial mode)
+   Layer 1: 3-stop background gradient with hue shift on .phone
+   Layer 2: ambient radial glow ::before, 13s loop
+   Layer 3: vignette ::after, static
+   Layer 4 (stone halo + stone body) lives on .stone below
+   ════════════════════════════════════════════════ */
+.phone {
+  width: 100%; height: 100%;
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  font-family: var(--font-body); color: var(--color-text-primary);
+  background: linear-gradient(
+    180deg,
+    #EDE4D4 0%,
+    var(--color-bg-warm-phase) 45%,
+    #F5ECD8 100%
+  );
+}
+/* Ambient warm glow — centered around stone focal point, slow breathing */
+.phone::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 42%,
+    rgba(232, 200, 140, 0.28) 0%,
+    rgba(232, 200, 140, 0.10) 40%,
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: ambientGlow 13s var(--ease-essence) infinite;
+}
+@keyframes ambientGlow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+/* Vignette — soft corner deepening, static */
+.phone::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 50%,
+    transparent 50%,
+    rgba(60, 45, 25, 0.08) 85%,
+    rgba(60, 45, 25, 0.16) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+/* Keep screen content above atmosphere layers */
+.phone__status, .phone__island, .phone__home-indicator { z-index: 10; }
+.phone__status {
+  position: absolute; inset: 0 0 auto 0; height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px 0;
+  font-weight: 600; font-size: var(--text-small);
+  color: var(--color-text-primary); z-index: 10; pointer-events: none;
+}
+.phone__status-icons { display: flex; gap: 6px; align-items: center; }
+.phone__island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 30px; border-radius: 999px; background: #0B0B0B; z-index: 11;
+}
+.phone__home-indicator {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  width: 134px; height: 5px; border-radius: 3px;
+  background: rgba(28,26,24,0.35); z-index: 10;
+}
+.phone__screen { position: absolute; inset: 44px 0 0 0; display: flex; flex-direction: column; z-index: 3; }
+
+.crumb-wrap {
+  position: absolute;
+  top: var(--space-md);
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 4;
+  opacity: 0;
+  animation: atmosphereFadeIn var(--duration-medium) var(--ease-essence) 100ms forwards;
+}
+
+.crumb-display {
+  display: inline-flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-surface-honey);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.crumb-display__divider {
+  width: 3px; height: 3px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  opacity: 0.4;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: var(--space-xl);
+  text-align: center;
+}
+.stage--hidden { display: none; }
+
+/* STONE — working state */
+.stone {
+  position: relative; border-radius: var(--radius-full);
+  width: var(--stone-lg); height: var(--stone-lg);
+  margin-bottom: var(--space-3xl);
+  opacity: 0;
+  animation:
+    stoneEntrance var(--duration-medium) var(--ease-essence) 300ms forwards;
+}
+/* Halo — 6s tempo (breathing body's companion) */
+.stone::before {
+  content: ''; position: absolute; inset: -28%; border-radius: var(--radius-full);
+  background: radial-gradient(circle, rgba(160, 180, 200, 0.16), transparent 62%);
+  animation: stoneHaloWorking 6s var(--ease-essence) infinite;
+}
+/* Specular highlight + third breathing tempo at 9s — subtle shimmer */
+.stone::after {
+  content: ''; position: absolute; top: 15%; left: 22%;
+  width: 30%; height: 20%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.45), transparent 70%);
+  border-radius: var(--radius-full); filter: blur(6px); pointer-events: none;
+  animation: stoneShimmerWorking 9s var(--ease-essence) infinite;
+}
+.stone__body {
+  width: 100%; height: 100%; border-radius: var(--radius-full);
+  background: radial-gradient(circle at 30% 28%, #F0E8D5 0%, #DDC8A3 28%, #B89F70 60%, #80684A 90%);
+  box-shadow:
+    0 20px 40px rgba(120, 100, 70, 0.16),
+    inset -16px -24px 50px rgba(80, 60, 30, 0.32),
+    inset 16px 16px 36px rgba(255, 245, 220, 0.28);
+  animation: stoneBreathWorking 6s var(--ease-essence) infinite;
+}
+@keyframes stoneEntrance {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes atmosphereFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes stoneBreathWorking {
+  0%, 100% { transform: scale(1);     filter: brightness(1); }
+  50%      { transform: scale(1.025); filter: brightness(1.04); }
+}
+@keyframes stoneHaloWorking {
+  0%, 100% { transform: scale(1);    opacity: 0.12; }
+  50%      { transform: scale(1.08); opacity: 0.20; }
+}
+@keyframes stoneShimmerWorking {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.70; }
+}
+
+/* Failed: smaller stone, revert to ready honey */
+.stone--failed {
+  width: var(--stone-md); height: var(--stone-md);
+  margin-bottom: var(--space-xl);
+}
+.stone--failed .stone__body {
+  background: radial-gradient(circle at 30% 28%, #FBF2DC 0%, #E8CF9A 28%, #C9A665 60%, #8A6F3E 90%);
+  box-shadow:
+    0 20px 40px rgba(139,111,62,0.18),
+    inset -16px -24px 50px rgba(90,65,30,0.35),
+    inset 16px 16px 36px rgba(255,245,220,0.35);
+  animation: stoneBreathReady var(--duration-breath) var(--ease-essence) infinite;
+}
+.stone--failed::before {
+  background: radial-gradient(circle, rgba(255,220,160,0.22), transparent 62%);
+  animation: stoneHaloReady var(--duration-breath) var(--ease-essence) infinite;
+}
+.stone--failed::after {
+  animation: none;
+  opacity: 0.5;
+}
+@keyframes stoneBreathReady {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%      { transform: scale(1.05); filter: brightness(1.02); }
+}
+@keyframes stoneHaloReady {
+  0%, 100% { transform: scale(1);   opacity: 0.15; }
+  50%      { transform: scale(1.1); opacity: 0.22; }
+}
+
+.gen-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: 600;
+  line-height: var(--line-height-hero);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  max-width: 300px;
+  margin-bottom: var(--space-md);
+  text-wrap: pretty;
+  opacity: 0;
+  animation:
+    stoneEntrance var(--duration-medium) var(--ease-essence) 500ms forwards;
+  transition: opacity var(--duration-medium) var(--ease-essence);
+}
+.gen-aside {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  max-width: 280px;
+  text-wrap: pretty;
+  opacity: 0;
+  animation:
+    stoneEntrance var(--duration-medium) var(--ease-essence) 700ms forwards;
+  transition: opacity var(--duration-medium) var(--ease-essence);
+}
+/* Mid-stage copy swap (between beats) overrides animation */
+.gen-title.is-fading, .gen-aside.is-fading {
+  animation: none;
+  opacity: 0.3;
+}
+.gen-title.is-settled, .gen-aside.is-settled {
+  animation: none;
+  opacity: 1;
+}
+
+.failed-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: var(--line-height-title);
+  color: var(--color-text-primary);
+  max-width: 300px;
+  margin-bottom: var(--space-md);
+  text-wrap: pretty;
+}
+.failed-aside {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  max-width: 280px;
+  margin-bottom: var(--space-sm);
+  text-wrap: pretty;
+}
+.failed-reassurance {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2xl);
+  letter-spacing: 0.01em;
+}
+.failed-actions {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-md);
+  width: 100%; max-width: 280px;
+}
+
+/* Failed stage shifts to task mode: content pushed higher, actions above fold */
+.stage--failed {
+  justify-content: flex-start;
+  padding-top: var(--space-4xl);
+}
+
+.btn {
+  width: 100%; min-height: var(--size-control-md);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-mineral); color: #fff;
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--text-body-lg);
+  border: 0; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-mineral); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  transition: background var(--duration-micro) var(--ease-essence),
+              transform var(--duration-small) var(--ease-press);
+}
+.btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.btn:not(:disabled):active { transform: scale(var(--scale-press)); }
+
+.btn--link {
+  background: transparent;
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  font-weight: 500;
+  font-size: var(--text-body);
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-text-tertiary);
+  text-decoration-thickness: 1px;
+}
+.btn--link:not(:disabled):hover {
+  background: transparent;
+  color: var(--color-text-primary);
+  text-decoration-color: var(--color-text-secondary);
+}
+
+/* DEV NAV */
+.dev-rail { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dev-rail__label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+.dev-rail__nav, .dev-rail__row {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  max-width: 480px;
+}
+.dev-rail__nav button, .dev-rail__row button {
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 6px 12px;
+  font-family: var(--font-body); font-size: 11px;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: background var(--duration-micro) var(--ease-essence),
+              color var(--duration-micro) var(--ease-essence),
+              border-color var(--duration-micro) var(--ease-essence);
+}
+.dev-rail__nav button:hover, .dev-rail__row button:hover {
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95);
+}
+.dev-rail__nav button.is-current, .dev-rail__row button.is-on {
+  background: var(--color-mineral); color: #fff; border-color: var(--color-mineral);
+}
+.dev-row-label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  align-self: center; margin-right: 4px;
+}
+.variant-label {
+  position: absolute; top: 12px; left: 14px;
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(28,26,24,0.45);
+  z-index: 12; pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div class="dev-rail">
+  <div class="dev-rail__label">A5 — Generation</div>
+  <div class="dev-rail__nav" id="devNav">
+    <button data-state="default" class="is-current">Default (with note)</button>
+    <button data-state="failed-with-note">Failed · with note</button>
+    <button data-state="failed-no-note">Failed · no note</button>
+  </div>
+  <div class="dev-rail__row" id="copyRow" style="margin-top: 4px;">
+    <span class="dev-row-label">Copy beat:</span>
+    <button data-beat="1" class="is-on">1 · Shaping</button>
+    <button data-beat="2">2 · Listening</button>
+    <button data-beat="3">3 · Almost there</button>
+  </div>
+</div>
+
+<div class="prototype-wrapper">
+  <div class="phone">
+
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+
+    <div class="variant-label" id="variantLabel">A5 · Default</div>
+
+    <div class="phone__screen">
+
+      <div class="crumb-wrap">
+        <div class="crumb-display">
+          <span>For Sarah</span>
+          <span class="crumb-display__divider"></span>
+          <span>Encouragement</span>
+        </div>
+      </div>
+
+      <!-- Working stage -->
+      <div class="stage" id="stageWorking">
+        <div class="stone" id="workingStone">
+          <div class="stone__body"></div>
+        </div>
+        <h1 class="gen-title" id="genTitle">Shaping your message.</h1>
+        <p class="gen-aside" id="genAside">A minute, no more.</p>
+      </div>
+
+      <!-- Failed stage — smaller stone, content shifted higher, task-oriented -->
+      <div class="stage stage--failed stage--hidden" id="stageFailed">
+        <div class="stone stone--failed">
+          <div class="stone__body"></div>
+        </div>
+        <h2 class="failed-title" id="failedTitle">Couldn&rsquo;t quite land it.</h2>
+        <p class="failed-aside" id="failedAside">Something slipped on our end. Nothing is lost.</p>
+        <p class="failed-reassurance" id="failedReassurance">Your note is kept.</p>
+        <div class="failed-actions">
+          <button class="btn" id="failedPrimary">Try again</button>
+          <button class="btn btn--link" id="failedSecondary">Adjust your note</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const COPY_BEATS = {
+  1: { title: 'Shaping your message.',          aside: 'A minute, no more.' },
+  2: { title: 'Listening for the right tone.',  aside: 'Choosing the words that fit.' },
+  3: { title: 'Almost there.',                  aside: 'Nothing is lost.' },
+};
+const FAILED_COPY = {
+  'failed-with-note': {
+    title: 'Couldn\u2019t quite land it.',
+    aside: 'Something slipped on our end.',
+    reassurance: 'Your note is kept.',
+    primary: 'Try again',
+    secondary: 'Adjust your note',
+  },
+  'failed-no-note': {
+    title: 'Couldn\u2019t quite land it.',
+    aside: 'Something slipped on our end. Nothing is lost.',
+    reassurance: null,
+    primary: 'Try again',
+    secondary: null,
+  },
+};
+const VARIANT_LABELS = {
+  'default':          'A5 · Default',
+  'failed-with-note': 'A5 · Failed · w/ note',
+  'failed-no-note':   'A5 · Failed · no note',
+};
+const state = { variant: 'default', beat: 1 };
+
+function applyVariant(variant) {
+  state.variant = variant;
+  document.getElementById('variantLabel').textContent = VARIANT_LABELS[variant];
+  const working = document.getElementById('stageWorking');
+  const failed  = document.getElementById('stageFailed');
+
+  if (variant === 'default') {
+    working.classList.remove('stage--hidden');
+    failed.classList.add('stage--hidden');
+  } else {
+    working.classList.add('stage--hidden');
+    failed.classList.remove('stage--hidden');
+    const c = FAILED_COPY[variant];
+    document.getElementById('failedTitle').textContent = c.title;
+    document.getElementById('failedAside').textContent = c.aside;
+    document.getElementById('failedPrimary').textContent = c.primary;
+
+    const reassurance = document.getElementById('failedReassurance');
+    if (c.reassurance) {
+      reassurance.style.display = '';
+      reassurance.textContent = c.reassurance;
+    } else {
+      reassurance.style.display = 'none';
+    }
+
+    const sec = document.getElementById('failedSecondary');
+    if (c.secondary) { sec.style.display = ''; sec.textContent = c.secondary; }
+    else             { sec.style.display = 'none'; }
+  }
+
+  document.querySelectorAll('#devNav button').forEach(b => {
+    b.classList.toggle('is-current', b.dataset.state === variant);
+  });
+}
+
+function applyBeat(beat) {
+  state.beat = beat;
+  const title = document.getElementById('genTitle');
+  const aside = document.getElementById('genAside');
+  // On first boot, skip the fade cycle so entrance animation plays cleanly.
+  // On subsequent beats, fade the old copy out, swap, fade back in.
+  const hasEntered = title.classList.contains('is-settled');
+  if (hasEntered) {
+    title.classList.add('is-fading');
+    aside.classList.add('is-fading');
+    setTimeout(() => {
+      title.textContent = COPY_BEATS[beat].title;
+      aside.textContent = COPY_BEATS[beat].aside;
+      title.classList.remove('is-fading');
+      aside.classList.remove('is-fading');
+    }, 400);
+  } else {
+    // First beat just sets text; entrance animation handles the reveal
+    title.textContent = COPY_BEATS[beat].title;
+    aside.textContent = COPY_BEATS[beat].aside;
+    // Mark as settled after entrance would have completed (700ms + 800ms)
+    setTimeout(() => {
+      title.classList.add('is-settled');
+      aside.classList.add('is-settled');
+    }, 1600);
+  }
+  document.querySelectorAll('#copyRow button').forEach(b => {
+    b.classList.toggle('is-on', b.dataset.beat === String(beat));
+  });
+}
+
+document.querySelectorAll('#devNav button').forEach(b => b.addEventListener('click', () => applyVariant(b.dataset.state)));
+document.querySelectorAll('#copyRow button').forEach(b => b.addEventListener('click', () => applyBeat(parseInt(b.dataset.beat, 10))));
+
+applyVariant('default');
+applyBeat(1);
+</script>
+</body>
+</html>

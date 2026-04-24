@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ESSENCE · Step 5 · A7 Save Confirmation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════╗
+  ║  NOTE FOR CODE ARCHITECT — A7 Save Confirmation                       ║
+  ║                                                                       ║
+  ║  ─── VARIANTS ─────────────────────────────────────────────────────── ║
+  ║  - default  (message 1 or 2 of 3) → standard ceremonial close         ║
+  ║  - third    (message 3 of 3)      → triggers C1 Three Shaped after    ║
+  ║                                                                       ║
+  ║  The "third" variant does NOT replace A7. It runs A7 first, then      ║
+  ║  the user taps a CTA which routes to C1 Three Shaped. A7 is the       ║
+  ║  individual message confirmation; C1 is the ceiling moment.           ║
+  ║  This separation matters: the user just preserved a real message,     ║
+  ║  that act deserves its own moment, even on the third one.             ║
+  ║                                                                       ║
+  ║  ─── CTA HIERARCHY (locked) ───────────────────────────────────────── ║
+  ║  Primary:        "View on Memory Shelf" — drives retention loop       ║
+  ║  Secondary link: "Create another, when you're ready"  (default)       ║
+  ║  Secondary link: "See what's coming"  (third → routes to C1 then C2)  ║
+  ║                                                                       ║
+  ║  ─── ATMOSPHERE ──────────────────────────────────────────────────── ║
+  ║  Stone state: "infused" — warm amber tint, ceremonial.                ║
+  ║  Background: 3-stop amber gradient + ambient warm glow + vignette.    ║
+  ║  Base stop: var(--color-bg-gold) — warmest in the ramp.               ║
+  ║                                                                       ║
+  ║  Four breathing harmonics (none synchronized):                        ║
+  ║   - Stone body       5s                                               ║
+  ║   - Stone halo       7s                                               ║
+  ║   - Stone shimmer    9s  (specular highlight on top-left face)        ║
+  ║   - Ambient glow    13s  (radial behind everything)                   ║
+  ║                                                                       ║
+  ║  ─── ENTRANCE SEQUENCE ───────────────────────────────────────────── ║
+  ║  0ms     stone starts fade + scale 0.92 → 1.0                         ║
+  ║  1200ms  stone settled; halo, shimmer, body breath begin              ║
+  ║  1500ms  title reveals                                                ║
+  ║  1800ms  aside reveals                                                ║
+  ║  2100ms  timestamp reveals (attestation below aside)                  ║
+  ║  2400ms  primary CTA reveals                                          ║
+  ║  2600ms  primary CTA receives focus (accessibility)                   ║
+  ║  2800ms  secondary link reveals (two-tier, quieter side option)       ║
+  ║                                                                       ║
+  ║  Pure ceremony. Don't rush it.                                        ║
+  ║                                                                       ║
+  ║  ─── TIMESTAMP WIRING ────────────────────────────────────────────── ║
+  ║  The timestamp renders from a formatTimestamp() helper using the      ║
+  ║  current time at mount. In production, use the server's created_at    ║
+  ║  from the save response. Keep the "Kept on {date} · {time}" format;   ║
+  ║  format with user locale and timezone.                                ║
+  ║                                                                       ║
+  ║  ─── ACCESSIBILITY ──────────────────────────────────────────────── ║
+  ║  - .confirm has role="status" + aria-live="polite" + aria-atomic      ║
+  ║    so screen readers announce the full confirmation coherently.       ║
+  ║  - .stone is aria-hidden="true"; decorative only.                     ║
+  ║  - Primary button receives focus 2600ms after mount.                  ║
+  ║  - Reduced motion: atmospheric loops pause at mid-frame; entrance     ║
+  ║    animations collapse to instant. Screen arrives complete.           ║
+  ║                                                                       ║
+  ║  No backbar. The save is committed. The flow is over.                 ║
+  ║                                                                       ║
+  ║  ─── DO NOT ADD ────────────────────────────────────────────────── ║
+  ║  Confetti, particle bursts, sparkle effects. Celebration in           ║
+  ║  ceremonial mode is silence with weight, not spectacle. The warm      ║
+  ║  light and stone breathing IS the celebration.                        ║
+  ║                                                                       ║
+  ║  ─── V2 BACKLOG ────────────────────────────────────────────────── ║
+  ║  - Sound design hook: subtle chime synced to stone arrival at 1200ms. ║
+  ║  - Repeat-view compression: detect prior saves, compress entrance to  ║
+  ║    ~1200ms total. Ceremony respects the first time most.              ║
+  ║  - Saving-state clarification: A7 presumes save succeeded. If the     ║
+  ║    save can fail, upstream (A6 tap-save → A7) needs a D3 Saving       ║
+  ║    screen with warm retry on failure. Verify upstream handles this.   ║
+  ║  - Category-aware aside copy: currently generic. Workshop per-        ║
+  ║    category asides (birthday, encouragement, comfort, etc.) that      ║
+  ║    name the occasion the user just preserved for.                     ║
+  ║  - Recipient name overflow: test title at 5, 10, 18, 30+ chars.       ║
+  ║    text-wrap: balance holds short; 30+ may need truncation strategy.  ║
+  ╚═══════════════════════════════════════════════════════════════════════╝
+-->
+
+<style>
+:root {
+  --color-bg-neutral: #FBF8F4;
+  --color-bg-warm-1: #F9F3E8;
+  --color-bg-warm-2: #F6F0E5;
+  --color-bg-warm-phase: #F2EDE4;
+  --color-bg-gold: #F2E8D6;
+  --color-bg-rich: #EDE3D0;
+  --color-surface-card: #F6F0E5;
+  --color-surface-warm: #EDE3D0;
+  --color-surface-honey: #F2E8D6;
+  --color-mineral: #7A8088;
+  --color-mineral-dark: #656B73;
+  --color-text-primary: #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #ADA9A5;
+  --color-border: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
+
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --text-h1: 36px;
+  --text-title: 28px;
+  --text-body-lg: 18px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-caption: 12px;
+  --line-height-title: 1.4;
+  --line-height-hero: 1.25;
+
+  /* Text sizing — 16px floor for 45-70 audience */
+  --text-descriptor: var(--text-body);
+  --text-meta: var(--text-body);
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-press: cubic-bezier(0.2, 0.0, 0.0, 1);
+  --duration-micro: 200ms;
+  --duration-small: 400ms;
+  --duration-medium: 800ms;
+  --duration-large: 1200ms;
+  --duration-breath: 3000ms;
+
+  --size-avatar: 44px;
+  --size-control-md: 52px;
+  --stone-sm: 120px;
+  --stone-md: 160px;
+  --stone-lg: 180px;
+  --stone-xl: 200px;
+  --pip-w-rest: 6px;
+  --pip-w-active: 20px;
+  --scale-press: 0.98;
+  --scale-press-subtle: 0.99;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background: #1C1A18;
+  background-image: radial-gradient(ellipse at center, #2a2622 0%, #1C1A18 70%);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 12px 60px; gap: 24px;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Freeze looping atmospheric breath at mid-frame, keep composition */
+  .phone::before,
+  .stone::before,
+  .stone::after,
+  .stone__body {
+    animation-play-state: paused !important;
+  }
+  /* Entrance animations collapse to instant (user already on screen) */
+  .stone,
+  .confirm-title,
+  .confirm-aside,
+  .confirm-timestamp,
+  .footer .btn,
+  .footer .btn--link {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+button { font-family: inherit; }
+
+.prototype-wrapper {
+  width: 390px; height: 812px;
+  border-radius: 48px; overflow: hidden;
+  box-shadow: 0 0 0 10px #1A1715, 0 0 0 12px var(--color-mineral), 0 50px 100px rgba(0,0,0,0.45);
+  position: relative; flex-shrink: 0;
+  background: var(--color-bg-gold);
+}
+@media (max-width: 440px) {
+  .prototype-wrapper { transform: scale(0.88); transform-origin: top center; }
+}
+
+/* ════════════════════════════════════════════════
+   ATMOSPHERE STACK (ceremonial mode, amber family)
+   Layer 1: 3-stop amber gradient with hue shift on .phone
+   Layer 2: ambient warm radial glow ::before, 13s loop
+   Layer 3: vignette ::after, static
+   Layer 4 (stone halo + stone body + shimmer) on .stone below
+   ════════════════════════════════════════════════ */
+.phone {
+  width: 100%; height: 100%;
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  font-family: var(--font-body); color: var(--color-text-primary);
+  background: linear-gradient(
+    180deg,
+    #EDDCAB 0%,
+    var(--color-bg-gold) 45%,
+    #F4E5BC 100%
+  );
+}
+/* Ambient warm glow — amber light source around stone focal point */
+.phone::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 42%,
+    rgba(214, 162, 92, 0.30) 0%,
+    rgba(214, 162, 92, 0.12) 40%,
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: ambientGlow 13s var(--ease-essence) infinite;
+}
+@keyframes ambientGlow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+/* Vignette — soft corner deepening, static */
+.phone::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 50%,
+    transparent 50%,
+    rgba(60, 45, 25, 0.08) 85%,
+    rgba(60, 45, 25, 0.16) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+.phone__status {
+  position: absolute; inset: 0 0 auto 0; height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px 0;
+  font-weight: 600; font-size: var(--text-small);
+  color: var(--color-text-primary); z-index: 10; pointer-events: none;
+}
+.phone__status-icons { display: flex; gap: 6px; align-items: center; }
+.phone__island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 30px; border-radius: 999px; background: #0B0B0B; z-index: 11;
+}
+.phone__home-indicator {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  width: 134px; height: 5px; border-radius: 3px;
+  background: rgba(28,26,24,0.35); z-index: 10;
+}
+.phone__screen { position: absolute; inset: 44px 0 0 0; display: flex; flex-direction: column; z-index: 3; }
+
+/* Content stage — vertical-centered ceremonial layout */
+.confirm {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 0 var(--space-xl) var(--space-xl);
+}
+
+/* STONE — infused state (amber, ceremonial)
+   Four breathing harmonics with the ambient glow: 5s body, 7s halo,
+   9s shimmer, 13s ambient. No two synchronized; scene stays alive.
+*/
+.stone {
+  position: relative; border-radius: var(--radius-full);
+  width: var(--stone-xl); height: var(--stone-xl);
+  margin-bottom: var(--space-3xl);
+  /* Entry animation */
+  opacity: 0;
+  transform: scale(0.92);
+  animation: stoneArrival var(--duration-large) var(--ease-essence) forwards;
+}
+/* Halo — 7s tempo, warmer amber bloom */
+.stone::before {
+  content: ''; position: absolute; inset: -32%; border-radius: var(--radius-full);
+  background: radial-gradient(circle, rgba(232, 178, 96, 0.32), transparent 62%);
+  animation: stoneHaloInfused 7s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+/* Specular shimmer — 9s tempo, subtle breath on the highlight */
+.stone::after {
+  content: ''; position: absolute; top: 15%; left: 22%;
+  width: 30%; height: 20%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.55), transparent 70%);
+  border-radius: var(--radius-full); filter: blur(6px); pointer-events: none;
+  animation: stoneShimmerInfused 9s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+.stone__body {
+  width: 100%; height: 100%; border-radius: var(--radius-full);
+  /* Warmer amber tint for infused */
+  background: radial-gradient(circle at 30% 28%, #FCEEC9 0%, #ECCC83 28%, #C99A4D 60%, #856029 90%);
+  box-shadow:
+    0 24px 48px rgba(160, 110, 50, 0.24),
+    inset -16px -24px 50px rgba(100, 65, 25, 0.40),
+    inset 16px 16px 36px rgba(255, 245, 220, 0.40);
+  animation: stoneBreathInfused 5s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+
+@keyframes stoneArrival {
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes stoneBreathInfused {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%      { transform: scale(1.04); filter: brightness(1.06); }
+}
+@keyframes stoneHaloInfused {
+  0%, 100% { transform: scale(1);    opacity: 0.18; }
+  50%      { transform: scale(1.12); opacity: 0.32; }
+}
+@keyframes stoneShimmerInfused {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.80; }
+}
+
+/* COPY — staggered fade in
+   Reveal order after stone settles (~1200ms entry):
+     title      @ 1500ms
+     aside      @ 1800ms
+     timestamp  @ 2100ms  (attestation below the aside)
+     primary    @ 2400ms  (CTA arrives with weight)
+     secondary  @ 2800ms  (side option follows quietly)
+*/
+.confirm-title,
+.confirm-aside,
+.confirm-timestamp {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: copyReveal var(--duration-medium) var(--ease-essence) forwards;
+}
+.confirm-title     { animation-delay: 1500ms; }
+.confirm-aside     { animation-delay: 1800ms; }
+.confirm-timestamp { animation-delay: 2100ms; }
+@keyframes copyReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.confirm-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: 600;
+  line-height: var(--line-height-hero);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-md);
+  max-width: 340px;
+  text-wrap: balance;
+}
+
+.confirm-aside {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  max-width: 280px;
+  margin-bottom: var(--space-lg);
+  text-wrap: balance;
+}
+
+/* Timestamp attestation — museum label voice. Italic serif, tertiary color,
+   quiet proof of when this was committed. */
+.confirm-timestamp {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
+
+/* FOOTER — two-tier reveal: primary first, secondary follows */
+.footer {
+  padding: var(--space-md) var(--space-xl) var(--space-2xl);
+  background: transparent;
+  flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-sm);
+}
+.footer .btn,
+.footer .btn--link {
+  opacity: 0;
+  animation: copyReveal var(--duration-medium) var(--ease-essence) forwards;
+}
+.footer .btn           { animation-delay: 2400ms; }
+.footer .btn--link     { animation-delay: 2800ms; }
+
+.btn {
+  width: 100%; min-height: var(--size-control-md);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-mineral); color: #fff;
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--text-body-lg);
+  border: 0; border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  transition: background var(--duration-micro) var(--ease-essence),
+              transform var(--duration-small) var(--ease-press);
+}
+.btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.btn:not(:disabled):active { transform: scale(var(--scale-press)); }
+
+.btn--link {
+  background: transparent;
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  font-weight: 500;
+  font-size: var(--text-body);
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-text-tertiary);
+  text-decoration-thickness: 1px;
+  width: auto;
+}
+.btn--link:not(:disabled):hover {
+  background: transparent;
+  color: var(--color-text-primary);
+  text-decoration-color: var(--color-text-secondary);
+}
+
+/* DEV NAV */
+.dev-rail { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dev-rail__label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+.dev-rail__nav, .dev-rail__row {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  max-width: 480px;
+}
+.dev-rail__nav button, .dev-rail__row button {
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 6px 12px;
+  font-family: var(--font-body); font-size: 11px;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: background var(--duration-micro) var(--ease-essence),
+              color var(--duration-micro) var(--ease-essence),
+              border-color var(--duration-micro) var(--ease-essence);
+}
+.dev-rail__nav button:hover, .dev-rail__row button:hover {
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95);
+}
+.dev-rail__nav button.is-current, .dev-rail__row button.is-on {
+  background: var(--color-mineral); color: #fff; border-color: var(--color-mineral);
+}
+.dev-row-label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  align-self: center; margin-right: 4px;
+}
+.variant-label {
+  position: absolute; top: 12px; left: 14px;
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(28,26,24,0.45);
+  z-index: 12; pointer-events: none;
+}
+.dev-rail__nav button.replay {
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  border: 1px dashed rgba(255,255,255,0.2);
+}
+</style>
+</head>
+<body>
+
+<div class="dev-rail">
+  <div class="dev-rail__label">A7 — Save Confirmation</div>
+  <div class="dev-rail__nav" id="devNav">
+    <button data-variant="default" class="is-current">Default (msg 1 or 2)</button>
+    <button data-variant="third">Third of three</button>
+    <button data-action="replay" class="replay">↻ Replay animation</button>
+  </div>
+</div>
+
+<div class="prototype-wrapper">
+  <div class="phone" id="phone">
+
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+
+    <div class="variant-label" id="variantLabel">A7 · Default</div>
+
+    <div class="phone__screen">
+
+      <div class="confirm" role="status" aria-live="polite" aria-atomic="true">
+        <div class="stone" aria-hidden="true">
+          <div class="stone__body"></div>
+        </div>
+
+        <h1 class="confirm-title" id="confirmTitle">Your voice is on the shelf for Sarah.</h1>
+        <p class="confirm-aside" id="confirmAside">She won&rsquo;t know it&rsquo;s there until she needs to.</p>
+        <p class="confirm-timestamp" id="confirmTimestamp">Kept on Apr 23, 2026 &middot; 9:41pm</p>
+      </div>
+
+      <div class="footer">
+        <button class="btn" id="primaryBtn">View on Memory Shelf</button>
+        <button class="btn btn--link" id="secondaryBtn">Create another, when you&rsquo;re ready</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * NOTE FOR CODE ARCHITECT — timestamp wiring
+ * The timestamp below is a rendered placeholder using the current date/time
+ * on screen mount. In production, the save timestamp should come from the
+ * server response (created_at) and be formatted client-side. Keep the
+ * "Kept on {date} · {time}" pattern; format with user locale.
+ */
+function formatTimestamp(date) {
+  const d = date || new Date();
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = monthNames[d.getMonth()];
+  const day = d.getDate();
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12 || 12;
+  return `Kept on ${month} ${day}, ${year} \u00B7 ${hours}:${minutes}${ampm}`;
+}
+
+const COPY = {
+  default: {
+    title: 'Your voice is on the shelf for Sarah.',
+    aside: 'She won\u2019t know it\u2019s there until she needs to.',
+    primary: 'View on Memory Shelf',
+    secondary: 'Create another, when you\u2019re ready',
+  },
+  third: {
+    title: 'Your voice is on the shelf for Sarah.',
+    aside: 'She won\u2019t know it\u2019s there until she needs to.',
+    primary: 'View on Memory Shelf',
+    secondary: 'See what\u2019s coming',
+  },
+};
+const VARIANT_LABELS = {
+  'default': 'A7 · Default',
+  'third':   'A7 · Third of three',
+};
+
+// Focus management: primary button receives focus after full entrance
+// completes (stone 1200ms + primary delay 2400ms + reveal 800ms = ~3000ms,
+// but we use 2600ms so focus lands as the button becomes visible, not after).
+const FOCUS_DELAY_MS = 2600;
+let focusTimeoutId = null;
+
+function applyVariant(variant) {
+  document.getElementById('variantLabel').textContent = VARIANT_LABELS[variant];
+  const c = COPY[variant];
+  document.getElementById('confirmTitle').textContent = c.title;
+  document.getElementById('confirmAside').textContent = c.aside;
+  document.getElementById('confirmTimestamp').textContent = formatTimestamp();
+  document.getElementById('primaryBtn').textContent = c.primary;
+  document.getElementById('secondaryBtn').textContent = c.secondary;
+
+  document.querySelectorAll('#devNav button[data-variant]').forEach(b => {
+    b.classList.toggle('is-current', b.dataset.variant === variant);
+  });
+}
+
+function scheduleFocus() {
+  if (focusTimeoutId) clearTimeout(focusTimeoutId);
+  focusTimeoutId = setTimeout(() => {
+    const primary = document.getElementById('primaryBtn');
+    if (primary && document.activeElement !== primary) {
+      primary.focus({ preventScroll: true });
+    }
+  }, FOCUS_DELAY_MS);
+}
+
+function replayAnimation() {
+  // Re-mount the screen contents to restart all animations
+  const phone = document.getElementById('phone');
+  const screen = phone.querySelector('.phone__screen');
+  const clone = screen.cloneNode(true);
+  screen.replaceWith(clone);
+  scheduleFocus();
+}
+
+document.querySelectorAll('#devNav button[data-variant]').forEach(b => {
+  b.addEventListener('click', () => applyVariant(b.dataset.variant));
+});
+document.querySelectorAll('#devNav button[data-action="replay"]').forEach(b => {
+  b.addEventListener('click', () => replayAnimation());
+});
+
+applyVariant('default');
+scheduleFocus();
+</script>
+</body>
+</html>

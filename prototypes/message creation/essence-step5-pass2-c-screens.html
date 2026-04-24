@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ESSENCE · Step 5 · Pass 2 · C1 · C2 · C3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════╗
+  ║  NOTE FOR CODE ARCHITECT — Step 5 Pass 2 (C1, C2, C3)                 ║
+  ║                                                                       ║
+  ║  ─── POSITIONING ──────────────────────────────────────────────────── ║
+  ║  The product is voice insurance. These three screens are the CEILING  ║
+  ║  moment of the message creation flow. They are not a paywall.         ║
+  ║  The user got what they paid for. Waitlist is a "look ahead."         ║
+  ║                                                                       ║
+  ║  Tone across all three:                                               ║
+  ║   - Value-add framing ("the three included"), not scarcity            ║
+  ║   - FOMO for V2, never pressure                                       ║
+  ║   - Stewardship language, never sales                                 ║
+  ║   - "Your voice is preserved" is the anchor phrase                    ║
+  ║                                                                       ║
+  ║  ─── VISUAL PROGRESSION (atmospheric step-down) ───────────────────── ║
+  ║  C1 → full ceremonial, inherits A7's amber atmosphere                 ║
+  ║  C2 → quieter warm, an announcement not a ceremony                    ║
+  ║  C3 → cream calm, the ongoing steady-state                            ║
+  ║                                                                       ║
+  ║  ─── C1 · THREE SHAPED ────────────────────────────────────────────── ║
+  ║  Triggered from A7 when variant='third' + user taps "See what's       ║
+  ║  coming." One-time ceremony. Fires ONCE in the user's lifetime.       ║
+  ║                                                                       ║
+  ║  Stone state: infused (inherited from A7 — no mode change)            ║
+  ║  Background: same 3-stop amber + ambient glow as A7                   ║
+  ║  Primary CTA: "See what's coming" → routes to C2                      ║
+  ║  Secondary link: "Back to Home" → Home B                              ║
+  ║                                                                       ║
+  ║  Entrance sequence (slower than A7 — this is the larger moment):      ║
+  ║   0ms     stone fade + scale 0.92 → 1.0                               ║
+  ║   1200ms  stone settled                                               ║
+  ║   1600ms  title reveals (larger than A7 title)                        ║
+  ║   2000ms  aside reveals                                               ║
+  ║   2400ms  reassurance reveals (stewardship line)                      ║
+  ║   2800ms  primary CTA reveals                                         ║
+  ║   3200ms  secondary link reveals                                      ║
+  ║                                                                       ║
+  ║  ─── C2 · WAITLIST ────────────────────────────────────────────────── ║
+  ║  Reachable from C1 primary, from C3 primary, and from Settings (V2).  ║
+  ║  Captures: email (pre-filled) + multi-select feature priority signal. ║
+  ║                                                                       ║
+  ║  Stone state: shimmer (ceremonial stillness, smaller than C1)         ║
+  ║  Background: bg-warm-1 (steps down from C1's gold)                    ║
+  ║  Layout: stone small top, content stack below                         ║
+  ║                                                                       ║
+  ║  Data capture (V1 minimum):                                           ║
+  ║   - Email opt-in (pre-filled from auth, confirmable)                  ║
+  ║   - Multi-select: which features matter most                          ║
+  ║   - Submit → confirm state with "You're on the list" treatment        ║
+  ║                                                                       ║
+  ║  V2 features to name explicitly:                                      ║
+  ║   1. More messages each month                                         ║
+  ║   2. Schedule messages for future dates                               ║
+  ║   3. Birthday and occasion reminders                                  ║
+  ║   4. Multiple voice profiles                                          ║
+  ║   5. Longer, story-form messages                                      ║
+  ║                                                                       ║
+  ║  States:                                                              ║
+  ║   - default  (before submit)                                          ║
+  ║   - success  (after submit, confirmation surface)                     ║
+  ║                                                                       ║
+  ║  ─── C3 · VAULT LIMIT REACHED ─────────────────────────────────────── ║
+  ║  Replaces A2 Recipient Setup when user taps "Create a message"        ║
+  ║  with three already saved. This is the ONGOING state for capped       ║
+  ║  users — they see this every time they try to create a 4th+.          ║
+  ║                                                                       ║
+  ║  Stone state: archive (static, preserved, no motion)                  ║
+  ║  Background: bg-neutral (cream, matches the rest of the app)          ║
+  ║  Primary CTA: "See what's coming" → routes to C2                      ║
+  ║  Secondary link: "Back to Home" → Home B                              ║
+  ║                                                                       ║
+  ║  Tone here: the calmest of the three. The user has seen C1 already    ║
+  ║  (likely weeks or months ago). This is not an event. It's a gentle    ║
+  ║  fact. Shorter copy, less atmosphere, no celebration.                 ║
+  ║                                                                       ║
+  ║  ─── ACCESSIBILITY ──────────────────────────────────────────────── ║
+  ║  - C1/C3: role="status" + aria-live="polite" on the confirm region    ║
+  ║  - C2: form uses role="form" + labeled fieldsets                      ║
+  ║  - Stones are aria-hidden="true" everywhere                           ║
+  ║  - Primary button receives focus after entrance completes             ║
+  ║  - Reduced motion: atmospheric loops pause at mid-frame; entrance     ║
+  ║    animations collapse to instant                                     ║
+  ║                                                                       ║
+  ║  ─── DO NOT ADD ────────────────────────────────────────────────── ║
+  ║  - Countdown timers anywhere                                          ║
+  ║  - "Upgrade to Legacy" CTAs (Legacy is deferred to V2 waitlist)       ║
+  ║  - Scarcity framing ("you've used up")                                ║
+  ║  - Confetti, particle bursts                                          ║
+  ║  - Discount offers                                                    ║
+  ║  - "We'd hate to lose you" / save-offer language                      ║
+  ║                                                                       ║
+  ║  ─── V2 BACKLOG ────────────────────────────────────────────────── ║
+  ║  - Sound design hook: soft chime on C1 stone arrival @ 1200ms         ║
+  ║  - C2 multi-select: compute counts server-side as demand signal       ║
+  ║  - C2 success state: post-submit email confirmation surface           ║
+  ║  - Repeat-view compression on C3: after 3+ views, compress entrance   ║
+  ╚═══════════════════════════════════════════════════════════════════════╝
+-->
+
+<style>
+:root {
+  /* Background ramp (from design-tokens.md, canonical) */
+  --color-bg-neutral:     #FBF8F4;
+  --color-bg-warm-1:      #F9F3E8;
+  --color-bg-warm-2:      #F6F0E5;
+  --color-bg-warm-phase:  #F2EDE4;
+  --color-bg-gold:        #F2E8D6;
+  --color-bg-rich:        #EDE3D0;
+
+  --color-surface-card:   #F6F0E5;
+  --color-surface-warm:   #EDE3D0;
+  --color-surface-honey:  #F2E8D6;
+
+  --color-mineral:        #7A8088;
+  --color-mineral-dark:   #656B73;
+
+  --color-text-primary:   #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary:  #ADA9A5;
+
+  --color-border:         rgba(0, 0, 0, 0.06);
+  --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-mineral:       0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-focus-ring:    0 0 0 4px rgba(122, 128, 136, 0.18);
+
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  --text-h1:      36px;
+  --text-hero:    40px;
+  --text-title:   28px;
+  --text-body-lg: 18px;
+  --text-body:    16px;
+  --text-ui:      15px;
+  --text-small:   14px;
+  --text-caption: 12px;
+
+  --line-height-title: 1.4;
+  --line-height-hero:  1.2;
+
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   12px;
+  --space-lg:   16px;
+  --space-xl:   24px;
+  --space-2xl:  32px;
+  --space-3xl:  40px;
+  --space-4xl:  48px;
+
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;
+  --radius-full: 9999px;
+
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-press:   cubic-bezier(0.2, 0.0, 0.0, 1);
+  --duration-micro:  200ms;
+  --duration-small:  400ms;
+  --duration-medium: 800ms;
+  --duration-large:  1200ms;
+  --duration-breath: 3000ms;
+
+  --size-control-md: 52px;
+  --stone-sm: 100px;
+  --stone-md: 140px;
+  --stone-lg: 180px;
+  --stone-xl: 220px;
+
+  --scale-press:        0.98;
+  --scale-press-subtle: 0.99;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background: #1C1A18;
+  background-image: radial-gradient(ellipse at center, #2a2622 0%, #1C1A18 70%);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 12px 60px; gap: 24px;
+}
+button { font-family: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  .phone::before,
+  .phone__screen--c1::after,
+  .stone::before,
+  .stone::after,
+  .stone__body {
+    animation-play-state: paused !important;
+  }
+  .stone,
+  .reveal,
+  .confirm-title,
+  .confirm-aside,
+  .confirm-reassurance,
+  .footer .btn,
+  .footer .btn--link {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PHONE FRAME — reusable across all three screens
+   ══════════════════════════════════════════════════════════════════════ */
+.prototype-wrapper {
+  width: 390px; height: 812px;
+  border-radius: 48px; overflow: hidden;
+  box-shadow:
+    0 0 0 10px #1A1715,
+    0 0 0 12px var(--color-mineral),
+    0 50px 100px rgba(0,0,0,0.45);
+  position: relative; flex-shrink: 0;
+  background: var(--color-bg-neutral);
+}
+@media (max-width: 440px) {
+  .prototype-wrapper { transform: scale(0.88); transform-origin: top center; }
+}
+
+.phone {
+  width: 100%; height: 100%;
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  font-family: var(--font-body); color: var(--color-text-primary);
+  /* Default background — individual screens override */
+  background: var(--color-bg-neutral);
+}
+/* The `hidden` HTML attribute sets display:none at user-agent priority,
+   which loses to our .phone { display: flex } rule above. Force it. */
+.phone[hidden] { display: none !important; }
+
+.phone__status {
+  position: absolute; inset: 0 0 auto 0; height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px 0;
+  font-weight: 600; font-size: var(--text-small);
+  color: var(--color-text-primary); z-index: 10; pointer-events: none;
+}
+.phone__status-icons { display: flex; gap: 6px; align-items: center; }
+.phone__island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 30px; border-radius: 999px; background: #0B0B0B; z-index: 11;
+}
+.phone__home-indicator {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  width: 134px; height: 5px; border-radius: 3px;
+  background: rgba(28,26,24,0.35); z-index: 10;
+}
+.phone__screen {
+  position: absolute; inset: 44px 0 0 0;
+  display: flex; flex-direction: column; z-index: 3;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   C1 — THREE SHAPED (inherits A7 atmosphere, larger ceremony)
+   ══════════════════════════════════════════════════════════════════════ */
+.phone--c1 {
+  background: linear-gradient(
+    180deg,
+    #EDDCAB 0%,
+    var(--color-bg-gold) 45%,
+    #F4E5BC 100%
+  );
+}
+/* Ambient warm glow — amber light around stone focal point */
+.phone--c1::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 40%,
+    rgba(214, 162, 92, 0.32) 0%,
+    rgba(214, 162, 92, 0.12) 40%,
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: ambientGlow 13s var(--ease-essence) infinite;
+}
+/* Vignette — soft corner deepening, static */
+.phone--c1::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 50%,
+    transparent 50%,
+    rgba(60, 45, 25, 0.08) 85%,
+    rgba(60, 45, 25, 0.16) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes ambientGlow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   C2 — WAITLIST (quieter, announcement not ceremony)
+   ══════════════════════════════════════════════════════════════════════ */
+.phone--c2 {
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-warm-2) 0%,
+    var(--color-bg-warm-1) 55%,
+    var(--color-bg-warm-2) 100%
+  );
+}
+.phone--c2::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 80% 50% at 50% 18%,
+    rgba(214, 180, 130, 0.18) 0%,
+    rgba(214, 180, 130, 0.06) 40%,
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   C3 — VAULT LIMIT REACHED (cream, settled, ongoing)
+   ══════════════════════════════════════════════════════════════════════ */
+.phone--c3 {
+  background: var(--color-bg-neutral);
+}
+/* Very subtle warm wash — present but almost imperceptible */
+.phone--c3::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 85% 60% at 50% 35%,
+    rgba(214, 180, 130, 0.10) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STAGE — vertically centered ceremonial layout (C1, C3)
+   ══════════════════════════════════════════════════════════════════════ */
+.confirm {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 0 var(--space-xl) var(--space-xl);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STONE — three states, static PNG-style gradient approximations
+   ══════════════════════════════════════════════════════════════════════ */
+.stone {
+  position: relative; border-radius: var(--radius-full);
+  width: var(--stone-xl); height: var(--stone-xl);
+  margin-bottom: var(--space-3xl);
+  opacity: 0;
+  transform: scale(0.92);
+  animation: stoneArrival var(--duration-large) var(--ease-essence) forwards;
+}
+.stone--md { width: var(--stone-md); height: var(--stone-md); margin-bottom: var(--space-xl); }
+.stone--sm { width: var(--stone-sm); height: var(--stone-sm); margin-bottom: var(--space-lg); }
+
+@keyframes stoneArrival {
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Infused (C1) — warm amber, 5s body / 7s halo / 9s shimmer ─── */
+.stone--infused::before {
+  content: ''; position: absolute; inset: -32%; border-radius: var(--radius-full);
+  background: radial-gradient(circle, rgba(232, 178, 96, 0.32), transparent 62%);
+  animation: stoneHaloInfused 7s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+.stone--infused::after {
+  content: ''; position: absolute; top: 15%; left: 22%;
+  width: 30%; height: 20%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.55), transparent 70%);
+  border-radius: var(--radius-full); filter: blur(6px); pointer-events: none;
+  animation: stoneShimmerInfused 9s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+.stone--infused .stone__body {
+  background: radial-gradient(circle at 30% 28%, #FCEEC9 0%, #ECCC83 28%, #C99A4D 60%, #856029 90%);
+  box-shadow:
+    0 24px 48px rgba(160, 110, 50, 0.24),
+    inset -16px -24px 50px rgba(100, 65, 25, 0.40),
+    inset 16px 16px 36px rgba(255, 245, 220, 0.40);
+  animation: stoneBreathInfused 5s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+@keyframes stoneBreathInfused {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%      { transform: scale(1.04); filter: brightness(1.06); }
+}
+@keyframes stoneHaloInfused {
+  0%, 100% { transform: scale(1);    opacity: 0.18; }
+  50%      { transform: scale(1.12); opacity: 0.32; }
+}
+@keyframes stoneShimmerInfused {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.80; }
+}
+
+/* ─── Shimmer (C2) — warm neutral, ceremonial stillness ─── */
+.stone--shimmer::before {
+  content: ''; position: absolute; inset: -24%; border-radius: var(--radius-full);
+  background: radial-gradient(circle, rgba(214, 180, 130, 0.22), transparent 60%);
+  animation: stoneHaloShimmer 5s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+.stone--shimmer::after {
+  content: ''; position: absolute; top: 14%; left: 20%;
+  width: 32%; height: 22%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.50), transparent 70%);
+  border-radius: var(--radius-full); filter: blur(5px); pointer-events: none;
+  opacity: 0.7;
+}
+.stone--shimmer .stone__body {
+  background: radial-gradient(circle at 30% 28%, #F8F0DC 0%, #D7C8AE 32%, #A89577 65%, #7D7060 92%);
+  box-shadow:
+    0 18px 36px rgba(100, 85, 60, 0.20),
+    inset -14px -20px 42px rgba(90, 75, 55, 0.34),
+    inset 14px 14px 30px rgba(255, 245, 220, 0.32);
+  animation: stoneBreathShimmer 5s var(--ease-essence) infinite;
+  animation-delay: var(--duration-large);
+}
+@keyframes stoneBreathShimmer {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%      { transform: scale(1.03); filter: brightness(1.04); }
+}
+@keyframes stoneHaloShimmer {
+  0%, 100% { transform: scale(1);    opacity: 0.08; }
+  50%      { transform: scale(1.08); opacity: 0.22; }
+}
+
+/* Archive (C3) — preserved, still, NO MOTION. Warm amber family like
+   infused but dialed down: slightly deeper saturation, less specular
+   brightness, no breath. Reads as "at rest," not "dead." */
+.stone--archive::before {
+  content: ''; position: absolute; inset: -20%; border-radius: var(--radius-full);
+  background: radial-gradient(circle, rgba(200, 150, 80, 0.18), transparent 62%);
+}
+.stone--archive::after {
+  content: ''; position: absolute; top: 15%; left: 22%;
+  width: 28%; height: 19%;
+  background: radial-gradient(ellipse, rgba(255, 245, 220, 0.50), transparent 70%);
+  border-radius: var(--radius-full); filter: blur(5px); pointer-events: none;
+  opacity: 0.6;
+}
+.stone--archive .stone__body {
+  background: radial-gradient(circle at 30% 28%, #F6E4BC 0%, #DDB778 28%, #B08A4A 60%, #6B4E25 92%);
+  box-shadow:
+    0 18px 36px rgba(120, 85, 40, 0.22),
+    inset -14px -20px 44px rgba(85, 55, 20, 0.38),
+    inset 14px 14px 32px rgba(255, 240, 210, 0.36);
+}
+.stone__body {
+  width: 100%; height: 100%; border-radius: var(--radius-full);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   COPY REVEAL — shared pattern, delay set per-screen
+   ══════════════════════════════════════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: copyReveal var(--duration-medium) var(--ease-essence) forwards;
+}
+@keyframes copyReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   C1 — THREE SHAPED content
+   ══════════════════════════════════════════════════════════════════════ */
+.c1-title {
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  font-weight: 600;
+  line-height: var(--line-height-hero);
+  color: var(--color-text-primary);
+  letter-spacing: -0.012em;
+  margin-bottom: var(--space-lg);
+  max-width: 340px;
+  text-wrap: balance;
+  animation-delay: 1600ms;
+}
+.c1-aside {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  max-width: 300px;
+  margin-bottom: var(--space-lg);
+  text-wrap: balance;
+  animation-delay: 2000ms;
+}
+.c1-reassurance {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  color: var(--color-text-tertiary);
+  max-width: 280px;
+  letter-spacing: 0.005em;
+  animation-delay: 2400ms;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   C2 — WAITLIST content
+   ══════════════════════════════════════════════════════════════════════ */
+.waitlist {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: var(--space-xl) var(--space-xl) var(--space-lg);
+  overflow-y: auto;
+  /* Ensure CTA footer content doesn't get crowded */
+  padding-bottom: calc(var(--space-xl) + 140px);
+}
+.waitlist-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-mineral);
+  margin-bottom: var(--space-md);
+  animation-delay: 1400ms;
+}
+.waitlist-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: var(--line-height-title);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  text-align: center;
+  margin-bottom: var(--space-sm);
+  max-width: 320px;
+  text-wrap: balance;
+  animation-delay: 1700ms;
+}
+.waitlist-subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+  max-width: 300px;
+  text-wrap: balance;
+  animation-delay: 2000ms;
+}
+
+.waitlist-features {
+  width: 100%;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg) var(--space-lg);
+  margin-bottom: var(--space-xl);
+  animation-delay: 2300ms;
+}
+.waitlist-features-label {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+  display: block;
+}
+.waitlist-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.waitlist-feature + .waitlist-feature {
+  border-top: 1px solid rgba(0,0,0,0.04);
+}
+.waitlist-feature__check {
+  width: 22px; height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-text-tertiary);
+  background: transparent;
+  flex-shrink: 0; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--duration-micro) var(--ease-essence),
+              border-color var(--duration-micro) var(--ease-essence);
+  position: relative;
+}
+.waitlist-feature__check svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--duration-micro) var(--ease-essence),
+              transform var(--duration-small) var(--ease-press);
+  color: #fff;
+}
+.waitlist-feature.is-checked .waitlist-feature__check {
+  background: var(--color-mineral);
+  border-color: var(--color-mineral);
+}
+.waitlist-feature.is-checked .waitlist-feature__check svg {
+  opacity: 1;
+  transform: scale(1);
+}
+.waitlist-feature__text {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.45;
+  color: var(--color-text-primary);
+  text-align: left;
+  padding-top: 1px;
+}
+.waitlist-feature.is-checked .waitlist-feature__text {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+.waitlist-feature__helper {
+  display: block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+.waitlist-email {
+  width: 100%;
+  animation-delay: 2600ms;
+}
+.waitlist-email-label {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+  display: block;
+}
+.waitlist-email-input {
+  width: 100%;
+  min-height: var(--size-control-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-bg-neutral);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-primary);
+  transition: border-color var(--duration-micro) var(--ease-essence),
+              box-shadow var(--duration-micro) var(--ease-essence);
+}
+.waitlist-email-input:focus {
+  outline: none;
+  border-color: var(--color-mineral);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+/* ─── C2 success state ─── */
+.waitlist-success {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 0 var(--space-xl) var(--space-xl);
+  animation: copyReveal var(--duration-medium) var(--ease-essence) forwards;
+}
+.waitlist-success .stone {
+  animation-delay: 0ms;
+}
+.waitlist-success-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: 600;
+  line-height: var(--line-height-hero);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-md);
+  max-width: 320px;
+  text-wrap: balance;
+}
+.waitlist-success-aside {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  max-width: 280px;
+  text-wrap: balance;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   C3 — VAULT LIMIT REACHED (state, not moment)
+   Less centered, faster entrance, smaller stone, shorter copy stack.
+   Reads as practical redirect, not ceremony.
+   ══════════════════════════════════════════════════════════════════════ */
+.confirm--c3 {
+  /* Shift content upward from true center so the stage feels grounded,
+     not floating. Padding-top creates breathing room under the status bar;
+     justify-content: flex-start locks the layout at that anchor. */
+  justify-content: flex-start;
+  padding-top: var(--space-4xl);
+}
+.c3-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-mineral);
+  margin-bottom: var(--space-sm);
+  animation-delay: 700ms;
+}
+.c3-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: var(--line-height-title);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-md);
+  max-width: 320px;
+  text-wrap: balance;
+  animation-delay: 900ms;
+}
+.c3-aside {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  max-width: 290px;
+  text-wrap: balance;
+  animation-delay: 1100ms;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   FOOTER CTAs — shared pattern
+   ══════════════════════════════════════════════════════════════════════ */
+.footer {
+  padding: var(--space-md) var(--space-xl) var(--space-2xl);
+  background: transparent;
+  flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-sm);
+}
+.footer--c2 {
+  /* C2 footer sits on top of warm bg, gradient fade for readability over scroll */
+  background: linear-gradient(
+    180deg,
+    rgba(249, 243, 232, 0) 0%,
+    rgba(249, 243, 232, 0.95) 40%,
+    var(--color-bg-warm-1) 100%
+  );
+  padding-top: var(--space-xl);
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 5;
+}
+
+.footer .btn {
+  width: 100%; min-height: var(--size-control-md);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-mineral); color: #fff;
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--text-body-lg);
+  border: 0; border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  transition: background var(--duration-micro) var(--ease-essence),
+              transform var(--duration-small) var(--ease-press);
+  opacity: 0;
+  animation: copyReveal var(--duration-medium) var(--ease-essence) forwards;
+}
+.footer .btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.footer .btn:not(:disabled):active { transform: scale(var(--scale-press)); }
+.footer .btn:disabled {
+  background: var(--color-text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.footer .btn--link {
+  background: transparent;
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  font-weight: 500;
+  font-size: var(--text-body);
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-text-tertiary);
+  text-decoration-thickness: 1px;
+  width: auto;
+  opacity: 0;
+  animation: copyReveal var(--duration-medium) var(--ease-essence) forwards;
+}
+.footer .btn--link:not(:disabled):hover {
+  background: transparent;
+  color: var(--color-text-primary);
+  text-decoration-color: var(--color-text-secondary);
+}
+
+/* C1 footer reveals */
+.footer--c1 .btn        { animation-delay: 2800ms; }
+.footer--c1 .btn--link  { animation-delay: 3200ms; }
+
+/* C2 footer reveals (no ceremonial entrance, straightforward) */
+.footer--c2 .btn        { animation-delay: 2900ms; opacity: 0; }
+.footer--c2 .btn--link  { animation-delay: 3100ms; opacity: 0; }
+
+/* C3 footer reveals — faster than C1, this is a state not a ceremony */
+.footer--c3 .btn        { animation-delay: 1300ms; }
+.footer--c3 .btn--link  { animation-delay: 1500ms; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   DEV NAV — screen selector
+   ══════════════════════════════════════════════════════════════════════ */
+.dev-rail {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+}
+.dev-rail__label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+.dev-rail__nav {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  max-width: 480px;
+}
+.dev-rail__nav button {
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 6px 12px;
+  font-family: var(--font-body); font-size: 11px;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: background var(--duration-micro) var(--ease-essence),
+              color var(--duration-micro) var(--ease-essence),
+              border-color var(--duration-micro) var(--ease-essence);
+}
+.dev-rail__nav button:hover {
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95);
+}
+.dev-rail__nav button.is-current {
+  background: var(--color-mineral); color: #fff; border-color: var(--color-mineral);
+}
+.dev-rail__nav button.replay {
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  border: 1px dashed rgba(255,255,255,0.2);
+}
+.variant-label {
+  position: absolute; top: 12px; left: 14px;
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(28,26,24,0.45);
+  z-index: 12; pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div class="dev-rail">
+  <div class="dev-rail__label">Step 5 · Pass 2 · Ceiling &amp; Waitlist</div>
+  <div class="dev-rail__nav" id="devNav">
+    <button data-screen="c1" class="is-current">C1 · Three Shaped</button>
+    <button data-screen="c2">C2 · Waitlist</button>
+    <button data-screen="c2-success">C2 · Submitted</button>
+    <button data-screen="c3">C3 · Vault Limit</button>
+    <button data-action="replay" class="replay">↻ Replay</button>
+  </div>
+</div>
+
+<div class="prototype-wrapper">
+  <!-- All four screens live inside the same phone frame; only one is visible at a time -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       C1 — THREE SHAPED
+       Triggered from A7 when user has just saved message 3 of 3
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="phone phone--c1" data-screen="c1">
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">C1 · Three Shaped</div>
+
+    <div class="phone__screen">
+      <div class="confirm" role="status" aria-live="polite" aria-atomic="true">
+        <div class="stone stone--infused" aria-hidden="true">
+          <div class="stone__body"></div>
+        </div>
+        <h1 class="c1-title reveal">Three are kept.</h1>
+        <p class="c1-aside reveal">The messages you shaped for the people you love are on the shelf, safe.</p>
+        <p class="c1-reassurance reveal">Your voice stays preserved in your Vault. More ways to use it are on the way.</p>
+      </div>
+      <div class="footer footer--c1">
+        <button class="btn" data-goto="c2">See what&rsquo;s coming</button>
+        <button class="btn btn--link" data-goto="back">Back to Home</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       C2 — WAITLIST
+       Reachable from C1 primary, C3 primary, or Settings
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="phone phone--c2" data-screen="c2" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">C2 · Waitlist</div>
+
+    <div class="phone__screen">
+      <div class="waitlist" role="form" aria-labelledby="waitlistTitle">
+        <p class="waitlist-eyebrow reveal">Coming to Essence</p>
+        <h1 class="waitlist-title reveal" id="waitlistTitle">What we&rsquo;re building next.</h1>
+        <p class="waitlist-subtitle reveal">Tell us what matters most to you, and we&rsquo;ll let you know when it&rsquo;s ready.</p>
+
+        <div class="waitlist-features reveal" role="group" aria-label="Which features matter most to you">
+          <span class="waitlist-features-label">Features in development</span>
+
+          <label class="waitlist-feature" data-feature="more-messages">
+            <span class="waitlist-feature__check" aria-hidden="true">
+              <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                <path d="M1 5L4.5 8.5L11 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="waitlist-feature__text">
+              More messages each month
+              <span class="waitlist-feature__helper">Keep creating beyond the three you&rsquo;ve shaped</span>
+            </span>
+            <input type="checkbox" name="feature" value="more-messages" style="display:none;">
+          </label>
+
+          <label class="waitlist-feature" data-feature="scheduling">
+            <span class="waitlist-feature__check" aria-hidden="true">
+              <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                <path d="M1 5L4.5 8.5L11 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="waitlist-feature__text">
+              Schedule messages for future dates
+              <span class="waitlist-feature__helper">Arriving on birthdays, anniversaries, the moments you choose</span>
+            </span>
+            <input type="checkbox" name="feature" value="scheduling" style="display:none;">
+          </label>
+
+          <label class="waitlist-feature" data-feature="reminders">
+            <span class="waitlist-feature__check" aria-hidden="true">
+              <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                <path d="M1 5L4.5 8.5L11 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="waitlist-feature__text">
+              Birthday and occasion reminders
+              <span class="waitlist-feature__helper">Gentle prompts so no moment slips past</span>
+            </span>
+            <input type="checkbox" name="feature" value="reminders" style="display:none;">
+          </label>
+
+          <label class="waitlist-feature" data-feature="multi-profile">
+            <span class="waitlist-feature__check" aria-hidden="true">
+              <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                <path d="M1 5L4.5 8.5L11 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="waitlist-feature__text">
+              Multiple voice profiles
+              <span class="waitlist-feature__helper">Preserve parents, partners, others you love</span>
+            </span>
+            <input type="checkbox" name="feature" value="multi-profile" style="display:none;">
+          </label>
+
+          <label class="waitlist-feature" data-feature="longer-messages">
+            <span class="waitlist-feature__check" aria-hidden="true">
+              <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                <path d="M1 5L4.5 8.5L11 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="waitlist-feature__text">
+              Longer, story-form messages
+              <span class="waitlist-feature__helper">Room for the memories that take a while to tell</span>
+            </span>
+            <input type="checkbox" name="feature" value="longer-messages" style="display:none;">
+          </label>
+        </div>
+
+        <div class="waitlist-email reveal">
+          <label class="waitlist-email-label" for="waitlistEmail">Notify at</label>
+          <input
+            type="email"
+            class="waitlist-email-input"
+            id="waitlistEmail"
+            value="oremi@essence.co"
+            autocomplete="email"
+          >
+        </div>
+      </div>
+
+      <div class="footer footer--c2">
+        <button class="btn" id="waitlistSubmit">Add me to the list</button>
+        <button class="btn btn--link" data-goto="back">Back to Home</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       C2 SUCCESS — after submit
+       =============================================================== -->
+  <div class="phone phone--c2" data-screen="c2-success" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">C2 · Submitted</div>
+
+    <div class="phone__screen">
+      <div class="waitlist-success" role="status" aria-live="polite">
+        <div class="stone stone--md stone--shimmer" aria-hidden="true">
+          <div class="stone__body"></div>
+        </div>
+        <h1 class="waitlist-success-title">You&rsquo;re on the list.</h1>
+        <p class="waitlist-success-aside">We&rsquo;ll write when something&rsquo;s ready. Your voice stays preserved while you wait.</p>
+      </div>
+      <div class="footer footer--c3">
+        <button class="btn" data-goto="back">Back to Home</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       C3 — VAULT LIMIT REACHED
+       Replaces A2 when user attempts to create msg 4+
+       =============================================================== -->
+  <div class="phone phone--c3" data-screen="c3" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">C3 · Vault Limit</div>
+
+    <div class="phone__screen">
+      <div class="confirm confirm--c3" role="status" aria-live="polite" aria-atomic="true">
+        <div class="stone stone--sm stone--archive" aria-hidden="true">
+          <div class="stone__body"></div>
+        </div>
+        <p class="c3-eyebrow reveal">Your Vault</p>
+        <h1 class="c3-title reveal">Three messages, kept.</h1>
+        <p class="c3-aside reveal">Your voice stays preserved. You can revisit what you&rsquo;ve saved anytime.</p>
+      </div>
+      <div class="footer footer--c3">
+        <button class="btn" data-goto="back">Visit your Memory Shelf</button>
+        <button class="btn btn--link" data-goto="c2">See what&rsquo;s coming</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/**
+ * NOTE FOR CODE ARCHITECT
+ *
+ * Screen routing in production (Next.js):
+ *   /app/message/complete → A7
+ *     if messageCount === 3 && hasCeremony === false
+ *       → /app/message/ceiling  (C1, one-time only; set hasCeremony=true)
+ *
+ *   /app/message/new
+ *     if messageCount >= 3 → /app/message/limit  (C3, always)
+ *
+ *   /app/waitlist  (C2)
+ *     GET: render form pre-filled with session email
+ *     POST: persist {user_id, email, selected_features[], submitted_at}
+ *     → /app/waitlist/submitted  (success state)
+ *
+ * The dev rail below is a prototype-only switcher. Remove for production.
+ */
+
+// ─── Screen switcher ────────────────────────────────────────────────────
+// Dev-rail buttons are queried once; phone frames must be queried FRESH
+// on each call because the clone-to-replay-animations trick detaches the
+// old reference, leaving the original NodeList pointing at stale nodes.
+const navButtons = document.querySelectorAll('#devNav button[data-screen]');
+
+// History stack — lets "Back to Home" and "back" buttons walk backwards
+// through whatever path the user took. In production, real routing handles
+// this; the stack is a prototype-only convenience so you can test the full
+// loop without reloading.
+const screenHistory = ['c1'];
+
+function showScreen(name, pushHistory = true) {
+  if (pushHistory && screenHistory[screenHistory.length - 1] !== name) {
+    screenHistory.push(name);
+  }
+  // Query fresh each call — clone/replace below invalidates stale refs
+  const screens = document.querySelectorAll('.phone[data-screen]');
+  screens.forEach(s => {
+    s.hidden = s.dataset.screen !== name;
+  });
+  navButtons.forEach(b => {
+    b.classList.toggle('is-current', b.dataset.screen === name);
+  });
+  // Replay animations on the newly shown screen
+  const active = document.querySelector(`.phone[data-screen="${name}"]:not([hidden])`);
+  if (active) {
+    const clone = active.cloneNode(true);
+    active.replaceWith(clone);
+    wireScreen(clone);
+  }
+}
+
+function goBack() {
+  if (screenHistory.length > 1) {
+    screenHistory.pop();
+    const prev = screenHistory[screenHistory.length - 1];
+    showScreen(prev, false);
+  } else {
+    // Already at root — in production would navigate to Home B; here,
+    // cycle back to C1 so the prototype is always navigable.
+    showScreen('c1', false);
+  }
+}
+
+// ─── Interactions within screens ────────────────────────────────────────
+function wireScreen(root) {
+  // In-screen "goto" buttons (primary CTAs that route between screens)
+  root.querySelectorAll('[data-goto]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.goto;
+      if (target === 'back' || target === 'home') {
+        goBack();
+        return;
+      }
+      showScreen(target);
+    });
+  });
+
+  // C2 feature multi-select
+  const features = root.querySelectorAll('.waitlist-feature');
+  features.forEach(f => {
+    f.addEventListener('click', (e) => {
+      // Only toggle on label click, not on the hidden input
+      if (e.target.tagName === 'INPUT') return;
+      e.preventDefault();
+      const input = f.querySelector('input[type="checkbox"]');
+      input.checked = !input.checked;
+      f.classList.toggle('is-checked', input.checked);
+    });
+  });
+
+  // C2 submit
+  const submitBtn = root.querySelector('#waitlistSubmit');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      // In production: POST selected features + email to /api/waitlist
+      showScreen('c2-success');
+    });
+  }
+}
+
+// ─── Dev rail wiring ────────────────────────────────────────────────────
+document.querySelectorAll('#devNav button[data-screen]').forEach(b => {
+  b.addEventListener('click', () => showScreen(b.dataset.screen));
+});
+document.querySelectorAll('#devNav button[data-action="replay"]').forEach(b => {
+  b.addEventListener('click', () => {
+    const current = document.querySelector('#devNav button.is-current')?.dataset.screen || 'c1';
+    showScreen(current);
+  });
+});
+
+// Wire the initially visible screen
+wireScreen(document.querySelector('.phone[data-screen="c1"]'));
+</script>
+</body>
+</html>

@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ESSENCE · Step 5 · A4 Personal Note</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════╗
+  ║  NOTE FOR CODE ARCHITECT — A4 Personal Note                           ║
+  ║                                                                       ║
+  ║  This screen uses placeholder copy throughout.                        ║
+  ║  Two real production decisions need to land before this ships:        ║
+  ║                                                                       ║
+  ║  1. CATEGORY-AWARE QUESTION COPY                                      ║
+  ║     The italic question floating below the stone changes based on     ║
+  ║     the category selected on A3. Need 7 strings, one per category:    ║
+  ║       birthday, encouragement, daily, future, comfort, holiday, checkin   ║
+  ║     Each should be a single-sentence, second-person prompt that       ║
+  ║     invites a specific kind of contribution. Validation task should   ║
+  ║     workshop these.                                                   ║
+  ║     Currently using: "What do you want them to know?" as placeholder. ║
+  ║                                                                       ║
+  ║  2. HONORING-MOMENT COPY (Direction 5)                                ║
+  ║     After the user taps "Shape it from this", the note appears        ║
+  ║     centered in italic Spectral with a quiet acknowledgment line.     ║
+  ║     Currently using: "We'll bring this into your voice." as placeholder. ║
+  ║     This line could vary by category, OR stay constant. Workshop.     ║
+  ║                                                                       ║
+  ║  3. STATE WIRING                                                      ║
+  ║     - Recipient name + category come from prior screens (state.recipient,    ║
+  ║       state.category). Currently mocked as "Sarah" + "Encouragement".  ║
+  ║     - 200-char limit on the note input enforced via JS + visible      ║
+  ║       counter that only appears after 150 chars.                      ║
+  ║     - Skip path: empty input + tap "Use a generic message" button     ║
+  ║       routes directly to A5, skipping the honoring moment entirely.   ║
+  ║                                                                       ║
+  ║  4. ANIMATION                                                         ║
+  ║     The honoring moment uses a fade + slight upward translate         ║
+  ║     (--duration-medium 800ms). Reduced-motion media query already     ║
+  ║     handled at :root level. Stone state stays "ready" throughout      ║
+  ║     A4, transitions to "working" only when generation starts on A5.   ║
+  ╚═══════════════════════════════════════════════════════════════════════╝
+-->
+
+<style>
+:root {
+  --color-bg-neutral: #FBF8F4;
+  --color-bg-warm-1: #F9F3E8;
+  --color-bg-warm-2: #F6F0E5;
+  --color-bg-warm-phase: #F2EDE4;
+  --color-bg-gold: #F2E8D6;
+  --color-bg-rich: #EDE3D0;
+  --color-surface-card: #F6F0E5;
+  --color-surface-warm: #EDE3D0;
+  --color-surface-honey: #F2E8D6;
+  --color-mineral: #7A8088;
+  --color-mineral-dark: #656B73;
+  --color-text-primary: #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #ADA9A5;
+  --color-border: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
+
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --text-h1: 36px;
+  --text-title: 28px;
+  --text-body-lg: 18px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-caption: 12px;
+  --line-height-title: 1.4;
+  --line-height-hero: 1.25;
+
+  /* Text sizing — 16px floor for 45-70 audience */
+  --text-descriptor: var(--text-body);
+  --text-meta: var(--text-body);
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-press: cubic-bezier(0.2, 0.0, 0.0, 1);
+  --duration-micro: 200ms;
+  --duration-small: 400ms;
+  --duration-medium: 800ms;
+  --duration-large: 1200ms;
+  --duration-breath: 3000ms;
+
+  --size-avatar: 44px;
+  --size-control-md: 52px;
+
+  --stone-sm: 120px;
+  --stone-md: 160px;
+  --stone-lg: 180px;
+  --stone-xl: 200px;
+
+  --scale-press: 0.98;
+  --scale-press-subtle: 0.99;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background: #1C1A18;
+  background-image: radial-gradient(ellipse at center, #2a2622 0%, #1C1A18 70%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 12px 60px; gap: 24px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+button { font-family: inherit; }
+
+.prototype-wrapper {
+  width: 390px; height: 812px;
+  border-radius: 48px; overflow: hidden;
+  box-shadow: 0 0 0 10px #1A1715, 0 0 0 12px var(--color-mineral), 0 50px 100px rgba(0,0,0,0.45);
+  position: relative; flex-shrink: 0;
+  background: var(--color-bg-warm-2);
+}
+@media (max-width: 440px) {
+  .prototype-wrapper { transform: scale(0.88); transform-origin: top center; }
+}
+.phone {
+  width: 100%; height: 100%;
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--color-bg-warm-2);
+  font-family: var(--font-body); color: var(--color-text-primary);
+}
+.phone__status {
+  position: absolute; inset: 0 0 auto 0; height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px 0;
+  font-weight: 600; font-size: var(--text-small);
+  color: var(--color-text-primary); z-index: 10; pointer-events: none;
+}
+.phone__status-icons { display: flex; gap: 6px; align-items: center; }
+.phone__island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 30px; border-radius: 999px; background: #0B0B0B; z-index: 11;
+}
+.phone__home-indicator {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  width: 134px; height: 5px; border-radius: 3px;
+  background: rgba(28,26,24,0.35); z-index: 10;
+}
+.phone__screen { position: absolute; inset: 44px 0 0 0; display: flex; flex-direction: column; }
+
+/* BACKBAR */
+.backbar {
+  padding: var(--space-md) var(--space-xl);
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 52px; flex-shrink: 0;
+}
+.backbar__btn {
+  background: transparent; border: 0;
+  padding: var(--space-sm); margin: calc(-1 * var(--space-sm));
+  color: var(--color-text-secondary); cursor: pointer;
+  display: flex; min-height: 44px; align-items: center;
+  border-radius: var(--radius-md);
+  transition: color var(--duration-micro) var(--ease-essence);
+}
+.backbar__btn:hover { color: var(--color-text-primary); }
+.backbar__pips { display: flex; gap: var(--pip-w-rest); }
+.backbar__pip {
+  width: var(--pip-w-rest); height: var(--pip-w-rest);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-warm);
+  transition: width var(--duration-medium) var(--ease-essence), background var(--duration-medium) var(--ease-essence);
+}
+.backbar__pip.is-current { width: var(--pip-w-active); background: var(--color-bg-gold); }
+.backbar__pip.is-done { background: var(--color-bg-gold); }
+.backbar__spacer { width: 22px; }
+
+/* CRUMB — display-only on A4+ (per cross-cutting decision: tappable through A3 only) */
+.crumb-display {
+  display: inline-flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-bg-warm-2);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  /* No chevron, no hover, no cursor — display-only signals the system won't let you revise here */
+}
+.crumb-display__divider {
+  width: 3px; height: 3px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  opacity: 0.4;
+}
+
+/* BODY */
+.body {
+  padding: var(--space-xs) var(--space-xl) var(--space-lg);
+  flex: 1; display: flex; flex-direction: column;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+
+/* ════════════════════════════════════════════════
+   STAGE A — input mode (Direction 1: stone as prompt)
+   ════════════════════════════════════════════════ */
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: var(--space-lg);
+  text-align: center;
+}
+
+/* ═══ ENTRANCE CHOREOGRAPHY ═══
+   Stone → question → textarea, staggered 200ms apart.
+   Each element fades in + drifts up 8px. */
+@keyframes stageReveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stage .stone {
+  opacity: 0;
+  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
+  animation-delay: 100ms;
+}
+.stage .prompt-question {
+  opacity: 0;
+  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
+  animation-delay: 300ms;
+}
+.stage .note-wrap {
+  opacity: 0;
+  animation: stageReveal var(--duration-medium) var(--ease-essence) forwards;
+  animation-delay: 500ms;
+}
+
+/* ═══ QUESTION RECEDES WHEN TYPING ═══
+   Fades to secondary and lifts slightly when user is writing.
+   Returns when field is empty + blurred. */
+.prompt-question {
+  transition:
+    opacity var(--duration-medium) var(--ease-essence),
+    transform var(--duration-medium) var(--ease-essence),
+    color var(--duration-medium) var(--ease-essence);
+}
+.stage.is-writing .prompt-question {
+  opacity: 0.35;
+  transform: translateY(-4px);
+}
+
+/* ═══ TEXTAREA GLOW RESPONDS TO CONTENT ═══
+   Ambient warmth behind the textarea intensifies as the user writes more. */
+.note-wrap::before {
+  transition: opacity var(--duration-large) var(--ease-essence);
+}
+.stage.has-content .note-wrap::before {
+  opacity: 1;
+  background: radial-gradient(ellipse at 50% 40%, rgba(242, 232, 214, 0.7), transparent 65%);
+}
+.stage.has-long-content .note-wrap::before {
+  background: radial-gradient(ellipse at 50% 40%, rgba(237, 227, 208, 0.85), transparent 60%);
+}
+
+/* Stone — companion presence, not centerpiece */
+.stone {
+  position: relative; border-radius: 999px; display: block;
+  width: var(--stone-sm); height: var(--stone-sm);
+}
+.stone::before {
+  content: ''; position: absolute; inset: -28%; border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,220,160,0.22), transparent 62%);
+  animation: stoneHalo 4s var(--ease-essence) infinite;
+}
+.stone::after {
+  content: ''; position: absolute; top: 15%; left: 22%;
+  width: 30%; height: 20%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.55), transparent 70%);
+  border-radius: 999px; filter: blur(6px); pointer-events: none;
+}
+.stone__body {
+  width: 100%; height: 100%; border-radius: 999px;
+  background: radial-gradient(circle at 30% 28%, #FBF2DC 0%, #E8CF9A 28%, #C9A665 60%, #8A6F3E 90%);
+  box-shadow:
+    0 12px 28px rgba(139,111,62,0.16),
+    inset -12px -18px 40px rgba(90,65,30,0.30),
+    inset 12px 12px 28px rgba(255,245,220,0.30);
+  animation: stoneBreath 4s var(--ease-essence) infinite;
+}
+@keyframes stoneBreath {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.025); filter: brightness(1.015); }
+}
+@keyframes stoneHalo {
+  0%, 100% { transform: scale(1); opacity: 0.12; }
+  50% { transform: scale(1.06); opacity: 0.18; }
+}
+
+/* The question — the emotional anchor of this screen */
+.prompt-question {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-title);
+  line-height: var(--line-height-title);
+  color: var(--color-text-primary);
+  max-width: 280px;
+  margin-top: var(--space-xl);
+  text-wrap: pretty;
+}
+
+/* Writing area wrapper — ambient warmth behind the textarea */
+.note-wrap {
+  position: relative;
+  width: 100%;
+  margin-top: var(--space-xl);
+}
+.note-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -20px -16px;
+  border-radius: var(--radius-2xl);
+  background: radial-gradient(ellipse at 50% 40%, rgba(242, 232, 214, 0.5), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Textarea — recessed, warm, inviting */
+.note-field {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: var(--space-lg) var(--space-lg) var(--space-xl);
+  background: var(--color-surface-honey);
+  border: 1.5px solid rgba(0,0,0,0.04);
+  border-radius: var(--radius-2xl);
+  font-family: var(--font-display);
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-primary);
+  outline: none;
+  resize: none;
+  min-height: 130px;
+  text-align: left;
+  transition:
+    border-color var(--duration-small) var(--ease-essence),
+    box-shadow var(--duration-small) var(--ease-essence);
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,0.04),
+    0 1px 3px rgba(0,0,0,0.03);
+}
+.note-field::placeholder {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+.note-field:focus {
+  border-color: var(--color-mineral);
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,0.04),
+    var(--shadow-focus-ring);
+}
+
+/* Char counter — only appears past 150 chars */
+.note-counter {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--space-sm);
+  text-align: right;
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transition: opacity var(--duration-small) var(--ease-essence);
+}
+.note-counter.is-visible { opacity: 1; }
+.note-counter.is-warning { color: var(--color-status-warning, #8A5A1E); }
+
+/* ════════════════════════════════════════════════
+   STAGE B — honoring moment (Direction 5)
+   ════════════════════════════════════════════════ */
+.honoring {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-xl);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--duration-medium) var(--ease-essence),
+    transform var(--duration-medium) var(--ease-essence);
+}
+.honoring.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.honoring__quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-title);
+  line-height: var(--line-height-title);
+  color: var(--color-text-primary);
+  max-width: 300px;
+  position: relative;
+  letter-spacing: -0.005em;
+  text-wrap: pretty;
+}
+.honoring__quote::before,
+.honoring__quote::after {
+  font-family: var(--font-display);
+  color: var(--color-text-tertiary);
+  font-size: 1.2em;
+  position: relative;
+  top: 4px;
+}
+.honoring__quote::before { content: '\201C'; margin-right: 4px; }
+.honoring__quote::after  { content: '\201D'; margin-left: 4px; }
+
+.honoring__ack {
+  margin-top: var(--space-2xl);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  max-width: 280px;
+}
+
+.honoring__pulse {
+  margin-top: var(--space-2xl);
+  display: flex;
+  gap: var(--space-sm);
+}
+.honoring__pulse-dot {
+  width: var(--pip-w-rest); height: var(--pip-w-rest);
+  border-radius: var(--radius-full);
+  background: var(--color-mineral);
+  opacity: 0.4;
+  animation: pulseDot 1.6s var(--ease-essence) infinite;
+}
+.honoring__pulse-dot:nth-child(2) { animation-delay: 200ms; }
+.honoring__pulse-dot:nth-child(3) { animation-delay: 400ms; }
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.3); }
+}
+
+/* FOOTER */
+.footer {
+  padding: var(--space-md) var(--space-xl) var(--space-2xl);
+  border-top: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--color-bg-warm-2) 24px,
+    var(--color-bg-warm-2) 100%
+  );
+  flex-shrink: 0;
+  display: flex; flex-direction: column; gap: var(--space-sm);
+  transition: opacity var(--duration-small) var(--ease-essence);
+}
+.footer.is-hidden { opacity: 0; pointer-events: none; }
+
+.btn {
+  width: 100%; min-height: var(--size-control-md);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-mineral); color: #fff;
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--text-body-lg);
+  border: 0; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-mineral); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  transition: background var(--duration-micro) var(--ease-essence),
+              transform var(--duration-small) var(--ease-press),
+              opacity var(--duration-small) var(--ease-essence);
+}
+.btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.btn:not(:disabled):active { transform: scale(var(--scale-press)); }
+
+/* "Use a generic message" — quieter ghost button (Direction 4 free bonus) */
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  font-weight: 500;
+  font-size: var(--text-body);
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-text-tertiary);
+  text-decoration-thickness: 1px;
+}
+.btn--ghost:not(:disabled):hover {
+  background: transparent;
+  color: var(--color-text-primary);
+  text-decoration-color: var(--color-text-secondary);
+}
+
+/* DEV NAV */
+.dev-rail { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dev-rail__label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+.dev-rail__nav, .dev-rail__row {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  max-width: 480px;
+}
+.dev-rail__nav button, .dev-rail__row button {
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 6px 12px;
+  font-family: var(--font-body); font-size: 11px;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: all 200ms ease;
+}
+.dev-rail__nav button:hover, .dev-rail__row button:hover {
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95);
+}
+.dev-rail__nav button.is-current, .dev-rail__row button.is-on {
+  background: var(--color-mineral); color: #fff; border-color: var(--color-mineral);
+}
+.dev-row-label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  align-self: center; margin-right: 4px;
+}
+
+.variant-label {
+  position: absolute; top: 12px; left: 14px;
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(28,26,24,0.45);
+  z-index: 12; pointer-events: none;
+}
+
+.stage--hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="dev-rail">
+  <div class="dev-rail__label">A4 — Personal Note · Direction 1 + 5</div>
+  <div class="dev-rail__nav" id="devNav">
+    <button data-stage="input" class="is-current">Stage A · Input</button>
+    <button data-stage="honoring">Stage B · Honoring</button>
+  </div>
+</div>
+
+<div class="prototype-wrapper">
+  <div class="phone">
+
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+
+    <div class="variant-label" id="variantLabel">A4 · Stage A</div>
+
+    <div class="phone__screen">
+
+      <div class="backbar">
+        <button class="backbar__btn" aria-label="Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>
+          <span class="backbar__pip is-done"></span>
+          <span class="backbar__pip is-current"></span>
+          <span class="backbar__pip"></span>
+          <span class="backbar__pip"></span>
+        </div>
+        <div class="backbar__spacer"></div>
+      </div>
+
+      <!-- Display-only crumb (no chevron, no tap) -->
+      <div style="padding: 0 var(--space-xl); margin-bottom: var(--space-md);">
+        <div class="crumb-display">
+          <span>For Sarah</span>
+          <span class="crumb-display__divider"></span>
+          <span>Encouragement</span>
+        </div>
+      </div>
+
+      <div class="body">
+
+        <!-- ═══ STAGE A — Input mode (Direction 1: stone as prompt) ═══ -->
+        <div class="stage" id="stageInput">
+          <div class="stone">
+            <div class="stone__body"></div>
+          </div>
+
+          <!-- PLACEHOLDER COPY — see header note for production strings -->
+          <p class="prompt-question" id="promptQuestion">
+            What do you want them to know?
+          </p>
+
+          <div class="note-wrap">
+            <textarea
+              class="note-field"
+              id="noteField"
+              placeholder="Say what comes to mind."
+              maxlength="200"
+              rows="3"
+            ></textarea>
+
+            <div class="note-counter" id="noteCounter">
+              <span id="charCount">0</span> / 200
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ STAGE B — Honoring moment (Direction 5) ═══ -->
+        <div class="stage stage--hidden" id="stageHonoring">
+          <div class="honoring" id="honoringContent">
+            <p class="honoring__quote" id="honoringQuote">
+              Whatever happens Friday, you were braver than you think.
+            </p>
+            <!-- PLACEHOLDER COPY — see header note for production strings -->
+            <p class="honoring__ack">
+              We&rsquo;ll bring this into your voice.
+            </p>
+            <div class="honoring__pulse">
+              <span class="honoring__pulse-dot"></span>
+              <span class="honoring__pulse-dot"></span>
+              <span class="honoring__pulse-dot"></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="footer" id="footer">
+        <button class="btn" id="primaryBtn">Use a generic message</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const state = {
+  stage: 'input',
+  noteText: '',
+};
+
+function applyStage(stage) {
+  state.stage = stage;
+  document.getElementById('variantLabel').textContent = `A4 · Stage ${stage === 'input' ? 'A' : 'B'}`;
+
+  const input = document.getElementById('stageInput');
+  const honoring = document.getElementById('stageHonoring');
+  const honoringContent = document.getElementById('honoringContent');
+  const footer = document.getElementById('footer');
+
+  if (stage === 'input') {
+    input.classList.remove('stage--hidden');
+    honoring.classList.add('stage--hidden');
+    honoringContent.classList.remove('is-visible');
+    footer.classList.remove('is-hidden');
+  } else {
+    input.classList.add('stage--hidden');
+    honoring.classList.remove('stage--hidden');
+    footer.classList.add('is-hidden');
+    // Hydrate the quote from current note text, fall back to demo string
+    const noteText = state.noteText || 'Whatever happens Friday, you were braver than you think.';
+    document.getElementById('honoringQuote').textContent = noteText;
+    // Trigger fade-in
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => honoringContent.classList.add('is-visible'));
+    });
+    // After ~2.4s, would route to A5 in production. Here we just hold the moment.
+  }
+
+  document.querySelectorAll('#devNav button').forEach(b => {
+    b.classList.toggle('is-current', b.dataset.stage === stage);
+  });
+}
+
+document.querySelectorAll('#devNav button').forEach(b => {
+  b.addEventListener('click', () => applyStage(b.dataset.stage));
+});
+
+// Note field — Direction 4: button copy changes based on input state
+const noteField = document.getElementById('noteField');
+const primaryBtn = document.getElementById('primaryBtn');
+const noteCounter = document.getElementById('noteCounter');
+const charCount = document.getElementById('charCount');
+const stageInput = document.getElementById('stageInput');
+
+noteField.addEventListener('input', e => {
+  const value = e.target.value;
+  state.noteText = value;
+  const len = value.length;
+
+  // Button copy and styling shift based on input state
+  if (len > 0) {
+    primaryBtn.textContent = 'Shape it from this';
+    primaryBtn.classList.remove('btn--ghost');
+    stageInput.classList.add('has-content');
+  } else {
+    primaryBtn.textContent = 'Use a generic message';
+    primaryBtn.classList.add('btn--ghost');
+    stageInput.classList.remove('has-content', 'has-long-content');
+  }
+
+  // Glow intensifies at 80+ chars
+  if (len >= 80) {
+    stageInput.classList.add('has-long-content');
+  } else {
+    stageInput.classList.remove('has-long-content');
+  }
+
+  // Counter — appears past 150 chars (75% threshold)
+  charCount.textContent = len;
+  if (len >= 150) {
+    noteCounter.classList.add('is-visible');
+    if (len >= 180) noteCounter.classList.add('is-warning');
+    else noteCounter.classList.remove('is-warning');
+  } else {
+    noteCounter.classList.remove('is-visible', 'is-warning');
+  }
+});
+
+// Question recedes while typing, returns when field empty + blurred
+noteField.addEventListener('focus', () => {
+  stageInput.classList.add('is-writing');
+});
+noteField.addEventListener('blur', () => {
+  if (state.noteText.length === 0) {
+    stageInput.classList.remove('is-writing');
+  }
+});
+
+// Initial state — empty field, ghost button
+primaryBtn.classList.add('btn--ghost');
+
+primaryBtn.addEventListener('click', () => {
+  if (state.noteText.length > 0) {
+    // Has content — show honoring moment
+    applyStage('honoring');
+  } else {
+    // Empty — would route directly to A5 (generation) in production
+    // For prototype demo, show honoring with placeholder content
+    applyStage('honoring');
+  }
+});
+
+// Boot
+applyStage('input');
+</script>
+</body>
+</html>
