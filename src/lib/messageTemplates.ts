@@ -2,7 +2,7 @@
  * Message Templates Registry
  *
  * Canonical source of truth for the seven launch message categories.
- * See ESSENCE_Master_Spec_UPDATED.md Chapter 8 for spec rules.
+ * See docs/MASTER_SPEC.md Chapter 8 for spec rules.
  *
  * This file is the single place to edit:
  * - Category display labels and descriptions
