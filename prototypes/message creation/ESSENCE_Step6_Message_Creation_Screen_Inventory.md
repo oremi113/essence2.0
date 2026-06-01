@@ -1,7 +1,7 @@
-# ESSENCE — Step 5: Message Creation Flow
+# ESSENCE — Step 6: Message Creation Flow
 ## Screen Inventory for Wireframing (V1)
 
-**Purpose of this doc:** The single source of truth for Step 5 wireframing. Architecture decisions are locked. V1 = Vault tier only. Use alongside `ESSENCE_Step5_Architecture_LOCKED.md` for the technical contract.
+**Purpose of this doc:** The single source of truth for Step 6 wireframing. Architecture decisions are locked. V1 = Vault tier only. Use alongside `docs/session-8/Step6_OpenContracts.md` for the technical contract.
 
 **Status:** Ready to wireframe.
 
@@ -9,9 +9,9 @@
 
 ## V1 POSITIONING — IMPORTANT CONTEXT
 
-**The product is voice insurance.** Vault preservation of the user's voice is the core value. The 3 messages are a bolt-on, not the main event. Step 5 should feel like "a nice thing you can do with your preserved voice," not the climax of the product. The Vault Reveal moment (Step 4) carries the emotional weight of the purchase.
+**The product is voice insurance.** Vault preservation of the user's voice is the core value. The 3 messages are a bolt-on, not the main event. Step 6 should feel like "a nice thing you can do with your preserved voice," not the climax of the product. The Vault Reveal moment (Step 4) carries the emotional weight of the purchase.
 
-This reframe affects tone throughout Step 5:
+This reframe affects tone throughout Step 6:
 - The 3-message cap is value-add framing ("the three included with your Vault"), not scarcity framing ("you've used up three")
 - Hitting the cap should feel like a calm ceiling, not a wall
 - The waitlist moment is about future expansion and FOMO, not unblocking pent-up demand

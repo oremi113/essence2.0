@@ -1665,7 +1665,7 @@ Templates must support stable AI voice generation:
 
 ### 8.7 Generation Architecture (V1)
 
-The V1 generation pipeline is locked to a hybrid model that protects template consistency while allowing genuine personalization. The architecture below is the binding contract for Step 5 (Message Creation) and downstream system states.
+The V1 generation pipeline is locked to a hybrid model that protects template consistency while allowing genuine personalization. The architecture below is the binding contract for Step 6 (Message Creation) and downstream system states.
 
 **8.7.1 Text Generation Method — Hybrid (templates + LLM-handled personalized insert)**
 
@@ -1729,7 +1729,7 @@ Every generation attempt logs full inputs and outputs. This is V1's primary data
 
 ### 8.8 V1 Scope — Personal Note Input
 
-The V1 personal note step (A4 in the Step 5 screen inventory) presents a **single optional input field** with a category-specific prompt and a **200-character cap**.
+The V1 personal note step (A4 in the Step 6 screen inventory) presents a **single optional input field** with a category-specific prompt and a **200-character cap**.
 
 If the field is filled, generation routes through the hybrid LLM path. If blank, generation routes through the pure template path. Skip and Continue CTAs are equally weighted — there is no friction for users who want a pure template message.
 
