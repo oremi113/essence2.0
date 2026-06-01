@@ -271,14 +271,42 @@ Naming convention: `step6.<noun>_<verb>`. Snake_case props.
 
 ---
 
+## Q7. URL routing
+
+**Constraint:** Routes are locked at design — DECISIONS.md states URL paths never change during a redesign. Whatever ships is permanent.
+
+**Constraint:** Pre-generation state is ephemeral (no DB row exists yet, per Q1). Post-generation state is anchored by `generation_id`, which is the durable identifier the user owns.
+
+**Proposal: hybrid — single URL for the form steps, generation-id-keyed URL for the audio-bearing steps, separate routes for ceiling screens.**
+
+| Route | Screens | Notes |
+|---|---|---|
+| `/messages/new` | A2, A3, A4 | Internal React step state. No URL changes between form steps — pre-generation state is ephemeral and not worth deep-linking. Back-button exits the flow (correct model for an unsaved in-progress form). |
+| `/messages/new/g/[generationId]` | A5 (if `audio_status != 'succeeded'`), A6 (if ready) | Server-side `page.tsx` fetches `pending_generations` row by id. Screen choice derives from status. Refresh and back work naturally. Supports future deep links ("your message is ready" notifications). |
+| `/messages/saved/[messageId]` | A7 | Permanent save URL — the saved message is an addressable artifact the user owns. Pass `?ceremony=three-shaped` to overlay the C1 ceremonial moment after the 3rd save (one-time per user lifetime). |
+| `/messages/limit` | C3 (Vault Limit Reached) | Static. Routed from A2 entry when user is at 3/3 saved, and from `/save` race-case 403 (Q4). |
+| `/messages/waitlist` | C2 (Waitlist) | Static. Routed from C1 "See what's coming" and from C3. |
+
+**Why hybrid:**
+- **Form steps (A2/A3/A4)** are pure input. No server state to anchor a URL on, no analytics value in URL-segmenting (per-step events ship in Phase 1.1 anyway). Single URL keeps back-button behavior predictable.
+- **Audio-bearing steps (A5/A6)** need a stable identifier for refresh, resume, and eventual deep links. `generation_id` is that identifier.
+- **A7** gets its own permanent URL because the saved message is durable, shareable-with-self, and worth bookmarking.
+- **C-screens** are static destinations, not flow steps — they earn their own routes.
+
+**DECISION:** Routes locked per the table above. Internal `/messages/new` flow uses React state for step transitions; no query params for step state. C1 is a query-param overlay on `/messages/saved/[messageId]`, not its own route.
+
+---
+
 ## What to do once the DECISIONs are signed
 
-1. Update inventory line 4 reference (already done — points at this doc).
-2. Create `docs/analytics/2026-06-01-step6-events.md`.
-3. Write migration for `pending_generations` table + `messages.source_generation_id unique` column.
-4. Update API_CONTRACTS.md stubs to reflect `/regenerate` `mode` flag, `/save` idempotency, cost-limit error codes.
-5. Pass 1 production build can begin (A2 + A3 + A5 + A7 — the spine).
-6. A6 prototype is still missing — build that before A6 production.
+1. ~~Update inventory line 4 reference~~ — done (points at this doc).
+2. ~~Create `docs/analytics/2026-06-01-step6-events.md`~~ — done (15 events, V1 + Phase 1.1 split).
+3. ~~Write migration for `pending_generations` table + `messages.source_generation_id unique` column~~ — done (`20260601181821_*.sql`, `20260601181822_*.sql`); not yet applied to remote.
+4. ~~Lock URL routing~~ — done, see Q7.
+5. A2 + A6 prototypes — design brief in `docs/session-8/Step6_A2_A6_Design_Brief.md`. Pending architect agent.
+6. Update API_CONTRACTS.md stubs to reflect `/regenerate` `mode` flag, `/save` idempotency, cost-limit error codes.
+7. Pass 1 production build (A2 + A3 + A5 + A7 — the spine), routes per Q7, telemetry wrapper around existing `track()` with the global props from the analytics doc.
+8. A6 production after A6 prototype lands.
 
 ---
 
