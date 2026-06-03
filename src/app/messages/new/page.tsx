@@ -1,0 +1,73 @@
+import { redirect } from 'next/navigation';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { MessagesNewPageClient } from './MessagesNewPageClient';
+import type { ExistingRecipient } from '@/components/screens/messages/RecipientSetupScreen.types';
+import type { RelationshipKey } from '@/lib/messageTemplates';
+
+/**
+ * /messages/new — entry point for Step 6 (message creation) per
+ * Step6_OpenContracts.md Q7. Hosts A2 → A4 via the orchestrator's
+ * internal step state. A5/A6 live at /messages/new/g/[generationId]
+ * once /generate has fired; A7 lives at /messages/saved/[messageId].
+ *
+ * This page is a thin data-shuttle per CLAUDE.md three-layer rules:
+ * auth check, fetch existing recipients, render the client orchestrator.
+ *
+ * NOTE: The lifetime-cap (3 saved messages on Vault) UX gate per
+ * Step6_OpenContracts.md Q4 is not enforced here yet — wire it in when
+ * the saved-message-count query lands (subscription + count(*) on
+ * messages.user_id). Until then, the server gate in /api/messages/save
+ * is the only block; the client UX may let capped users start the flow
+ * and hit the race-case 403.
+ */
+
+const VALID_RELATIONSHIPS: ReadonlySet<string> = new Set([
+  'daughter',
+  'son',
+  'partner',
+  'parent',
+  'grandchild',
+  'friend',
+  'other',
+]);
+
+function normalizeRelationship(value: unknown): RelationshipKey {
+  if (typeof value === 'string' && VALID_RELATIONSHIPS.has(value)) {
+    return value as RelationshipKey;
+  }
+  return 'other';
+}
+
+export default async function MessagesNewPage() {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/auth/sign-in?next=/messages/new');
+  }
+
+  const { data: rawRecipients } = await supabase
+    .from('recipients')
+    .select('id, name, relationship')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  // V1: skip the duplicate-name disambiguator join. If the user has
+  // two recipients with the same name + relationship, both cards
+  // render without a disambiguator (acceptable for early launch).
+  // Layer the last-message-category lookup in when duplicate-name
+  // cases appear in real data.
+  const existingRecipients: ExistingRecipient[] = (rawRecipients ?? []).map(
+    (r) => ({
+      id: r.id as string,
+      name: r.name as string,
+      relationship: normalizeRelationship(r.relationship),
+      lastMessageCategory: null,
+    })
+  );
+
+  return <MessagesNewPageClient existingRecipients={existingRecipients} />;
+}

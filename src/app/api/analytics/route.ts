@@ -21,7 +21,7 @@ import { generateRequestId, logError, withRequestId } from "@/lib/logger";
 import { NextResponse } from "next/server";
 
 /** Prefixes that the client is allowed to write through this route. */
-const ACTION_PREFIXES = ["breath_stone_"] as const;
+const ACTION_PREFIXES = ["breath_stone_", "step6."] as const;
 
 function isAllowedAction(action: unknown): action is string {
   return (
