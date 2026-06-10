@@ -107,14 +107,23 @@ voice service (audio), and the database. A person never sees these directly.
 | `regenerate` | Re-roll a message | ✅ Proven (smoke) | baseline |
 | `save` | Keep a message permanently | ✅ Proven (smoke) | baseline |
 | `discard` | Throw an in-progress message away | ✅ Proven (smoke) | baseline |
-| `commit` | "Hear this in your voice" (render on demand) | 🟡 Foundation laid, route next | Deferred Audio |
+| `commit` | "Hear this in your voice" (render on demand) | ✅ Proven (smoke) | Deferred Audio |
 
-**Deferred-Audio foundation (2026-06-10):** the database columns (candidate
-text + the two counters), the split caps (3 audio renders / 10 text re-rolls),
-and the `DEFERRED_AUDIO_ENABLED` flag are built and committed — all behind the
-flag (off). The `/commit` endpoint and the flag-forked `/regenerate` are the
-next step, built once the new migration is live on the remote DB (see Blockers)
-so they can be smoke-proven like the rest.
+**Deferred-Audio backend (2026-06-10) — built + proven:** the migration is live
+on remote, and the full backend is in behind `DEFERRED_AUDIO_ENABLED` (off):
+the split caps (3 audio renders / 10 text re-rolls), the new `/commit` endpoint
+(renders a candidate → committed take, failure-safe per A1 §5.5), and the
+flag-forked `/regenerate` (produces a free text candidate, no render). Proven by
+`tests/smoke/messages-deferred.spec.ts` — 5 flag-on tests (regenerate produces a
+candidate without touching the committed take; text_reroll_cap; commit
+no-candidate/cap/unknown), zero vendor spend. The control arm (flag off) still
+passes its 18 tests unchanged.
+
+**Two small bits still owed** (not blocking): the `/commit` *successful*
+render→promote needs a real cloned voice to verify (same boundary as
+`/generate`'s render — a manual check), and "Keep the current one" doesn't yet
+clear the candidate server-side (FOLLOW_UPS #31). Activating the feature later =
+apply nothing more, just flip `DEFERRED_AUDIO_ENABLED=true` and A/B.
 
 **Proven how (2026-06-10):** `tests/smoke/messages.spec.ts` — 18 tests against
 the **real server + real database** (no mocks). Covers every gate, all three
@@ -143,10 +152,10 @@ and unit-tested — it's the most proven part of the whole feature.
 2. **Wire the screens to the backend** — the backend exists and is proven, but
    the screens don't call it yet. This is the "make it work end-to-end for a real
    person" step.
-3. **Finish Deferred Audio** — foundation done (✅ migration + caps + flag). Left:
-   apply the new migration to remote, build + smoke-prove the `/commit` endpoint
-   and the flag-forked `/regenerate`, and add the client tracking events (those
-   land with the A6 screen). See Amendment A1.
+3. **Finish Deferred Audio** — ✅ backend built + proven (migration, caps,
+   `/commit`, flag-forked `/regenerate`). Left: the client tracking events (land
+   with the A6 screen), the "Keep the current one" candidate-clear (#31), the
+   `/commit` real-render manual check, and flipping the flag on after the A/B.
 4. ~~Route-level tests for the endpoints~~ — ✅ done (18 smoke tests). The full
    `/generate` → real-voice render is the one remaining manual check.
 
@@ -187,7 +196,7 @@ Audio upgrade.
 |---|---|---|
 | ~~No `ANTHROPIC_API_KEY` in `.env.local`~~ — ✅ **Resolved 2026-06-10** | (was: AI text step wouldn't run locally) | Key added to `.env.local` and verified live (authenticates, Haiku reachable). |
 | **Most screens aren't built** | The flow can't be clicked through end-to-end by a real person yet. | Build A3–A7 (the work above). |
-| **Deferred-Audio migration not yet applied to remote** | The `/commit` endpoint can't be built + tested until the candidate columns exist on the live DB. | Apply `20260610170000_deferred_audio_candidate_columns.sql` via the Dashboard SQL bundle (one paste, like before). |
+| ~~Deferred-Audio migration not yet applied to remote~~ — ✅ **Resolved 2026-06-10** | (was: `/commit` couldn't be built/tested) | Applied via the Dashboard SQL bundle; candidate columns verified live. `/commit` built + smoke-proven. |
 | Supabase CLI — ✅ **mostly resolved 2026-06-10** | (was: "auth broken") | Login works; type-gen fixed via `--project-id`; DB connection fixed by adding `SUPABASE_DB_PASSWORD` to `.env.local` (`migration list` / `db pull` / dry-run all work). **Still open:** `db push` trips on a *pre-existing* migration-history collision in early migrations — see FOLLOW_UPS #30. Use the Dashboard SQL bundle for new migrations until that's reconciled. |
 | ~~Database migrations not applied to the live database~~ — ✅ **Resolved 2026-06-10** | (was: backend tables might not exist on the server) | The 4 missing Step-6 migrations were applied via the Dashboard SQL Editor; verified live (`pending_generations` etc. now exist). |
 
