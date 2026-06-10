@@ -102,3 +102,100 @@ export const audioCommitSchema = z
   .loose();
 
 export type AudioCommitBody = z.infer<typeof audioCommitSchema>;
+
+// ---------------------------------------------------------------------------
+// Step 6 — message creation flow (Open Contracts Q1–Q5)
+// ---------------------------------------------------------------------------
+
+const MAX_NOTE_LENGTH = 200;
+
+// Mirrors the public.message_category Postgres enum
+// (20260421120000_messages_category.sql) and the MessageCategory union in
+// src/lib/messageTemplates.ts. Keep all three in sync.
+export const messageCategorySchema = z.enum([
+  "birthday",
+  "encouragement",
+  "daily_reminder",
+  "future_message",
+  "comfort",
+  "holiday",
+  "checking_in",
+]);
+
+const optionalUuid = z
+  .string()
+  .uuid({ message: "must be a UUID" })
+  .optional();
+
+const optionalTrimmed = (max: number, label: string) =>
+  z
+    .string()
+    .max(max, { message: `${label} must be ${max} characters or fewer` })
+    .transform((v) => v.trim())
+    .optional();
+
+/**
+ * POST /api/messages/generate — start a fresh Step 6 generation.
+ *
+ * Recipient is exactly one branch: an existing `recipientId`, OR a typed
+ * pending recipient (`pendingRecipientName` + `pendingRecipientRelationship`).
+ * `pendingRecipientDescriptor` is the optional "Someone else" free-form hint.
+ */
+export const messageGenerateSchema = z
+  .object({
+    voiceProfileId: z
+      .string({ error: "voiceProfileId is required" })
+      .uuid({ message: "voiceProfileId must be a UUID" }),
+    category: messageCategorySchema,
+    note: z
+      .string()
+      .max(MAX_NOTE_LENGTH, { message: `note must be ${MAX_NOTE_LENGTH} characters or fewer` })
+      .transform((v) => v.trim())
+      .optional(),
+    recipientId: optionalUuid,
+    pendingRecipientName: optionalTrimmed(120, "pendingRecipientName"),
+    pendingRecipientRelationship: optionalTrimmed(60, "pendingRecipientRelationship"),
+    pendingRecipientDescriptor: optionalTrimmed(120, "pendingRecipientDescriptor"),
+    fromGenerationId: optionalUuid,
+  })
+  .loose()
+  .superRefine((val, ctx) => {
+    const hasExisting = !!val.recipientId;
+    const hasPending = !!val.pendingRecipientName && !!val.pendingRecipientRelationship;
+    if (hasExisting === hasPending) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Provide exactly one recipient: recipientId, OR pendingRecipientName + pendingRecipientRelationship",
+      });
+    }
+  });
+
+export type MessageGenerateBody = z.infer<typeof messageGenerateSchema>;
+
+/**
+ * POST /api/messages/regenerate — re-roll within an existing generation.
+ * `variant` is the user "Regenerate" (new template variant); `retry_audio` is
+ * the system retry after an audio-only failure (cached text, same variant).
+ */
+export const messageRegenerateSchema = z
+  .object({
+    generationId: z
+      .string({ error: "generationId is required" })
+      .uuid({ message: "generationId must be a UUID" }),
+    mode: z.enum(["variant", "retry_audio"]).default("variant"),
+  })
+  .loose();
+
+export type MessageRegenerateBody = z.infer<typeof messageRegenerateSchema>;
+
+/** POST /api/messages/save and /discard — both keyed by generationId. */
+export const messageGenerationRefSchema = z
+  .object({
+    generationId: z
+      .string({ error: "generationId is required" })
+      .uuid({ message: "generationId must be a UUID" }),
+  })
+  .loose();
+
+export type MessageGenerationRefBody = z.infer<typeof messageGenerationRefSchema>;
