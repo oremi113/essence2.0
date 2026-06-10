@@ -81,6 +81,11 @@ type PendingOverrides = Partial<{
   source_generation_id: string | null;
   superseded_at: string | null;
   saved_message_id: string | null;
+  // Deferred Audio (A1)
+  candidate_text: string | null;
+  candidate_template_variant: string | null;
+  text_reroll_count: number;
+  audio_render_count: number;
 }>;
 
 export async function seedPending(
