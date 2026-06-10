@@ -228,7 +228,9 @@ This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced b
 **Fix shape:** either (a) ratify the `essence-audio` + `pending/` prefix as the real contract via a one-line decision memo and update `docs/API_CONTRACTS.md` wording, or (b) provision a dedicated `messages` bucket with matching RLS and repoint `pendingGenerationAudioPath` + `messageAudioObjectPath`.
 **Pick up when:** the API contract doc gets its next pass, or before Step 6 ships to production storage.
 
-### 29. Step 6 endpoints have no route-level integration tests
+### 29. Step 6 endpoints have no route-level integration tests — ✅ RESOLVED 2026-06-10
+**Resolved by** `tests/smoke/messages.spec.ts` + `tests/smoke/fixtures/step6.ts`: 18 smoke tests against the real server + real database (no mocks) covering every gate, all three cost caps, save 404/409/403 paths, the full happy-save pipeline (recipient promotion + audio copy + immutable message insert), idempotency, and discard — zero vendor spend (paths return before the render, or copy a seeded fake audio object). The full `/generate` → real-ElevenLabs render remains a separate manual check (noted in `Step6_Status.md`). The two initial red tests turned out to be test-expectation bugs, not route bugs, and surfaced two correct behaviors worth recording: `defineRoute` validates the body before auth (so an unauth call with an invalid body returns 400, not 401), and the `dedup` gate 429s a rapid double-`/save` while the DB-level unique `source_generation_id` handles delayed retries. Original entry below.
+
 `/api/messages/{generate,regenerate,save,discard}` are covered only at the pure-logic layer (`tests/unit/step6-generation.test.ts`) and the telemetry wrapper (`tests/unit/step6-analytics.test.ts`). The handlers themselves — recipient-branch validation, edit-note lineage + supersede, cost-control 429s, Save idempotency (unique `source_generation_id`), recipient promotion, audio copy-then-delete — are untested.
 
 **Why deferred:** route tests need Supabase + ElevenLabs + Anthropic mocking harnesses that don't exist in this repo yet.

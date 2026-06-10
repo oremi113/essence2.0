@@ -79,15 +79,24 @@ voice service (audio), and the database. A person never sees these directly.
 
 | Endpoint | What it does | Status | Track |
 |---|---|---|---|
-| `generate` | Make a fresh message (text + audio) | 🟡 Built, not proven | baseline |
-| `regenerate` | Re-roll a message | 🟡 Built, not proven | baseline |
-| `save` | Keep a message permanently | 🟡 Built, not proven | baseline |
-| `discard` | Throw an in-progress message away | 🟡 Built, not proven | baseline |
+| `generate` | Make a fresh message (text + audio) | ✅ Proven (smoke) | baseline |
+| `regenerate` | Re-roll a message | ✅ Proven (smoke) | baseline |
+| `save` | Keep a message permanently | ✅ Proven (smoke) | baseline |
+| `discard` | Throw an in-progress message away | ✅ Proven (smoke) | baseline |
 | `commit` | "Hear this in your voice" (render on demand) | ⬜ Not started | Deferred Audio |
 
-**"Built, not proven" means:** the code is written, type-checks, passes its small
-internal tests, and is committed — but it has **never actually run** against the
-real database + AI + voice service. That end-to-end test is still owed.
+**Proven how (2026-06-10):** `tests/smoke/messages.spec.ts` — 18 tests against
+the **real server + real database** (no mocks). Covers every gate, all three
+cost caps (pending/edit-note-depth/regenerate), the save 404/409/403 paths, the
+full happy-save pipeline end-to-end (subscription gate → vault quota → recipient
+promotion → audio copy → immutable message row → pending marked), idempotency,
+and discard. **Zero vendor spend** — every path returns before the ElevenLabs
+render, or copies a seeded fake audio object.
+
+**The one bit still owed:** the full `/generate` → *real* ElevenLabs voice render
+path. It needs a real cloned voice, so it's a separate manual check (the render
+call itself, `generateSpeech`, is already live in production via the older
+`/api/messages` route). Everything *around* the render is proven.
 
 There's also a layer of shared logic underneath (turning a template + your note
 into final words via Claude Haiku, then into audio via ElevenLabs). That's built
