@@ -9,7 +9,7 @@
  * Server-only.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateSpeech } from "@/lib/elevenlabs";
+import { generateSpeech, type SpeechVoiceSettings } from "@/lib/elevenlabs";
 import { AUDIO_BUCKET, pendingGenerationAudioPath } from "@/lib/audio/storage-paths";
 import { ErrorCode } from "@/lib/errors";
 import { logEvent, durationSince } from "@/lib/logger";
@@ -27,14 +27,16 @@ export type GenerateAudioParams = {
   requestId: string;
   /** Request start (ms) for duration logging. */
   startMs: number;
+  /** Per-category voice tuning. Omitted → ElevenLabs defaults. */
+  voiceSettings?: SpeechVoiceSettings;
 };
 
 export type AudioOutcome = { ok: true; audioPath: string } | { ok: false; code: string };
 
 export async function generateAndStoreAudio(params: GenerateAudioParams): Promise<AudioOutcome> {
-  const { supabase, service, userId, generationId, voiceId, text, requestId, startMs } = params;
+  const { supabase, service, userId, generationId, voiceId, text, requestId, startMs, voiceSettings } = params;
 
-  const tts = await generateSpeech({ voiceId, text });
+  const tts = await generateSpeech({ voiceId, text, voiceSettings });
   if (!tts.ok) {
     const code = tts.status === 504 ? ErrorCode.TTS_TIMEOUT : ErrorCode.TTS_FAILED;
     await supabase

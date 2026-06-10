@@ -17,7 +17,7 @@ import { logEvent, logError, durationSince } from "@/lib/logger";
 import { recordUsageEvent } from "@/lib/rate-limit";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { messageRegenerateSchema } from "@/lib/api/schemas";
-import { normalizeRelationship, type MessageCategory } from "@/lib/messageTemplates";
+import { normalizeRelationship, getCategoryVoiceSettings, type MessageCategory } from "@/lib/messageTemplates";
 import { selectVariantByIndex, generateMessageText } from "@/lib/messages/generation";
 import { generateAndStoreAudio } from "@/lib/messages/audio";
 import {
@@ -98,6 +98,7 @@ export const POST = defineRoute(
         text: gen.generated_text,
         requestId,
         startMs,
+        voiceSettings: getCategoryVoiceSettings(gen.category as MessageCategory),
       });
 
       return NextResponse.json(
@@ -210,6 +211,7 @@ export const POST = defineRoute(
       text: textResult.text,
       requestId,
       startMs,
+      voiceSettings: getCategoryVoiceSettings(category),
     });
 
     logEvent({

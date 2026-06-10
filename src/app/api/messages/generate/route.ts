@@ -22,7 +22,7 @@ import { assertCanGenerateMessage } from "@/lib/guards";
 import { recordUsageEvent } from "@/lib/rate-limit";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { messageGenerateSchema } from "@/lib/api/schemas";
-import { normalizeRelationship, type MessageCategory } from "@/lib/messageTemplates";
+import { normalizeRelationship, getCategoryVoiceSettings, type MessageCategory } from "@/lib/messageTemplates";
 import { selectVariantByIndex, getTemplateById, generateMessageText } from "@/lib/messages/generation";
 import { generateAndStoreAudio } from "@/lib/messages/audio";
 import {
@@ -252,6 +252,7 @@ export const POST = defineRoute(
       text: textResult.text,
       requestId,
       startMs,
+      voiceSettings: getCategoryVoiceSettings(effectiveCategory),
     });
 
     if (!audioOutcome.ok) {
