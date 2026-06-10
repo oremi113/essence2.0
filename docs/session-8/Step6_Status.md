@@ -22,6 +22,29 @@ into code. Deeper detail lives in the docs linked at the bottom.
 | ⬜ Not started | Designed or specced, but no code yet. |
 | 🟣 Needs a decision | Waiting on a product/design/you call before it can be built. |
 | ⛔ Blocked | Something concrete is stopping it. See Blockers. |
+| ✅ Proven | Verified running against the real server + database. |
+
+---
+
+## Recent progress (2026-06-10)
+
+A lot landed today — the backend went from "written" to **proven**, and the
+infrastructure got de-risked:
+
+- **The 4 backend endpoints are now proven**, not just written — 18 smoke tests
+  against the real server + real database (see The backend, below).
+- **The live database is correct** — the Step-6 migrations (which had never been
+  applied) were applied + verified.
+- **Anthropic (AI text) key** wired + verified; **Supabase CLI** login, type
+  generation, and DB connection all fixed.
+- **Two clean-ups shipped** — per-category voice settings now reach the render,
+  and the category type is sourced from the database (no drift). (Closed
+  FOLLOW_UPS #26, #27, #29.)
+- **Deferred-Audio foundation built** — the migration (candidate columns), the
+  split caps, and the on/off flag, all behind `DEFERRED_AUDIO_ENABLED` (off), so
+  the proven control arm is untouched. The `/commit` route is the next step.
+
+Still the bulk of the visible work: **the screens** (only A2 exists).
 
 ---
 
@@ -36,16 +59,17 @@ deliberately building both:
 
 2. **The cost-saving upgrade ("Deferred Audio").** You can shuffle through *text*
    drafts for free, and only spend an audio recording when you tap "Hear this in
-   your voice." Cheaper, snappier. **This is fully designed and decided, but not
-   built yet.** It will ship behind an on/off switch so we can compare it against
-   the baseline before making it the default.
+   your voice." Cheaper, snappier. **Fully decided, and the foundation is now
+   built** (database + caps + flag); the `/commit` endpoint is next. It ships
+   behind an on/off switch so we can compare it against the baseline before
+   making it the default.
 
 Everything below is colored by which of these two it belongs to.
 
-**Where we honestly are:** the *plumbing* (backend) for the baseline is written,
-but the *screens* a person actually taps through are mostly not built yet, and
-nothing has been run end-to-end. So we are further along on the inside than the
-outside.
+**Where we honestly are:** the baseline backend is **built and proven** (real
+server + database tests). The *screens* a person taps through are mostly not
+built yet (only A2 exists). So we are well ahead on the inside (engine) and the
+remaining work is mostly the outside (screens) — plus finishing Deferred Audio.
 
 ---
 
@@ -83,7 +107,14 @@ voice service (audio), and the database. A person never sees these directly.
 | `regenerate` | Re-roll a message | ✅ Proven (smoke) | baseline |
 | `save` | Keep a message permanently | ✅ Proven (smoke) | baseline |
 | `discard` | Throw an in-progress message away | ✅ Proven (smoke) | baseline |
-| `commit` | "Hear this in your voice" (render on demand) | ⬜ Not started | Deferred Audio |
+| `commit` | "Hear this in your voice" (render on demand) | 🟡 Foundation laid, route next | Deferred Audio |
+
+**Deferred-Audio foundation (2026-06-10):** the database columns (candidate
+text + the two counters), the split caps (3 audio renders / 10 text re-rolls),
+and the `DEFERRED_AUDIO_ENABLED` flag are built and committed — all behind the
+flag (off). The `/commit` endpoint and the flag-forked `/regenerate` are the
+next step, built once the new migration is live on the remote DB (see Blockers)
+so they can be smoke-proven like the rest.
 
 **Proven how (2026-06-10):** `tests/smoke/messages.spec.ts` — 18 tests against
 the **real server + real database** (no mocks). Covers every gate, all three
@@ -107,15 +138,17 @@ and unit-tested — it's the most proven part of the whole feature.
 ## What's left to build (the work, roughly in order)
 
 1. **The remaining screens** — A3, A4, A5, A6, A7, then C1–C3. (Biggest chunk of
-   visible work.) A6 has a design brief; the rest need design-to-code.
-2. **Wire the screens to the backend** — right now the backend exists but the
-   screens don't call it yet. This is the "make it actually work end-to-end" step.
-3. **Run it for real & test it** — first true end-to-end run, plus route-level
-   tests for the endpoints (currently only the pure logic is tested).
-4. **The Deferred Audio upgrade** (its own chunk, only after the baseline runs):
-   a small database change, the new `commit` endpoint, the on/off switch, the
-   split limits, and a few new tracking events. All of this is **designed and
-   decided** — see Amendment A1.
+   visible work.) A6 has a design brief + an architect prototype in progress; the
+   rest need design-to-code. They have prototypes (A3/A4/A5/A7) except A6.
+2. **Wire the screens to the backend** — the backend exists and is proven, but
+   the screens don't call it yet. This is the "make it work end-to-end for a real
+   person" step.
+3. **Finish Deferred Audio** — foundation done (✅ migration + caps + flag). Left:
+   apply the new migration to remote, build + smoke-prove the `/commit` endpoint
+   and the flag-forked `/regenerate`, and add the client tracking events (those
+   land with the A6 screen). See Amendment A1.
+4. ~~Route-level tests for the endpoints~~ — ✅ done (18 smoke tests). The full
+   `/generate` → real-voice render is the one remaining manual check.
 
 ---
 
@@ -153,7 +186,8 @@ Audio upgrade.
 | ⛔ Blocker | Impact | Fix |
 |---|---|---|
 | ~~No `ANTHROPIC_API_KEY` in `.env.local`~~ — ✅ **Resolved 2026-06-10** | (was: AI text step wouldn't run locally) | Key added to `.env.local` and verified live (authenticates, Haiku reachable). |
-| **Most screens aren't built** | The flow can't be clicked through or tested end-to-end yet. | Build A3–A7 (the work above). |
+| **Most screens aren't built** | The flow can't be clicked through end-to-end by a real person yet. | Build A3–A7 (the work above). |
+| **Deferred-Audio migration not yet applied to remote** | The `/commit` endpoint can't be built + tested until the candidate columns exist on the live DB. | Apply `20260610170000_deferred_audio_candidate_columns.sql` via the Dashboard SQL bundle (one paste, like before). |
 | Supabase CLI — ✅ **mostly resolved 2026-06-10** | (was: "auth broken") | Login works; type-gen fixed via `--project-id`; DB connection fixed by adding `SUPABASE_DB_PASSWORD` to `.env.local` (`migration list` / `db pull` / dry-run all work). **Still open:** `db push` trips on a *pre-existing* migration-history collision in early migrations — see FOLLOW_UPS #30. Use the Dashboard SQL bundle for new migrations until that's reconciled. |
 | ~~Database migrations not applied to the live database~~ — ✅ **Resolved 2026-06-10** | (was: backend tables might not exist on the server) | The 4 missing Step-6 migrations were applied via the Dashboard SQL Editor; verified live (`pending_generations` etc. now exist). |
 
@@ -163,14 +197,19 @@ Audio upgrade.
 
 These live in `docs/FOLLOW_UPS.md` with full detail:
 
-- **#27** — Each category has tuned voice settings (e.g. comfort steadier,
-  birthday livelier), but the audio step isn't sending them yet. Quality gap, not
-  a breakage.
+- ~~**#26** — category type hand-written, could drift~~ — ✅ resolved (sourced
+  from generated DB types).
+- ~~**#27** — per-category voice settings not sent to the render~~ — ✅ resolved
+  (now wired).
 - **#28** — Where the in-progress audio is stored deviates slightly from the
   original contract wording (a storage-location naming choice). Documented;
-  harmless; needs ratifying or repointing.
-- **#29** — The four endpoints have no full "pretend to be a user" tests yet, only
-  small logic tests.
+  harmless; needs ratifying or repointing. **Still open.**
+- ~~**#29** — endpoints have no "pretend to be a user" tests~~ — ✅ resolved (18
+  smoke tests).
+- **#30** — `db push` is blocked by a pre-existing migration-history collision in
+  early migrations. Harmless day-to-day (we use the Dashboard bundle for new
+  migrations); fix before relying on `db push` or going to production. **Still
+  open.**
 
 ---
 
@@ -182,9 +221,16 @@ These live in `docs/FOLLOW_UPS.md` with full detail:
 - **The exact API behavior:** `docs/API_CONTRACTS.md`.
 - **The original amendment proposal (the "why"):**
   `ESSENCE_Spec_Amendment_Deferred_Audio_Render.md` (in your Downloads).
-- **The deferred items list:** `docs/FOLLOW_UPS.md` (#26–#29).
+- **The deferred items list:** `docs/FOLLOW_UPS.md` (#28 + #30 open; #26/#27/#29
+  resolved 2026-06-10).
 
-**Good next conversation to have** (no code, just understanding): walk through
-A6 — the Preview & Refine screen — since it's the heart of the feature, it's where
-Deferred Audio lives, and it's the screen with the most design decisions still
-open. Everything else (A3, A4, A7) is comparatively simple.
+## What's next (pick one)
+
+1. **Apply the Deferred-Audio migration** (one Dashboard paste), then I build +
+   smoke-prove the `/commit` endpoint and the flag-forked `/regenerate`. Finishes
+   the Deferred-Audio backend.
+2. **Build the spine screens** (A3 → A4 → A5 → A7) from their prototypes — the
+   biggest chunk of visible product, and it wires the proven backend to a real UI.
+   Wants your eye (senior-designer bar), so best done with you reviewing.
+3. **A6** — once the architect's prototype + copy land, build it (it's the heart
+   of the flow and where Deferred Audio surfaces).
