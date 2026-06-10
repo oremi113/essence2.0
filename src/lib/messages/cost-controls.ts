@@ -51,13 +51,35 @@ export const STEP6_LIMITS = {
   get maxSavedMessages() {
     return envInt("STEP6_MAX_SAVED_MESSAGES", 3);
   },
+  // --- Deferred Audio (Amendment A1, §A1.6) — only used when the flag is on ---
+  /** Paid voice renders per message (first listen + each committed candidate). The cost driver. */
+  get maxAudioRenders() {
+    return envInt("STEP6_MAX_AUDIO_RENDERS", 3);
+  },
+  /** Free "Try another" text re-rolls per message — cheap, soft abuse fence. */
+  get maxTextRerolls() {
+    return envInt("STEP6_MAX_TEXT_REROLLS", 10);
+  },
 };
+
+/**
+ * Deferred Audio Render master switch (Amendment A1, §A1.8 / §5.10). Off by
+ * default: the proven audio-on-every-regenerate control arm runs. When true,
+ * regenerate produces a free text candidate and /commit renders on demand.
+ * Gated here so every Step 6 surface reads one flag.
+ */
+export function isDeferredAudioEnabled(): boolean {
+  return process.env.DEFERRED_AUDIO_ENABLED === "true";
+}
 
 export type CostLimitKind =
   | "regenerate_cap"
   | "edit_note_depth"
   | "pending_max"
-  | "hourly_max";
+  | "hourly_max"
+  // Deferred Audio (A1, §A1.6): the split caps that replace regenerate_cap when on.
+  | "audio_render_cap"
+  | "text_reroll_cap";
 
 /** usage_events action key counted for the hourly cap. */
 export const STEP6_GENERATE_ACTION = "step6_generate";
