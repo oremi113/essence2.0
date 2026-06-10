@@ -165,7 +165,10 @@ export type Database = {
       pending_generations: {
         Row: {
           audio_path: string | null
+          audio_render_count: number
           audio_status: string
+          candidate_template_variant: string | null
+          candidate_text: string | null
           category: Database["public"]["Enums"]["message_category"]
           created_at: string
           edit_note_depth: number
@@ -182,6 +185,7 @@ export type Database = {
           source_generation_id: string | null
           superseded_at: string | null
           template_variant: string
+          text_reroll_count: number
           text_status: string
           updated_at: string
           user_id: string
@@ -189,7 +193,10 @@ export type Database = {
         }
         Insert: {
           audio_path?: string | null
+          audio_render_count?: number
           audio_status?: string
+          candidate_template_variant?: string | null
+          candidate_text?: string | null
           category: Database["public"]["Enums"]["message_category"]
           created_at?: string
           edit_note_depth?: number
@@ -206,6 +213,7 @@ export type Database = {
           source_generation_id?: string | null
           superseded_at?: string | null
           template_variant: string
+          text_reroll_count?: number
           text_status?: string
           updated_at?: string
           user_id: string
@@ -213,7 +221,10 @@ export type Database = {
         }
         Update: {
           audio_path?: string | null
+          audio_render_count?: number
           audio_status?: string
+          candidate_template_variant?: string | null
+          candidate_text?: string | null
           category?: Database["public"]["Enums"]["message_category"]
           created_at?: string
           edit_note_depth?: number
@@ -230,6 +241,7 @@ export type Database = {
           source_generation_id?: string | null
           superseded_at?: string | null
           template_variant?: string
+          text_reroll_count?: number
           text_status?: string
           updated_at?: string
           user_id?: string
