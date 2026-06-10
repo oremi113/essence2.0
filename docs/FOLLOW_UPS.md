@@ -234,3 +234,21 @@ This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced b
 **Why deferred:** route tests need Supabase + ElevenLabs + Anthropic mocking harnesses that don't exist in this repo yet.
 **Fix shape:** add a route-handler test harness (mock `createSupabaseServerClient`/`service`, `generateSpeech`, `generateInsert`) and cover: dual-recipient-branch rejection, edit_note_depth/regenerate_cap/pending_max/hourly_max 429s, Save idempotency double-tap, vault_limit_reached at cap, discard of an already-saved row (409).
 **Pick up when:** before Step 6 production ship, or when the first route bug surfaces.
+
+## Supabase migration history reconciliation (from Session 8, 2026-06-10)
+
+### 30. `db push` blocked by version-collision in early migration history
+After fixing the CLI's database connection (added `SUPABASE_DB_PASSWORD` to `.env.local`, which cleared the `cli_login_postgres` permission error), `supabase db push --dry-run` reports: *"Remote migration versions not found in local migrations directory"* and suggests `supabase migration repair --status reverted 20260421` / `supabase db pull`.
+
+**Root cause:** several early migration files use short, non-unique version stubs — e.g. three `20260214*` files all parse to version `20260214`, two `20260412*` files to `20260412`, and `20260421_add_failed_attempt_count.sql` to `20260421`. The remote `supabase_migrations.schema_migrations` table (whose `version` is a primary key) can't hold one row per file when versions collide, so the CLI sees the same version as both "local-only" and "remote-only" and refuses to push. The *schema itself is correct* (verified via `gen types` — all expected tables/columns/enums exist); this is purely a bookkeeping mismatch in the migration-history table.
+
+**Why not fix reactively:** the CLI's suggested `migration repair --status reverted <version>` marks a version as un-applied, which would make `db push` try to RE-RUN an already-applied migration (e.g. re-add `failed_attempt_count`) and error (`column already exists`). Reconciliation needs care, not a one-liner.
+
+**Impact:** low. New migrations are applied reliably via the Dashboard SQL Editor bundle (the method used to apply the 4 Step-6 migrations on 2026-06-10). `db push` is just not usable until history is reconciled. Type generation (`--project-id`) and direct-DB reads work fine.
+
+**Fix shape (do in a dedicated, calm pass — not mid-feature):**
+1. Inspect `supabase_migrations.schema_migrations` contents on remote (Dashboard SQL Editor: `select version, name from supabase_migrations.schema_migrations order by version;`).
+2. Decide a strategy: either (a) rename the colliding local migration files to unique full timestamps and re-record matching history rows, or (b) `migration repair --status applied <version>` for each version that's actually applied but recorded inconsistently — verifying against the live schema before each repair so nothing gets marked for re-run.
+3. Confirm with `db push --dry-run` showing a clean "up to date" before trusting `db push`.
+
+**Pick up when:** before relying on `db push` in CI/automation, or the next time migration history needs to be authoritative. Until then, Dashboard bundle is the path. Supersedes the CLI-auth half of #26 (auth itself is fixed).
