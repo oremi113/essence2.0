@@ -320,9 +320,9 @@ Naming convention: `step6.<noun>_<verb>`. Snake_case props.
 
 ---
 
-# Amendment A1 (Proposed) — Deferred Audio Render: committed-vs-candidate state model
+# Amendment A1 — Deferred Audio Render: committed-vs-candidate state model
 
-**Status:** Proposed. Drafted in response to `ESSENCE_Spec_Amendment_Deferred_Audio_Render.md` §5.6 ("Server state and the preservation rule"), whose closing trigger is "state model written into the contracts doc, including what is persisted vs ephemeral and when a `generationId` is minted." This section is the concrete proposal that decision reacts to. It is **not** binding until the amendment is accepted and §6.2 decisions are closed. Nothing in Q1–Q7 above changes until then.
+**Status:** Decisions resolved 2026-06-10. Drafted in response to `ESSENCE_Spec_Amendment_Deferred_Audio_Render.md` §5.6 ("Server state and the preservation rule"), whose closing trigger is "state model written into the contracts doc, including what is persisted vs ephemeral and when a `generationId` is minted." All six §6.2 open decisions are now closed (see A1.8); the deferred path is cleared to build behind `DEFERRED_AUDIO_ENABLED`. Q1–Q7 above (the control arm) are unchanged.
 
 **Boundary with the control arm:** the endpoints shipped in commits `a280a80`/`928bd5e` are the audio-on-every-regen *control arm*. Everything below is additive behind `DEFERRED_AUDIO_ENABLED` (amendment §5.10) and must coexist with the control arm during the A/B — so the schema delta is **additive only** (no destructive renames).
 
@@ -373,7 +373,7 @@ alter table public.pending_generations
 | "Try another" / Regenerate | new variant text into `candidate_*` | No | `text_reroll_count++` | untouched |
 | "Hear this in your voice" (commit) | render `candidate_text` | **Yes** | `audio_render_count++` | **promoted from candidate on success** |
 | "Keep the current one" | clear `candidate_*` | No | — | unchanged |
-| Reshape (edit-note) | new lineage member, returns as candidate | No (deferred — pending §5.7) | new row | superseded on commit |
+| Reshape (edit-note) | new lineage member, returns as candidate | No (deferred — decided #4) | new row | superseded on commit |
 | Save | persist committed take | No | — | becomes `messages` row |
 | Commit render **fails** | keep `candidate_text`, offer retry | attempted | **`audio_render_count` NOT incremented** | unchanged (prior take survives) |
 
@@ -390,19 +390,30 @@ alter table public.pending_generations
 
 Two independent caps replace the single `MAX_REGENERATES`:
 
-| Cap | Counter | Recommended default | `limit_kind` |
-|---|---|---|---|
-| Audio renders (paid, the cost driver) | `audio_render_count` | 3 (matches today's spend ceiling) | `audio_render_cap` |
-| Text re-rolls (cheap, abuse fence) | `text_reroll_count` | 8–12 (soft) | `text_reroll_cap` |
+| Cap | Counter | Default (decided #1) | env var | `limit_kind` |
+|---|---|---|---|---|
+| Audio renders (paid, the cost driver) | `audio_render_count` | **3** (matches today's spend ceiling) | `STEP6_MAX_AUDIO_RENDERS` | `audio_render_cap` |
+| Text re-rolls (cheap, abuse fence) | `text_reroll_count` | **10** (soft, "keep trying") | `STEP6_MAX_TEXT_REROLLS` | `text_reroll_cap` |
 
-`cost_limit_blocked.limit_kind` re-keys from `regenerate_cap` → `audio_render_cap` for the paid action (§6.2 #6). The regen indicator dots track `audio_render_count` remaining, not text re-rolls (§5.3). Both numbers stay env-configurable in `src/lib/messages/cost-controls.ts` (the `STEP6_LIMITS` getters already follow this pattern).
+`cost_limit_blocked.limit_kind` re-keys from `regenerate_cap` → `audio_render_cap` for the paid action (decided #6); `text_reroll_cap` is added for the soft text ceiling. The regen indicator dots track `audio_render_count` remaining, not text re-rolls (decided #2); the text-reroll soft cap stays unsignalled until ~1 re-roll remains, then shows a quiet note. Both numbers are env-configurable in `src/lib/messages/cost-controls.ts` (the `STEP6_LIMITS` getters already follow this pattern).
 
 ## A1.7 Telemetry (amendment §5.9)
 
 New events on the existing `flow_id`: `variant_previewed` (candidate text shown, no render), `variant_committed` (render spent) with `audio_renders_used`; `text_reroll_count` and `audio_render_count` as properties on `message_saved`; `cost_limit_blocked` re-pointed to the audio-render cap. These extend `docs/analytics/2026-06-01-step6-events.md` and would land in the same PR as the deferred-path build.
 
-## A1.8 What is blocked before this can be built
+## A1.8 §6.2 decisions (resolved 2026-06-10)
 
-Amendment §6.2 lists six open decisions; this state model assumes the recommended answers but does not decide them. Build-blocking for eng specifically: cap numbers (#1), `cost_limit_blocked` re-key (#6), Save-with-candidate behavior (#3, assumed §5.4(a) here), and reshape model (#4, assumed deferred/candidate here). Product/design owns the rest.
+All six amendment §6.2 open decisions are closed. The build is unblocked.
 
-**DECISION (proposed, not yet signed):** committed-vs-candidate both live on the single `pending_generations` row via additive columns; `generationId` mints only at cold-start and reshape; commit is a dedicated `/commit` route that renders the candidate and replaces the committed take on success; caps split into `audio_render_count` (hard) and `text_reroll_count` (soft); all of it gated behind `DEFERRED_AUDIO_ENABLED` and additive to the control arm.
+| # | Decision | Resolution |
+|---|---|---|
+| 1 | Audio-render cap + text-reroll soft cap | **audio = 3, text = 10**, both env-configurable (A1.6) |
+| 2 | Regen dots semantics | **dots = audio renders remaining**; text-reroll cap unsignalled until ~1 left, then a quiet note |
+| 3 | Save with an uncommitted candidate | **(a)** — Save persists the committed take, candidate silently dropped (A1.5) |
+| 4 | Reshape: deferred or render-on-arrival | **deferred** — reshape returns text-first as a candidate, one model app-wide (A1.4) |
+| 5 | First-commit reveal beat | **no beat** — commit reads as "choosing"; ceremony stays on the first listen only |
+| 6 | `cost_limit_blocked` re-key | **`regenerate_cap` → `audio_render_cap`**, add `text_reroll_cap` (A1.6) |
+
+**Not build-blocking, still owed (design/copy):** the "current take vs candidate" visual treatment (#3), and copy for the commit affordance, "Try another", the cap-note, and the commit-failure retry path (amendment §5.5).
+
+**DECISION (resolved):** committed-vs-candidate both live on the single `pending_generations` row via additive columns; `generationId` mints only at cold-start and reshape; commit is a dedicated `/commit` route that renders the candidate and replaces the committed take on success; caps split into `audio_render_count` (hard, 3) and `text_reroll_count` (soft, 10); reshape is deferred (text-first); no reveal beat on commit; all of it gated behind `DEFERRED_AUDIO_ENABLED` and additive to the control arm.
