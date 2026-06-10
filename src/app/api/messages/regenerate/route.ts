@@ -25,6 +25,7 @@ import {
   STEP6_GENERATE_ACTION,
   costLimitBlocked,
   countGenerationsThisHour,
+  isDeferredAudioEnabled,
 } from "@/lib/messages/cost-controls";
 
 export const maxDuration = 120; // 2 min — LLM insert + TTS + upload
@@ -46,7 +47,7 @@ export const POST = defineRoute(
     const { data: gen } = await supabase
       .from("pending_generations")
       .select(
-        "generation_id, voice_profile_id, category, template_variant, generated_text, regenerate_count, recipient_id, pending_recipient_relationship, pending_recipient_descriptor, note, saved_message_id, superseded_at",
+        "generation_id, voice_profile_id, category, template_variant, generated_text, regenerate_count, text_reroll_count, audio_render_count, recipient_id, pending_recipient_relationship, pending_recipient_descriptor, note, saved_message_id, superseded_at",
       )
       .eq("generation_id", generationId)
       .eq("user_id", user.id)
@@ -114,16 +115,7 @@ export const POST = defineRoute(
     }
 
     // --- variant: user-initiated content re-roll ----------------------------
-    const nextCount = gen.regenerate_count + 1;
-    if (nextCount > STEP6_LIMITS.maxRegenerates) {
-      return costLimitBlocked("regenerate_cap");
-    }
-
-    if ((await countGenerationsThisHour(service, user.id)) >= STEP6_LIMITS.maxGenerationsPerHour) {
-      return costLimitBlocked("hourly_max");
-    }
-
-    // Resolve relationship for variant selection (existing recipient vs typed).
+    // Resolve relationship + category for variant selection (both arms need them).
     let relationshipRaw: string | null = gen.pending_recipient_relationship;
     if (gen.recipient_id) {
       const { data: rec } = await supabase
@@ -136,6 +128,63 @@ export const POST = defineRoute(
     }
     const relationship = normalizeRelationship(relationshipRaw);
     const category = gen.category as MessageCategory;
+
+    // === Deferred Audio (A1): produce a free TEXT candidate, no render ======
+    // "Try another" — new variant text into candidate_*, bump text_reroll_count,
+    // leave the committed take (generated_text/audio_path/audio_status) intact.
+    if (isDeferredAudioEnabled()) {
+      const nextReroll = gen.text_reroll_count + 1;
+      if (nextReroll > STEP6_LIMITS.maxTextRerolls) {
+        return costLimitBlocked("text_reroll_cap");
+      }
+      const candidateVariant = selectVariantByIndex(category, relationship, nextReroll);
+      const candidateText = await generateMessageText({
+        template: candidateVariant,
+        category,
+        relationship,
+        descriptor: gen.pending_recipient_descriptor,
+        note: gen.note,
+      });
+      if (!candidateText.ok) {
+        return NextResponse.json(
+          { generationId, candidate: false, error: "Could not shape your message. Please try again.", code: ErrorCode.INTERNAL_ERROR, retryable: true },
+          { status: 502 },
+        );
+      }
+      await supabase
+        .from("pending_generations")
+        .update({
+          candidate_text: candidateText.text,
+          candidate_template_variant: candidateVariant.id,
+          text_reroll_count: nextReroll,
+        })
+        .eq("generation_id", generationId)
+        .eq("user_id", user.id);
+      logEvent({
+        event: "step6_variant_previewed",
+        requestId,
+        userId: user.id,
+        outcome: "success",
+        durationMs: durationSince(startMs),
+        meta: { generationId, textRerollCount: nextReroll, variant: candidateVariant.id },
+      });
+      return NextResponse.json({
+        generationId,
+        candidate: true,
+        textRerollCount: nextReroll,
+        audioRenderCount: gen.audio_render_count,
+      });
+    }
+
+    // === Control arm: text + audio together, regenerate_count++ =============
+    const nextCount = gen.regenerate_count + 1;
+    if (nextCount > STEP6_LIMITS.maxRegenerates) {
+      return costLimitBlocked("regenerate_cap");
+    }
+
+    if ((await countGenerationsThisHour(service, user.id)) >= STEP6_LIMITS.maxGenerationsPerHour) {
+      return costLimitBlocked("hourly_max");
+    }
 
     // A different variant from the prior one (index keyed to the new count).
     const variant = selectVariantByIndex(category, relationship, nextCount);

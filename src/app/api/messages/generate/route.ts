@@ -31,6 +31,7 @@ import {
   costLimitBlocked,
   countActivePending,
   countGenerationsThisHour,
+  isDeferredAudioEnabled,
 } from "@/lib/messages/cost-controls";
 
 export const maxDuration = 120; // 2 min — LLM insert + TTS + upload
@@ -180,6 +181,8 @@ export const POST = defineRoute(
         text_status: "pending",
         audio_status: "pending",
         regenerate_count: 0,
+        // Deferred Audio: the first listen consumes one render allowance.
+        audio_render_count: isDeferredAudioEnabled() ? 1 : 0,
         edit_note_depth: editNoteDepth,
         source_generation_id: priorGenerationId,
       })
