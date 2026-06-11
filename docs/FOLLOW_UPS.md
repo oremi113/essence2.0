@@ -301,3 +301,12 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 **Fix shape:** during the stitch, decide which message-creation route is canonical, repoint all callers to it via the single route constant, and delete the other route tree + its page/dev scaffolding. The route map makes this a one-constant change.
 **Pick up when:** the prototype-stitching pass that wires voice-creation → First Breath (FOLLOW_UPS #24/#25) → message creation, since that's when the entry point gets pinned.
+
+## A6 Preview & Refine — screen build (from Step 6 A6 wiring chunk 1, 2026-06-11)
+
+### 35. A6 stone uses the shared canvas BreathStone; reads softer than the prototype's golden stone
+**File:** `src/components/screens/messages/PreviewRefineScreen.tsx` (the `<BreathStone state=… size=…>` render).
+**What:** the A6 prototype (`prototypes/message creation/essence-step6-a6-deferred.html`) draws a rich honey-gold CSS-gradient stone (Ready / Playback / Working) on the cream page. Production reuses the shared canvas `BreathStone` instead — the architecturally correct call (one stone grammar across onboarding + Voice Training + A6), and its `ready`/`playback`/`working` states map cleanly. But on the cream `--color-bg-warm-phase` ground the `ready` stone renders as a soft pale-taupe pebble (center ~rgb(206,196,178)), noticeably less ceremonial/present than the prototype's gold orb. Same softness affects any light-background BreathStone (e.g. RecordScreen), so it isn't A6-specific.
+**Why it matters:** the stone is the emotional anchor of the preview screen; a washed-out stone undersells the "here it is, in your voice" moment. Cosmetic, not functional — the three states are correct and the motion runs at 4× CPU.
+**Fix shape:** in the design/polish pass, either (a) tune `breathStoneEngine`'s palette/contrast for light grounds (helps every light-bg usage), or (b) pass A6 a warmer stone variant. Decide with the prototype's gold stone as the reference. Do NOT fork a bespoke CSS stone into A6 — that re-splits the stone grammar.
+**Pick up when:** the Step 6 visual-polish pass, or whenever BreathStone-on-light contrast is addressed for RecordScreen.
