@@ -9,6 +9,7 @@ import type { Ref } from "react";
 import { useState, useRef, useCallback, useEffect, useImperativeHandle } from "react";
 import { TIMING } from "@/lib/config/timing";
 import { useUploadPipeline } from "@/lib/upload/useUploadPipeline";
+import { useResource } from "@/lib/data/useResource";
 
 export type Status =
   | "idle"
@@ -75,9 +76,30 @@ export function RecordingUpload({
   const chunksRef = useRef<Blob[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null);
 
-  const [clips, setClips] = useState<ClipRow[]>([]);
-  const [clipsLoading, setClipsLoading] = useState(false);
-  const [clipsError, setClipsError] = useState<string | null>(null);
+  // Recent-clips list, keyed on voiceProfileId. Fetch logic lives in fetchClips
+  // so the post-upload silent refresh can reuse it (via setClips, no loading
+  // flicker) while useResource drives the keyed load/error/empty states.
+  const fetchClips = useCallback(
+    async (signal?: AbortSignal): Promise<ClipRow[]> => {
+      const res = await fetch(
+        `/api/training-clips/list?voiceProfileId=${encodeURIComponent(voiceProfileId)}`,
+        signal ? { signal } : undefined,
+      );
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error ?? "List failed");
+      }
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    [voiceProfileId],
+  );
+  const {
+    data: clips,
+    isLoading: clipsLoading,
+    error: clipsError,
+    setData: setClips,
+  } = useResource<ClipRow[]>(fetchClips, { initialData: [], key: voiceProfileId });
   const [unavailableClipIds, setUnavailableClipIds] = useState<Set<string>>(new Set());
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -139,45 +161,6 @@ export function RecordingUpload({
   useEffect(() => {
     if (clipId === null) playbackRetriedRef.current = false;
   }, [clipId]);
-
-  // Clips-list data fetch keyed on voiceProfileId. The synchronous loading/
-  // reset setState calls below are the conventional pre-fetch pattern; the
-  // cascading-render concern react-hooks/set-state-in-effect flags doesn't
-  // bite here (runs once per voiceProfileId change). Surfaced only after FU-1
-  // removed the upstream ref-during-render disables, letting the analyzer
-  // reach this effect — tracked as FOLLOW_UPS #32 (migrate to a data-fetching
-  // library or key-based remount, which removes the need for this disable).
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!voiceProfileId) {
-      setClips([]);
-      setClipsLoading(false);
-      setClipsError(null);
-      return;
-    }
-    let cancelled = false;
-    setClipsLoading(true);
-    setClipsError(null);
-    fetch(`/api/training-clips/list?voiceProfileId=${encodeURIComponent(voiceProfileId)}`)
-      .then((res) => {
-        if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error ?? "List failed")));
-        return res.json();
-      })
-      .then((data) => {
-        if (!cancelled) setClips(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setClipsError(err instanceof Error ? err.message : "Failed to load clips");
-          setClips([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setClipsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [voiceProfileId]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const startRecording = useCallback(async () => {
     setError(null);
@@ -243,11 +226,8 @@ export function RecordingUpload({
       setClipId(id);
       setStatus("ready");
       onReady?.(id);
-      // Refetch recent clips so the new clip appears in the list
-      fetch(`/api/training-clips/list?voiceProfileId=${encodeURIComponent(voiceProfileId)}`)
-        .then((res) => res.ok ? res.json() : [])
-        .then((data) => setClips(Array.isArray(data) ? data : []))
-        .catch(() => {});
+      // Silent background refresh so the new clip appears (no loading flicker).
+      fetchClips().then(setClips).catch(() => {});
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       setStatus("error");
@@ -257,7 +237,7 @@ export function RecordingUpload({
       // is otherwise never reset until the next upload() call.
       resetPipeline();
     }
-  }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady, uploadPipeline, resetPipeline]);
+  }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady, uploadPipeline, resetPipeline, fetchClips, setClips]);
 
   // Expose imperative handle so a parent (e.g. PromptView) can drive
   // recording from its own custom button without reaching into our DOM.
@@ -422,7 +402,7 @@ export function RecordingUpload({
           {!clipsLoading && !clipsError && clips.length === 0 && (
             <p style={{ marginTop: 8 }}>No clips yet.</p>
           )}
-          {!clipsLoading && clips.length > 0 && (
+          {!clipsLoading && !clipsError && clips.length > 0 && (
             <ul style={{ marginTop: 8, paddingLeft: 20 }}>
               {clips.map((clip) => (
                 <li key={clip.id} style={{ marginBottom: 8 }}>

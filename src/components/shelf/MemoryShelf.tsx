@@ -1,48 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import type { ShelfMessage } from "./types";
 import { MessageList } from "./MessageList";
 import { usePlaybackController } from "./usePlaybackController";
+import { useResource } from "@/lib/data/useResource";
 import { ROUTES } from "@/lib/routes";
-
-type LoadState = "loading" | "loaded" | "error";
 
 /**
  * Memory Shelf — lists the user's saved messages and lets them play
  * each one back. State is split three ways:
- *   - this component owns the list fetch (loadState, messages, listError);
+ *   - useResource owns the list fetch (status, messages, error, retry);
  *   - usePlaybackController owns the audio element + playback state;
  *   - MessageList renders the rows as pure presentation.
  */
 export function MemoryShelf() {
-  const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [messages, setMessages] = useState<ShelfMessage[]>([]);
-  const [listError, setListError] = useState<string | null>(null);
-
-  const playback = usePlaybackController();
-
-  const fetchMessages = useCallback(async () => {
-    setLoadState("loading");
-    setListError(null);
-    try {
-      const res = await fetch("/api/messages");
+  const {
+    data: messages,
+    status: loadState,
+    error: listError,
+    refetch: fetchMessages,
+  } = useResource<ShelfMessage[]>(
+    async (signal) => {
+      const res = await fetch("/api/messages", { signal });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Could not load messages");
       }
       const data = await res.json();
-      setMessages(data.messages ?? []);
-      setLoadState("loaded");
-    } catch (err) {
-      setListError(err instanceof Error ? err.message : "Something went wrong");
-      setLoadState("error");
-    }
-  }, []);
+      return data.messages ?? [];
+    },
+    { initialData: [] },
+  );
 
-  useEffect(() => {
-    fetchMessages();
-  }, [fetchMessages]);
+  const playback = usePlaybackController();
 
   // --- Loading state ---
   if (loadState === "loading") {

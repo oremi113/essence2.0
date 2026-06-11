@@ -272,12 +272,13 @@ Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_g
 
 ## RecordingUpload clips-list fetch (from FU-1 refactor, 2026-06-11)
 
-### 32. Clips-list effect uses synchronous-setState-in-effect (eslint-disabled)
-`src/components/audio/RecordingUpload.tsx` — the `voiceProfileId`-keyed clips-list data fetch resets list/loading/error state synchronously in the effect body (the conventional pre-fetch pattern). This trips `react-hooks/set-state-in-effect`. It was previously masked: the auto-advance block's ref-during-render code (FU-1) tripped `react-hooks/refs` *first*, so the analyzer never reached this effect. Removing those disables in the FU-1 refactor unmasked it; worked around with a block-level `eslint-disable react-hooks/set-state-in-effect` around the effect.
+### 32. Clips-list effect uses synchronous-setState-in-effect (eslint-disabled) — ✅ MOSTLY RESOLVED 2026-06-11
+`src/components/audio/RecordingUpload.tsx` — the `voiceProfileId`-keyed clips-list data fetch reset list/loading/error state synchronously in the effect body (the conventional pre-fetch pattern), tripping `react-hooks/set-state-in-effect` and carrying a block-level disable. The same hand-rolled `fetch`-in-effect triad also lived in `MemoryShelf`.
 
-**Why it's harmless today:** the synchronous resets run once per `voiceProfileId` change, so the cascading-render the rule guards against doesn't materialize.
-**Fix shape:** migrate the clips list to a data-fetching library (SWR / TanStack Query) or a `key`-based remount so loading/empty state is derived rather than synced via effect — removes the need for the disable. The same pattern likely recurs in other inline `fetch`-in-effect lists.
-**Pick up when:** a data-fetching-library adoption pass, or the next time this component's clips list is touched.
+**Resolved (the consolidation half):** extracted `src/lib/data/useResource.ts` — a generic `fetch`-in-effect-with-loading/error hook (status machine, AbortController-per-fetch stale-response guard, imperative `refetch`, `setData` for optimistic/silent patches, falsy-`key` disabled state). Both `RecordingUpload`'s clips list (keyed on `voiceProfileId`) and `MemoryShelf` (fetch-once + retry) now consume it; neither component carries the `set-state-in-effect` disable anymore. The disable now lives in exactly ONE documented place — the hook's fetch effect. Unit-tested in `tests/unit/useResource.test.tsx` (11 cases: status transitions, keyed/imperative refetch, disabled key, setData, abort/stale-response guard). MemoryShelf verified in-browser (loading → success → empty). RecordingUpload's clips list is mic-gated headless so not browser-verified, but runs the identical hook logic.
+
+**Remaining (the true zero-disable half):** the hook still carries one `eslint-disable react-hooks/set-state-in-effect` for the pre-fetch `loading` reset — the rule flags the *first* synchronous setState in any effect regardless of a following async call, so deriving the disabled branch didn't remove it. A genuinely disable-free version needs a cache-backed library (SWR / TanStack Query) that derives loading from request/response identity rather than syncing it via effect.
+**Pick up when:** a data-fetching-library adoption pass. New `fetch`-in-effect lists should consume `useResource` rather than re-rolling the pattern.
 
 ## Step 6 message routes — error-response convention (from shared-helpers refactor, 2026-06-11)
 
