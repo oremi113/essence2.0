@@ -11,8 +11,8 @@ import {
  *
  * Verifies the init -> PUT -> commit sequence, status transitions, error
  * extraction, cancel/abort semantics, reset, and optional config callbacks.
- * Behaviour is pinned to the current implementation; documented quirks
- * (e.g. cancel terminal state) are asserted as-is, not as-intended.
+ * A cancel()-triggered AbortError lands in the distinct 'cancelled' terminal
+ * state (not 'failed') with no error message — see FOLLOW_UPS #5.
  */
 
 // ----- helpers -------------------------------------------------------------
@@ -323,9 +323,10 @@ describe('useUploadPipeline — cancel', () => {
     });
 
     expect(firstCallSignal.aborted).toBe(true);
-    // The hook's catch block sets status to 'failed' for any thrown error,
-    // including AbortError. Documenting current behavior.
-    expect(result.current.status).toBe<UploadStatus>('failed');
+    // A user-initiated cancel lands in 'cancelled' (not 'failed') with the
+    // error cleared, so retry UIs / dashboards don't fire on it.
+    expect(result.current.status).toBe<UploadStatus>('cancelled');
+    expect(result.current.error).toBeNull();
   });
 
   it('cancel mid-PUT aborts the PUT and commit is never called', async () => {
@@ -365,7 +366,38 @@ describe('useUploadPipeline — cancel', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result.current.status).toBe<UploadStatus>('failed');
+    expect(result.current.status).toBe<UploadStatus>('cancelled');
+    expect(result.current.error).toBeNull();
+  });
+
+  it('cancel fires onStageChange with "cancelled", not "failed"', async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => {
+          const err = new Error('aborted');
+          err.name = 'AbortError';
+          reject(err);
+        });
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const stages: UploadStatus[] = [];
+    const { result } = renderHook(() =>
+      useUploadPipeline(baseConfig({ onStageChange: (s) => stages.push(s) }))
+    );
+
+    let uploadPromise: Promise<unknown>;
+    act(() => {
+      uploadPromise = result.current.upload(sampleBlob(), sampleMeta()).catch(() => undefined);
+    });
+
+    await act(async () => {
+      result.current.cancel();
+      await uploadPromise!;
+    });
+
+    expect(stages).toEqual<UploadStatus[]>(['initializing', 'cancelled']);
   });
 
   it('cancel before any upload is a no-op', () => {
