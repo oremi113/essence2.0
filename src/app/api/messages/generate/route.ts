@@ -25,6 +25,7 @@ import { messageGenerateSchema } from "@/lib/api/schemas";
 import { normalizeRelationship, getCategoryVoiceSettings, type MessageCategory } from "@/lib/messageTemplates";
 import { selectVariantByIndex, getTemplateById, generateMessageText } from "@/lib/messages/generation";
 import { generateAndStoreAudio } from "@/lib/messages/audio";
+import { isActivePending, pendingNotFoundResponse } from "@/lib/messages/route-helpers";
 import {
   STEP6_LIMITS,
   STEP6_GENERATE_ACTION,
@@ -88,11 +89,8 @@ export const POST = defineRoute(
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (!prior || prior.saved_message_id || prior.superseded_at) {
-        return NextResponse.json(
-          { error: "Prior generation not found or no longer active", code: ErrorCode.VALIDATION_ERROR },
-          { status: 404 },
-        );
+      if (!isActivePending(prior)) {
+        return pendingNotFoundResponse("Prior generation not found or no longer active");
       }
 
       editNoteDepth = prior.edit_note_depth + 1;

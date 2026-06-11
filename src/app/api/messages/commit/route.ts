@@ -24,6 +24,7 @@ import { defineRoute } from "@/lib/api/defineRoute";
 import { messageGenerationRefSchema } from "@/lib/api/schemas";
 import { getCategoryVoiceSettings, type MessageCategory } from "@/lib/messageTemplates";
 import { STEP6_LIMITS, costLimitBlocked } from "@/lib/messages/cost-controls";
+import { isActivePending, pendingNotFoundResponse, loadReadyVoiceProfile } from "@/lib/messages/route-helpers";
 
 export const maxDuration = 120; // 2 min — TTS + upload
 
@@ -50,12 +51,7 @@ export const POST = defineRoute(
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!gen || gen.saved_message_id || gen.superseded_at) {
-      return NextResponse.json(
-        { error: "Generation not found or no longer active", code: ErrorCode.VALIDATION_ERROR },
-        { status: 404 },
-      );
-    }
+    if (!isActivePending(gen)) return pendingNotFoundResponse();
 
     // Nothing to commit — no candidate is being previewed.
     if (!gen.candidate_text || !gen.candidate_template_variant) {
@@ -71,23 +67,13 @@ export const POST = defineRoute(
     }
 
     // --- Voice profile must still be usable ---------------------------------
-    const { data: profile } = await supabase
-      .from("voice_profiles")
-      .select("vendor_voice_id, status")
-      .eq("id", gen.voice_profile_id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (!profile?.vendor_voice_id || profile.status !== "ready") {
-      return NextResponse.json(
-        { error: "Voice profile is not ready.", code: ErrorCode.VOICE_NOT_READY },
-        { status: 400 },
-      );
-    }
+    const voice = await loadReadyVoiceProfile(supabase, gen.voice_profile_id, user.id);
+    if (!voice.ok) return voice.response;
 
     // --- Render the candidate. Nothing committed-touching happens until both
     //     the TTS and the upload succeed (A1 §5.5). -------------------------
     const tts = await generateSpeech({
-      voiceId: profile.vendor_voice_id,
+      voiceId: voice.vendorVoiceId,
       text: gen.candidate_text,
       voiceSettings: getCategoryVoiceSettings(gen.category as MessageCategory),
     });

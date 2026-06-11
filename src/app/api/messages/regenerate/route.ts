@@ -20,6 +20,7 @@ import { messageRegenerateSchema } from "@/lib/api/schemas";
 import { normalizeRelationship, getCategoryVoiceSettings, type MessageCategory } from "@/lib/messageTemplates";
 import { selectVariantByIndex, generateMessageText } from "@/lib/messages/generation";
 import { generateAndStoreAudio } from "@/lib/messages/audio";
+import { isActivePending, pendingNotFoundResponse, loadReadyVoiceProfile } from "@/lib/messages/route-helpers";
 import {
   STEP6_LIMITS,
   STEP6_GENERATE_ACTION,
@@ -53,12 +54,7 @@ export const POST = defineRoute(
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!gen || gen.saved_message_id || gen.superseded_at) {
-      return NextResponse.json(
-        { error: "Generation not found or no longer active", code: ErrorCode.VALIDATION_ERROR },
-        { status: 404 },
-      );
-    }
+    if (!isActivePending(gen)) return pendingNotFoundResponse();
 
     // --- keep: discard the un-heard candidate, keep the committed take ------
     // Deferred-Audio "Keep the current one" (A6). Nulls the candidate_*
@@ -84,19 +80,8 @@ export const POST = defineRoute(
     }
 
     // Voice id for TTS (also confirms the profile is still usable).
-    const { data: profile } = await supabase
-      .from("voice_profiles")
-      .select("vendor_voice_id, status")
-      .eq("id", gen.voice_profile_id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!profile?.vendor_voice_id || profile.status !== "ready") {
-      return NextResponse.json(
-        { error: "Voice profile is not ready.", code: ErrorCode.VOICE_NOT_READY },
-        { status: 400 },
-      );
-    }
+    const voice = await loadReadyVoiceProfile(supabase, gen.voice_profile_id, user.id);
+    if (!voice.ok) return voice.response;
 
     // --- retry_audio: reuse cached text, audio only -------------------------
     if (mode === "retry_audio") {
@@ -118,7 +103,7 @@ export const POST = defineRoute(
         service,
         userId: user.id,
         generationId,
-        voiceId: profile.vendor_voice_id,
+        voiceId: voice.vendorVoiceId,
         text: gen.generated_text,
         requestId,
         startMs,
@@ -279,7 +264,7 @@ export const POST = defineRoute(
       service,
       userId: user.id,
       generationId,
-      voiceId: profile.vendor_voice_id,
+      voiceId: voice.vendorVoiceId,
       text: textResult.text,
       requestId,
       startMs,
