@@ -32,6 +32,7 @@ import {
   costLimitBlocked,
   countActivePending,
   countGenerationsThisHour,
+  isDeferredAudioEnabled,
 } from "@/lib/messages/cost-controls";
 
 export const maxDuration = 120; // 2 min — LLM insert + TTS + upload
@@ -107,6 +108,64 @@ export const POST = defineRoute(
         pending_recipient_descriptor: prior.pending_recipient_descriptor,
       };
       priorGenerationId = prior.generation_id;
+
+      // === Deferred reshape (Model A — A1 §A1.4) ===========================
+      // Under the flag, "Reshape your note" writes the reshaped text as a
+      // CANDIDATE on the EXISTING row + bumps edit_note_depth — no new lineage
+      // row, no render. The committed take the user heard stays intact as the
+      // fallback for "Back to the take you heard". (A1.2's new-row mechanism
+      // existed to power the depth cap; edit_note_depth on the same row does
+      // that without splitting the candidate across two rows.) The depth cap
+      // was already enforced above.
+      if (isDeferredAudioEnabled()) {
+        const relationship = normalizeRelationship(relationshipRaw);
+        const template =
+          getTemplateById(effectiveCategory, templateVariant) ??
+          selectVariantByIndex(effectiveCategory, relationship, 0);
+        const reshaped = await generateMessageText({
+          template,
+          category: effectiveCategory,
+          relationship,
+          descriptor: recipient.pending_recipient_descriptor,
+          note,
+        });
+        if (!reshaped.ok) {
+          return NextResponse.json(
+            {
+              generationId: fromGenerationId,
+              candidate: false,
+              error: "Could not shape your message. Please try again.",
+              code: ErrorCode.INTERNAL_ERROR,
+              retryable: true,
+            },
+            { status: 502 },
+          );
+        }
+        await supabase
+          .from("pending_generations")
+          .update({
+            note: note || null,
+            candidate_text: reshaped.text,
+            candidate_template_variant: template.id,
+            edit_note_depth: editNoteDepth,
+          })
+          .eq("generation_id", fromGenerationId)
+          .eq("user_id", user.id);
+        logEvent({
+          event: "step6_reshape_candidate",
+          requestId,
+          userId: user.id,
+          outcome: "success",
+          durationMs: durationSince(startMs),
+          meta: { generationId: fromGenerationId, editNoteDepth },
+        });
+        return NextResponse.json({
+          generationId: fromGenerationId,
+          candidate: true,
+          candidateText: reshaped.text,
+          editNoteDepth,
+        });
+      }
     } else {
       // --- Cold-start path ---
       // One active in-flight flow per user.

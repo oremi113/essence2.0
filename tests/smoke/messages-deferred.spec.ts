@@ -15,6 +15,7 @@
 import { test, expect } from './fixtures/auth';
 import * as s6 from './fixtures/step6';
 
+const GEN = '/api/messages/generate';
 const REGEN = '/api/messages/regenerate';
 const COMMIT = '/api/messages/commit';
 
@@ -100,5 +101,69 @@ test.describe('Step 6 — Deferred Audio (flag on)', () => {
   test('commit on an unknown generation → 404', async ({ authedContext }) => {
     const r = await authedContext.request.post(COMMIT, { data: { generationId: s6.ZERO_UUID } });
     expect(r.status()).toBe(404);
+  });
+
+  // ----- deferred reshape (Model A — same row) ---------------------------
+
+  test('reshape (deferred) writes a candidate on the SAME row — no new row, no render', async ({
+    authedContext,
+    testUser,
+  }) => {
+    const vp = await s6.seedReadyVoiceProfile(testUser.id);
+    const gen = await s6.seedPending(testUser.id, vp, {
+      generated_text: 'Committed take the user heard.',
+      audio_status: 'succeeded',
+      audio_path: `users/${testUser.id}/pending/x.mp3`,
+      note: 'original note',
+      edit_note_depth: 0,
+    });
+    // Reshape = /generate with fromGenerationId. note omitted → pure-template
+    // reshape (no LLM spend); the recipient branch is required by the schema.
+    const r = await authedContext.request.post(GEN, {
+      data: {
+        voiceProfileId: vp,
+        category: 'birthday',
+        pendingRecipientName: 'Sarah',
+        pendingRecipientRelationship: 'daughter',
+        fromGenerationId: gen,
+      },
+    });
+    expect(r.status()).toBe(200);
+    const b = await r.json();
+    expect(b.candidate).toBe(true);
+    expect(b.candidateText).toBeTruthy();
+    expect(b.editNoteDepth).toBe(1);
+    // SAME generationId — no new lineage row was minted (Model A).
+    expect(b.generationId).toBe(gen);
+
+    const row = await s6.getPending(gen);
+    expect(row!.candidate_text).toBeTruthy();
+    expect(row!.edit_note_depth).toBe(1);
+    // Committed take untouched (no render happened).
+    expect(row!.generated_text).toBe('Committed take the user heard.');
+    expect(row!.audio_status).toBe('succeeded');
+  });
+
+  test('reshape (deferred) past the edit-note depth cap is blocked (429)', async ({
+    authedContext,
+    testUser,
+  }) => {
+    const vp = await s6.seedReadyVoiceProfile(testUser.id);
+    const gen = await s6.seedPending(testUser.id, vp, {
+      generated_text: 'committed',
+      audio_status: 'succeeded',
+      edit_note_depth: 2, // at the cap
+    });
+    const r = await authedContext.request.post(GEN, {
+      data: {
+        voiceProfileId: vp,
+        category: 'birthday',
+        pendingRecipientName: 'Sarah',
+        pendingRecipientRelationship: 'daughter',
+        fromGenerationId: gen,
+      },
+    });
+    expect(r.status()).toBe(429);
+    expect((await r.json()).limit_kind).toBe('edit_note_depth');
   });
 });
