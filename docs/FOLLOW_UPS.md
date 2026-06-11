@@ -214,7 +214,9 @@ This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced b
 
 ## Step 6 message generation endpoints (from Session 8 Step 6 build)
 
-### 27. Per-category voice settings not wired into TTS
+### 27. Per-category voice settings not wired into TTS — ✅ RESOLVED 2026-06-10
+**Resolved by** commit `e16cda1` (feat(messages): apply per-category voice settings to TTS). `GenerateSpeechParams` now takes an optional `voiceSettings` and forwards it as `voice_settings` (stability / similarity_boost / style / use_speaker_boost) in the ElevenLabs request body, omitted-defaults preserved for callers that don't pass it. All three render paths forward `getCategoryVoiceSettings(category)`: `/api/messages/generate`, `/api/messages/regenerate` (both the `retry_audio` and control arms), and `/api/messages/commit` — the latter two via `generateAndStoreAudio` in `src/lib/messages/audio.ts`. Verified 2026-06-11 during the safe-refactor batch. Original entry below.
+
 `src/lib/elevenlabs.ts` `generateSpeech()` accepts only `{ voiceId, text }` — it does not send ElevenLabs voice settings. `src/lib/messageTemplates.ts` defines tuned `voiceSettings` per category (stability/similarity/style/speakerBoost, e.g. comfort is steadier, birthday more expressive), but `/api/messages/generate` and `/regenerate` call `generateSpeech` without them, so every category renders with ElevenLabs defaults.
 
 **Why it matters:** the emotional register tuning (MASTER_SPEC Ch. 8) is the point of per-category voice settings — losing it flattens comfort/birthday/etc. to one delivery.
