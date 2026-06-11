@@ -13,11 +13,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/errors";
-import { logEvent, logError, generateRequestId, withRequestId } from "@/lib/logger";
+import { logEvent, generateRequestId, withRequestId } from "@/lib/logger";
 import { checkSignedUrlLimit, assertAllowed, recordUsageEvent } from "@/lib/rate-limit";
 import { AUDIO_BUCKET } from "@/lib/audio/storage-paths";
-
-const DOWNLOAD_EXPIRY_SEC = 120; // 2 minutes
+import { createPlaybackSignedUrl, PLAYBACK_URL_EXPIRY_SEC } from "@/lib/audio/playback";
 
 export async function GET(
   _request: Request,
@@ -83,17 +82,12 @@ export async function GET(
       );
     }
 
-    const { data: signed, error: signError } = await service.storage
-      .from(AUDIO_BUCKET)
-      .createSignedUrl(gen.audio_path, DOWNLOAD_EXPIRY_SEC);
-
-    if (signError || !signed?.signedUrl) {
-      logError({ event: "pending_play_sign_failed", requestId, userId: user.id, error: signError });
-      return withRequestId(
-        NextResponse.json({ error: "Could not generate playback URL" }, { status: 500 }),
-        requestId
-      );
-    }
+    const url = await createPlaybackSignedUrl(
+      service,
+      AUDIO_BUCKET,
+      gen.audio_path,
+      { event: "pending_play_sign_failed", requestId, userId: user.id, meta: { generationId: id } },
+    );
 
     logEvent({
       event: "pending_play_signed_url",
@@ -104,7 +98,7 @@ export async function GET(
     });
 
     return withRequestId(
-      NextResponse.json({ url: signed.signedUrl, expiresIn: DOWNLOAD_EXPIRY_SEC }),
+      NextResponse.json({ url, expiresIn: PLAYBACK_URL_EXPIRY_SEC }),
       requestId
     );
   } catch (err) {
