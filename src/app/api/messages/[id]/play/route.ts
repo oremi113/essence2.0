@@ -7,29 +7,16 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
-import { handleRouteError } from "@/lib/errors";
-import { logEvent, generateRequestId, withRequestId } from "@/lib/logger";
+import { logEvent } from "@/lib/logger";
 import { checkSignedUrlLimit, assertAllowed, recordUsageEvent } from "@/lib/rate-limit";
 import { createPlaybackSignedUrl, PLAYBACK_URL_EXPIRY_SEC } from "@/lib/audio/playback";
+import { defineRoute } from "@/lib/api/defineRoute";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const requestId = generateRequestId();
-
-  try {
-    const { id } = await params;
+export const GET = defineRoute<true, { id: string }>(
+  { auth: true },
+  async ({ user, requestId, params }) => {
+    const { id } = params;
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return withRequestId(
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-        requestId
-      );
-    }
 
     // --- DB-backed rate limit ---
     const service = createSupabaseServiceClient();
@@ -53,24 +40,15 @@ export async function GET(
       .single();
 
     if (error || !message) {
-      return withRequestId(
-        NextResponse.json({ error: "Message not found" }, { status: 404 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
     if (message.status !== "saved") {
-      return withRequestId(
-        NextResponse.json({ error: "Message audio is not available yet" }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Message audio is not available yet" }, { status: 400 });
     }
 
     if (!message.storage_bucket || !message.storage_path) {
-      return withRequestId(
-        NextResponse.json({ error: "Audio file not found for this message" }, { status: 404 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Audio file not found for this message" }, { status: 404 });
     }
 
     const url = await createPlaybackSignedUrl(
@@ -88,12 +66,6 @@ export async function GET(
       outcome: "success",
     });
 
-    return withRequestId(
-      NextResponse.json({ url, expiresIn: PLAYBACK_URL_EXPIRY_SEC }),
-      requestId
-    );
-  } catch (err) {
-    const { body, status } = handleRouteError(err, requestId);
-    return withRequestId(NextResponse.json(body, { status }), requestId);
-  }
-}
+    return NextResponse.json({ url, expiresIn: PLAYBACK_URL_EXPIRY_SEC });
+  },
+);

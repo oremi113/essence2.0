@@ -12,22 +12,17 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { VALID_RELATIONSHIPS } from "@/lib/voice-training/types";
-import { generateRequestId, logError } from "@/lib/logger";
+import { logError } from "@/lib/logger";
+import { defineRoute } from "@/lib/api/defineRoute";
 
 const MAX_TEXT_LEN = 200;
 const MIN_BIRTH_YEAR = 1900;
 const MAX_BIRTH_YEAR = 2025;
 
-export async function POST(request: Request) {
-  const requestId = generateRequestId();
-  try {
+export const POST = defineRoute(
+  { auth: true },
+  async ({ request, user, requestId }) => {
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const body = await request.json().catch(() => ({}));
 
@@ -143,8 +138,5 @@ export async function POST(request: Request) {
       voiceProfileId: row.id,
       status: row.status,
     });
-  } catch (err) {
-    logError({ event: "voice_profile_create_error", requestId, route: "/api/voice-profiles", error: err });
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
-  }
-}
+  },
+);

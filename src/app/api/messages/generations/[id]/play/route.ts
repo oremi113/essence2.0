@@ -12,30 +12,17 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
-import { handleRouteError } from "@/lib/errors";
-import { logEvent, generateRequestId, withRequestId } from "@/lib/logger";
+import { logEvent } from "@/lib/logger";
 import { checkSignedUrlLimit, assertAllowed, recordUsageEvent } from "@/lib/rate-limit";
 import { AUDIO_BUCKET } from "@/lib/audio/storage-paths";
 import { createPlaybackSignedUrl, PLAYBACK_URL_EXPIRY_SEC } from "@/lib/audio/playback";
+import { defineRoute } from "@/lib/api/defineRoute";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const requestId = generateRequestId();
-
-  try {
-    const { id } = await params;
+export const GET = defineRoute<true, { id: string }>(
+  { auth: true },
+  async ({ user, requestId, params }) => {
+    const { id } = params;
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return withRequestId(
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-        requestId
-      );
-    }
 
     // --- DB-backed signed-URL rate limit ---
     const service = createSupabaseServiceClient();
@@ -58,28 +45,19 @@ export async function GET(
       .maybeSingle();
 
     if (error || !gen) {
-      return withRequestId(
-        NextResponse.json({ error: "Generation not found" }, { status: 404 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Generation not found" }, { status: 404 });
     }
 
     // Already promoted — the pending object is gone; use the saved message route.
     if (gen.saved_message_id) {
-      return withRequestId(
-        NextResponse.json(
-          { error: "This message is saved.", messageId: gen.saved_message_id },
-          { status: 409 }
-        ),
-        requestId
+      return NextResponse.json(
+        { error: "This message is saved.", messageId: gen.saved_message_id },
+        { status: 409 },
       );
     }
 
     if (gen.audio_status !== "succeeded" || !gen.audio_path) {
-      return withRequestId(
-        NextResponse.json({ error: "Audio is not ready yet." }, { status: 400 }),
-        requestId
-      );
+      return NextResponse.json({ error: "Audio is not ready yet." }, { status: 400 });
     }
 
     const url = await createPlaybackSignedUrl(
@@ -97,12 +75,6 @@ export async function GET(
       meta: { generationId: id },
     });
 
-    return withRequestId(
-      NextResponse.json({ url, expiresIn: PLAYBACK_URL_EXPIRY_SEC }),
-      requestId
-    );
-  } catch (err) {
-    const { body, status } = handleRouteError(err, requestId);
-    return withRequestId(NextResponse.json(body, { status }), requestId);
-  }
-}
+    return NextResponse.json({ url, expiresIn: PLAYBACK_URL_EXPIRY_SEC });
+  },
+);

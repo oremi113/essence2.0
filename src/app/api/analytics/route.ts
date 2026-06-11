@@ -14,11 +14,11 @@
  * Best-effort by design: returns 204 even on insert failure. The caller
  * uses navigator.sendBeacon and never blocks UX on the response.
  */
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { recordUsageEvent } from "@/lib/rate-limit";
-import { generateRequestId, logError, withRequestId } from "@/lib/logger";
+import { logError } from "@/lib/logger";
 import { NextResponse } from "next/server";
+import { defineRoute } from "@/lib/api/defineRoute";
 
 /** Prefixes that the client is allowed to write through this route. */
 const ACTION_PREFIXES = ["breath_stone_", "step6."] as const;
@@ -32,31 +32,19 @@ function isAllowedAction(action: unknown): action is string {
   );
 }
 
-export async function POST(request: Request) {
-  const requestId = generateRequestId();
+export const POST = defineRoute({ auth: true }, async ({ request, user, requestId }) => {
+  const body = await request.json().catch(() => null);
+  const action = body?.action;
+  const meta = body?.meta;
+
+  if (!isAllowedAction(action)) {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
+  // Best-effort: the caller uses navigator.sendBeacon and never blocks UX on
+  // the response, so a write failure must still return 204 — never surface it
+  // as an error the client might retry.
   try {
-    const auth = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await auth.auth.getUser();
-    if (!user) {
-      return withRequestId(
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-        requestId
-      );
-    }
-
-    const body = await request.json().catch(() => null);
-    const action = body?.action;
-    const meta = body?.meta;
-
-    if (!isAllowedAction(action)) {
-      return withRequestId(
-        NextResponse.json({ error: "Invalid action" }, { status: 400 }),
-        requestId
-      );
-    }
-
     const service = createSupabaseServiceClient();
     await recordUsageEvent(service, {
       userId: user.id,
@@ -65,11 +53,9 @@ export async function POST(request: Request) {
       outcome: "success",
       meta: meta && typeof meta === "object" ? meta : undefined,
     });
-
-    return withRequestId(new NextResponse(null, { status: 204 }), requestId);
   } catch (err) {
     logError({ event: "analytics.post.failed", requestId, error: err });
-    // Even on failure: 204 to keep the client from retrying a best-effort event.
-    return withRequestId(new NextResponse(null, { status: 204 }), requestId);
   }
-}
+
+  return new NextResponse(null, { status: 204 });
+});
