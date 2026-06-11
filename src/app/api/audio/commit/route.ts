@@ -4,7 +4,6 @@
  * Phase 8: body size check, structured logging.
  */
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { AUDIO_BUCKET } from "@/lib/audio/storage-paths";
 import { NextResponse } from "next/server";
 import { logEvent, logError } from "@/lib/logger";
 import { defineRoute } from "@/lib/api/defineRoute";
@@ -44,7 +43,9 @@ export const POST = defineRoute(
       return NextResponse.json({ error: "Clip not in uploading state" }, { status: 400 });
     }
 
-    const bucket = row.storage_bucket || AUDIO_BUCKET;
+    // storage_bucket is NOT NULL (default 'audio') and is always set on insert
+    // by audio/init-upload, so it can be read directly without a fallback.
+    const bucket = row.storage_bucket;
     const objectPath = row.storage_path;
 
     const service = createSupabaseServiceClient();
