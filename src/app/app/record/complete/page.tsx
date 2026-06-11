@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FirstBreathSequence } from "@/components/screens/FirstBreathSequence";
+import { ROUTES, signInWithNext } from "@/lib/routes";
 
 export default async function RecordCompletePage() {
   const supabase = await createSupabaseServerClient();
@@ -9,7 +10,7 @@ export default async function RecordCompletePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/sign-in?next=/app/record/complete");
+    redirect(signInWithNext(ROUTES.recordComplete));
   }
 
   const { data: voiceProfile } = await supabase
@@ -21,18 +22,18 @@ export default async function RecordCompletePage() {
     .maybeSingle();
 
   if (!voiceProfile) {
-    redirect("/app/record");
+    redirect(ROUTES.record);
   }
 
   if (voiceProfile.status === "archived") {
-    redirect("/home");
+    redirect(ROUTES.home);
   }
 
   if (
     voiceProfile.status === "created" ||
     voiceProfile.status === "failed"
   ) {
-    redirect("/app/record");
+    redirect(ROUTES.record);
   }
 
   return <FirstBreathSequence voiceProfileId={voiceProfile.id} />;

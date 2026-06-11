@@ -288,3 +288,15 @@ Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_g
 
 **Remaining (optional, lower priority now):** the routes still build these error bodies inline rather than via the documented `throw new AppError(...)` convention (`src/lib/errors.ts:3`). With `retryable` now consistent, the main concrete benefit of an AppError migration is gone — what's left is stylistic alignment + future-drift protection (inline returns can still omit `retryable` again; AppError can't). Not worth the throw/return split and the awkward fit for the string-coded responses (`subscription_lapsed`) and the no-message `vault_limit_reached` unless a broader API-envelope pass happens.
 **Pick up when:** an API-envelope/AppError-convention consolidation pass, if ever.
+
+## Route map — two routing inconsistencies surfaced (from route-centralization, 2026-06-11)
+
+### 34. `/messages/new` vs `/app/messages/new` — two live message-creation routes
+Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
+
+**(a) `/app/home` bug — FIXED.** `src/app/app/vault/seal/actions.tsx` dismiss handler pushed to `/app/home`, which is not a route (the home route is `/home`) — it would 404. Fixed to `ROUTES.home` during centralization. No follow-up needed; recorded here for traceability.
+
+**(b) Two parallel message-creation routes — NEEDS A DECISION.** Both `/messages/new` (`src/app/messages/new/`) and `/app/messages/new` (`src/app/app/messages/new/`) exist and render. App surfaces (TabNav, MemoryShelf, VaultSealed, VoiceCreationView) push to `/app/messages/new`; the doc-described Step 6 entry is `/messages/new`. The route map keeps both (`ROUTES.messagesNew`, `ROUTES.appMessagesNew`) and preserved each caller's current target — no behavior change — but one is almost certainly canonical and the other dead/legacy.
+
+**Fix shape:** during the stitch, decide which message-creation route is canonical, repoint all callers to it via the single route constant, and delete the other route tree + its page/dev scaffolding. The route map makes this a one-constant change.
+**Pick up when:** the prototype-stitching pass that wires voice-creation → First Breath (FOLLOW_UPS #24/#25) → message creation, since that's when the entry point gets pinned.

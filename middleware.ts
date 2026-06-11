@@ -1,10 +1,11 @@
 import { updateSession } from "@/lib/supabase/middleware";
 import { NextRequest, NextResponse } from "next/server";
+import { ROUTES } from "@/lib/routes";
 
 function isProtectedPath(pathname: string): boolean {
   return (
     pathname.startsWith("/app") ||
-    pathname === "/home" ||
+    pathname === ROUTES.home ||
     pathname === "/settings"
   );
 }
@@ -21,7 +22,7 @@ export async function middleware(request: NextRequest) {
   // Redirect unauthenticated users
   if (!user) {
     const next = encodeURIComponent(pathname + search);
-    const signInUrl = new URL("/auth/sign-in", request.url);
+    const signInUrl = new URL(ROUTES.signIn, request.url);
     signInUrl.searchParams.set("next", next);
     return NextResponse.redirect(signInUrl);
   }

@@ -2,13 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { VaultSealedScreen } from '@/components/screens/vault/VaultSealedScreen';
+import { ROUTES } from '@/lib/routes';
 
 export function SealedActions() {
   const router = useRouter();
   return (
     <VaultSealedScreen
-      onCreateMessage={() => router.push('/app/messages/new')}
-      onGoHome={() => router.push('/app/record')}
+      onCreateMessage={() => router.push(ROUTES.appMessagesNew)}
+      onGoHome={() => router.push(ROUTES.record)}
     />
   );
 }

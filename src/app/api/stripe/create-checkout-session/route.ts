@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createCheckoutSession } from '@/lib/stripe/create-checkout-session';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 import type { BillingPlan } from '@/lib/vault';
+import { ROUTES, signInWithNext } from '@/lib/routes';
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   // Mock path — preserves 7a behavior when the flag is off.
   if (!isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
     return NextResponse.json({
-      checkoutUrl: `/app/vault/sealed?mock=true&plan=${plan}`,
+      checkoutUrl: `${ROUTES.vaultSealed}?mock=true&plan=${plan}`,
     });
   }
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     if (code === 'unauthenticated') {
       return NextResponse.json(
-        { error: 'Not authenticated', redirect: `/auth/sign-in?next=/app/vault/protect` },
+        { error: 'Not authenticated', redirect: signInWithNext(ROUTES.vaultProtect) },
         { status: 401 },
       );
     }

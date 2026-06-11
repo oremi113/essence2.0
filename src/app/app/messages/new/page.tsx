@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { NewMessageView } from "@/components/messages/NewMessageView";
 import { TabNav } from "@/components/nav/TabNav";
+import { ROUTES, signInWithNext } from "@/lib/routes";
 
 export default async function NewMessagePage() {
   const supabase = await createSupabaseServerClient();
@@ -9,7 +10,7 @@ export default async function NewMessagePage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/auth/sign-in?next=/app/messages/new");
+    redirect(signInWithNext(ROUTES.appMessagesNew));
   }
 
   // Fetch voice profiles that are ready

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ShelfMessage } from "./types";
 import { MessageList } from "./MessageList";
 import { usePlaybackController } from "./usePlaybackController";
+import { ROUTES } from "@/lib/routes";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -94,7 +95,7 @@ export function MemoryShelf() {
           No messages yet. Create your first message to see it here.
         </p>
         <a
-          href="/app/messages/new"
+          href={ROUTES.appMessagesNew}
           style={{
             display: "inline-block",
             marginTop: 12,
@@ -177,7 +178,7 @@ export function MemoryShelf() {
       )}
 
       <div style={{ marginTop: 24, textAlign: "center" }}>
-        <a href="/app/messages/new" style={{ color: "#555", fontSize: 14 }}>
+        <a href={ROUTES.appMessagesNew} style={{ color: "#555", fontSize: 14 }}>
           + Create a new message
         </a>
       </div>

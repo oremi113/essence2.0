@@ -10,6 +10,7 @@ import { TOTAL_PROMPT_COUNT, ALL_PROMPTS, getStageForPrompt } from '@/lib/voice-
 import { resolvePrompt } from '@/lib/voice-training/resolver';
 import type { ResolverContext, PromptCelebration } from '@/lib/voice-training/types';
 import { TIMING } from '@/lib/config/timing';
+import { ROUTES } from '@/lib/routes';
 import type { RecordScreenData } from './RecordScreen.types';
 import { recordReducer, deriveInitialView } from './RecordScreen.reducer';
 
@@ -111,7 +112,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
       <PageTransition>
         <EntryView
           onContinue={() => dispatch({ type: 'ENTRY_CONTINUED' })}
-          onDoLater={() => router.push('/home')}
+          onDoLater={() => router.push(ROUTES.home)}
         />
       </PageTransition>
     );
@@ -128,7 +129,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
       <PageTransition>
         <MicPermissionView
           onGranted={() => dispatch({ type: 'MIC_PERMISSION_GRANTED' })}
-          onSkip={() => router.push('/home')}
+          onSkip={() => router.push(ROUTES.home)}
         />
       </PageTransition>
     );
@@ -174,7 +175,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
   if (view.type === 'paused')
     return (
       <PageTransition>
-        <PausedView onReturnHome={() => router.push('/home')} />
+        <PausedView onReturnHome={() => router.push(ROUTES.home)} />
       </PageTransition>
     );
 
@@ -188,7 +189,7 @@ export function RecordScreen({ data }: RecordScreenProps) {
   if (view.type === 'ready')
     return (
       <PageTransition>
-        <ReadyView onContinue={() => router.push('/app/voice/create')} />
+        <ReadyView onContinue={() => router.push(ROUTES.voiceCreate)} />
       </PageTransition>
     );
 

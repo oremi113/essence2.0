@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Top-level tab nav shared by the post-onboarding /app pages.
@@ -8,9 +9,9 @@ import Link from "next/link";
 export type TabKey = "record" | "new-message" | "shelf";
 
 const TABS: { key: TabKey; href: string; label: string }[] = [
-  { key: "record", href: "/app/record", label: "Record" },
-  { key: "new-message", href: "/app/messages/new", label: "New Message" },
-  { key: "shelf", href: "/app/shelf", label: "Memory Shelf" },
+  { key: "record", href: ROUTES.record, label: "Record" },
+  { key: "new-message", href: ROUTES.appMessagesNew, label: "New Message" },
+  { key: "shelf", href: ROUTES.shelf, label: "Memory Shelf" },
 ];
 
 export function TabNav({ current }: { current: TabKey }) {

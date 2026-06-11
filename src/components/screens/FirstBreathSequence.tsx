@@ -6,6 +6,7 @@ import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { track } from '@/lib/analytics/client';
 import { useReducedMotion } from '@/lib/animation/useReducedMotion';
 import { useCopyCrossfade } from '@/lib/animation/useCopyCrossfade';
+import { ROUTES } from '@/lib/routes';
 import {
   useFirstBreathPhases,
   type FirstBreathPhase,
@@ -96,8 +97,10 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
 
   const handleExit = useCallback(() => {
     track('breath_stone_cta_tapped', { voiceProfileId, phase: 'detail' });
-    // TODO: replace with router.push('/app/checkout') when Session 7 is complete
-    router.push('/app/record/complete/stub');
+    // Routes to a placeholder; the real First-Breath exit destination is an
+    // open product decision — see FOLLOW_UPS #25. (Supersedes the old
+    // "/app/checkout when Session 7 is complete" TODO; Session 7 shipped.)
+    router.push(ROUTES.recordCompleteStub);
   }, [router, voiceProfileId]);
 
   const stone = PHASE_CONFIG[phase];

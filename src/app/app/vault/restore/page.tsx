@@ -2,8 +2,9 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getSubscriptionStatus } from '@/lib/subscription/get-status';
 import { RestoreActions } from './actions';
+import { ROUTES, signInWithNext } from '@/lib/routes';
 
-const VAULT_ROUTE = '/app/vault/restore';
+const VAULT_ROUTE = ROUTES.vaultRestore;
 
 export default async function VaultRestorePage() {
   const supabase = await createSupabaseServerClient();
@@ -13,19 +14,19 @@ export default async function VaultRestorePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/auth/sign-in?next=${VAULT_ROUTE}`);
+    redirect(signInWithNext(VAULT_ROUTE));
   }
 
   const sub = await getSubscriptionStatus(user.id);
 
   // Already restored (webhook fired after Portal update) — send them onward.
   if (sub.status === 'trial' || sub.status === 'active') {
-    redirect('/app/record');
+    redirect(ROUTES.record);
   }
 
   // Never had a subscription — the restore screen doesn't apply.
   if (sub.status === 'none') {
-    redirect('/app/vault/reveal');
+    redirect(ROUTES.vaultReveal);
   }
 
   // past_due | lapsed | cancelled → render restore.

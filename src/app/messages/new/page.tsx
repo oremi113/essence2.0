@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { MessagesNewPageClient } from './MessagesNewPageClient';
 import type { ExistingRecipient } from '@/components/screens/messages/RecipientSetupScreen.types';
 import type { RelationshipKey } from '@/lib/messageTemplates';
+import { ROUTES, signInWithNext } from '@/lib/routes';
 
 /**
  * /messages/new — entry point for Step 6 (message creation) per
@@ -45,7 +46,7 @@ export default async function MessagesNewPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect('/auth/sign-in?next=/messages/new');
+    redirect(signInWithNext(ROUTES.messagesNew));
   }
 
   const { data: rawRecipients } = await supabase

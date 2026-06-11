@@ -5,6 +5,7 @@ import type { RecordScreenData } from "@/components/screens/RecordScreen.types";
 import { RecordPageShell } from "./RecordPageShell";
 import { RecordPageBannerWrapper } from "./RecordPageBannerWrapper";
 import { getSubscriptionStatus } from "@/lib/subscription/get-status";
+import { ROUTES, signInWithNext } from "@/lib/routes";
 
 /**
  * Server component for the voice training record page.
@@ -26,7 +27,7 @@ export default async function RecordPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/auth/sign-in?next=/app/record");
+    redirect(signInWithNext(ROUTES.record));
   }
 
   // Past-due banner: shown above all record-page content when Stripe's
@@ -59,13 +60,13 @@ export default async function RecordPage({
       <>
         {banner}
         <nav style={{ marginBottom: 16, fontSize: 14 }}>
-          <a href="/app/shelf">Memory Shelf</a>
+          <a href={ROUTES.shelf}>Memory Shelf</a>
           <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
-          <a href="/app/messages/new">New Message</a>
+          <a href={ROUTES.appMessagesNew}>New Message</a>
           {voiceProfile && (
             <>
               <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
-              <a href="/app/record">Back to current profile</a>
+              <a href={ROUTES.record}>Back to current profile</a>
             </>
           )}
         </nav>
@@ -106,7 +107,7 @@ export default async function RecordPage({
 
   // Already ready — skip training
   if (voiceProfile.status === "ready") {
-    redirect("/app/voice/create");
+    redirect(ROUTES.voiceCreate);
   }
 
   const data: RecordScreenData = {

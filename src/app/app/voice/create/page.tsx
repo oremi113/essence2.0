@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { VoiceCreationView } from "@/components/voice/VoiceCreationView";
+import { ROUTES, signInWithNext } from "@/lib/routes";
 
 export default async function VoiceCreatePage() {
   const supabase = await createSupabaseServerClient();
@@ -8,7 +9,7 @@ export default async function VoiceCreatePage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/auth/sign-in?next=/app/voice/create");
+    redirect(signInWithNext(ROUTES.voiceCreate));
   }
 
   return (

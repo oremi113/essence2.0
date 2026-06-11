@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isFeatureEnabled } from '@/lib/feature-flags';
+import { ROUTES, signInWithNext } from '@/lib/routes';
 
 /**
  * POST — create a Stripe Customer Portal session for the authenticated user
@@ -23,7 +24,7 @@ export async function POST() {
 
   if (!user) {
     return NextResponse.json(
-      { error: 'Not authenticated', redirect: '/auth/sign-in?next=/app/vault/restore' },
+      { error: 'Not authenticated', redirect: signInWithNext(ROUTES.vaultRestore) },
       { status: 401 },
     );
   }

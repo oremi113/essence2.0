@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TIMING } from "@/lib/config/timing";
+import { ROUTES } from "@/lib/routes";
 
 type VoiceProfile = { id: string; label: string; status: string };
 
@@ -154,7 +155,7 @@ export function NewMessageView({
           You need a ready voice to create messages. Go to the record page to
           create your voice first.
         </p>
-        <a href="/app/record">Go to Record</a>
+        <a href={ROUTES.record}>Go to Record</a>
       </div>
     );
   }
@@ -280,7 +281,7 @@ export function NewMessageView({
           <button type="button" onClick={handleNewMessage}>
             Create another message
           </button>
-          <a href="/app/shelf" style={{ marginLeft: 12 }}>
+          <a href={ROUTES.shelf} style={{ marginLeft: 12 }}>
             Memory Shelf
           </a>
         </div>
@@ -298,7 +299,7 @@ export function NewMessageView({
           <button type="button" onClick={handleRetry}>
             Try again
           </button>
-          <a href="/app/shelf" style={{ marginLeft: 12 }}>
+          <a href={ROUTES.shelf} style={{ marginLeft: 12 }}>
             Memory Shelf
           </a>
         </div>

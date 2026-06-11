@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VaultContinuityScreen } from '@/components/screens/vault/VaultContinuityScreen';
+import { vaultSealWithPlan } from '@/lib/routes';
 
 export function ContinuityActions() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export function ContinuityActions() {
 
   return (
     <VaultContinuityScreen
-      onAdvance={() => router.push(`/app/vault/seal?plan=${plan}`)}
+      onAdvance={() => router.push(vaultSealWithPlan(plan))}
     />
   );
 }

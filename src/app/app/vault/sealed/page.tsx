@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getSubscriptionStatus } from '@/lib/subscription/get-status';
 import { SealedActions } from './actions';
+import { ROUTES, signInWithNext } from '@/lib/routes';
 
 export default async function VaultSealedPage({
   searchParams,
@@ -12,7 +13,7 @@ export default async function VaultSealedPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/auth/sign-in?next=/app/vault/sealed');
+  if (!user) redirect(signInWithNext(ROUTES.vaultSealed));
 
   const params = await searchParams;
 
@@ -34,7 +35,7 @@ export default async function VaultSealedPage({
     // Direct navigation — only allow if the user actually has a subscription.
     const sub = await getSubscriptionStatus(user.id);
     if (sub.status !== 'trial' && sub.status !== 'active') {
-      redirect('/app/vault/reveal');
+      redirect(ROUTES.vaultReveal);
     }
   }
 

@@ -7,6 +7,7 @@ import type {
   OnCompleteOnboarding,
   OnUploadAvatar,
 } from '@/components/screens/OnboardingScreen.types';
+import { ROUTES } from '@/lib/routes';
 
 /**
  * Thin client wrapper. Holds the router (navigates to /app/record after
@@ -35,7 +36,7 @@ export function OnboardingPageClient({
     stateCode: string
   ) {
     await onComplete(firstName, lastName, dateOfBirth, city, stateCode);
-    router.push('/app/record');
+    router.push(ROUTES.record);
   }
 
   return (

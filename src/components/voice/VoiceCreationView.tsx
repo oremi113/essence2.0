@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { TIMING } from "@/lib/config/timing";
+import { ROUTES } from "@/lib/routes";
 
 const POLL_INTERVAL_MS = TIMING.VOICE_PROFILE_POLL_INTERVAL_MS;
 const POLL_TIMEOUT_MS = TIMING.VOICE_PROFILE_TAKING_LONGER_MS;
@@ -191,7 +192,7 @@ export function VoiceCreationView() {
     return (
       <div style={{ padding: 24 }}>
         <p>No voice profile selected. Go to the record page and select a profile, then try again.</p>
-        <a href="/app/record">Back to Record</a>
+        <a href={ROUTES.record}>Back to Record</a>
       </div>
     );
   }
@@ -223,7 +224,7 @@ export function VoiceCreationView() {
           </p>
         )}
         <p style={{ marginTop: 16 }}>
-          <button type="button" onClick={() => router.push("/app/record")}>
+          <button type="button" onClick={() => router.push(ROUTES.record)}>
             Back to Record
           </button>
         </p>
@@ -240,13 +241,13 @@ export function VoiceCreationView() {
         <div style={{ marginTop: 16 }}>
           <button
             type="button"
-            onClick={() => router.push("/app/messages/new")}
+            onClick={() => router.push(ROUTES.appMessagesNew)}
           >
             Create a message
           </button>
           <button
             type="button"
-            onClick={() => router.push("/app/record")}
+            onClick={() => router.push(ROUTES.record)}
             style={{ marginLeft: 8 }}
           >
             Back to Record
@@ -262,7 +263,7 @@ export function VoiceCreationView() {
         <h2>Something went wrong</h2>
         <p>{errorMessage ?? "Voice creation failed. You can try again."}</p>
         <div style={{ marginTop: 16 }}>
-          <button type="button" onClick={() => router.push("/app/record")}>
+          <button type="button" onClick={() => router.push(ROUTES.record)}>
             Back to Record
           </button>
           {retryAvailable && (

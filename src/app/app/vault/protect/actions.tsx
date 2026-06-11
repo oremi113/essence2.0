@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VaultProtectScreen } from '@/components/screens/vault/VaultProtectScreen';
 import type { BillingPlan } from '@/lib/vault';
+import { ROUTES, vaultContinuityWithPlan } from '@/lib/routes';
 
 function readPlan(params: URLSearchParams): BillingPlan {
   return params.get('plan') === 'monthly' ? 'monthly' : 'annual';
@@ -16,7 +17,7 @@ export function ProtectActions() {
   const handlePlanChange = (next: BillingPlan) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('plan', next);
-    router.replace(`/app/vault/protect?${params.toString()}`, { scroll: false });
+    router.replace(`${ROUTES.vaultProtect}?${params.toString()}`, { scroll: false });
   };
 
   const handleCheckout = async (selected: BillingPlan) => {
@@ -48,7 +49,7 @@ export function ProtectActions() {
   };
 
   const handleDismiss = () => {
-    router.push(`/app/vault/continuity?plan=${plan}`);
+    router.push(vaultContinuityWithPlan(plan));
   };
 
   return (

@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getSubscriptionStatus } from '@/lib/subscription/get-status';
 import { SealActions } from './actions';
 import type { BillingPlan } from '@/lib/vault';
+import { ROUTES, signInWithNext } from '@/lib/routes';
 
 export default async function VaultSealPage({
   searchParams,
@@ -13,14 +14,14 @@ export default async function VaultSealPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/auth/sign-in?next=/app/vault/seal');
+  if (!user) redirect(signInWithNext(ROUTES.vaultSeal));
 
   const sub = await getSubscriptionStatus(user.id);
   if (sub.status === 'trial' || sub.status === 'active') {
-    redirect('/app/record');
+    redirect(ROUTES.record);
   }
   if (sub.status === 'lapsed' || sub.status === 'cancelled') {
-    redirect('/app/vault/restore');
+    redirect(ROUTES.vaultRestore);
   }
 
   const params = await searchParams;

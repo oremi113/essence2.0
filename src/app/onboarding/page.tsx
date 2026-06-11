@@ -11,6 +11,7 @@ import {
 } from '@/lib/profile';
 import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen.types';
 import { OnboardingPageClient } from './OnboardingPageClient';
+import { ROUTES, signInWithNext } from '@/lib/routes';
 
 /**
  * Normalize user-typed names and cities before saving.
@@ -45,7 +46,7 @@ export default async function OnboardingPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect('/auth/sign-in?next=/onboarding');
+    redirect(signInWithNext(ROUTES.onboarding));
   }
 
   const { data: profile } = await supabase
@@ -58,7 +59,7 @@ export default async function OnboardingPage() {
 
   // Already completed — skip the wizard entirely.
   if (profile?.onboarding_completed_at) {
-    redirect('/home');
+    redirect(ROUTES.home);
   }
 
   // Prefer explicit first_name. Fall back to parsing display_name only if

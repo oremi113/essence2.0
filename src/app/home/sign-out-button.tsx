@@ -2,6 +2,7 @@
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -9,7 +10,7 @@ export function SignOutButton() {
   async function handleSignOut() {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
-    router.push("/auth/sign-in");
+    router.push(ROUTES.signIn);
     router.refresh();
   }
 

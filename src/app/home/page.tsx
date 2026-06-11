@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrCreateProfile } from "@/lib/profile";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "./sign-out-button";
+import { ROUTES, signInWithNext } from "@/lib/routes";
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient();
@@ -10,14 +11,14 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/sign-in?next=/home");
+    redirect(signInWithNext(ROUTES.home));
   }
 
   const profile = await getOrCreateProfile();
 
   // New users who haven't completed onboarding are sent to the wizard.
   if (!profile.onboarding_completed_at) {
-    redirect("/onboarding");
+    redirect(ROUTES.onboarding);
   }
 
   return (
@@ -25,7 +26,7 @@ export default async function HomePage() {
       <h1>Home</h1>
       <p>Signed in as {user.email ?? "unknown"}.</p>
       <p>
-        <a href="/app/record">Record training clip</a> (Phase 4: init → upload → commit → playback)
+        <a href={ROUTES.record}>Record training clip</a> (Phase 4: init → upload → commit → playback)
       </p>
       <SignOutButton />
     </>
