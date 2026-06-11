@@ -124,7 +124,7 @@ export const POST = defineRoute(
           .maybeSingle();
         if (!rec) {
           return NextResponse.json(
-            { error: "Recipient not found", code: ErrorCode.VALIDATION_ERROR },
+            { error: "Recipient not found", code: ErrorCode.VALIDATION_ERROR, retryable: false },
             { status: 404 },
           );
         }

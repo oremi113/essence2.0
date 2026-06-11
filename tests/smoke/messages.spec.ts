@@ -101,11 +101,15 @@ test.describe('Step 6 — message endpoints', () => {
     const gen = await s6.seedPending(testUser.id, vp, { generated_text: null });
     const r = await authedContext.request.post(REGEN, { data: { generationId: gen, mode: 'retry_audio' } });
     expect(r.status()).toBe(409);
+    expect((await r.json()).retryable).toBe(false);
   });
 
   test('regenerate: unknown generation → 404', async ({ authedContext }) => {
     const r = await authedContext.request.post(REGEN, { data: { generationId: s6.ZERO_UUID, mode: 'variant' } });
     expect(r.status()).toBe(404);
+    // every error body carries `retryable` (FOLLOW_UPS #33) — here via the
+    // shared pendingNotFoundResponse helper.
+    expect((await r.json()).retryable).toBe(false);
   });
 
   test('regenerate: keep clears the un-heard candidate, keeps the committed take', async ({ authedContext, testUser }) => {
@@ -159,6 +163,7 @@ test.describe('Step 6 — message endpoints', () => {
   test('save: unknown generation → 404', async ({ authedContext }) => {
     const r = await authedContext.request.post(SAVE, { data: { generationId: s6.ZERO_UUID } });
     expect(r.status()).toBe(404);
+    expect((await r.json()).retryable).toBe(false);
   });
 
   test('save: not-yet-rendered audio is a conflict (409)', async ({ authedContext, testUser }) => {
@@ -170,6 +175,7 @@ test.describe('Step 6 — message endpoints', () => {
     });
     const r = await authedContext.request.post(SAVE, { data: { generationId: gen } });
     expect(r.status()).toBe(409);
+    expect((await r.json()).retryable).toBe(false);
   });
 
   test('save: lapsed subscription blocks save (403 subscription_lapsed)', async ({ authedContext, testUser }) => {
@@ -183,7 +189,9 @@ test.describe('Step 6 — message endpoints', () => {
     });
     const r = await authedContext.request.post(SAVE, { data: { generationId: gen } });
     expect(r.status()).toBe(403);
-    expect((await r.json()).code).toBe('subscription_lapsed');
+    const body = await r.json();
+    expect(body.code).toBe('subscription_lapsed');
+    expect(body.retryable).toBe(false);
   });
 
   test('save: at the vault cap blocks save (403 vault_limit_reached)', async ({ authedContext, testUser }) => {

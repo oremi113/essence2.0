@@ -56,7 +56,7 @@ export const POST = defineRoute(
     // Nothing to commit — no candidate is being previewed.
     if (!gen.candidate_text || !gen.candidate_template_variant) {
       return NextResponse.json(
-        { error: "No candidate to commit.", code: ErrorCode.VALIDATION_ERROR },
+        { error: "No candidate to commit.", code: ErrorCode.VALIDATION_ERROR, retryable: false },
         { status: 409 },
       );
     }

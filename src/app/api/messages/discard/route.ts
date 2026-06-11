@@ -43,7 +43,7 @@ export const POST = defineRoute(
     // Don't let discard destroy a row that was already promoted to a message.
     if (gen.saved_message_id) {
       return NextResponse.json(
-        { error: "Message already saved; cannot discard.", code: ErrorCode.VALIDATION_ERROR },
+        { error: "Message already saved; cannot discard.", code: ErrorCode.VALIDATION_ERROR, retryable: false },
         { status: 409 },
       );
     }

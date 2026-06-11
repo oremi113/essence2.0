@@ -54,7 +54,7 @@ export const POST = defineRoute(
 
     if (!gen) {
       return NextResponse.json(
-        { error: "Generation not found", code: ErrorCode.VALIDATION_ERROR },
+        { error: "Generation not found", code: ErrorCode.VALIDATION_ERROR, retryable: false },
         { status: 404 },
       );
     }
@@ -81,7 +81,7 @@ export const POST = defineRoute(
     // --- Preconditions: audio must be ready ---------------------------------
     if (gen.audio_status !== "succeeded" || !gen.audio_path || !gen.generated_text) {
       return NextResponse.json(
-        { error: "Message is not ready to save yet.", code: ErrorCode.VALIDATION_ERROR },
+        { error: "Message is not ready to save yet.", code: ErrorCode.VALIDATION_ERROR, retryable: false },
         { status: 409 },
       );
     }
@@ -90,7 +90,7 @@ export const POST = defineRoute(
     const subscription = await getSubscriptionStatus(user.id);
     if (!SAVE_ALLOWED_STATUSES.has(subscription.status)) {
       return NextResponse.json(
-        { error: "Your subscription is not active.", code: "subscription_lapsed" },
+        { error: "Your subscription is not active.", code: "subscription_lapsed", retryable: false },
         { status: 403 },
       );
     }

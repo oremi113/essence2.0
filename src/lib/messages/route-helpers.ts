@@ -48,7 +48,7 @@ export function pendingNotFoundResponse(
   message = "Generation not found or no longer active",
 ): NextResponse {
   return NextResponse.json(
-    { error: message, code: ErrorCode.VALIDATION_ERROR },
+    { error: message, code: ErrorCode.VALIDATION_ERROR, retryable: false },
     { status: 404 },
   );
 }
@@ -75,7 +75,7 @@ export async function loadReadyVoiceProfile(
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "Voice profile is not ready.", code: ErrorCode.VOICE_NOT_READY },
+        { error: "Voice profile is not ready.", code: ErrorCode.VOICE_NOT_READY, retryable: false },
         { status: 400 },
       ),
     };

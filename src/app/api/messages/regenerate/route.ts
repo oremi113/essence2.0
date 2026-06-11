@@ -87,7 +87,7 @@ export const POST = defineRoute(
     if (mode === "retry_audio") {
       if (!gen.generated_text) {
         return NextResponse.json(
-          { error: "No generated text to retry audio for.", code: ErrorCode.VALIDATION_ERROR },
+          { error: "No generated text to retry audio for.", code: ErrorCode.VALIDATION_ERROR, retryable: false },
           { status: 409 },
         );
       }
