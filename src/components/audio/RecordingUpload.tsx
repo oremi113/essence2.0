@@ -92,7 +92,7 @@ export function RecordingUpload({
     resolvedVariantKeys?: Record<string, string | undefined>;
   };
 
-  const { upload: uploadPipeline } = useUploadPipeline<TrainingClipMeta, { ok?: boolean }>({
+  const { upload: uploadPipeline, reset: resetPipeline } = useUploadPipeline<TrainingClipMeta, { ok?: boolean }>({
     initEndpoint: "/api/audio/init-upload",
     commitEndpoint: "/api/audio/commit",
     buildInitBody: (meta) => ({
@@ -236,8 +236,13 @@ export function RecordingUpload({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       setStatus("error");
+      // Clear the pipeline's terminal 'failed'/'cancelled' status so a future
+      // status consumer (retry UI, progress bar) doesn't observe stale state
+      // between attempts. This component drives its own `status`, so the hook's
+      // is otherwise never reset until the next upload() call.
+      resetPipeline();
     }
-  }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady, uploadPipeline]);
+  }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady, uploadPipeline, resetPipeline]);
 
   // Expose imperative handle so a parent (e.g. PromptView) can drive
   // recording from its own custom button without reaching into our DOM.
