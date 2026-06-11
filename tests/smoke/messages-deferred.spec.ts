@@ -41,10 +41,13 @@ test.describe('Step 6 — Deferred Audio (flag on)', () => {
     const b = await r.json();
     expect(b.candidate).toBe(true);
     expect(b.textRerollCount).toBe(1);
+    // The response carries the new draft's words so the UI can render it (#2).
+    expect(b.candidateText).toBeTruthy();
 
     const row = await s6.getPending(gen);
     // A candidate now exists...
     expect(row!.candidate_text).toBeTruthy();
+    expect(b.candidateText).toBe(row!.candidate_text); // response matches what was persisted
     expect(row!.candidate_template_variant).toBeTruthy();
     expect(row!.text_reroll_count).toBe(1);
     // ...and the committed take is untouched (no render happened).

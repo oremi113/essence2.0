@@ -179,6 +179,7 @@ export const POST = defineRoute(
       return NextResponse.json({
         generationId,
         candidate: true,
+        candidateText: candidateText.text,
         textRerollCount: nextReroll,
         audioRenderCount: gen.audio_render_count,
       });

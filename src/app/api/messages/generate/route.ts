@@ -32,7 +32,6 @@ import {
   costLimitBlocked,
   countActivePending,
   countGenerationsThisHour,
-  isDeferredAudioEnabled,
 } from "@/lib/messages/cost-controls";
 
 export const maxDuration = 120; // 2 min — LLM insert + TTS + upload
@@ -179,8 +178,11 @@ export const POST = defineRoute(
         text_status: "pending",
         audio_status: "pending",
         regenerate_count: 0,
-        // Deferred Audio: the first listen consumes one render allowance.
-        audio_render_count: isDeferredAudioEnabled() ? 1 : 0,
+        // Deferred Audio: the first listen is FREE. audio_render_count counts
+        // committed re-recordings only (cap 3), so the dots read as 3 commits
+        // available at first listen (prototype d1) and the amendment's
+        // "3 committed renders" (§5.2). Defaults to 0.
+        audio_render_count: 0,
         edit_note_depth: editNoteDepth,
         source_generation_id: priorGenerationId,
       })
