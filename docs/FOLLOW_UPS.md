@@ -265,3 +265,12 @@ Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_g
 **Fix shape:** a tiny server action to null out `candidate_text` / `candidate_template_variant` for the generation — either a `mode: "keep"` on `/regenerate`, or fold it into A6's page hydrate. Cheap; pair it with the A6 build so the client wiring and the server clear land together.
 
 **Pick up when:** building A6 (the screen that owns the candidate-vs-committed UI), since that's where "Keep the current one" is wired.
+
+## RecordingUpload clips-list fetch (from FU-1 refactor, 2026-06-11)
+
+### 32. Clips-list effect uses synchronous-setState-in-effect (eslint-disabled)
+`src/components/audio/RecordingUpload.tsx` — the `voiceProfileId`-keyed clips-list data fetch resets list/loading/error state synchronously in the effect body (the conventional pre-fetch pattern). This trips `react-hooks/set-state-in-effect`. It was previously masked: the auto-advance block's ref-during-render code (FU-1) tripped `react-hooks/refs` *first*, so the analyzer never reached this effect. Removing those disables in the FU-1 refactor unmasked it; worked around with a block-level `eslint-disable react-hooks/set-state-in-effect` around the effect.
+
+**Why it's harmless today:** the synchronous resets run once per `voiceProfileId` change, so the cascading-render the rule guards against doesn't materialize.
+**Fix shape:** migrate the clips list to a data-fetching library (SWR / TanStack Query) or a `key`-based remount so loading/empty state is derived rather than synced via effect — removes the need for the disable. The same pattern likely recurs in other inline `fetch`-in-effect lists.
+**Pick up when:** a data-fetching-library adoption pass, or the next time this component's clips list is touched.
