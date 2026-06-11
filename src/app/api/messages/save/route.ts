@@ -13,6 +13,7 @@
  * on an already-saved message returns it even at the cap.
  */
 import { randomUUID } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
@@ -204,8 +205,7 @@ export const POST = defineRoute(
  * recipient id, or null on insert failure.
  */
 async function promoteRecipient(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
+  supabase: SupabaseClient,
   userId: string,
   name: string,
   relationship: string | null,
