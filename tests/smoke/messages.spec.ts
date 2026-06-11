@@ -108,6 +108,52 @@ test.describe('Step 6 — message endpoints', () => {
     expect(r.status()).toBe(404);
   });
 
+  test('regenerate: keep clears the un-heard candidate, keeps the committed take', async ({ authedContext, testUser }) => {
+    const vp = await s6.seedReadyVoiceProfile(testUser.id);
+    const gen = await s6.seedPending(testUser.id, vp, {
+      text_status: 'succeeded',
+      generated_text: 'the committed take',
+      template_variant: 'birthday_generic_01',
+      audio_status: 'succeeded',
+      audio_path: 'x',
+      // an un-heard candidate from a prior "Try another"
+      candidate_text: 'a candidate the user did not hear',
+      candidate_template_variant: 'birthday_generic_02',
+      text_reroll_count: 1,
+    });
+
+    const r = await authedContext.request.post(REGEN, { data: { generationId: gen, mode: 'keep' } });
+    expect(r.status()).toBe(200);
+    expect(await r.json()).toMatchObject({ generationId: gen, candidate: false });
+
+    const row = await s6.getPending(gen);
+    // candidate cleared...
+    expect(row?.candidate_text).toBeNull();
+    expect(row?.candidate_template_variant).toBeNull();
+    // ...committed take untouched, nothing spent.
+    expect(row?.generated_text).toBe('the committed take');
+    expect(row?.template_variant).toBe('birthday_generic_01');
+    expect(row?.audio_path).toBe('x');
+    expect(row?.text_reroll_count).toBe(1);
+    expect(row?.audio_render_count).toBe(0);
+  });
+
+  test('regenerate: keep is an idempotent no-op when no candidate is present', async ({ authedContext, testUser }) => {
+    const vp = await s6.seedReadyVoiceProfile(testUser.id);
+    const gen = await s6.seedPending(testUser.id, vp, {
+      text_status: 'succeeded',
+      generated_text: 'hi',
+      audio_status: 'succeeded',
+      audio_path: 'x',
+    });
+    const r = await authedContext.request.post(REGEN, { data: { generationId: gen, mode: 'keep' } });
+    expect(r.status()).toBe(200);
+    expect(await r.json()).toMatchObject({ generationId: gen, candidate: false });
+    const row = await s6.getPending(gen);
+    expect(row?.candidate_text).toBeNull();
+    expect(row?.generated_text).toBe('hi');
+  });
+
   // ----- save --------------------------------------------------------------
 
   test('save: unknown generation → 404', async ({ authedContext }) => {

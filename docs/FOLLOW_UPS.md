@@ -257,7 +257,9 @@ After fixing the CLI's database connection (added `SUPABASE_DB_PASSWORD` to `.en
 
 ## Deferred Audio — "Keep the current one" candidate clear (from Session 8, 2026-06-10)
 
-### 31. "Keep the current one" doesn't clear the candidate server-side
+### 31. "Keep the current one" doesn't clear the candidate server-side — ✅ RESOLVED 2026-06-11
+**Resolved by** a `mode: "keep"` on `POST /api/messages/regenerate` that nulls `candidate_text` / `candidate_template_variant` for the generation (no LLM, no TTS, no voice-profile dependency — runs before the profile check). Idempotent: a no-op when no candidate is present, so a redundant call or a refresh-then-keep is safe. Emits a `step6_candidate_kept` server log (see `docs/analytics/2026-06-11-step6-candidate-kept.md`). Covered by two smoke tests in `tests/smoke/messages.spec.ts` (clears a present candidate while leaving the committed take + counts untouched; idempotent no-op with no candidate). The A6 client still needs to call `mode: "keep"` when wiring the "Keep the current one" button — the server half is now in place so the client wiring and durable clear can land together. Original entry below.
+
 Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_generations.candidate_text` / `candidate_template_variant`. The A6 "Keep the current one" action (discard the un-heard candidate, return to the committed take) is currently client-only — it stops showing the candidate, but the row's `candidate_*` columns linger until the next `/regenerate` overwrites them, `/commit` promotes them, or `/discard` deletes the row.
 
 **Impact:** low and not user-visible in the happy path. The lingering candidate is never saved (`/save` reads the committed fields only) and never auto-committed. The one rough edge is **resumability**: if the user taps "Keep the current one" and then refreshes, a server-side rehydrate would surface the stale candidate again, contradicting their choice.

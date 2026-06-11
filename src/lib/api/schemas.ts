@@ -176,14 +176,16 @@ export type MessageGenerateBody = z.infer<typeof messageGenerateSchema>;
 /**
  * POST /api/messages/regenerate — re-roll within an existing generation.
  * `variant` is the user "Regenerate" (new template variant); `retry_audio` is
- * the system retry after an audio-only failure (cached text, same variant).
+ * the system retry after an audio-only failure (cached text, same variant);
+ * `keep` is Deferred-Audio "Keep the current one" — discard the un-heard
+ * candidate and return to the committed take (no LLM, no TTS).
  */
 export const messageRegenerateSchema = z
   .object({
     generationId: z
       .string({ error: "generationId is required" })
       .uuid({ message: "generationId must be a UUID" }),
-    mode: z.enum(["variant", "retry_audio"]).default("variant"),
+    mode: z.enum(["variant", "retry_audio", "keep"]).default("variant"),
   })
   .loose();
 

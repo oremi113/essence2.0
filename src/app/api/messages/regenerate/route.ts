@@ -60,6 +60,29 @@ export const POST = defineRoute(
       );
     }
 
+    // --- keep: discard the un-heard candidate, keep the committed take ------
+    // Deferred-Audio "Keep the current one" (A6). Nulls the candidate_*
+    // columns so a later server-side rehydrate doesn't resurface a candidate
+    // the user already dismissed. Spends nothing — no voice profile needed, no
+    // LLM, no TTS — so it runs before the profile check below. Idempotent: a
+    // no-op when no candidate is present.
+    if (mode === "keep") {
+      await supabase
+        .from("pending_generations")
+        .update({ candidate_text: null, candidate_template_variant: null })
+        .eq("generation_id", generationId)
+        .eq("user_id", user.id);
+      logEvent({
+        event: "step6_candidate_kept",
+        requestId,
+        userId: user.id,
+        outcome: "success",
+        durationMs: durationSince(startMs),
+        meta: { generationId },
+      });
+      return NextResponse.json({ generationId, candidate: false });
+    }
+
     // Voice id for TTS (also confirms the profile is still usable).
     const { data: profile } = await supabase
       .from("voice_profiles")
