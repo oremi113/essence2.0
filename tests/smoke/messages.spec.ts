@@ -242,4 +242,41 @@ test.describe('Step 6 — message endpoints', () => {
     expect(r.status()).toBe(200);
     expect((await r.json()).status).toBe('discarded');
   });
+
+  // ----- pending-audio playback ------------------------------------------
+
+  test('play: returns a signed URL for a ready pending generation', async ({ authedContext, testUser }) => {
+    const vp = await s6.seedReadyVoiceProfile(testUser.id);
+    const gen = await s6.seedPending(testUser.id, vp, { audio_status: 'succeeded' });
+    await s6.seedPendingAudioObject(testUser.id, gen); // real object at the pending path
+    const r = await authedContext.request.get(`/api/messages/generations/${gen}/play`);
+    expect(r.status()).toBe(200);
+    const b = await r.json();
+    expect(b.url).toBeTruthy();
+    expect(b.expiresIn).toBeGreaterThan(0);
+  });
+
+  test('play: audio not yet rendered → 400', async ({ authedContext, testUser }) => {
+    const vp = await s6.seedReadyVoiceProfile(testUser.id);
+    const gen = await s6.seedPending(testUser.id, vp, { audio_status: 'pending' });
+    const r = await authedContext.request.get(`/api/messages/generations/${gen}/play`);
+    expect(r.status()).toBe(400);
+  });
+
+  test('play: unknown generation → 404', async ({ authedContext }) => {
+    const r = await authedContext.request.get(`/api/messages/generations/${s6.ZERO_UUID}/play`);
+    expect(r.status()).toBe(404);
+  });
+
+  test('play: an already-saved generation → 409', async ({ authedContext, testUser }) => {
+    const vp = await s6.seedReadyVoiceProfile(testUser.id);
+    const messageId = await s6.seedSavedMessage(testUser.id, vp);
+    const gen = await s6.seedPending(testUser.id, vp, {
+      audio_status: 'succeeded',
+      audio_path: `users/${testUser.id}/pending/x.mp3`,
+      saved_message_id: messageId,
+    });
+    const r = await authedContext.request.get(`/api/messages/generations/${gen}/play`);
+    expect(r.status()).toBe(409);
+  });
 });
