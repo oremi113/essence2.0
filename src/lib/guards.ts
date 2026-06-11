@@ -119,19 +119,16 @@ export async function assertCanStartVoiceCreation(
 // ---------------------------------------------------------------------------
 
 /**
- * Pre-conditions for clip upload:
- * 1. Voice profile exists and is owned by user
- * 2. Clips-per-profile cap not exceeded
- * 3. Plan allows (stub)
+ * Assert a voice profile exists and is owned by `userId`. Throws
+ * VOICE_NOT_FOUND (404) otherwise. Selects only `id`; callers that also need
+ * profile columns should query separately. Shared by the clip-upload guard and
+ * the training-clips list route, which previously duplicated this check inline.
  */
-export async function assertCanUploadClip(
+export async function assertOwnsVoiceProfile(
   supabase: SupabaseClient,
   userId: string,
   voiceProfileId: string
 ): Promise<void> {
-  await assertPlanAllows(userId, "clip_upload");
-
-  // Ownership check
   const { data: profile, error } = await supabase
     .from("voice_profiles")
     .select("id")
@@ -147,6 +144,22 @@ export async function assertCanUploadClip(
       false
     );
   }
+}
+
+/**
+ * Pre-conditions for clip upload:
+ * 1. Voice profile exists and is owned by user
+ * 2. Clips-per-profile cap not exceeded
+ * 3. Plan allows (stub)
+ */
+export async function assertCanUploadClip(
+  supabase: SupabaseClient,
+  userId: string,
+  voiceProfileId: string
+): Promise<void> {
+  await assertPlanAllows(userId, "clip_upload");
+
+  await assertOwnsVoiceProfile(supabase, userId, voiceProfileId);
 
   // Clip cap (uses training_clips table directly)
   const limit = await checkClipUploadLimit(supabase, voiceProfileId);
