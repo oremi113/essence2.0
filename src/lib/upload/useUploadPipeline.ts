@@ -14,7 +14,24 @@ export type UploadStatus =
   | "uploading"
   | "committing"
   | "succeeded"
+  | "cancelled"
   | "failed";
+
+/**
+ * True when a rejection was caused by an AbortController.abort() — i.e. a
+ * user-initiated cancel rather than a real failure. Robust to the rejection
+ * being a DOMException (native fetch) or a plain Error with name set
+ * (test mocks): both expose `name === "AbortError"`, neither is reliably an
+ * `instanceof Error` across environments.
+ */
+function isAbortError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "name" in err &&
+    (err as { name?: unknown }).name === "AbortError"
+  );
+}
 
 export interface InitResponse {
   id: string;
@@ -152,10 +169,21 @@ export function useUploadPipeline<
         abortRef.current = null;
         return { init, commit: commitJson };
       } catch (err) {
+        abortRef.current = null;
+        // A cancel()-triggered AbortError is user-initiated, not a failure.
+        // Land in a distinct terminal state with no error message so
+        // consumers (retry UI, dashboards) don't treat a deliberate cancel
+        // like a real upload failure. Still re-throw so awaiting callers can
+        // branch on err.name if they need to.
+        if (isAbortError(err)) {
+          setError(null);
+          setStatus("cancelled");
+          onStageChange?.("cancelled");
+          throw err;
+        }
         setError(err instanceof Error ? err.message : "Upload failed");
         setStatus("failed");
         onStageChange?.("failed");
-        abortRef.current = null;
         throw err;
       }
     },

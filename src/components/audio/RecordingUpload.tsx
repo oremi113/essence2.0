@@ -92,7 +92,7 @@ export function RecordingUpload({
     resolvedVariantKeys?: Record<string, string | undefined>;
   };
 
-  const { upload: uploadPipeline } = useUploadPipeline<TrainingClipMeta, { ok?: boolean }>({
+  const { upload: uploadPipeline, reset: resetPipeline } = useUploadPipeline<TrainingClipMeta, { ok?: boolean }>({
     initEndpoint: "/api/audio/init-upload",
     commitEndpoint: "/api/audio/commit",
     buildInitBody: (meta) => ({
@@ -113,15 +113,15 @@ export function RecordingUpload({
     onStatusChange?.(status);
   }, [status, onStatusChange]);
 
-  // Reset recording state when promptIndex changes (auto-advance).
-  // Previous-value ref pattern during render is intentional; out of scope
-  // for this refactor to restructure, and the lint rule only activates
-  // now because the simplified upload call lets the analyzer run.
-  const prevPromptRef = useRef(promptIndex);
-  // eslint-disable-next-line react-hooks/refs
-  if (prevPromptRef.current !== promptIndex) {
-    // eslint-disable-next-line react-hooks/refs
-    prevPromptRef.current = promptIndex;
+  // Auto-advance: when the prompt changes, clear a settled (ready/error) clip
+  // so the new prompt starts fresh — but never interrupt an in-flight
+  // recording/upload. Uses React's "adjust state during render on a prop
+  // change" pattern (https://react.dev/reference/react/useState) rather than
+  // an effect, so the reset is synchronous with the prompt change and never
+  // flashes the previous clip's UI for a frame.
+  const [seenPromptIndex, setSeenPromptIndex] = useState(promptIndex);
+  if (promptIndex !== seenPromptIndex) {
+    setSeenPromptIndex(promptIndex);
     if (status === "ready" || status === "error") {
       setStatus("idle");
       setClipId(null);
@@ -129,11 +129,25 @@ export function RecordingUpload({
       setPlaybackUnavailable(false);
       setError(null);
       setRecordingSeconds(0);
-      // eslint-disable-next-line react-hooks/refs
-      playbackRetriedRef.current = false;
     }
   }
 
+  // No playback retry can be in flight while there is no active clip. Keep the
+  // guard ref in sync here so the auto-advance reset above doesn't have to
+  // write a ref during render (which the previous-value pattern did, tripping
+  // react-hooks/refs). Covers auto-advance and Record-again — both null clipId.
+  useEffect(() => {
+    if (clipId === null) playbackRetriedRef.current = false;
+  }, [clipId]);
+
+  // Clips-list data fetch keyed on voiceProfileId. The synchronous loading/
+  // reset setState calls below are the conventional pre-fetch pattern; the
+  // cascading-render concern react-hooks/set-state-in-effect flags doesn't
+  // bite here (runs once per voiceProfileId change). Surfaced only after FU-1
+  // removed the upstream ref-during-render disables, letting the analyzer
+  // reach this effect — tracked as FOLLOW_UPS #32 (migrate to a data-fetching
+  // library or key-based remount, which removes the need for this disable).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!voiceProfileId) {
       setClips([]);
@@ -163,6 +177,7 @@ export function RecordingUpload({
       });
     return () => { cancelled = true; };
   }, [voiceProfileId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const startRecording = useCallback(async () => {
     setError(null);
@@ -236,8 +251,13 @@ export function RecordingUpload({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       setStatus("error");
+      // Clear the pipeline's terminal 'failed'/'cancelled' status so a future
+      // status consumer (retry UI, progress bar) doesn't observe stale state
+      // between attempts. This component drives its own `status`, so the hook's
+      // is otherwise never reset until the next upload() call.
+      resetPipeline();
     }
-  }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady, uploadPipeline]);
+  }, [status, voiceProfileId, promptIndex, resolvedVariantKeys, onReady, uploadPipeline, resetPipeline]);
 
   // Expose imperative handle so a parent (e.g. PromptView) can drive
   // recording from its own custom button without reaching into our DOM.

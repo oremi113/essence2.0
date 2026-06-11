@@ -18,20 +18,18 @@
  * Pattern reference: src/lib/voice-training/script.ts
  */
 
+import type { Database } from '@/lib/supabase/types';
+
 // ---------- Types ----------
 
 /**
- * Mirrors the public.message_category Postgres enum.
- * Keep in sync with supabase/migrations/20260421120000_messages_category.sql.
+ * The seven launch categories. Sourced from the generated Supabase types so it
+ * stays in lockstep with the public.message_category Postgres enum — if a
+ * migration adds a value, regenerating types updates this automatically, with
+ * no hand-maintained union to drift. See
+ * supabase/migrations/20260421120000_messages_category.sql.
  */
-export type MessageCategory =
-  | 'birthday'
-  | 'encouragement'
-  | 'daily_reminder'
-  | 'future_message'
-  | 'comfort'
-  | 'holiday'
-  | 'checking_in';
+export type MessageCategory = Database['public']['Enums']['message_category'];
 
 export type RelationshipKey =
   | 'daughter'

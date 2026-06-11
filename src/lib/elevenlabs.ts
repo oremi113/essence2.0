@@ -118,11 +118,21 @@ export async function createVoiceFromClips(
 // Text-to-Speech (Phase 6)
 // ---------------------------------------------------------------------------
 
+/** Per-category ElevenLabs voice tuning (mirrors messageTemplates VoiceSettings). */
+export type SpeechVoiceSettings = {
+  stability: number;
+  similarity: number;
+  style: number;
+  useSpeakerBoost: boolean;
+};
+
 export type GenerateSpeechParams = {
   /** ElevenLabs voice id (vendor_voice_id from voice_profiles). */
   voiceId: string;
   /** Text to speak. */
   text: string;
+  /** Optional per-category voice tuning. Omitted → ElevenLabs defaults. */
+  voiceSettings?: SpeechVoiceSettings;
 };
 
 export type GenerateSpeechResult =
@@ -136,7 +146,7 @@ export type GenerateSpeechResult =
 export async function generateSpeech(
   params: GenerateSpeechParams
 ): Promise<GenerateSpeechResult> {
-  const { voiceId, text } = params;
+  const { voiceId, text, voiceSettings } = params;
   if (!voiceId?.trim()) {
     return { ok: false, status: 400, message: "Voice ID is required" };
   }
@@ -160,6 +170,14 @@ export async function generateSpeech(
         body: JSON.stringify({
           text: text.trim(),
           model_id: TTS_MODEL_ID,
+          ...(voiceSettings && {
+            voice_settings: {
+              stability: voiceSettings.stability,
+              similarity_boost: voiceSettings.similarity,
+              style: voiceSettings.style,
+              use_speaker_boost: voiceSettings.useSpeakerBoost,
+            },
+          }),
         }),
         signal: controller.signal,
       }

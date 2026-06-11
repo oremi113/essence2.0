@@ -211,3 +211,70 @@ This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced b
 4. Add a CI check (or a pre-commit hook) that regenerates types and fails if `src/lib/supabase/types.ts` would change — catches drift before merge.
 
 **Pick up when:** next time the CLI auth needs to work for a separate reason (migration repair, local Supabase spin-up), or when a second DB enum union is about to be hand-written — whichever comes first. Not blocking Session 8; the hand-written `MessageCategory` is type-safe within the codebase, it just can't catch schema-drift.
+
+## Step 6 message generation endpoints (from Session 8 Step 6 build)
+
+### 27. Per-category voice settings not wired into TTS — ✅ RESOLVED 2026-06-10
+**Resolved by** commit `e16cda1` (feat(messages): apply per-category voice settings to TTS). `GenerateSpeechParams` now takes an optional `voiceSettings` and forwards it as `voice_settings` (stability / similarity_boost / style / use_speaker_boost) in the ElevenLabs request body, omitted-defaults preserved for callers that don't pass it. All three render paths forward `getCategoryVoiceSettings(category)`: `/api/messages/generate`, `/api/messages/regenerate` (both the `retry_audio` and control arms), and `/api/messages/commit` — the latter two via `generateAndStoreAudio` in `src/lib/messages/audio.ts`. Verified 2026-06-11 during the safe-refactor batch. Original entry below.
+
+`src/lib/elevenlabs.ts` `generateSpeech()` accepts only `{ voiceId, text }` — it does not send ElevenLabs voice settings. `src/lib/messageTemplates.ts` defines tuned `voiceSettings` per category (stability/similarity/style/speakerBoost, e.g. comfort is steadier, birthday more expressive), but `/api/messages/generate` and `/regenerate` call `generateSpeech` without them, so every category renders with ElevenLabs defaults.
+
+**Why it matters:** the emotional register tuning (MASTER_SPEC Ch. 8) is the point of per-category voice settings — losing it flattens comfort/birthday/etc. to one delivery.
+**Fix shape:** extend `GenerateSpeechParams` with an optional `voiceSettings` and forward it in the TTS request body (`voice_settings`); pass `getCategoryVoiceSettings(category)` from both generation routes. Keep defaults when omitted so existing callers (`/api/messages` POST) are unaffected.
+**Pick up when:** first voice-quality pass on Step 6 audio, or when tuning ElevenLabs output.
+
+### 28. Pending audio lives in `essence-audio`, not the contract's `messages` bucket
+`src/lib/audio/storage-paths.ts` `pendingGenerationAudioPath()` writes pending Step 6 audio to `essence-audio` under a `users/{userId}/pending/` prefix. The API contract (`docs/API_CONTRACTS.md`) and the `pending_generations` migration comment describe the path as `messages/{userId}/pending/{generationId}.mp3` — implying a separate `messages` bucket.
+
+**Why the deviation:** provisioning a second storage bucket is infra (Supabase dashboard) with its own RLS; reusing the existing `essence-audio` bucket keeps one RLS surface and one set of path helpers. The copy-then-delete Save promotion (Q5) is unchanged — pending and permanent paths are still distinct and deterministic.
+**Fix shape:** either (a) ratify the `essence-audio` + `pending/` prefix as the real contract via a one-line decision memo and update `docs/API_CONTRACTS.md` wording, or (b) provision a dedicated `messages` bucket with matching RLS and repoint `pendingGenerationAudioPath` + `messageAudioObjectPath`.
+**Pick up when:** the API contract doc gets its next pass, or before Step 6 ships to production storage.
+
+### 29. Step 6 endpoints have no route-level integration tests — ✅ RESOLVED 2026-06-10
+**Resolved by** `tests/smoke/messages.spec.ts` + `tests/smoke/fixtures/step6.ts`: 18 smoke tests against the real server + real database (no mocks) covering every gate, all three cost caps, save 404/409/403 paths, the full happy-save pipeline (recipient promotion + audio copy + immutable message insert), idempotency, and discard — zero vendor spend (paths return before the render, or copy a seeded fake audio object). The full `/generate` → real-ElevenLabs render remains a separate manual check (noted in `Step6_Status.md`). The two initial red tests turned out to be test-expectation bugs, not route bugs, and surfaced two correct behaviors worth recording: `defineRoute` validates the body before auth (so an unauth call with an invalid body returns 400, not 401), and the `dedup` gate 429s a rapid double-`/save` while the DB-level unique `source_generation_id` handles delayed retries. Original entry below.
+
+`/api/messages/{generate,regenerate,save,discard}` are covered only at the pure-logic layer (`tests/unit/step6-generation.test.ts`) and the telemetry wrapper (`tests/unit/step6-analytics.test.ts`). The handlers themselves — recipient-branch validation, edit-note lineage + supersede, cost-control 429s, Save idempotency (unique `source_generation_id`), recipient promotion, audio copy-then-delete — are untested.
+
+**Why deferred:** route tests need Supabase + ElevenLabs + Anthropic mocking harnesses that don't exist in this repo yet.
+**Fix shape:** add a route-handler test harness (mock `createSupabaseServerClient`/`service`, `generateSpeech`, `generateInsert`) and cover: dual-recipient-branch rejection, edit_note_depth/regenerate_cap/pending_max/hourly_max 429s, Save idempotency double-tap, vault_limit_reached at cap, discard of an already-saved row (409).
+**Pick up when:** before Step 6 production ship, or when the first route bug surfaces.
+
+## Supabase migration history reconciliation (from Session 8, 2026-06-10)
+
+### 30. `db push` blocked by version-collision in early migration history
+After fixing the CLI's database connection (added `SUPABASE_DB_PASSWORD` to `.env.local`, which cleared the `cli_login_postgres` permission error), `supabase db push --dry-run` reports: *"Remote migration versions not found in local migrations directory"* and suggests `supabase migration repair --status reverted 20260421` / `supabase db pull`.
+
+**Root cause:** several early migration files use short, non-unique version stubs — e.g. three `20260214*` files all parse to version `20260214`, two `20260412*` files to `20260412`, and `20260421_add_failed_attempt_count.sql` to `20260421`. The remote `supabase_migrations.schema_migrations` table (whose `version` is a primary key) can't hold one row per file when versions collide, so the CLI sees the same version as both "local-only" and "remote-only" and refuses to push. The *schema itself is correct* (verified via `gen types` — all expected tables/columns/enums exist); this is purely a bookkeeping mismatch in the migration-history table.
+
+**Why not fix reactively:** the CLI's suggested `migration repair --status reverted <version>` marks a version as un-applied, which would make `db push` try to RE-RUN an already-applied migration (e.g. re-add `failed_attempt_count`) and error (`column already exists`). Reconciliation needs care, not a one-liner.
+
+**Impact:** low. New migrations are applied reliably via the Dashboard SQL Editor bundle (the method used to apply the 4 Step-6 migrations on 2026-06-10). `db push` is just not usable until history is reconciled. Type generation (`--project-id`) and direct-DB reads work fine.
+
+**Fix shape (do in a dedicated, calm pass — not mid-feature):**
+1. Inspect `supabase_migrations.schema_migrations` contents on remote (Dashboard SQL Editor: `select version, name from supabase_migrations.schema_migrations order by version;`).
+2. Decide a strategy: either (a) rename the colliding local migration files to unique full timestamps and re-record matching history rows, or (b) `migration repair --status applied <version>` for each version that's actually applied but recorded inconsistently — verifying against the live schema before each repair so nothing gets marked for re-run.
+3. Confirm with `db push --dry-run` showing a clean "up to date" before trusting `db push`.
+
+**Pick up when:** before relying on `db push` in CI/automation, or the next time migration history needs to be authoritative. Until then, Dashboard bundle is the path. Supersedes the CLI-auth half of #26 (auth itself is fixed).
+
+## Deferred Audio — "Keep the current one" candidate clear (from Session 8, 2026-06-10)
+
+### 31. "Keep the current one" doesn't clear the candidate server-side — ✅ RESOLVED 2026-06-11
+**Resolved by** a `mode: "keep"` on `POST /api/messages/regenerate` that nulls `candidate_text` / `candidate_template_variant` for the generation (no LLM, no TTS, no voice-profile dependency — runs before the profile check). Idempotent: a no-op when no candidate is present, so a redundant call or a refresh-then-keep is safe. Emits a `step6_candidate_kept` server log (see `docs/analytics/2026-06-11-step6-candidate-kept.md`). Covered by two smoke tests in `tests/smoke/messages.spec.ts` (clears a present candidate while leaving the committed take + counts untouched; idempotent no-op with no candidate). The A6 client still needs to call `mode: "keep"` when wiring the "Keep the current one" button — the server half is now in place so the client wiring and durable clear can land together. Original entry below.
+
+Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_generations.candidate_text` / `candidate_template_variant`. The A6 "Keep the current one" action (discard the un-heard candidate, return to the committed take) is currently client-only — it stops showing the candidate, but the row's `candidate_*` columns linger until the next `/regenerate` overwrites them, `/commit` promotes them, or `/discard` deletes the row.
+
+**Impact:** low and not user-visible in the happy path. The lingering candidate is never saved (`/save` reads the committed fields only) and never auto-committed. The one rough edge is **resumability**: if the user taps "Keep the current one" and then refreshes, a server-side rehydrate would surface the stale candidate again, contradicting their choice.
+
+**Fix shape:** a tiny server action to null out `candidate_text` / `candidate_template_variant` for the generation — either a `mode: "keep"` on `/regenerate`, or fold it into A6's page hydrate. Cheap; pair it with the A6 build so the client wiring and the server clear land together.
+
+**Pick up when:** building A6 (the screen that owns the candidate-vs-committed UI), since that's where "Keep the current one" is wired.
+
+## RecordingUpload clips-list fetch (from FU-1 refactor, 2026-06-11)
+
+### 32. Clips-list effect uses synchronous-setState-in-effect (eslint-disabled)
+`src/components/audio/RecordingUpload.tsx` — the `voiceProfileId`-keyed clips-list data fetch resets list/loading/error state synchronously in the effect body (the conventional pre-fetch pattern). This trips `react-hooks/set-state-in-effect`. It was previously masked: the auto-advance block's ref-during-render code (FU-1) tripped `react-hooks/refs` *first*, so the analyzer never reached this effect. Removing those disables in the FU-1 refactor unmasked it; worked around with a block-level `eslint-disable react-hooks/set-state-in-effect` around the effect.
+
+**Why it's harmless today:** the synchronous resets run once per `voiceProfileId` change, so the cascading-render the rule guards against doesn't materialize.
+**Fix shape:** migrate the clips list to a data-fetching library (SWR / TanStack Query) or a `key`-based remount so loading/empty state is derived rather than synced via effect — removes the need for the disable. The same pattern likely recurs in other inline `fetch`-in-effect lists.
+**Pick up when:** a data-fetching-library adoption pass, or the next time this component's clips list is touched.

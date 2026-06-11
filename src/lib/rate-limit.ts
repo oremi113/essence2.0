@@ -78,7 +78,7 @@ export type RateLimitResult =
  * Count usage_events for a user+action within a time window.
  * Uses the service client to bypass RLS (server-only).
  */
-async function countRecentEvents(
+export async function countRecentEvents(
   serviceClient: SupabaseClient,
   userId: string,
   action: string | string[],
