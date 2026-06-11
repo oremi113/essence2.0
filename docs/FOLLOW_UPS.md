@@ -278,3 +278,13 @@ Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_g
 **Why it's harmless today:** the synchronous resets run once per `voiceProfileId` change, so the cascading-render the rule guards against doesn't materialize.
 **Fix shape:** migrate the clips list to a data-fetching library (SWR / TanStack Query) or a `key`-based remount so loading/empty state is derived rather than synced via effect — removes the need for the disable. The same pattern likely recurs in other inline `fetch`-in-effect lists.
 **Pick up when:** a data-fetching-library adoption pass, or the next time this component's clips list is touched.
+
+## Step 6 message routes — error-response convention (from shared-helpers refactor, 2026-06-11)
+
+### 33. Simple error returns don't use the documented AppError convention
+`src/lib/errors.ts:3` states "All route handlers catch AppError and return `{ error, code, retryable }`," and `defineRoute` does catch `AppError` via `handleRouteError`. But the Step 6 routes (`generate`/`regenerate`/`commit`/`save`/`discard`) build their simple error responses inline with `return NextResponse.json({ error, code }, { status })` (~13 sites) instead of `throw new AppError(...)`. The partial-success responses that also carry `generationId` / `textStatus` / `audioStatus` / `committed` genuinely can't be AppErrors and must stay explicit.
+
+**Why not fixed in the shared-helpers refactor:** two non-clean options. (a) A new `errorResponse()` helper would be a *third* error-construction pattern competing with the AppError convention. (b) Converting the simple returns to `throw AppError` changes the wire format — `appErrorToJson` always emits `retryable`, so 404/409 bodies that currently omit it would gain `retryable: false`. That's an API-response change that wants a deliberate decision + a smoke-test sweep, not an incidental refactor.
+
+**Fix shape:** decide whether `retryable` should be present on all error bodies (it probably should, for client uniformity); if yes, convert the ~13 simple `NextResponse.json({error,code},…)` returns in the five routes to `throw new AppError(code, message, status, retryable)` and update any smoke assertions. Leave the partial-success responses as explicit returns.
+**Pick up when:** an API-envelope consistency pass, or before documenting the Step 6 error contract for clients.
