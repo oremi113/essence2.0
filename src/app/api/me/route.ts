@@ -11,25 +11,22 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 import { logEvent, logError, generateRequestId, withRequestId } from "@/lib/logger";
+import { defineRoute } from "@/lib/api/defineRoute";
 
-export async function GET() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = defineRoute({ auth: true }, async ({ user }) => {
   return NextResponse.json({
     id: user.id,
     email: user.email ?? undefined,
   });
-}
+});
 
 // ---------------------------------------------------------------------------
 // DELETE /api/me — Delete all user data (internal testing only)
+//
+// Stays a raw handler (not defineRoute): the triple gate (env flag, non-prod,
+// confirmation header) must run BEFORE auth so a disabled endpoint answers 403
+// "disabled" regardless of session. defineRoute always runs auth first, which
+// would leak a 401 ahead of the gate — a deliberate exception.
 // ---------------------------------------------------------------------------
 
 export async function DELETE(request: Request) {

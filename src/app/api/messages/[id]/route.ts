@@ -4,22 +4,13 @@
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { generateRequestId, logError } from "@/lib/logger";
+import { defineRoute } from "@/lib/api/defineRoute";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const requestId = generateRequestId();
-  try {
-    const { id } = await params;
+export const GET = defineRoute<true, { id: string }>(
+  { auth: true },
+  async ({ user, params }) => {
+    const { id } = params;
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { data: message, error } = await supabase
       .from("messages")
@@ -31,10 +22,7 @@ export async function GET(
       .single();
 
     if (error || !message) {
-      return NextResponse.json(
-        { error: "Message not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -49,8 +37,5 @@ export async function GET(
       createdAt: message.created_at,
       completedAt: message.generation_completed_at ?? undefined,
     });
-  } catch (err) {
-    logError({ event: "messages_get_error", requestId, route: "/api/messages/[id]", error: err });
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
-  }
-}
+  },
+);

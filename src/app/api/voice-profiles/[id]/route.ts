@@ -5,7 +5,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { isVoiceProfileRetryAllowed } from "@/lib/voice-training/backoff";
-import { generateRequestId, logError } from "@/lib/logger";
+import { defineRoute } from "@/lib/api/defineRoute";
 
 function isRetryAvailable(
   status: string,
@@ -16,20 +16,11 @@ function isRetryAvailable(
   return isVoiceProfileRetryAllowed(attemptCount, lastAttemptAt);
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const requestId = generateRequestId();
-  try {
-    const { id } = await params;
+export const GET = defineRoute<true, { id: string }>(
+  { auth: true },
+  async ({ user, params }) => {
+    const { id } = params;
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { data: profile, error } = await supabase
       .from("voice_profiles")
@@ -54,8 +45,5 @@ export async function GET(
       last_error_message: profile.last_error_message ?? undefined,
       retry_available: profile.status === "failed" ? retry_available : undefined,
     });
-  } catch (err) {
-    logError({ event: "voice_profile_get_error", requestId, route: "/api/voice-profiles/[id]", error: err });
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
-  }
-}
+  },
+);
