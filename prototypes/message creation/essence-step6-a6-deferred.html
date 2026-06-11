@@ -1,0 +1,2210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ESSENCE · Step 6 · A6 Deferred Audio · Preview &amp; Refine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ╔══════════════════════════════════════════════════════════════════════╗
+  ║  ESSENCE · STEP 6 · A6 — DEFERRED AUDIO VARIANT (Amendment A1)        ║
+  ║  Design memo for the production code architect.                       ║
+  ║  Sibling of essence-step6-a6.html (the control arm). The control      ║
+  ║  arm's foundation — tokens, frame, atmosphere, stone, player,         ║
+  ║  discard sheet, save states, reduced motion, entrance choreography —  ║
+  ║  is inherited VERBATIM (CSS extracted from the control file by        ║
+  ║  tooling, not retyped). This file re-composes that foundation around  ║
+  ║  the candidate state and the commit affordance.                       ║
+  ╠══════════════════════════════════════════════════════════════════════╣
+  ║                                                                        ║
+  ║  THE MODEL (A1, locked)                                                ║
+  ║  Text is free to explore; a recording is the thing you commit to.     ║
+  ║  3 voice recordings + 10 free text re-rolls per message. Dots =       ║
+  ║  recordings remaining. Save keeps the last take HEARD. Reshape        ║
+  ║  returns as a text candidate. No reveal beat on commit. Cap copy      ║
+  ║  points at recordings.                                                 ║
+  ║                                                                        ║
+  ║  MODE MAP (design lens)                                                ║
+  ║  Committed states are CEREMONIAL (control arm's register, untouched). ║
+  ║  The candidate state deliberately steps DOWN from ceremony into a     ║
+  ║  quiet reading register. The commit moment is TRANSACTIONAL: it       ║
+  ║  spends a scarce thing, so it inherits transactional discipline —     ║
+  ║  submitting state, double-tap prevention, explicit "nothing was       ║
+  ║  spent" on failure, draft preserved on failure.                       ║
+  ║                                                                        ║
+  ║  CANDIDATE vs COMMITTED (§7.1 resolution)                              ║
+  ║  Axis is WARMTH + CONTAINMENT, never legibility. The candidate        ║
+  ║  transcript is FULLY legible (the user reads to decide; dimming it    ║
+  ║  punishes the model's core behavior). Distinction is carried by:      ║
+  ║  • Containment: committed words sit open on the page (control arm's   ║
+  ║    transcript, no border). Candidate words sit on a CARD              ║
+  ║    (surface-card, hairline, radius-2xl, shadow-sm) — an object        ║
+  ║    being held and examined, not yet part of the room. Cards are       ║
+  ║    A2's learned selection vocabulary.                                 ║
+  ║  • Warmth withdrawal: in candidate state the ambient glow drops to    ║
+  ║    ~half Ready intensity and the stone halo pulls back. Nothing is    ║
+  ║    alive yet. Committing restores warmth via the existing             ║
+  ║    .is-playing intensify — the commit is FELT as the room warming,    ║
+  ║    which is decision #5 (no reveal beat) done as temperature.         ║
+  ║  • Marker: one italic Spectral line above the card —                  ║
+  ║    "Just the words, for now." Silent register, no DRAFT chip, no      ║
+  ║    admin label.                                                        ║
+  ║  • Stone holds Ready (spec), halo recessed. Committed transcript is   ║
+  ║    hidden while a candidate is up — "still safe underneath" is        ║
+  ║    carried by "Keep the current one", not by stacked text blocks.     ║
+  ║                                                                        ║
+  ║  ACTION STACK WITH A CANDIDATE (§7.2 resolution)                       ║
+  ║  1. "Hear this in your voice" — primary mineral, THE DOTS LIVE HERE.  ║
+  ║     Budget is shown only at the moment of spending; committed states  ║
+  ║     show no dots anywhere (no counts in ceremonial foreground).       ║
+  ║     sr-only count on the button for screen readers.                   ║
+  ║  2. "See another way to say it" — secondary, free, words-anchored.    ║
+  ║     ("Try another" is dead in this arm: "take" implies audio, and     ║
+  ║     killing "Try" removes the Try-another/Try-again collision.)       ║
+  ║  3. ONE scoped escape: "Back to the take you heard" (the keepcurrent  ║
+  ║     return). Candidate is a sub-decision — hear it / see another /    ║
+  ║     back out. Save, Reshape, Discard are NOT here; they live in       ║
+  ║     committed mode (resolve the draft first). This honors decision    ║
+  ║     #3 structurally — there is no path to save an un-heard draft —    ║
+  ║     and drops the candidate footer from 6 interactive els to 3.       ║
+  ║                                                                        ║
+  ║  COMMIT FAILURE (§5.6 resolution)                                      ║
+  ║  Stay in candidate state, card untouched, draft preserved. The        ║
+  ║  pending dot dims during Working and REFILLS on failure — "nothing    ║
+  ║  was spent" made physically true — and the message states it in       ║
+  ║  words anyway (transactional rule: charge status is explicit).        ║
+  ║  Retry affordance = the commit button itself, label unchanged.        ║
+  ║  aria-live polite on the message.                                     ║
+  ║                                                                        ║
+  ║  CAPS                                                                  ║
+  ║  • Recording cap: commit is done. "See another way" is RETIRED        ║
+  ║    (approved): a draft that can never be heard or saved is a dead     ║
+  ║    end. Quiet rec-keyed cap note in its place (decision #6).          ║
+  ║  • Text soft cap: invisible until 1 re-roll remains, then a quiet     ║
+  ║    whisper under the free-draft button; at 0 the button swaps for a   ║
+  ║    note. Note copy differs by context: committed state points at      ║
+  ║    keeping; candidate state points at committing.                     ║
+  ║                                                                        ║
+  ║  PASS STATUS                                                           ║
+  ║  PASS 1 (this file): structure, six dev-rail states + compose         ║
+  ║    toggles, candidate composition, static fidelity, functional        ║
+  ║    interactions (free draft, commit + fail/retry + dot refill, keep,  ║
+  ║    play/pause, sheet). Reduced motion inherited.                      ║
+  ║  PASS 2 (next): live choreography — candidate card entrance,          ║
+  ║    warmth-shift transitions, commit card-dissolve → words settle      ║
+  ║    into the open page → Playback ramp, pending-dot pulse, refined     ║
+  ║    refill motion, focus management on state swaps.                    ║
+  ║                                                                        ║
+  ║  OUT OF SCOPE: final copy (all strings are placeholder slots for the  ║
+  ║    copy pass), telemetry, URL routing, the control-arm A6 (done).     ║
+  ╚══════════════════════════════════════════════════════════════════════╝
+-->
+
+<style>
+:root {
+  /* Background ramp (design-tokens.md, canonical) */
+  --color-bg-neutral: #FBF8F4;
+  --color-bg-warm-1: #F9F3E8;
+  --color-bg-warm-2: #F6F0E5;
+  --color-bg-warm-phase: #F2EDE4;
+  --color-bg-gold: #F2E8D6;
+  --color-bg-rich: #EDE3D0;
+
+  /* Surfaces */
+  --color-surface-card: #F6F0E5;
+  --color-surface-warm: #EDE3D0;
+  --color-surface-honey: #F2E8D6;
+
+  /* Accent */
+  --color-mineral: #7A8088;
+  --color-mineral-dark: #656B73;
+
+  /* Text */
+  --color-text-primary: #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #ADA9A5;
+
+  /* Status */
+  --color-status-warning: #8A5A1E;
+
+  /* Borders + shadows */
+  --color-border: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
+
+  /* Type */
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --text-h1: 36px;
+  --text-title: 28px;
+  --text-body-lg: 18px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-caption: 12px;
+  --line-height-title: 1.4;
+  --line-height-hero: 1.25;
+
+  /* Text sizing — 16px floor for 45-70 audience */
+  --text-descriptor: var(--text-body);
+  --text-meta: var(--text-body);
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  /* Easing + duration */
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-press: cubic-bezier(0.2, 0.0, 0.0, 1);
+  --ease-ceremonial: cubic-bezier(0.22, 1, 0.36, 1); /* slow-out, ceremonial peaks */
+  --duration-micro: 200ms;
+  --duration-small: 400ms;
+  --duration-medium: 800ms;
+  --duration-large: 1200ms;
+  --duration-breath: 3000ms;
+
+  /* Sizing */
+  --size-avatar: 44px;
+  --size-control-md: 52px;
+  --pip-w-rest: 6px;
+  --pip-w-active: 20px;
+  --stone-sm: 100px;
+  --stone-md: 140px;
+  --stone-lg: 180px;
+  --stone-xl: 220px;
+
+  /* Motion */
+  --scale-press: 0.98;
+  --scale-press-subtle: 0.99;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background: #1C1A18;
+  background-image: radial-gradient(ellipse at center, #2a2622 0%, #1C1A18 70%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 12px 60px; gap: 24px;
+}
+button { font-family: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DEV RAIL — prototype-only variation switcher (mirrors A2 / pass2-c-screens)
+   Row 1: the four primary states. Row 2: the reshape-exhausted toggle, which
+   COMPOSES over whichever base state is showing (A6.11), plus replay.
+   ══════════════════════════════════════════════════════════════════════ */
+.dev-rail { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dev-rail__label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+.dev-rail__nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 520px; }
+.dev-rail__nav button {
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 6px 12px;
+  font-family: var(--font-body); font-size: 11px;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: all 200ms ease;
+}
+.dev-rail__nav button:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95); }
+.dev-rail__nav button.is-current { background: var(--color-mineral); color: #fff; border-color: var(--color-mineral); }
+.dev-rail__nav button.is-on { background: var(--color-status-warning); color: #fff; border-color: var(--color-status-warning); }
+.dev-rail__nav button.replay { font-size: 11px; }
+.dev-row-label {
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  align-self: center; margin-right: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PHONE FRAME
+   ══════════════════════════════════════════════════════════════════════ */
+.prototype-wrapper {
+  width: 390px; height: 812px;
+  border-radius: 48px; overflow: hidden;
+  box-shadow: 0 0 0 10px #1A1715, 0 0 0 12px var(--color-mineral), 0 50px 100px rgba(0,0,0,0.45);
+  position: relative; flex-shrink: 0;
+  background: var(--color-bg-warm-phase);
+}
+@media (max-width: 440px) {
+  .prototype-wrapper { transform: scale(0.88); transform-origin: top center; }
+}
+
+.phone {
+  width: 100%; height: 100%;
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  font-family: var(--font-body); color: var(--color-text-primary);
+  background: var(--color-bg-warm-phase);
+}
+.phone[hidden] { display: none !important; }
+
+.phone__status {
+  position: absolute; inset: 0 0 auto 0; height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px 0;
+  font-weight: 600; font-size: var(--text-small);
+  color: var(--color-text-primary); z-index: 10; pointer-events: none;
+}
+.phone__status-icons { display: flex; gap: 6px; align-items: center; }
+.phone__island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 30px; border-radius: 999px; background: #0B0B0B; z-index: 11;
+}
+.phone__home-indicator {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  width: 134px; height: 5px; border-radius: 3px;
+  background: rgba(28,26,24,0.35); z-index: 10;
+}
+.phone__screen { position: absolute; inset: 44px 0 0 0; display: flex; flex-direction: column; z-index: 3; }
+
+.variant-label {
+  position: absolute; top: 12px; left: 14px;
+  font-family: var(--font-body); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(28,26,24,0.45);
+  z-index: 12; pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ATMOSPHERE STACK (approved upgrade) — warm-light, A7's register.
+   Base warm-phase surface stays (intimate family); glow + vignette layer on
+   top behind content. Glow is quiet at Ready and intensifies on .is-playing.
+   Content layers (backbar/body/footer) sit at z-index 1 above the z-0 stack.
+   ══════════════════════════════════════════════════════════════════════ */
+.atmosphere {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+.atmosphere__glow {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 40%,
+    rgba(214, 162, 92, 0.18) 0%,
+    rgba(214, 162, 92, 0.07) 42%,
+    transparent 75%
+  );
+  opacity: 0.85;
+  animation: ambientGlow 13s var(--ease-essence) infinite;
+  transition: background var(--duration-large) var(--ease-ceremonial),
+              opacity var(--duration-large) var(--ease-ceremonial);
+}
+.phone__screen.is-playing .atmosphere__glow {
+  background: radial-gradient(
+    ellipse 78% 60% at 50% 38%,
+    rgba(214, 162, 92, 0.30) 0%,
+    rgba(214, 162, 92, 0.12) 45%,
+    transparent 78%
+  );
+  animation: ambientGlow 16s var(--ease-essence) infinite; /* slows when alive */
+}
+.atmosphere__vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 50%,
+    transparent 50%,
+    rgba(60, 45, 25, 0.07) 85%,
+    rgba(60, 45, 25, 0.14) 100%
+  );
+}
+@keyframes ambientGlow {
+  0%, 100% { opacity: 0.82; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+
+/* Content sits above the atmosphere */
+.backbar, .body, .footer { position: relative; z-index: 1; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   BACKBAR — back affordance + step pips
+   A6 is step 4 (preview): pips 1–3 is-done (gold), 4 is-current, 5 rest.
+   ══════════════════════════════════════════════════════════════════════ */
+.backbar {
+  padding: var(--space-md) var(--space-xl);
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 52px; flex-shrink: 0;
+}
+.backbar__btn {
+  background: transparent; border: 0;
+  padding: var(--space-sm); margin: calc(-1 * var(--space-sm));
+  color: var(--color-text-secondary); cursor: pointer;
+  display: flex; min-height: 44px; align-items: center;
+  border-radius: var(--radius-md);
+  transition: color var(--duration-micro) var(--ease-essence);
+}
+.backbar__btn:hover { color: var(--color-text-primary); }
+.backbar__pips { display: flex; gap: 6px; }
+.backbar__pip {
+  width: var(--pip-w-rest); height: var(--pip-w-rest);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-warm);
+  transition: width var(--duration-medium) var(--ease-essence), background var(--duration-medium) var(--ease-essence);
+}
+.backbar__pip.is-done { background: var(--color-bg-gold); }
+.backbar__pip.is-current { width: var(--pip-w-active); background: var(--color-bg-gold); }
+.backbar__spacer { width: 22px; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   BODY + STAGE
+   ══════════════════════════════════════════════════════════════════════ */
+.body {
+  padding: var(--space-xs) var(--space-xl) var(--space-2xl);
+  flex: 1; display: flex; flex-direction: column;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.stage {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding-top: var(--space-lg);
+  text-align: center;
+}
+
+/* ═══ ENTRANCE CHOREOGRAPHY (A6.13) ═══
+   Stone → question → scrubber → transcript, staggered. Inherited from A2;
+   transcript fades in last so the eye lands stone → question → player →
+   words. Pass 2 syncs the transcript opacity-resolve to first play. */
+@keyframes stageReveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stage .stone {
+  opacity: 0;
+  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
+  animation-delay: 100ms;
+}
+.stage .prompt-question {
+  opacity: 0;
+  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
+  animation-delay: 300ms;
+}
+.stage .player {
+  opacity: 0;
+  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
+  animation-delay: 500ms;
+}
+.stage .transcript {
+  opacity: 0;
+  animation: stageReveal var(--duration-medium) var(--ease-essence) forwards;
+  animation-delay: 700ms;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   BREATH STONE — three states (A6.4)
+   Ready (rest): A2's canonical Ready treatment, --stone-md.
+   Playback (.is-playback): --stone-lg, 5s breath to 1.04, halo to 0.32.
+     Body hue unchanged — the change is scale + cadence, not color (A6.4).
+   Working (.is-working): --stone-md, cool sweep gradient, no breath, slow
+     shimmer rotation 8s (A6.4). The room stays warm; only the stone cools.
+   ══════════════════════════════════════════════════════════════════════ */
+.stone {
+  position: relative; border-radius: 999px; display: block;
+  width: var(--stone-md); height: var(--stone-md);
+  /* Reserve the Playback growth so the grow is a GPU transform, not a reflow
+     (ceremonial motion rule). 20px each side = (stone-lg - stone-md) / 2. */
+  margin: 20px 0;
+  transform-origin: center center;
+  will-change: transform;
+  transition: transform var(--duration-large) var(--ease-ceremonial);
+}
+.stone::before {
+  content: ''; position: absolute; inset: -28%; border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,220,160,0.22), transparent 62%);
+  animation: stoneHalo 4s var(--ease-essence) infinite;
+}
+.stone::after {
+  content: ''; position: absolute; top: 15%; left: 22%;
+  width: 30%; height: 20%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.55), transparent 70%);
+  border-radius: 999px; filter: blur(6px); pointer-events: none;
+}
+.stone__body {
+  width: 100%; height: 100%; border-radius: 999px;
+  background: radial-gradient(circle at 30% 28%, #FBF2DC 0%, #E8CF9A 28%, #C9A665 60%, #8A6F3E 90%);
+  box-shadow:
+    0 12px 28px rgba(139,111,62,0.16),
+    inset -12px -18px 40px rgba(90,65,30,0.30),
+    inset 12px 12px 28px rgba(255,245,220,0.30);
+  animation: stoneBreath 4s var(--ease-essence) infinite;
+}
+@keyframes stoneBreath {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.025); filter: brightness(1.015); }
+}
+@keyframes stoneHalo {
+  0%, 100% { transform: scale(1); opacity: 0.12; }
+  50% { transform: scale(1.06); opacity: 0.18; }
+}
+
+/* Playback — larger, slower, warmer halo. Hero grows during the peak.
+   scale 1.2857 = stone-lg / stone-md, composited (no reflow). */
+.stone.is-playback { transform: scale(1.2857); }
+.stone.is-playback::before {
+  background: radial-gradient(circle, rgba(255,220,160,0.32), transparent 64%);
+  animation: stoneHaloPlayback 5s var(--ease-essence) infinite;
+}
+.stone.is-playback .stone__body {
+  animation: stoneBreathPlayback 5s var(--ease-essence) infinite;
+}
+@keyframes stoneBreathPlayback {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%      { transform: scale(1.04); filter: brightness(1.04); }
+}
+@keyframes stoneHaloPlayback {
+  0%, 100% { transform: scale(1);    opacity: 0.20; }
+  50%      { transform: scale(1.10); opacity: 0.32; }
+}
+
+/* Working — regenerate transition. Cool sweep, no breath, slow shimmer. */
+.stone.is-working .stone__body {
+  background: radial-gradient(circle at 30% 28%, #FBF2DC 0%, #E8CF9A 28%, #A8A89A 70%, #6B6B6B 95%);
+  animation: stoneShimmerRotate 8s linear infinite;
+}
+.stone.is-working::before {
+  background: radial-gradient(circle, rgba(180,190,200,0.18), transparent 62%);
+  animation: stoneHalo 6s var(--ease-essence) infinite;
+}
+@keyframes stoneShimmerRotate {
+  from { filter: brightness(1) hue-rotate(0deg); }
+  50%  { filter: brightness(1.05) hue-rotate(0deg); }
+  to   { filter: brightness(1) hue-rotate(0deg); }
+}
+
+/* The prompt — emotional anchor, italic Spectral (A6.1) */
+.prompt-question {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-title);
+  font-weight: 500;
+  line-height: var(--line-height-title);
+  color: var(--color-text-primary);
+  max-width: 290px;
+  margin-top: var(--space-xl);
+  text-wrap: pretty;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PLAYER — tap-to-play affordance + scrubber (A6.5, A6.12)
+   The hint sits above the scrubber at Ready, pre-first-play. The timecode is
+   deliberately recessed (tertiary, small, tabular) so it doesn't read as a
+   counter in a ceremonial frame.
+   ══════════════════════════════════════════════════════════════════════ */
+.player {
+  width: 100%;
+  margin-top: var(--space-2xl);
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-md);
+}
+.play-hint {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  transition: opacity var(--duration-small) var(--ease-essence);
+}
+.phone__screen.is-playing .play-hint,
+.phone__screen.is-played .play-hint { opacity: 0; height: 0; margin: calc(-1 * var(--space-sm)) 0; pointer-events: none; }
+
+.player__bar {
+  width: 100%;
+  display: flex; align-items: center; gap: var(--space-md);
+}
+.player__toggle {
+  width: var(--size-control-md); height: var(--size-control-md);
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-mineral);
+  border: 0;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--duration-small) var(--ease-press),
+              background var(--duration-micro) var(--ease-essence);
+}
+.player__toggle:active { transform: scale(var(--scale-press)); }
+.player__toggle:focus-visible { outline: 2px solid var(--color-text-primary); outline-offset: 2px; }
+.player__toggle .icon-pause { display: none; }
+.phone__screen.is-playing .player__toggle .icon-play { display: none; }
+.phone__screen.is-playing .player__toggle .icon-pause { display: block; }
+
+.player__track {
+  flex: 1;
+  height: 4px;
+  background: rgba(122,128,136,0.32);
+  border-radius: var(--radius-full);
+  position: relative;
+}
+.player__fill {
+  position: absolute; left: 0; top: 0; height: 100%;
+  width: 0%;
+  background: var(--color-mineral);
+  border-radius: var(--radius-full);
+  transition: width var(--duration-small) linear;
+}
+.player__thumb {
+  position: absolute; top: 50%; left: 0%;
+  width: 14px; height: 14px; margin-left: -7px;
+  transform: translateY(-50%);
+  background: var(--color-mineral);
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  transition: left var(--duration-small) linear;
+}
+.player__time {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 76px; text-align: right;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   TRANSCRIPT (A6.6) — full message, Spectral, breathes open.
+   Dimmed to 0.35 pre-first-play (first-listen primacy); resolves to full on
+   play and stays full thereafter. No quote marks, no border.
+   ══════════════════════════════════════════════════════════════════════ */
+.transcript {
+  width: 100%;
+  margin-top: var(--space-xl);
+  font-family: var(--font-display);
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-primary);
+  text-align: left;
+  /* base (pre-first-play) reading opacity */
+  --transcript-rest: 0.35;
+  filter: none;
+}
+.transcript-inner { opacity: var(--transcript-rest); transition: opacity var(--duration-medium) var(--ease-ceremonial); }
+.phone__screen.is-playing .transcript-inner,
+.phone__screen.is-played .transcript-inner { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ACTION STACK (A6.7) — Save (primary) · Regenerate (secondary) ·
+   Reshape (link) · Discard (link). Gaps: md between buttons, lg to links,
+   sm between links.
+   ══════════════════════════════════════════════════════════════════════ */
+.footer {
+  padding: var(--space-md) var(--space-xl) var(--space-xl);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--color-bg-warm-phase) 24px,
+    var(--color-bg-warm-phase) 100%
+  );
+  flex-shrink: 0;
+  display: flex; flex-direction: column;
+  gap: var(--space-md);
+}
+.btn {
+  width: 100%; min-height: var(--size-control-md);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-mineral); color: #fff;
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--text-body-lg);
+  border: 0; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-mineral); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  transition: background var(--duration-micro) var(--ease-essence), transform var(--duration-small) var(--ease-press);
+}
+.btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.btn:not(:disabled):active { transform: scale(var(--scale-press)); }
+.btn:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+.btn:disabled {
+  background: var(--color-surface-warm);
+  color: var(--color-text-tertiary);
+  box-shadow: none; cursor: default; pointer-events: none;
+}
+
+/* Regenerate — secondary: surface fill, hairline, no shadow */
+.btn-secondary {
+  width: 100%; min-height: var(--size-control-md);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-surface-honey);
+  color: var(--color-text-primary);
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--text-body-lg);
+  border: 1.5px solid var(--color-mineral);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  transition: background var(--duration-micro) var(--ease-essence), transform var(--duration-small) var(--ease-press);
+}
+.btn-secondary:hover { background: var(--color-bg-rich); }
+.btn-secondary:active { transform: scale(var(--scale-press)); }
+.btn-secondary:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+
+/* Regen dots (A6.9) — filled = remaining, draining as spent. Never numeric. */
+.regen-dots { display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-sm); }
+.regen-dot {
+  width: 5px; height: 5px; border-radius: var(--radius-full);
+  background: var(--color-mineral);
+  transition: background var(--duration-small) var(--ease-essence);
+}
+.regen-dot.is-spent { background: rgba(122,128,136,0.25); }
+
+/* Cap-note (A6.7) — replaces Regenerate when regens exhausted */
+.cap-note {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.5;
+  padding: var(--space-md) 0;
+}
+
+/* Text links — Reshape + Discard (A6.8). md top gap → group sits lg below
+   the buttons via the footer's md gap plus this. sm between the two links. */
+.link-group {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs); /* footer gap(md) + this ≈ lg to the buttons */
+}
+.btn-link {
+  background: transparent; border: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: 500;
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
+  text-align: center; cursor: pointer;
+  transition: color var(--duration-micro) var(--ease-essence);
+}
+.btn-link:hover { color: var(--color-text-primary); text-decoration: underline; }
+.btn-link:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+
+/* Reshape exhausted (A6.11) — quiet inline disable, no hover, no underline.
+   Copy belongs to System States doc + copy pass (DESIGN OPEN). */
+.btn-link.is-exhausted {
+  color: var(--color-text-secondary);
+  cursor: default; pointer-events: none;
+  font-size: var(--text-small);
+  max-width: 280px; line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DISCARD BOTTOM SHEET (A6.10) — over the A6.a layout.
+   Backdrop dims the screen to 40%; sheet rises from the bottom. The voice
+   survives, so the language reassures and the primary keeps mineral weight.
+   Pass 2: slide-in motion, focus trap, Escape/backdrop-tap = Keep it.
+   ══════════════════════════════════════════════════════════════════════ */
+.sheet-layer {
+  position: absolute; inset: 0; z-index: 20;
+  visibility: hidden; pointer-events: none;
+}
+.sheet-layer.is-open { visibility: visible; pointer-events: auto; }
+.sheet-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(28,26,24,0.40);
+  opacity: 0;
+  transition: opacity var(--duration-small) var(--ease-essence);
+}
+.sheet-layer.is-open .sheet-backdrop { opacity: 1; }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--color-bg-warm-phase);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  padding: var(--space-xl);
+  padding-top: var(--space-md);
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  transform: translateY(100%);
+  transition: transform var(--duration-medium) var(--ease-essence);
+  will-change: transform;
+}
+.sheet-layer.is-open .sheet { transform: translateY(0); }
+.sheet__handle {
+  width: 36px; height: 4px; border-radius: var(--radius-full);
+  background: rgba(28,26,24,0.20);
+  margin-bottom: var(--space-xl);
+}
+.sheet__title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body-lg);
+  font-weight: 500;
+  line-height: var(--line-height-title);
+  color: var(--color-text-primary);
+}
+.sheet__body {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-top: var(--space-sm);
+  max-width: 280px;
+}
+.sheet .btn { margin-top: var(--space-xl); }
+.sheet .btn-link { margin-top: var(--space-sm); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   PASS 2 — choreography support
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Regen dot drain — the spent dot fades and shrinks rather than snapping,
+   so the cost of a regenerate is felt as a small quiet loss. */
+.regen-dot {
+  transition: background var(--duration-small) var(--ease-essence),
+              transform var(--duration-small) var(--ease-essence),
+              opacity var(--duration-small) var(--ease-essence);
+}
+.regen-dot.is-spent { background: rgba(122,128,136,0.25); transform: scale(0.7); opacity: 0.6; }
+
+/* Audio-failure affordance (omission, now built). Replaces the scrubber with
+   a quiet retry rather than leaving a dead player. */
+.player.is-failed .player__bar { display: none; }
+.audio-retry {
+  display: none;
+  width: 100%;
+  flex-direction: column; align-items: center; gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+.player.is-failed .audio-retry { display: flex; }
+.audio-retry__msg {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+}
+.audio-retry__btn {
+  background: transparent;
+  border: 1.5px solid var(--color-mineral);
+  color: var(--color-text-primary);
+  font-family: var(--font-body); font-weight: 500; font-size: var(--text-body);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm) var(--space-lg);
+  min-height: 44px; cursor: pointer;
+  transition: background var(--duration-micro) var(--ease-essence), transform var(--duration-small) var(--ease-press);
+}
+.audio-retry__btn:hover { background: var(--color-bg-rich); }
+.audio-retry__btn:active { transform: scale(var(--scale-press)); }
+.audio-retry__btn:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+
+/* Scrubber thumb appears only once playback has been engaged */
+.player__thumb { opacity: 0; transition: opacity var(--duration-micro) var(--ease-essence), left var(--duration-small) linear; }
+.phone__screen.is-playing .player__thumb,
+.phone__screen.is-played .player__thumb { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   DEFERRED-AUDIO ADDITIONS (everything above this line is the control
+   arm's CSS, inherited verbatim)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ─── Candidate state: warmth withdraws from the moment ───
+   Glow drops to ~half Ready intensity; the room stays lit, the vignette
+   stays, but nothing is alive yet. Committing restores warmth through the
+   existing .is-playing intensify — the commit reads as temperature, not
+   ceremony (decision #5). */
+.phone__screen.is-candidate .atmosphere__glow {
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 40%,
+    rgba(214, 162, 92, 0.09) 0%,
+    rgba(214, 162, 92, 0.035) 42%,
+    transparent 75%
+  );
+  opacity: 0.7;
+}
+.phone__screen.is-candidate .stone::before {
+  background: radial-gradient(circle, rgba(255,220,160,0.12), transparent 60%);
+}
+/* The words are the hero of the candidate state. The stone steps back to
+   --stone-sm (precedent: the recording flow's prompt screens, where the
+   task is the hero), and vertical spacing tightens so the full draft reads
+   above the fold. Not a shrink during a peak — the candidate is the
+   deliberately de-ceremonialized register. Pass 2 choreographs this as a
+   transform, not a snap. */
+.phone__screen.is-candidate .stone {
+  width: var(--stone-sm); height: var(--stone-sm);
+  margin: var(--space-xs) 0;
+}
+.phone__screen.is-candidate .stage { padding-top: var(--space-xs); }
+.phone__screen.is-candidate .prompt-question { margin-top: var(--space-sm); }
+.phone__screen.is-candidate .footer { padding-bottom: var(--space-lg); }
+
+/* ─── Candidate composition swaps ───
+   The player (nothing to scrub — no recording exists yet) and the open
+   committed transcript step aside; the marker + card + commit stack step
+   in. "Still safe underneath" is carried by Keep the current one. */
+.candidate-block { display: none; }
+.phone__screen.is-candidate .candidate-block {
+  display: flex; flex-direction: column; align-items: center; width: 100%;
+}
+.phone__screen.is-candidate .player { display: none; }
+.phone__screen.is-candidate .transcript { display: none; }
+
+.stage .candidate-block {
+  opacity: 0;
+  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
+  animation-delay: 500ms;
+}
+
+/* Marker — the "not-yet-yours" slot. Italic Spectral whispered aside.
+   COPY SLOT (copy pass): "Just the words, for now." */
+.candidate-marker {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-md);
+}
+
+/* The card — containment is the semantic. An object being held and
+   examined, not yet absorbed into the room. Fully legible: the user
+   reads to decide; never dim a candidate. */
+.candidate-card {
+  width: 100%;
+  margin-top: var(--space-sm);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg) var(--space-xl);
+  text-align: left;
+}
+.candidate-card__text {
+  font-family: var(--font-display);
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  color: var(--color-text-primary);
+}
+
+/* ─── Footer stacks: committed vs candidate ─── */
+.stack { display: none; flex-direction: column; gap: var(--space-md); }
+.phone__screen:not(.is-candidate) .stack-committed { display: flex; }
+.phone__screen.is-candidate .stack-candidate { display: flex; }
+
+/* Recording dots — live ONLY on the commit button (budget shown at the
+   moment of spending; committed states show no counts anywhere). White
+   family on the mineral fill; drain/refill language matches the control
+   arm's regen dots.
+   Sized for the 45-70 audience: 7px on the dark fill (the control arm's
+   5px was tuned for a honey surface). Spent state is alpha-only — the
+   scale(0.7) penalty stacked with the alpha drop double-punished
+   legibility, so the alpha carries the distinction on its own. */
+.rec-dots { display: inline-flex; align-items: center; gap: 5px; margin-left: var(--space-sm); }
+.rec-dot {
+  width: 7px; height: 7px; border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.95);
+  transition: background var(--duration-small) var(--ease-essence),
+              opacity var(--duration-small) var(--ease-essence);
+}
+.rec-dot.is-spent { background: rgba(255,255,255,0.35); }
+/* Pending: dims while the commit is in flight; refills on failure (the
+   "nothing was spent" proof). Pass 2 adds a slow pulse. */
+.rec-dot.is-pending { opacity: 0.45; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* Commit failure — calm inline line above the commit button. Transactional
+   rule: charge status is explicit. Draft and dots stay intact.
+   COPY SLOT (copy pass): "That didn't come through. Your draft is safe,
+   and nothing was spent." */
+.commit-fail {
+  display: none;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.5;
+  padding: 0 var(--space-md);
+}
+.phone__screen.is-commitfail .commit-fail { display: block; }
+
+/* ─── Caps ─── */
+/* Pre-placed cap notes, hidden until their state applies. (.cap-note base
+   styling is inherited from the control arm.) */
+.footer .cap-note { display: none; }
+
+/* Recording cap (is-cap): commit is done; the free-draft button is RETIRED
+   (a draft that can never be heard is a dead end). Rec-keyed note in its
+   place (decision #6).
+   COPY SLOT: "That's all the recordings for this one. When it feels right,
+   keep the one you heard." */
+.phone__screen.is-cap .stack-committed [data-action="freedraft"] { display: none; }
+.phone__screen.is-cap .stack-committed .cap-note--rec { display: block; }
+.phone__screen.is-cap .reroll-whisper { display: none; }
+/* Defensive: candidate-at-cap is unreachable by design (freedraft retires
+   before the third commit is spent, and the JS guards both actions at
+   zero), but the CSS encoded that assumption nowhere. If a future
+   state-machine bug ever composes is-candidate with is-cap, the candidate
+   stack must not render a spendable commit or a free-draft path. */
+.phone__screen.is-cap .stack-candidate [data-action="freedraft"] { display: none; }
+.phone__screen.is-cap .btn--commit {
+  pointer-events: none; cursor: default;
+  background: var(--color-surface-warm);
+  color: var(--color-text-tertiary);
+  box-shadow: none;
+}
+/* White dots vanish on the warm disabled fill; mute them to the dark family
+   so the all-spent state still reads. */
+.phone__screen.is-cap .btn--commit .rec-dot { background: rgba(28,26,24,0.18); }
+
+/* Text soft cap: invisible until 1 re-roll remains (whisper), then the
+   free-draft button swaps for a note at 0. Committed-state note points at
+   keeping; candidate-state note points at committing.
+   COPY SLOTS: whisper "One more after this." / notes in markup. */
+.reroll-whisper {
+  display: none;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: calc(-1 * var(--space-xs));
+}
+.phone__screen.is-lastreroll .reroll-whisper { display: block; }
+.phone__screen.is-textcap [data-action="freedraft"] { display: none; }
+.phone__screen.is-textcap .reroll-whisper { display: none; }
+.phone__screen.is-textcap .stack-committed .cap-note--text { display: block; }
+.phone__screen.is-textcap .stack-candidate .cap-note--text { display: block; }
+
+/* ─── Candidate link group ───
+   Candidate is a scoped sub-decision: the footer offers only draft-local
+   choices — commit, see-another, and ONE escape ("Back to the take you
+   heard"). Save / Reshape / Discard live in committed mode, so the
+   candidate footer is 3 interactive elements, not 6. */
+</style>
+</head>
+<body>
+
+<div class="dev-rail">
+  <div class="dev-rail__label">Step 6 · A6 · Deferred Audio</div>
+  <div class="dev-rail__nav" id="devNav">
+    <button data-screen="d1" class="is-current">d1 · First listen</button>
+    <button data-screen="d2">d2 · Candidate</button>
+    <button data-screen="d3">d3 · After commit</button>
+    <button data-screen="d4">d4 · Recording cap</button>
+    <button data-screen="d5">d5 · Commit failure</button>
+    <button data-screen="d6">d6 · Discard sheet</button>
+  </div>
+  <div class="dev-rail__nav">
+    <span class="dev-row-label">Compose</span>
+    <button data-action="toggle-reshape" id="reshapeToggle">⊘ Reshape exhausted</button>
+    <button data-action="toggle-audiofail" id="audioFailToggle">⚠ Audio fail</button>
+    <button data-action="toggle-commitfail" id="commitFailToggle">⚠ Commit fail</button>
+    <button data-action="toggle-maxtext" id="maxTextToggle">Aa Max text (200)</button>
+    <button data-action="replay" class="replay">↻ Replay</button>
+  </div>
+</div>
+
+<div class="prototype-wrapper">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       A6.D1 · FIRST LISTEN
+       FIRST LISTEN — unchanged from the control arm (the magic moment is never deferred). Committed take already recorded; Ready stone, tap-to-play, dimmed transcript. Footer is the committed stack: no dots anywhere.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="phone" data-screen="d1">
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">A6.d1 · First listen</div>
+
+    <div class="phone__screen">
+      <div class="atmosphere" aria-hidden="true">
+        <div class="atmosphere__glow"></div>
+        <div class="atmosphere__vignette"></div>
+      </div>
+
+      <div class="backbar">
+        <button class="backbar__btn" data-goto="back" aria-label="Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>     <!-- 1 recipient -->
+          <span class="backbar__pip is-done"></span>     <!-- 2 category -->
+          <span class="backbar__pip is-done"></span>     <!-- 3 note -->
+          <span class="backbar__pip is-current"></span>  <!-- 4 preview (here) -->
+          <span class="backbar__pip"></span>             <!-- 5 save -->
+        </div>
+        <span class="backbar__spacer"></span>
+      </div>
+
+      <div class="body">
+        <div class="stage">
+          <div class="stone" aria-hidden="true"><div class="stone__body"></div></div>
+          <h1 class="prompt-question">Here it is, in your voice.</h1>
+
+          <div class="player">
+            <span class="play-hint">Tap to hear it.</span>
+            <div class="player__bar">
+              <button class="player__toggle" data-action="playpause" aria-label="Play">
+                <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              </button>
+              <div class="player__track">
+                <div class="player__fill"></div>
+                <div class="player__thumb"></div>
+              </div>
+              <span class="player__time">0:00 / 0:28</span>
+            </div>
+          </div>
+
+          <div class="candidate-block">
+            <!-- COPY SLOT (candidate marker): "Just the words, for now." -->
+            <p class="candidate-marker">Just the words, for now.</p>
+            <div class="candidate-card">
+              <p class="candidate-card__text">Sarah, good morning. I know there's a big decision sitting on your shoulders, so breathe for a second. You work things over out loud the way you always have, turning them until they come clear, and they do come clear. The answer is already yours. I just wanted to remind you.</p>
+            </div>
+          </div>
+
+          <div class="transcript">
+            <div class="transcript-inner">Sarah, it's me. Whatever you're weighing right now, you don't have to have it all figured out today. I keep thinking about the way you talk things through until they make sense, and they always do. Take your time, and trust yourself. I'm proud of you.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="stack stack-committed">
+          <button class="btn" data-action="save">Save this message</button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
+          <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
+          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
+          <div class="link-group">
+            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
+            <button class="btn-link" data-action="discard">Discard</button>
+          </div>
+        </div>
+        <div class="stack stack-candidate">
+          <!-- COPY SLOT (commit failure): explicit charge status, draft preserved. -->
+          <p class="commit-fail" aria-live="polite">That didn't come through. Your draft is safe, and nothing was spent.</p>
+          <button class="btn btn--commit" data-action="commit">
+            Hear this in your voice
+            <span class="rec-dots" aria-hidden="true"><span class="rec-dot"></span><span class="rec-dot"></span><span class="rec-dot"></span></span>
+            <span class="sr-only js-rec-count">Three recordings remaining</span>
+          </button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (text cap, candidate context: points at committing) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When one feels close, hear it in your voice.</p>
+          <div class="link-group">
+            <!-- Scoped escape (the only global link in candidate mode). Candidate
+                 is a sub-decision: hear it / see another / back out. Save, Reshape,
+                 and Discard live in committed mode — resolve the draft first.
+                 COPY SLOT: reads as RETURN, never "keep"/"save" (keep≈save was the
+                 confusion). -->
+            <button class="btn-link" data-action="keepcurrent">Back to the take you heard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       A6.D2 · CANDIDATE
+       CANDIDATE (§5.2, the core new state) — a free text draft, no audio. Warmth withdrawn (quiet glow, recessed halo), Ready stone, marker + card replace the player and the open transcript. Dots live on the commit button: 3 remaining.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="phone" data-screen="d2" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">A6.d2 · Candidate</div>
+
+    <div class="phone__screen is-candidate is-played">
+      <div class="atmosphere" aria-hidden="true">
+        <div class="atmosphere__glow"></div>
+        <div class="atmosphere__vignette"></div>
+      </div>
+
+      <div class="backbar">
+        <button class="backbar__btn" data-goto="back" aria-label="Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>     <!-- 1 recipient -->
+          <span class="backbar__pip is-done"></span>     <!-- 2 category -->
+          <span class="backbar__pip is-done"></span>     <!-- 3 note -->
+          <span class="backbar__pip is-current"></span>  <!-- 4 preview (here) -->
+          <span class="backbar__pip"></span>             <!-- 5 save -->
+        </div>
+        <span class="backbar__spacer"></span>
+      </div>
+
+      <div class="body">
+        <div class="stage">
+          <div class="stone" aria-hidden="true"><div class="stone__body"></div></div>
+          <h1 class="prompt-question">Here's another way to say it.</h1>
+
+          <div class="player">
+            <div class="player__bar">
+              <button class="player__toggle" data-action="playpause" aria-label="Play">
+                <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              </button>
+              <div class="player__track">
+                <div class="player__fill"></div>
+                <div class="player__thumb"></div>
+              </div>
+              <span class="player__time">0:00 / 0:28</span>
+            </div>
+          </div>
+
+          <div class="candidate-block">
+            <!-- COPY SLOT (candidate marker): "Just the words, for now." -->
+            <p class="candidate-marker">Just the words, for now.</p>
+            <div class="candidate-card">
+              <p class="candidate-card__text">Sarah, good morning. I know there's a big decision sitting on your shoulders, so breathe for a second. You work things over out loud the way you always have, turning them until they come clear, and they do come clear. The answer is already yours. I just wanted to remind you.</p>
+            </div>
+          </div>
+
+          <div class="transcript">
+            <div class="transcript-inner">Sarah, it's me. Whatever you're weighing right now, you don't have to have it all figured out today. I keep thinking about the way you talk things through until they make sense, and they always do. Take your time, and trust yourself. I'm proud of you.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="stack stack-committed">
+          <button class="btn" data-action="save">Save this message</button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
+          <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
+          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
+          <div class="link-group">
+            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
+            <button class="btn-link" data-action="discard">Discard</button>
+          </div>
+        </div>
+        <div class="stack stack-candidate">
+          <!-- COPY SLOT (commit failure): explicit charge status, draft preserved. -->
+          <p class="commit-fail" aria-live="polite">That didn't come through. Your draft is safe, and nothing was spent.</p>
+          <button class="btn btn--commit" data-action="commit">
+            Hear this in your voice
+            <span class="rec-dots" aria-hidden="true"><span class="rec-dot"></span><span class="rec-dot"></span><span class="rec-dot"></span></span>
+            <span class="sr-only js-rec-count">Three recordings remaining</span>
+          </button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (text cap, candidate context: points at committing) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When one feels close, hear it in your voice.</p>
+          <div class="link-group">
+            <!-- Scoped escape (the only global link in candidate mode). Candidate
+                 is a sub-decision: hear it / see another / back out. Save, Reshape,
+                 and Discard live in committed mode — resolve the draft first.
+                 COPY SLOT: reads as RETURN, never "keep"/"save" (keep≈save was the
+                 confusion). -->
+            <button class="btn-link" data-action="keepcurrent">Back to the take you heard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       A6.D3 · AFTER COMMIT
+       COMMITTED AFTER COMMIT (§5.3) — the candidate was recorded and promoted; it slid into Playback with no reveal beat (decision #5). Shown post-listen. One recording spent, but committed states surface no counts.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="phone" data-screen="d3" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">A6.d3 · After commit</div>
+
+    <div class="phone__screen is-played">
+      <div class="atmosphere" aria-hidden="true">
+        <div class="atmosphere__glow"></div>
+        <div class="atmosphere__vignette"></div>
+      </div>
+
+      <div class="backbar">
+        <button class="backbar__btn" data-goto="back" aria-label="Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>     <!-- 1 recipient -->
+          <span class="backbar__pip is-done"></span>     <!-- 2 category -->
+          <span class="backbar__pip is-done"></span>     <!-- 3 note -->
+          <span class="backbar__pip is-current"></span>  <!-- 4 preview (here) -->
+          <span class="backbar__pip"></span>             <!-- 5 save -->
+        </div>
+        <span class="backbar__spacer"></span>
+      </div>
+
+      <div class="body">
+        <div class="stage">
+          <div class="stone" aria-hidden="true"><div class="stone__body"></div></div>
+          <h1 class="prompt-question">Here it is, in your voice.</h1>
+
+          <div class="player">
+            <span class="play-hint">Tap to hear it.</span>
+            <div class="player__bar">
+              <button class="player__toggle" data-action="playpause" aria-label="Play">
+                <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              </button>
+              <div class="player__track">
+                <div class="player__fill"></div>
+                <div class="player__thumb"></div>
+              </div>
+              <span class="player__time">0:00 / 0:31</span>
+            </div>
+          </div>
+
+          <div class="candidate-block">
+            <!-- COPY SLOT (candidate marker): "Just the words, for now." -->
+            <p class="candidate-marker">Just the words, for now.</p>
+            <div class="candidate-card">
+              <p class="candidate-card__text">Hi Sarah. No speech, just a small thing from me. You don't have to choose perfectly, you just have to choose like yourself. I've watched you puzzle things out a hundred times, and you always land somewhere true. Whatever you pick, I'm with you on it.</p>
+            </div>
+          </div>
+
+          <div class="transcript">
+            <div class="transcript-inner">Sarah, good morning. I know there's a big decision sitting on your shoulders, so breathe for a second. You work things over out loud the way you always have, turning them until they come clear, and they do come clear. The answer is already yours. I just wanted to remind you.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="stack stack-committed">
+          <button class="btn" data-action="save">Save this message</button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
+          <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
+          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
+          <div class="link-group">
+            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
+            <button class="btn-link" data-action="discard">Discard</button>
+          </div>
+        </div>
+        <div class="stack stack-candidate">
+          <!-- COPY SLOT (commit failure): explicit charge status, draft preserved. -->
+          <p class="commit-fail" aria-live="polite">That didn't come through. Your draft is safe, and nothing was spent.</p>
+          <button class="btn btn--commit" data-action="commit">
+            Hear this in your voice
+            <span class="rec-dots" aria-hidden="true"><span class="rec-dot"></span><span class="rec-dot"></span><span class="rec-dot is-spent"></span></span>
+            <span class="sr-only js-rec-count">Two recordings remaining</span>
+          </button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (text cap, candidate context: points at committing) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When one feels close, hear it in your voice.</p>
+          <div class="link-group">
+            <!-- Scoped escape (the only global link in candidate mode). Candidate
+                 is a sub-decision: hear it / see another / back out. Save, Reshape,
+                 and Discard live in committed mode — resolve the draft first.
+                 COPY SLOT: reads as RETURN, never "keep"/"save" (keep≈save was the
+                 confusion). -->
+            <button class="btn-link" data-action="keepcurrent">Back to the take you heard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       A6.D4 · RECORDING CAP
+       RECORDING CAP (§5.4) — 3 recordings spent. Commit is done and the free-draft button is retired with it (approved: drafts that can never be heard are dead ends). Rec-keyed cap note; Save / Reshape / Discard remain.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="phone" data-screen="d4" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">A6.d4 · Recording cap</div>
+
+    <div class="phone__screen is-played is-cap">
+      <div class="atmosphere" aria-hidden="true">
+        <div class="atmosphere__glow"></div>
+        <div class="atmosphere__vignette"></div>
+      </div>
+
+      <div class="backbar">
+        <button class="backbar__btn" data-goto="back" aria-label="Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>     <!-- 1 recipient -->
+          <span class="backbar__pip is-done"></span>     <!-- 2 category -->
+          <span class="backbar__pip is-done"></span>     <!-- 3 note -->
+          <span class="backbar__pip is-current"></span>  <!-- 4 preview (here) -->
+          <span class="backbar__pip"></span>             <!-- 5 save -->
+        </div>
+        <span class="backbar__spacer"></span>
+      </div>
+
+      <div class="body">
+        <div class="stage">
+          <div class="stone" aria-hidden="true"><div class="stone__body"></div></div>
+          <h1 class="prompt-question">Here it is, in your voice.</h1>
+
+          <div class="player">
+            <span class="play-hint">Tap to hear it.</span>
+            <div class="player__bar">
+              <button class="player__toggle" data-action="playpause" aria-label="Play">
+                <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              </button>
+              <div class="player__track">
+                <div class="player__fill"></div>
+                <div class="player__thumb"></div>
+              </div>
+              <span class="player__time">0:00 / 0:31</span>
+            </div>
+          </div>
+
+          <div class="candidate-block">
+            <!-- COPY SLOT (candidate marker): "Just the words, for now." -->
+            <p class="candidate-marker">Just the words, for now.</p>
+            <div class="candidate-card">
+              <p class="candidate-card__text">Hi Sarah. No speech, just a small thing from me. You don't have to choose perfectly, you just have to choose like yourself. I've watched you puzzle things out a hundred times, and you always land somewhere true. Whatever you pick, I'm with you on it.</p>
+            </div>
+          </div>
+
+          <div class="transcript">
+            <div class="transcript-inner">Hi Sarah. No speech, just a small thing from me. You don't have to choose perfectly, you just have to choose like yourself. I've watched you puzzle things out a hundred times, and you always land somewhere true. Whatever you pick, I'm with you on it.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="stack stack-committed">
+          <button class="btn" data-action="save">Save this message</button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
+          <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
+          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
+          <div class="link-group">
+            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
+            <button class="btn-link" data-action="discard">Discard</button>
+          </div>
+        </div>
+        <div class="stack stack-candidate">
+          <!-- COPY SLOT (commit failure): explicit charge status, draft preserved. -->
+          <p class="commit-fail" aria-live="polite">That didn't come through. Your draft is safe, and nothing was spent.</p>
+          <button class="btn btn--commit" data-action="commit">
+            Hear this in your voice
+            <span class="rec-dots" aria-hidden="true"><span class="rec-dot is-spent"></span><span class="rec-dot is-spent"></span><span class="rec-dot is-spent"></span></span>
+            <span class="sr-only js-rec-count">No recordings remaining</span>
+          </button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (text cap, candidate context: points at committing) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When one feels close, hear it in your voice.</p>
+          <div class="link-group">
+            <!-- Scoped escape (the only global link in candidate mode). Candidate
+                 is a sub-decision: hear it / see another / back out. Save, Reshape,
+                 and Discard live in committed mode — resolve the draft first.
+                 COPY SLOT: reads as RETURN, never "keep"/"save" (keep≈save was the
+                 confusion). -->
+            <button class="btn-link" data-action="keepcurrent">Back to the take you heard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       A6.D5 · COMMIT FAILURE
+       COMMIT FAILURE (§5.6) — the delicate one. Candidate state held: card untouched, draft preserved, prior take safe. Dots show 2 remaining (one spent on an EARLIER successful commit; this failure spent nothing — live refill lands in Pass 2). Retry = the commit button itself, label unchanged.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="phone" data-screen="d5" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">A6.d5 · Commit failure</div>
+
+    <div class="phone__screen is-candidate is-played is-commitfail">
+      <div class="atmosphere" aria-hidden="true">
+        <div class="atmosphere__glow"></div>
+        <div class="atmosphere__vignette"></div>
+      </div>
+
+      <div class="backbar">
+        <button class="backbar__btn" data-goto="back" aria-label="Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>     <!-- 1 recipient -->
+          <span class="backbar__pip is-done"></span>     <!-- 2 category -->
+          <span class="backbar__pip is-done"></span>     <!-- 3 note -->
+          <span class="backbar__pip is-current"></span>  <!-- 4 preview (here) -->
+          <span class="backbar__pip"></span>             <!-- 5 save -->
+        </div>
+        <span class="backbar__spacer"></span>
+      </div>
+
+      <div class="body">
+        <div class="stage">
+          <div class="stone" aria-hidden="true"><div class="stone__body"></div></div>
+          <h1 class="prompt-question">Here's another way to say it.</h1>
+
+          <div class="player">
+            <div class="player__bar">
+              <button class="player__toggle" data-action="playpause" aria-label="Play">
+                <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              </button>
+              <div class="player__track">
+                <div class="player__fill"></div>
+                <div class="player__thumb"></div>
+              </div>
+              <span class="player__time">0:00 / 0:31</span>
+            </div>
+          </div>
+
+          <div class="candidate-block">
+            <!-- COPY SLOT (candidate marker): "Just the words, for now." -->
+            <p class="candidate-marker">Just the words, for now.</p>
+            <div class="candidate-card">
+              <p class="candidate-card__text">Hi Sarah. No speech, just a small thing from me. You don't have to choose perfectly, you just have to choose like yourself. I've watched you puzzle things out a hundred times, and you always land somewhere true. Whatever you pick, I'm with you on it.</p>
+            </div>
+          </div>
+
+          <div class="transcript">
+            <div class="transcript-inner">Sarah, good morning. I know there's a big decision sitting on your shoulders, so breathe for a second. You work things over out loud the way you always have, turning them until they come clear, and they do come clear. The answer is already yours. I just wanted to remind you.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="stack stack-committed">
+          <button class="btn" data-action="save">Save this message</button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
+          <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
+          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
+          <div class="link-group">
+            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
+            <button class="btn-link" data-action="discard">Discard</button>
+          </div>
+        </div>
+        <div class="stack stack-candidate">
+          <!-- COPY SLOT (commit failure): explicit charge status, draft preserved. -->
+          <p class="commit-fail" aria-live="polite">That didn't come through. Your draft is safe, and nothing was spent.</p>
+          <button class="btn btn--commit" data-action="commit">
+            Hear this in your voice
+            <span class="rec-dots" aria-hidden="true"><span class="rec-dot"></span><span class="rec-dot"></span><span class="rec-dot is-spent"></span></span>
+            <span class="sr-only js-rec-count">Two recordings remaining</span>
+          </button>
+          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (text cap, candidate context: points at committing) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When one feels close, hear it in your voice.</p>
+          <div class="link-group">
+            <!-- Scoped escape (the only global link in candidate mode). Candidate
+                 is a sub-decision: hear it / see another / back out. Save, Reshape,
+                 and Discard live in committed mode — resolve the draft first.
+                 COPY SLOT: reads as RETURN, never "keep"/"save" (keep≈save was the
+                 confusion). -->
+            <button class="btn-link" data-action="keepcurrent">Back to the take you heard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       A6.D6 · DISCARD SHEET
+       DISCARD SHEET — inherited from the control arm over the committed layout. Focus trap, Escape/backdrop = Keep it.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="phone" data-screen="d6" hidden>
+    <div class="phone__status">
+      <span>9:41</span>
+      <div class="phone__status-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 7l2-1 2 2 2-4 2 3 2-1v5H1z"/></svg>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="13" height="8" rx="2"/><rect x="2.5" y="2.5" width="10" height="5" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="phone__island"></div>
+    <div class="phone__home-indicator"></div>
+    <div class="variant-label">A6.d6 · Discard sheet</div>
+
+    <div class="phone__screen is-played">
+      <div class="atmosphere" aria-hidden="true">
+        <div class="atmosphere__glow"></div>
+        <div class="atmosphere__vignette"></div>
+      </div>
+
+      <div class="backbar">
+        <button class="backbar__btn" data-goto="back" aria-label="Back" tabindex="-1">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>     <!-- 1 recipient -->
+          <span class="backbar__pip is-done"></span>     <!-- 2 category -->
+          <span class="backbar__pip is-done"></span>     <!-- 3 note -->
+          <span class="backbar__pip is-current"></span>  <!-- 4 preview (here) -->
+          <span class="backbar__pip"></span>             <!-- 5 save -->
+        </div>
+        <span class="backbar__spacer"></span>
+      </div>
+
+      <div class="body">
+        <div class="stage">
+          <div class="stone" aria-hidden="true"><div class="stone__body"></div></div>
+          <h1 class="prompt-question">Here it is, in your voice.</h1>
+
+          <div class="player">
+            <div class="player__bar">
+              <button class="player__toggle" data-action="playpause" aria-label="Play" tabindex="-1">
+                <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              </button>
+              <div class="player__track">
+                <div class="player__fill"></div>
+                <div class="player__thumb"></div>
+              </div>
+              <span class="player__time">0:00 / 0:28</span>
+            </div>
+          </div>
+
+          <div class="candidate-block">
+            <!-- COPY SLOT (candidate marker): "Just the words, for now." -->
+            <p class="candidate-marker">Just the words, for now.</p>
+            <div class="candidate-card">
+              <p class="candidate-card__text">Sarah, good morning. I know there's a big decision sitting on your shoulders, so breathe for a second. You work things over out loud the way you always have, turning them until they come clear, and they do come clear. The answer is already yours. I just wanted to remind you.</p>
+            </div>
+          </div>
+
+          <div class="transcript">
+            <div class="transcript-inner">Sarah, it's me. Whatever you're weighing right now, you don't have to have it all figured out today. I keep thinking about the way you talk things through until they make sense, and they always do. Take your time, and trust yourself. I'm proud of you.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="stack stack-committed">
+          <button class="btn" data-action="save" tabindex="-1">Save this message</button>
+          <button class="btn-secondary" data-action="freedraft" tabindex="-1">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
+          <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
+          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
+          <div class="link-group">
+            <button class="btn-link" data-reshape data-goto="reshape" tabindex="-1">Reshape your note</button>
+            <button class="btn-link" data-action="discard" tabindex="-1">Discard</button>
+          </div>
+        </div>
+        <div class="stack stack-candidate">
+          <!-- COPY SLOT (commit failure): explicit charge status, draft preserved. -->
+          <p class="commit-fail" aria-live="polite">That didn't come through. Your draft is safe, and nothing was spent.</p>
+          <button class="btn btn--commit" data-action="commit" tabindex="-1">
+            Hear this in your voice
+            <span class="rec-dots" aria-hidden="true"><span class="rec-dot"></span><span class="rec-dot"></span><span class="rec-dot"></span></span>
+            <span class="sr-only js-rec-count">Three recordings remaining</span>
+          </button>
+          <button class="btn-secondary" data-action="freedraft" tabindex="-1">See another way to say it</button>
+          <!-- COPY SLOT (text soft-cap whisper) -->
+          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (text cap, candidate context: points at committing) -->
+          <p class="cap-note cap-note--text">That's all the new wordings for now. When one feels close, hear it in your voice.</p>
+          <div class="link-group">
+            <!-- Scoped escape (inert footer copy — discard sheet open over candidate). -->
+            <button class="btn-link" data-action="keepcurrent" tabindex="-1">Back to the take you heard</button>
+          </div>
+        </div>
+      </div>
+      <!-- Discard sheet, inherited from the control arm verbatim. -->
+      <div class="sheet-layer is-open" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+        <div class="sheet-backdrop" data-action="keep"></div>
+        <div class="sheet">
+          <div class="sheet__handle" aria-hidden="true"></div>
+          <h2 class="sheet__title" id="sheetTitle">Discard this message?</h2>
+          <p class="sheet__body">Your voice stays preserved. Only this message goes.</p>
+          <button class="btn" data-action="confirm-discard">Discard</button>
+          <button class="btn-link" data-action="keep">Keep it</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     DESIGN OPEN markers (carried for the copy / production passes)
+     ══════════════════════════════════════════════════════════════════════ -->
+<!-- RESOLVED (candidate footer density, 2026-06-11): the candidate footer is
+     now 3 interactive elements — Hear this in your voice / See another way to
+     say it / Back to the take you heard. Save, Reshape, and Discard were
+     pulled out: candidate is a scoped sub-decision, and saving routes through
+     the escape back to committed mode first. This honors decision #3
+     STRUCTURALLY (no path to save an un-heard draft) and removes the
+     keep≈save synonym confusion ("Keep the current one" vs "Save the take you
+     heard"). Escape copy is a COPY SLOT: must read as RETURN, not "keep". -->
+<!-- DESIGN OPEN (A1 §5.3 commit arrival): commit success auto-enters
+     Playback (the "slides into Playback" reading). If product later prefers
+     tap-to-play on arrival, remove the startPlayback call in commit()
+     success and the Ready stone carries it. -->
+<!-- DESIGN OPEN (pending-audio playback URL): engineering is adding the
+     playback URL for pending takes. This prototype simulates the commit
+     round-trip at 1700ms to match the control arm's regen timing. -->
+<!-- DESIGN OPEN (copy pass): every string marked COPY SLOT above is
+     placeholder. Registers: candidate state is Silent; commit failure is
+     Calm; cap notes are Calm. No counts surface as numerals anywhere. -->
+
+<script>
+/**
+ * A6 Deferred Audio — prototype controller (Pass 1).
+ *
+ * Production routing (Next.js): same surface as the control arm —
+ * /messages/new preview state behind DEFERRED_AUDIO_ENABLED. Save → A7.
+ * Back chevron → A4. Backend mapping (already built):
+ *   See another way → POST /api/messages/regenerate (text candidate, no audio)
+ *   Hear this in your voice → POST /api/messages/commit (records + promotes)
+ *   Keep the current one → clears the candidate
+ *   Save → POST /api/messages/save (keeps the COMMITTED take)
+ *   Reshape → POST /api/messages/generate (edit-note) → returns a candidate
+ *   Discard → POST /api/messages/discard
+ *
+ * Inherited verbatim from the control arm: scrubber engine, play/pause ramp,
+ * audio-failure affordance, discard sheet (slide-in, focus trap, Escape /
+ * backdrop = Keep it), clone-to-replay routing, compose-toggle pattern.
+ *
+ * New in this arm: the candidate model. Free drafts are text-only (10 soft
+ * cap), commits spend recordings (3 hard cap, dots on the commit button),
+ * commit failure refunds visibly (pending dot refills) and preserves the
+ * draft, recording cap retires the free-draft button.
+ */
+
+const navButtons = document.querySelectorAll('#devNav button[data-screen]');
+const screenHistory = ['d1'];
+
+/* ─── Compose state (orthogonal axes, re-applied on every screen show) ─── */
+let reshapeExhausted = false;
+let audioWillFail = false;   // committed-take playback failure (control arm's)
+let commitWillFail = false;  // commit round-trip failure (this arm's, §5.6)
+let maxTextOn = false;
+const MAX_TEXT_200 = "Sarah, it's me. I wanted you to hear this in my own voice. Whatever you're deciding now, you don't have to have it all figured out today. You think things through, and you always land somewhere true.";
+
+const RESHAPE_EXHAUSTED_COPY = "This note's been reshaped as far as it goes. When a take feels right, keep it.";
+const RESHAPE_DEFAULT_COPY = "Reshape your note";
+
+/* ─── The deferred model (A1, locked) ─── */
+const TOTAL_RECORDINGS = 3;   // hard cap, dots = these
+const TOTAL_REROLLS = 10;     // soft cap, invisible until ~1 remains
+let recRemaining = TOTAL_RECORDINGS;
+let rerollsRemaining = TOTAL_REROLLS;
+
+/* Per-dev-state presets so live interactions continue sensibly from any
+   entry point. Prototype-only. */
+const PRESETS = {
+  d1: { rec: 3, rr: 10 },
+  d2: { rec: 3, rr: 9 },   // one free draft pulled
+  d3: { rec: 2, rr: 9 },   // that draft was committed
+  d4: { rec: 0, rr: 6 },   // all recordings spent
+  d5: { rec: 2, rr: 8 },   // one spent EARLIER; this failure spent nothing
+  d6: { rec: 3, rr: 10 }
+};
+
+// Text candidates: same note + recipient, different template variant +
+// re-run insert (8.7.3). Illustrative copy for the prototype.
+const VARIANTS = [
+  "Sarah, good morning. I know there's a big decision sitting on your shoulders, so breathe for a second. You work things over out loud the way you always have, turning them until they come clear, and they do come clear. The answer is already yours. I just wanted to remind you.",
+  "Hi Sarah. No speech, just a small thing from me. You don't have to choose perfectly, you just have to choose like yourself. I've watched you puzzle things out a hundred times, and you always land somewhere true. Whatever you pick, I'm with you on it.",
+  "Sarah, it's me again. I know the waiting and the weighing is the hard part. Remember you think best when you stop bracing for it. You'll talk it through, you'll hear yourself, and you'll know. Go easy. You've got more of the answer than you feel like you do.",
+  "Sarah, one small thing before your day gets loud. Decisions like this one don't need to be wrestled, they need to be walked with. You've always known how to do that. Take it on your morning walk and let it answer you back.",
+  "Hey Sarah. I'm not going to tell you which way to go, you'd see through that anyway. I'll just say what I've always known: when you trust the quiet part of yourself, you choose well. You always have."
+];
+let variantIndex = 0; // d2/d5 markup shows VARIANTS[0]'s sibling already
+
+const COMMITTED_PROMPT = "Here it is, in your voice.";
+const CANDIDATE_PROMPT = "Here's another way to say it.";
+
+function applyReshapeState(root) {
+  root.querySelectorAll('[data-reshape]').forEach(link => {
+    if (reshapeExhausted) {
+      link.classList.add('is-exhausted');
+      link.textContent = RESHAPE_EXHAUSTED_COPY;
+      link.setAttribute('aria-disabled', 'true');
+    } else {
+      link.classList.remove('is-exhausted');
+      link.textContent = RESHAPE_DEFAULT_COPY;
+      link.removeAttribute('aria-disabled');
+    }
+  });
+}
+
+/* ─── Scrubber engine — inherited verbatim from the control arm ─── */
+function parseDuration(label) {
+  const after = (label.split('/')[1] || '0:28').trim();
+  const [m, sec] = after.split(':').map(Number);
+  return (m * 60) + sec;
+}
+function fmt(t) {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60).toString().padStart(2, '0');
+  return m + ':' + s;
+}
+
+function stopPlayback(screen, { reset } = { reset: true }) {
+  if (screen._timer) { clearInterval(screen._timer); screen._timer = null; }
+  screen.classList.remove('is-playing');
+  const stone = screen.querySelector('.stone');
+  if (stone) stone.classList.remove('is-playback');
+  const toggle = screen.querySelector('[data-action="playpause"]');
+  if (toggle) toggle.setAttribute('aria-label', 'Play');
+  if (reset) {
+    screen._pos = 0;
+    paintScrubber(screen);
+  }
+}
+
+function paintScrubber(screen) {
+  const dur = screen._dur || 28;
+  const pos = screen._pos || 0;
+  const pct = Math.min(100, (pos / dur) * 100);
+  const fill = screen.querySelector('.player__fill');
+  const thumb = screen.querySelector('.player__thumb');
+  const time = screen.querySelector('.player__time');
+  if (fill) fill.style.width = pct + '%';
+  if (thumb) thumb.style.left = pct + '%';
+  if (time) time.textContent = fmt(pos) + ' / ' + fmt(dur);
+}
+
+function startPlayback(screen) {
+  const stone = screen.querySelector('.stone');
+  screen.classList.add('is-playing');
+  screen.classList.add('is-played'); // first-listen latch: transcript stays full
+  if (stone) stone.classList.add('is-playback');
+  const toggle = screen.querySelector('[data-action="playpause"]');
+  if (toggle) toggle.setAttribute('aria-label', 'Pause');
+
+  const tick = 0.2;
+  screen._timer = setInterval(() => {
+    screen._pos = (screen._pos || 0) + tick;
+    if (screen._pos >= screen._dur) {
+      screen._pos = screen._dur;
+      paintScrubber(screen);
+      stopPlayback(screen, { reset: true }); // return to Ready at the end
+      return;
+    }
+    paintScrubber(screen);
+  }, tick * 1000);
+}
+
+function togglePlay(screen) {
+  const player = screen.querySelector('.player');
+  // Audio-failure path (compose toggle): first play fails into a retry.
+  // Distinct from commit failure — this is a committed clip failing to LOAD.
+  if (audioWillFail && player && !player.classList.contains('is-recovered')) {
+    showAudioFailure(screen);
+    return;
+  }
+  if (screen.classList.contains('is-playing')) {
+    stopPlayback(screen, { reset: false }); // pause, keep position
+  } else {
+    startPlayback(screen);
+  }
+}
+
+/* ─── Audio-load failure affordance — inherited from the control arm ─── */
+function showAudioFailure(screen) {
+  const player = screen.querySelector('.player');
+  if (!player) return;
+  player.classList.add('is-failed');
+  if (player.querySelector('.audio-retry')) return;
+  const retry = document.createElement('div');
+  retry.className = 'audio-retry';
+  retry.innerHTML =
+    '<span class="audio-retry__msg">Couldn\'t load it.</span>' +
+    '<button class="audio-retry__btn" type="button">Try again</button>';
+  retry.querySelector('.audio-retry__btn').addEventListener('click', () => {
+    player.classList.remove('is-failed');
+    player.classList.add('is-recovered'); // next attempt succeeds
+    startPlayback(screen);
+  });
+  player.appendChild(retry);
+}
+
+/* ─── The deferred model: dots, caps, candidate lifecycle ─── */
+
+function paintRecDots(root) {
+  const dots = root.querySelectorAll('.rec-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('is-spent', i >= recRemaining);
+    d.classList.remove('is-pending');
+  });
+  const words = { 3: 'Three', 2: 'Two', 1: 'One', 0: 'No' };
+  const sr = root.querySelector('.js-rec-count');
+  if (sr) sr.textContent = (words[recRemaining] || recRemaining) + ' recordings remaining';
+}
+
+function applyCapStates(root) {
+  const screen = root.querySelector('.phone__screen');
+  screen.classList.toggle('is-cap', recRemaining <= 0);
+  screen.classList.toggle('is-lastreroll', rerollsRemaining === 1);
+  screen.classList.toggle('is-textcap', rerollsRemaining <= 0);
+}
+
+/* Free draft — text only, no audio, soft-capped at 10. Stone goes Working
+   briefly (text round-trip is faster than a render: 900ms vs 1700ms), then
+   the candidate arrives. */
+function freeDraft(root) {
+  if (rerollsRemaining <= 0) return;
+  const screen = root.querySelector('.phone__screen');
+  const stone = screen.querySelector('.stone');
+  const btns = root.querySelectorAll('[data-action="freedraft"], [data-action="commit"]');
+
+  stopPlayback(screen, { reset: true });
+  if (stone) { stone.classList.remove('is-playback'); stone.classList.add('is-working'); }
+  btns.forEach(b => b.disabled = true);
+  rerollsRemaining--;
+
+  setTimeout(() => {
+    if (stone) stone.classList.remove('is-working');
+    variantIndex = (variantIndex + 1) % VARIANTS.length;
+    const cardText = screen.querySelector('.candidate-card__text');
+    if (cardText) cardText.textContent = maxTextOn ? MAX_TEXT_200 : VARIANTS[variantIndex];
+    const q = screen.querySelector('.prompt-question');
+    if (q) q.textContent = CANDIDATE_PROMPT;
+    screen.classList.remove('is-commitfail');
+    screen.classList.add('is-candidate');
+    applyCapStates(root);
+    btns.forEach(b => b.disabled = false);
+  }, 900);
+}
+
+/* Commit — the transactional moment. Spends a recording (pending dot dims
+   in flight), double-tap prevented, failure refunds visibly (dot refills),
+   draft preserved, prior take intact. Success promotes the candidate and
+   slides straight into Playback (decision #5: no reveal beat). */
+function commit(root) {
+  if (recRemaining <= 0) return;
+  const screen = root.querySelector('.phone__screen');
+  const stone = screen.querySelector('.stone');
+  const btns = root.querySelectorAll('[data-action="freedraft"], [data-action="commit"]');
+  const dots = root.querySelectorAll('.rec-dot');
+  const pendingDot = dots[recRemaining - 1] || null;
+
+  screen.classList.remove('is-commitfail');
+  if (stone) stone.classList.add('is-working');
+  btns.forEach(b => b.disabled = true);
+  if (pendingDot) pendingDot.classList.add('is-pending');
+
+  setTimeout(() => {
+    if (stone) stone.classList.remove('is-working');
+    btns.forEach(b => b.disabled = false);
+
+    if (commitWillFail && !screen._commitRecovered) {
+      // §5.6 — failure-safe: the dot REFILLS (nothing was spent), the draft
+      // stays exactly as it was, the message states the charge status, and
+      // the retry is the commit button itself.
+      if (pendingDot) pendingDot.classList.remove('is-pending');
+      screen.classList.add('is-commitfail');
+      screen._commitRecovered = true; // next attempt succeeds
+      return;
+    }
+
+    // Success — promote the candidate to the committed take.
+    recRemaining--;
+    paintRecDots(root);
+    const cardText = screen.querySelector('.candidate-card__text');
+    const inner = screen.querySelector('.transcript-inner');
+    if (cardText && inner) inner.textContent = cardText.textContent;
+    const q = screen.querySelector('.prompt-question');
+    if (q) q.textContent = COMMITTED_PROMPT;
+    const time = screen.querySelector('.player__time');
+    if (time) time.textContent = '0:00 / 0:31';
+    screen._dur = 31; screen._pos = 0;
+
+    screen.classList.remove('is-candidate', 'is-commitfail');
+    applyCapStates(root);
+    startPlayback(screen); // slides into Playback; warmth returns via is-playing
+  }, 1700);
+}
+
+/* Keep the current one — drop the draft, return to the committed take. */
+function keepCurrent(root) {
+  const screen = root.querySelector('.phone__screen');
+  screen.classList.remove('is-candidate', 'is-commitfail');
+  const q = screen.querySelector('.prompt-question');
+  if (q) q.textContent = COMMITTED_PROMPT;
+  applyCapStates(root);
+}
+
+/* ─── Discard sheet — inherited verbatim from the control arm ─── */
+function getSheet(screen) {
+  let sheet = screen.querySelector('.sheet-layer');
+  if (sheet) return sheet;
+  sheet = document.createElement('div');
+  sheet.className = 'sheet-layer';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  sheet.setAttribute('aria-labelledby', 'sheetTitle');
+  sheet.innerHTML =
+    '<div class="sheet-backdrop" data-action="keep"></div>' +
+    '<div class="sheet">' +
+      '<div class="sheet__handle" aria-hidden="true"></div>' +
+      '<h2 class="sheet__title" id="sheetTitle">Discard this message?</h2>' +
+      '<p class="sheet__body">Your voice stays preserved. Only this message goes.</p>' +
+      '<button class="btn" data-action="confirm-discard">Discard</button>' +
+      '<button class="btn-link" data-action="keep">Keep it</button>' +
+    '</div>';
+  screen.appendChild(sheet);
+  return sheet;
+}
+
+function openSheet(root, trigger) {
+  const screen = root.querySelector('.phone__screen');
+  const sheet = getSheet(screen);
+  sheet._returnFocus = trigger || null;
+
+  sheet.querySelectorAll('[data-action="keep"]').forEach(el =>
+    el.addEventListener('click', () => closeSheet(root)));
+  sheet.querySelectorAll('[data-action="confirm-discard"]').forEach(el =>
+    el.addEventListener('click', () => { closeSheet(root); /* prod: → discarded state */ }));
+
+  requestAnimationFrame(() => sheet.classList.add('is-open'));
+
+  const focusables = sheet.querySelectorAll('button:not([tabindex="-1"])');
+  const keep = sheet.querySelector('[data-action="keep"]');
+  (keep || focusables[0]).focus();
+
+  sheet._keydown = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeSheet(root); return; }
+    if (e.key === 'Tab') {
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', sheet._keydown);
+}
+
+function closeSheet(root) {
+  const screen = root.querySelector('.phone__screen');
+  const sheet = screen.querySelector('.sheet-layer');
+  if (!sheet) return;
+  sheet.classList.remove('is-open');
+  if (sheet._keydown) document.removeEventListener('keydown', sheet._keydown);
+  const back = sheet._returnFocus;
+  setTimeout(() => { if (back && back.focus) back.focus(); }, 200);
+}
+
+/* ─── Screen routing (clone-to-replay, inherited from the control arm) ─── */
+function showScreen(name, pushHistory = true) {
+  if (pushHistory && screenHistory[screenHistory.length - 1] !== name) {
+    screenHistory.push(name);
+  }
+  const screens = document.querySelectorAll('.phone[data-screen]');
+  screens.forEach(s => { s.hidden = s.dataset.screen !== name; });
+  navButtons.forEach(b => b.classList.toggle('is-current', b.dataset.screen === name));
+
+  const active = document.querySelector('.phone[data-screen="' + name + '"]:not([hidden])');
+  if (active) {
+    const clone = active.cloneNode(true);
+    active.replaceWith(clone);
+    wireScreen(clone);
+  }
+}
+
+function goBack() {
+  if (screenHistory.length > 1) {
+    screenHistory.pop();
+    showScreen(screenHistory[screenHistory.length - 1], false);
+  } else {
+    showScreen('d1', false);
+  }
+}
+
+function wireScreen(root) {
+  const screen = root.querySelector('.phone__screen');
+  applyReshapeState(root);
+  paintRecDots(root);
+  applyCapStates(root);
+
+  // Stress test: force both text surfaces to the 200-char ceiling.
+  if (maxTextOn) {
+    const inner = root.querySelector('.transcript-inner');
+    if (inner) inner.textContent = MAX_TEXT_200;
+    const cardText = root.querySelector('.candidate-card__text');
+    if (cardText) cardText.textContent = MAX_TEXT_200;
+  }
+
+  // init scrubber state from the time label
+  const timeLabel = screen.querySelector('.player__time');
+  screen._dur = timeLabel ? parseDuration(timeLabel.textContent) : 28;
+  screen._pos = 0;
+
+  root.querySelectorAll('[data-goto]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.goto === 'back') goBack();
+      // 'reshape' → A4 in production; returns to A6 as a CANDIDATE (§5.8). Inert here.
+    });
+  });
+
+  root.querySelectorAll('[data-action="playpause"]').forEach(btn =>
+    btn.addEventListener('click', () => togglePlay(screen)));
+
+  root.querySelectorAll('[data-action="freedraft"]').forEach(btn =>
+    btn.addEventListener('click', () => freeDraft(root)));
+
+  root.querySelectorAll('[data-action="commit"]').forEach(btn =>
+    btn.addEventListener('click', () => commit(root)));
+
+  root.querySelectorAll('[data-action="keepcurrent"]').forEach(btn =>
+    btn.addEventListener('click', () => keepCurrent(root)));
+
+  root.querySelectorAll('.footer [data-action="discard"], .body [data-action="discard"]').forEach(btn =>
+    btn.addEventListener('click', () => openSheet(root, btn)));
+
+  // d6 ships with the sheet already in markup and open: wire its trap.
+  // NOTE: the control arm's inline sheet (a6d) wires clicks but never
+  // installs the Escape/Tab handler — that path lives only in openSheet().
+  // Fixed here; flagged for the control arm's backlog.
+  const inlineSheet = screen.querySelector('.sheet-layer.is-open');
+  if (inlineSheet) {
+    inlineSheet.querySelectorAll('[data-action="keep"]').forEach(el =>
+      el.addEventListener('click', () => closeSheet(root)));
+    inlineSheet.querySelectorAll('[data-action="confirm-discard"]').forEach(el =>
+      el.addEventListener('click', () => closeSheet(root)));
+    const focusables = inlineSheet.querySelectorAll('button:not([tabindex="-1"])');
+    const keep = inlineSheet.querySelector('[data-action="keep"]');
+    if (keep) keep.focus();
+    inlineSheet._keydown = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); closeSheet(root); return; }
+      if (e.key === 'Tab') {
+        const first = focusables[0], last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', inlineSheet._keydown);
+  }
+}
+
+/* ─── Dev rail ─── */
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  recRemaining = p.rec;
+  rerollsRemaining = p.rr;
+}
+
+document.querySelectorAll('#devNav button[data-screen]').forEach(b =>
+  b.addEventListener('click', () => {
+    applyPreset(b.dataset.screen);
+    variantIndex = 0;
+    showScreen(b.dataset.screen);
+  }));
+document.querySelectorAll('.dev-rail__nav button[data-action="replay"]').forEach(b =>
+  b.addEventListener('click', () => {
+    const current = document.querySelector('#devNav button.is-current');
+    const name = current ? current.dataset.screen : 'd1';
+    applyPreset(name);
+    showScreen(name);
+  }));
+document.querySelectorAll('.dev-rail__nav button[data-action="toggle-reshape"]').forEach(b =>
+  b.addEventListener('click', () => {
+    reshapeExhausted = !reshapeExhausted;
+    b.classList.toggle('is-on', reshapeExhausted);
+    const current = document.querySelector('#devNav button.is-current');
+    showScreen(current ? current.dataset.screen : 'd1', false);
+  }));
+document.querySelectorAll('.dev-rail__nav button[data-action="toggle-audiofail"]').forEach(b =>
+  b.addEventListener('click', () => {
+    audioWillFail = !audioWillFail;
+    b.classList.toggle('is-on', audioWillFail);
+    const current = document.querySelector('#devNav button.is-current');
+    showScreen(current ? current.dataset.screen : 'd1', false);
+  }));
+document.querySelectorAll('.dev-rail__nav button[data-action="toggle-commitfail"]').forEach(b =>
+  b.addEventListener('click', () => {
+    commitWillFail = !commitWillFail;
+    b.classList.toggle('is-on', commitWillFail);
+    const current = document.querySelector('#devNav button.is-current');
+    showScreen(current ? current.dataset.screen : 'd1', false);
+  }));
+document.querySelectorAll('.dev-rail__nav button[data-action="toggle-maxtext"]').forEach(b =>
+  b.addEventListener('click', () => {
+    maxTextOn = !maxTextOn;
+    b.classList.toggle('is-on', maxTextOn);
+    const current = document.querySelector('#devNav button.is-current');
+    showScreen(current ? current.dataset.screen : 'd1', false);
+  }));
+
+wireScreen(document.querySelector('.phone[data-screen="d1"]'));
+</script>
+</body>
+</html>
