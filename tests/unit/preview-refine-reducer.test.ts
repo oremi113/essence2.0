@@ -161,6 +161,21 @@ describe("keep current (Back to the take you heard)", () => {
   });
 });
 
+describe("audio duration adoption (loadedmetadata)", () => {
+  it("adopts the real clip duration over the estimate", () => {
+    const s = previewReducer(init(), { type: "AUDIO_DURATION", durationSec: 31 });
+    expect(s.committedDurationSec).toBe(31);
+  });
+
+  it("is referentially stable on no-ops and junk", () => {
+    const s = init();
+    expect(previewReducer(s, { type: "AUDIO_DURATION", durationSec: COMMITTED.durationSec })).toBe(s);
+    expect(previewReducer(s, { type: "AUDIO_DURATION", durationSec: 0 })).toBe(s);
+    expect(previewReducer(s, { type: "AUDIO_DURATION", durationSec: NaN })).toBe(s);
+    expect(previewReducer(s, { type: "AUDIO_DURATION", durationSec: Infinity })).toBe(s);
+  });
+});
+
 describe("play-hint latch", () => {
   it("latches once and is idempotent", () => {
     const s1 = previewReducer(init(), { type: "PLAY_HINT_LEARNED" });

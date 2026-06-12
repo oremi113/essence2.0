@@ -138,6 +138,12 @@ export function PreviewRefineScreen(props: PreviewRefineScreenProps) {
         if (next >= dur) {
           clearTimer();
           setPlaying(false);
+          // Don't let real audio dangle past the visual end (the clock may
+          // run on an estimated duration until metadata loads).
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+          }
           return 0; // return to Ready at the end
         }
         return next;
@@ -241,11 +247,21 @@ export function PreviewRefineScreen(props: PreviewRefineScreenProps) {
       recordingsRemaining: result.recordingsRemaining,
       durationSec: result.durationSec,
     });
-    // Slides into Playback (decision #5 — no reveal beat). Reset the clip.
+    // Slides into Playback (decision #5 — no reveal beat). The element still
+    // holds the PRIOR take's clip — drop it and resolve a fresh URL for the
+    // newly committed one before starting, so the audio matches the words.
     setAudioRecovered(false);
     setAudioFailed(false);
     setPos(0);
+    if (audioRef.current) {
+      audioRef.current.removeAttribute('src');
+      audioRef.current.load();
+    }
+    const playback = await onRequestPlayback();
+    if (playback.ok && audioRef.current) audioRef.current.src = playback.url;
     // Defer to the next frame so the committed layout is mounted first.
+    // Visual playback proceeds even if the URL fetch failed (best-effort
+    // audio; the retry affordance covers the next explicit play).
     requestAnimationFrame(() => startPlayback());
   }, [
     state.pending,
@@ -253,6 +269,7 @@ export function PreviewRefineScreen(props: PreviewRefineScreenProps) {
     state.recordingsRemaining,
     stopPlayback,
     onCommit,
+    onRequestPlayback,
     startPlayback,
   ]);
 
@@ -321,7 +338,19 @@ export function PreviewRefineScreen(props: PreviewRefineScreenProps) {
   return (
     <main className={rootClasses}>
       <style>{PREVIEW_REFINE_CSS}</style>
-      <audio ref={audioRef} preload="none" aria-hidden="true" />
+      <audio
+        ref={audioRef}
+        preload="none"
+        aria-hidden="true"
+        onLoadedMetadata={() => {
+          // The real clip length is authoritative over the wpm estimate
+          // that painted the scrubber before load.
+          const sec = audioRef.current?.duration;
+          if (sec && Number.isFinite(sec)) {
+            dispatch({ type: 'AUDIO_DURATION', durationSec: Math.round(sec) });
+          }
+        }}
+      />
 
       <div className="atmosphere" aria-hidden="true">
         <div className="atmosphere__glow" />

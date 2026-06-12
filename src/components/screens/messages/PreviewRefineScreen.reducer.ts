@@ -55,7 +55,9 @@ export type PreviewAction =
   | { type: 'COMMIT_SUCCESS'; recordingsRemaining: number; durationSec: number }
   | { type: 'COMMIT_FAIL' }
   | { type: 'KEEP' }
-  | { type: 'PLAY_HINT_LEARNED' };
+  | { type: 'PLAY_HINT_LEARNED' }
+  /** Real clip metadata loaded — adopt the true duration over the estimate. */
+  | { type: 'AUDIO_DURATION'; durationSec: number };
 
 export interface PreviewInit {
   committed: CommittedTake;
@@ -151,6 +153,17 @@ export function previewReducer(state: PreviewState, action: PreviewAction): Prev
     case 'PLAY_HINT_LEARNED':
       if (state.playHintLearned) return state;
       return { ...state, playHintLearned: true };
+
+    case 'AUDIO_DURATION': {
+      // The committed clip's metadata is authoritative; the prop/commit
+      // value is a words-per-minute estimate (speech-duration.ts). Ignore
+      // junk (NaN/Infinity from a stream, zero-length).
+      const sec = Math.round(action.durationSec);
+      if (!Number.isFinite(sec) || sec <= 0 || sec === state.committedDurationSec) {
+        return state;
+      }
+      return { ...state, committedDurationSec: sec };
+    }
 
     default:
       return state;
