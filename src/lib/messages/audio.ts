@@ -11,6 +11,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateSpeech, type SpeechVoiceSettings } from "@/lib/elevenlabs";
 import { AUDIO_BUCKET, pendingGenerationAudioPath } from "@/lib/audio/storage-paths";
+import { mp3DurationMsFromByteLength } from "@/lib/audio/mp3-duration";
 import { ErrorCode } from "@/lib/errors";
 import { logEvent, durationSince } from "@/lib/logger";
 import { sanitizeErrorMessage } from "@/lib/api/sanitize";
@@ -31,7 +32,9 @@ export type GenerateAudioParams = {
   voiceSettings?: SpeechVoiceSettings;
 };
 
-export type AudioOutcome = { ok: true; audioPath: string } | { ok: false; code: string };
+export type AudioOutcome =
+  | { ok: true; audioPath: string; durationMs: number | null }
+  | { ok: false; code: string };
 
 export async function generateAndStoreAudio(params: GenerateAudioParams): Promise<AudioOutcome> {
   const { supabase, service, userId, generationId, voiceId, text, requestId, startMs, voiceSettings } = params;
@@ -78,11 +81,14 @@ export async function generateAndStoreAudio(params: GenerateAudioParams): Promis
     return { ok: false, code: ErrorCode.STORAGE_FAILED };
   }
 
+  // ElevenLabs returns CBR mp3, so the clip's duration follows from its size.
+  const durationMs = mp3DurationMsFromByteLength(tts.audioBuffer.length);
+
   await supabase
     .from("pending_generations")
-    .update({ audio_path: audioPath, audio_status: "succeeded" })
+    .update({ audio_path: audioPath, audio_status: "succeeded", audio_duration_ms: durationMs })
     .eq("generation_id", generationId)
     .eq("user_id", userId);
 
-  return { ok: true, audioPath };
+  return { ok: true, audioPath, durationMs };
 }
