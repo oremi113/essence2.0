@@ -257,6 +257,8 @@ After fixing the CLI's database connection (added `SUPABASE_DB_PASSWORD` to `.en
 
 **Pick up when:** before relying on `db push` in CI/automation, or the next time migration history needs to be authoritative. Until then, Dashboard bundle is the path. Supersedes the CLI-auth half of #26 (auth itself is fixed).
 
+**Bundle log:** 2026-06-11 bundle (`20260611233000` trigger fix, `20260611234000` profiles.ui_flags, `20260611235000` pending audio duration) applied 2026-06-12 via direct `pg` connection (same effect as the Dashboard SQL Editor), with full-timestamp history rows recorded in `supabase_migrations.schema_migrations` — consistent with the 2026-06-10 bundle, so this bundle adds no reconciliation debt.
+
 ## Deferred Audio — "Keep the current one" candidate clear (from Session 8, 2026-06-10)
 
 ### 31. "Keep the current one" doesn't clear the candidate server-side — ✅ RESOLVED 2026-06-11
@@ -310,3 +312,39 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Why it matters:** the stone is the emotional anchor of the preview screen; a washed-out stone undersells the "here it is, in your voice" moment. Cosmetic, not functional — the three states are correct and the motion runs at 4× CPU.
 **Fix shape:** in the design/polish pass, either (a) tune `breathStoneEngine`'s palette/contrast for light grounds (helps every light-bg usage), or (b) pass A6 a warmer stone variant. Decide with the prototype's gold stone as the reference. Do NOT fork a bespoke CSS stone into A6 — that re-splits the stone grammar.
 **Pick up when:** the Step 6 visual-polish pass, or whenever BreathStone-on-light contrast is addressed for RecordScreen.
+
+## A6 live wiring (from Step 6 A6 wiring chunk 2, 2026-06-11)
+
+### 36. A6 per-user latches ride a cookie, not the profile — ✅ RESOLVED 2026-06-12
+**Resolution:** `profiles.ui_flags jsonb` added (migration `20260611234000`, applied in the 2026-06-11 bundle). The A6 page reads the flags; a page-owned server action latches them; `a6-prefs.ts` (cookies) deleted. Verified live: latches persist server-side, old cookies ignored.
+
+**File:** `src/app/messages/new/g/[generationId]/a6-prefs.ts` (+ `page.tsx` cookie reads).
+**What:** the screen contract (`PreviewRefineScreen.types.ts`) wants `playHintLearned` / `isFirstArrival` as per-USER profile flags. There's no `profiles` column for UI latches, and new migrations currently go through the Dashboard bundle (#30), so Chunk 2 persists both as 1-year cookies (`essence_a6_play_hint`, `essence_a6_visited`).
+**Why it matters:** cookies are per-device — a user on a second device re-sees the tap-to-play hint and the first-arrival education line. Mild repetition, no data loss.
+**Fix shape:** add a `profiles.ui_flags jsonb` (or two booleans) via the next migration bundle, read it in the A6 page.tsx, persist via a small server action; drop the cookies.
+**Pick up when:** the next batch of remote migrations (after #30 unblocks), or the Step 6 polish pass.
+
+### 37. Audio duration is estimated, never measured — ✅ RESOLVED 2026-06-12
+**Resolution:** `pending_generations.audio_duration_ms` added (migration `20260611235000`, applied). ElevenLabs returns CBR mp3, so `src/lib/audio/mp3-duration.ts` derives duration exactly from byte length; `generateAndStoreAudio` and `/commit` store it, `/commit` returns `audioDurationMs`, `/save` copies it to `messages.audio_duration_ms` (previously never populated — verified live). The wpm estimate remains only as the fallback for pre-migration rows; `loadedmetadata` adoption stays as the last corrector.
+
+**Files:** `src/lib/messages/speech-duration.ts`, `PreviewRefinePageClient.tsx` (commit normalization), `PreviewRefineScreen.tsx` (`loadedmetadata` adoption).
+**What:** nothing in the pipeline measures the rendered clip's real duration — `pending_generations` has no duration column and the TTS call doesn't report one. A6 paints the scrubber from a ~150 wpm estimate, then adopts the real duration from the audio element's `loadedmetadata` once the clip loads.
+**Why it matters:** before the clip loads (and on the beat right after a commit), the scrubber's end-time can be off by a few seconds. Self-corrects on load; purely cosmetic. The saved-messages table already has `audio_duration_ms` but the Step 6 save path doesn't populate it either.
+**Fix shape:** measure duration server-side when the render lands (parse the mp3 or take it from the vendor response), store it on `pending_generations` (needs a column → migration bundle, #30) and return it from `/commit`; populate `messages.audio_duration_ms` on save while there.
+**Pick up when:** with the #36 migration bundle, or if the estimate visibly misleads during QA.
+
+### 38. A6 exit-path stop-gaps: A7, C3, and the reshape return all land short
+**File:** `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx`.
+**What:** three navigation targets in the A6 wiring don't exist yet, so the wrapper routes to interim destinations: Save success → Home (should be A7 Saved at `/messages/saved/[messageId]`); `vault_limit_reached` on save → Home (should be C3 Vault Limit, and `step6.vault_limit_blocked` should fire when C3 is shown — it deliberately doesn't fire now); Reshape ("What it says") and the back chevron → `/messages/new` flow start (should be A4 with `fromGenerationId`, returning to A6 as a candidate). The already-saved redirect in `page.tsx` (→ Home) has the same A7 dependency. `subscription_lapsed` correctly routes to the existing `/app/vault/restore` gate.
+**Why it matters:** the flows are safe but lossy — a reshape restarts the flow instead of editing the note, and a save gives no A7 confirmation beat.
+**Fix shape:** as A7 / C3 / A4 land (Step 6 spine screens), repoint each handler and the `page.tsx` saved-redirect at the real route, and wire `step6.vault_limit_blocked` into C3.
+**Pick up when:** each spine screen's build chunk — this entry is the checklist.
+
+### 39. Saved-message immutability trigger crashes on every saved-row update (dangling `kind` reference) — ✅ RESOLVED 2026-06-12
+**Resolution:** `20260611233000_fix_messages_immutability_trigger.sql` applied in the 2026-06-11 bundle. Probed live post-apply: mutable updates on saved rows pass, immutable mutations raise the intended "Message is immutable after saved", and the `source_generation_id` SET NULL cascade (promoted-pending-row deletes) works.
+
+**Files:** `supabase/migrations/20260213133000_phase3_primitives_state_machines.sql:401` (the broken function), `supabase/migrations/20260421120000_messages_category.sql:16` (the column drop that broke it), fix: `supabase/migrations/20260611233000_fix_messages_immutability_trigger.sql`.
+**What:** `prevent_message_mutation_after_saved()` (trigger `trg_messages_immutable`, BEFORE UPDATE on `messages`) compares `new.kind` — a column dropped when `category` replaced it. plpgsql resolves record fields at runtime, so since that drop **every UPDATE to a saved message raises `record "new" has no field "kind"`**: updates the guard should allow (non-artifact fields), legitimate status transitions, and the `on delete set null` cascade onto `messages.source_generation_id` when a promoted `pending_generations` row is deleted. Reproduced live during the A6 Chunk-2 smoke pass (any saved-row update errors; deleting a promoted pending row errors through the cascade).
+**Why it matters:** today's flows survive because nothing updates a saved message yet (save is insert-only, discard refuses saved rows, the expiry sweep targets unsaved rows). The first feature that touches a saved row — soft delete, playback bookkeeping, vault management, or cleanup of promoted pending rows — hits a hard DB error. It also means the immutability guard "works" only by crashing, with the wrong error.
+**Fix shape:** apply `20260611233000_fix_messages_immutability_trigger.sql` (recreates the function with `category` in place of `kind`). One `create or replace function`, no data change.
+**Pick up when:** the next Dashboard migration bundle (#30) — apply it with whatever migration ships next; don't let it ride long.
