@@ -301,3 +301,19 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 **Fix shape:** during the stitch, decide which message-creation route is canonical, repoint all callers to it via the single route constant, and delete the other route tree + its page/dev scaffolding. The route map makes this a one-constant change.
 **Pick up when:** the prototype-stitching pass that wires voice-creation → First Breath (FOLLOW_UPS #24/#25) → message creation, since that's when the entry point gets pinned.
+
+## Layering — Track 4 deferrals (from refactor-batch Track 4, 2026-06-11)
+
+The codebase-debt batch's Track 4 (layering) did the one durable piece — deduping the Stripe checkout glue into `src/lib/stripe/useCheckout.ts` (the vault Seal + Protect actions carried an identical copy). The two remaining items below are genuine layering violations per CLAUDE.md, but both restructure **utilitarian UI that will be redesigned during the production/stitch push** — so they're deferred to that work rather than polished now (you'd be moving code slated for rewrite; the screen-extraction payoff actually lands when the new design gets iterated in its dev page). Numbered #36/#37 to avoid colliding with the A6 branch's #35.
+
+### 36. `auth/sign-in/page.tsx` holds a full screen inline
+**File:** `src/app/auth/sign-in/page.tsx` — the inline `SignInForm` (email state, `/api/me` auth-check + redirect, `signInWithOtp`, and loading/sent/error JSX) is a screen's worth of UI living in a page.tsx.
+**Why it matters:** violates the layer split — screens belong in `src/components/screens/`, page.tsx is a thin shuttle, and every screen gets a `/dev/{name}` page. As-is there's no isolated way to iterate the sign-in UI.
+**Fix shape:** extract to `src/components/screens/SignInScreen.tsx` (props-driven: `next`, callbacks for submit/auth-check), thin the page.tsx to fetch/compose only, and add `src/app/dev/sign-in/page.tsx`. Needs visual validation (checking / sent / error states).
+**Pick up when:** the production auth redesign — fold the extraction into it so the dev page scaffolds the new design rather than the throwaway one.
+
+### 37. `record/page.tsx` has JSX branching / inline chrome
+**File:** `src/app/app/record/page.tsx` — two JSX return branches (create-mode vs training-mode), an inline `<nav>` with conditional links, and fragment composition (banner + nav + shell). CLAUDE.md: pages are "thin data-shuttles only… no JSX logic beyond the single screen render, no business branching inside JSX."
+**Why it matters:** the data-fetching/redirect decisions are legit page work, but the JSX composition (nav, mode tree) belongs in a screen wrapper.
+**Fix shape:** move the nav + mode-composition JSX into a screen component; leave the page fetching data and choosing props/redirects. Trickiest of the three (two modes to re-validate). The inline `<nav>` is throwaway dev chrome that the redesign replaces outright.
+**Pick up when:** the record/voice-training UI redesign in the production push.
