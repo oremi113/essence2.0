@@ -66,3 +66,8 @@ export function vaultContinuityWithPlan(plan: string): string {
 export function messageGenerationRoute(generationId: string): string {
   return `${ROUTES.messagesNew}/g/${generationId}`;
 }
+
+/** `/messages/saved/<messageId>` — A7 Save Confirmation (ceremonial close). */
+export function messageSavedRoute(messageId: string): string {
+  return `/messages/saved/${messageId}`;
+}

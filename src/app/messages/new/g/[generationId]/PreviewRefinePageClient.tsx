@@ -12,10 +12,11 @@
  * docs/analytics/2026-06-01-step6-events.md and the 2026-06-11 A6
  * wiring note).
  *
- * Interim navigation (FOLLOW_UPS #38): A7 (Saved), C3 (Vault Limit) and
- * the A4 reshape return-path aren't built, so save/discard land on Home,
- * vault-limit lands on Home, reshape/back land on the flow start. A
- * lapsed subscription routes to the existing restore gate.
+ * Save success routes to A7 (/messages/saved/[messageId]). Interim
+ * navigation (FOLLOW_UPS #38): C3 (Vault Limit) and the A4 reshape
+ * return-path aren't built, so vault-limit and discard land on Home and
+ * reshape/back land on the flow start. A lapsed subscription routes to
+ * the existing restore gate.
  */
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -28,7 +29,7 @@ import type {
 } from "@/components/screens/messages/PreviewRefineScreen.types";
 import { clearFlowId, getFlowStartedAt, trackStep6 } from "@/lib/analytics/step6";
 import { estimateSpeechDurationSec } from "@/lib/messages/speech-duration";
-import { ROUTES } from "@/lib/routes";
+import { messageSavedRoute, ROUTES } from "@/lib/routes";
 
 /** One-way per-user latches in profiles.ui_flags this screen owns. */
 export type A6UiFlag = "a6_play_hint_learned" | "a6_visited";
@@ -292,10 +293,12 @@ export function PreviewRefinePageClient({
     router.push(ROUTES.messagesNew);
   }, [router]);
 
-  const handleSaved = useCallback(() => {
-    // A7 (Saved) isn't built — Home is the interim landing (FOLLOW_UPS #38).
-    exitFlow(ROUTES.home);
-  }, [exitFlow]);
+  const handleSaved = useCallback(
+    (messageId: string) => {
+      exitFlow(messageSavedRoute(messageId));
+    },
+    [exitFlow],
+  );
 
   const handleDiscarded = useCallback(() => {
     exitFlow(ROUTES.home);

@@ -306,12 +306,12 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 ## A6 Preview & Refine — screen build (from Step 6 A6 wiring chunk 1, 2026-06-11)
 
-### 35. A6 stone uses the shared canvas BreathStone; reads softer than the prototype's golden stone
-**File:** `src/components/screens/messages/PreviewRefineScreen.tsx` (the `<BreathStone state=… size=…>` render).
-**What:** the A6 prototype (`prototypes/message creation/essence-step6-a6-deferred.html`) draws a rich honey-gold CSS-gradient stone (Ready / Playback / Working) on the cream page. Production reuses the shared canvas `BreathStone` instead — the architecturally correct call (one stone grammar across onboarding + Voice Training + A6), and its `ready`/`playback`/`working` states map cleanly. But on the cream `--color-bg-warm-phase` ground the `ready` stone renders as a soft pale-taupe pebble (center ~rgb(206,196,178)), noticeably less ceremonial/present than the prototype's gold orb. Same softness affects any light-background BreathStone (e.g. RecordScreen), so it isn't A6-specific.
-**Why it matters:** the stone is the emotional anchor of the preview screen; a washed-out stone undersells the "here it is, in your voice" moment. Cosmetic, not functional — the three states are correct and the motion runs at 4× CPU.
-**Fix shape:** in the design/polish pass, either (a) tune `breathStoneEngine`'s palette/contrast for light grounds (helps every light-bg usage), or (b) pass A6 a warmer stone variant. Decide with the prototype's gold stone as the reference. Do NOT fork a bespoke CSS stone into A6 — that re-splits the stone grammar.
-**Pick up when:** the Step 6 visual-polish pass, or whenever BreathStone-on-light contrast is addressed for RecordScreen.
+### 35. Canvas BreathStone reads softer/duller than the prototypes' golden CSS stones (A6 + A7, any light ground)
+**Files:** `src/components/screens/messages/PreviewRefineScreen.tsx` and `src/components/screens/messages/SaveConfirmationScreen.tsx` (the `<BreathStone …>` renders); `src/components/breath-stone/breathStoneEngine.ts` (the palette that would change).
+**What:** the Step 6 prototypes draw rich honey-gold CSS-gradient stones (A6: Ready/Playback/Working; A7: the `infused` ceremonial amber, `essence-step6-a7.html`). Production reuses the shared canvas `BreathStone` — the architecturally correct call (one stone grammar across onboarding + Voice Training + vault + Step 6), and the state mapping is clean. But on light grounds the canvas stone renders pale-taupe, noticeably less ceremonial than the prototypes' gold orbs. Confirmed against the reference sandbox (`/dev/breath-stone`): this is the settled engine look, not a usage bug. **2026-06-12, A7 design pass:** user agrees it reads "quite dull"; revisit deliberately deferred because warming the engine touches every stone usage (VaultSeal, FirstBreath, RecordScreen, A6, A7) — a lift of its own. A7 partially compensates with the prototype's 7s amber halo as a CSS layer behind the canvas (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`).
+**Why it matters:** the stone is the emotional anchor of the preview and save-confirmation moments; a washed-out stone undersells "here it is, in your voice" and the ceremonial close. Cosmetic, not functional — states are correct and motion holds at 4× CPU.
+**Fix shape:** a dedicated stone-warmth pass: tune `breathStoneEngine`'s palette/contrast for light grounds (helps every usage), with the prototypes' gold stones as the reference, then re-verify each stone screen. Do NOT fork bespoke CSS stones into individual screens — that re-splits the stone grammar.
+**Pick up when:** its own chunk after the Step 6 spine lands (user-deferred 2026-06-12), or whenever BreathStone-on-light contrast is addressed for RecordScreen.
 
 ## A6 live wiring (from Step 6 A6 wiring chunk 2, 2026-06-11)
 
@@ -333,12 +333,17 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Fix shape:** measure duration server-side when the render lands (parse the mp3 or take it from the vendor response), store it on `pending_generations` (needs a column → migration bundle, #30) and return it from `/commit`; populate `messages.audio_duration_ms` on save while there.
 **Pick up when:** with the #36 migration bundle, or if the estimate visibly misleads during QA.
 
-### 38. A6 exit-path stop-gaps: A7, C3, and the reshape return all land short
-**File:** `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx`.
-**What:** three navigation targets in the A6 wiring don't exist yet, so the wrapper routes to interim destinations: Save success → Home (should be A7 Saved at `/messages/saved/[messageId]`); `vault_limit_reached` on save → Home (should be C3 Vault Limit, and `step6.vault_limit_blocked` should fire when C3 is shown — it deliberately doesn't fire now); Reshape ("What it says") and the back chevron → `/messages/new` flow start (should be A4 with `fromGenerationId`, returning to A6 as a candidate). The already-saved redirect in `page.tsx` (→ Home) has the same A7 dependency. `subscription_lapsed` correctly routes to the existing `/app/vault/restore` gate.
-**Why it matters:** the flows are safe but lossy — a reshape restarts the flow instead of editing the note, and a save gives no A7 confirmation beat.
-**Fix shape:** as A7 / C3 / A4 land (Step 6 spine screens), repoint each handler and the `page.tsx` saved-redirect at the real route, and wire `step6.vault_limit_blocked` into C3.
-**Pick up when:** each spine screen's build chunk — this entry is the checklist.
+### 38. A6 exit-path stop-gaps: C3, the reshape return, and A7's ceiling CTA land short (A7 save-success ✅ 2026-06-12)
+**Files:** `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx`, `src/app/messages/saved/[messageId]/SaveConfirmationPageClient.tsx`.
+**Resolved (Chunk 3, 2026-06-12):** Save success now routes to A7 Saved at `/messages/saved/[messageId]`, and the already-saved redirect in the A6 `page.tsx` replays the same A7 — both verified live.
+**Still open:**
+- `vault_limit_reached` on save → Home (should be C3 Vault Limit, and `step6.vault_limit_blocked` should fire when C3 is shown — it deliberately doesn't fire now).
+- Reshape ("What it says") and the back chevron → `/messages/new` flow start (should be A4 with `fromGenerationId`, returning to A6 as a candidate).
+- **New with A7:** the `third` variant's "See what's coming" CTA → Home (should be C1 Three Shaped).
+`subscription_lapsed` correctly routes to the existing `/app/vault/restore` gate.
+**Why it matters:** the flows are safe but lossy — a reshape restarts the flow instead of editing the note, and capped users get no ceiling moment.
+**Fix shape:** as C3 / A4 / C1 land (Step 6 spine + ceiling screens), repoint each handler at the real route, and wire `step6.vault_limit_blocked` into C3.
+**Pick up when:** each remaining screen's build chunk — this entry is the checklist.
 
 ### 39. Saved-message immutability trigger crashes on every saved-row update (dangling `kind` reference) — ✅ RESOLVED 2026-06-12
 **Resolution:** `20260611233000_fix_messages_immutability_trigger.sql` applied in the 2026-06-11 bundle. Probed live post-apply: mutable updates on saved rows pass, immutable mutations raise the intended "Message is immutable after saved", and the `source_generation_id` SET NULL cascade (promoted-pending-row deletes) works.
@@ -348,3 +353,12 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Why it matters:** today's flows survive because nothing updates a saved message yet (save is insert-only, discard refuses saved rows, the expiry sweep targets unsaved rows). The first feature that touches a saved row — soft delete, playback bookkeeping, vault management, or cleanup of promoted pending rows — hits a hard DB error. It also means the immutability guard "works" only by crashing, with the wrong error.
 **Fix shape:** apply `20260611233000_fix_messages_immutability_trigger.sql` (recreates the function with `category` in place of `kind`). One `create or replace function`, no data change.
 **Pick up when:** the next Dashboard migration bundle (#30) — apply it with whatever migration ships next; don't let it ride long.
+
+## A7 design-architect pass (Step 6 spine, Chunk 3, 2026-06-12)
+
+### 40. `--shadow-mineral` is keyed to a retired teal, not the live mineral
+**Files:** `src/app/globals.css:54` (the token), consumers at `globals.css:3131`, `globals.css:3413`, `src/components/screens/messages/PreviewRefineScreen.css.ts:328`, `src/components/screens/messages/RecipientSetupScreen.tsx:215`.
+**What:** `--shadow-mineral` is `rgba(74, 107, 126, 0.3)` — a teal-blue left over from an earlier mineral — while the live `--color-mineral` is `#7A8088` (rgba 122, 128, 136). Every mineral button casts a shadow bluer than itself, and on warm grounds the cool cast reads off-temperature. Caught in the A7 design-architect pass; A7 deliberately uses a locally warm-keyed shadow instead (`SaveConfirmationScreen.css.ts`, with a pointer to this entry).
+**Why it matters:** cosmetic but systemic — the token drifts further from the palette every time a new warm screen uses it, and per-screen workarounds (A7's) re-split what should be one decision.
+**Fix shape:** re-key the token to the live mineral (e.g. `rgba(122, 128, 136, 0.3)`) or split into `--shadow-mineral` (cool grounds) + a warm-keyed sibling for amber/gold grounds; re-verify the five consumers visually (recording button states, A6 commit button, A2 continue).
+**Pick up when:** any tokens/visual-polish pass — pairs naturally with the stone-warmth pass (#35), same screens get re-verified.

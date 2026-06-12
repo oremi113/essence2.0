@@ -12,7 +12,7 @@
  */
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ROUTES, messageGenerationRoute, signInWithNext } from "@/lib/routes";
+import { ROUTES, messageGenerationRoute, messageSavedRoute, signInWithNext } from "@/lib/routes";
 import { STEP6_LIMITS, isDeferredAudioEnabled } from "@/lib/messages/cost-controls";
 import { estimateSpeechDurationSec } from "@/lib/messages/speech-duration";
 import { PreviewRefinePageClient, type A6UiFlag } from "./PreviewRefinePageClient";
@@ -50,9 +50,8 @@ export default async function MessageGenerationPage({
     .maybeSingle();
 
   if (!gen) notFound();
-  // Already saved → the message lives in the vault now. Route to A7 once it
-  // exists (FOLLOW_UPS #38); Home is the interim destination.
-  if (gen.saved_message_id) redirect(ROUTES.home);
+  // Already saved → the message lives in the vault now; replay its A7.
+  if (gen.saved_message_id) redirect(messageSavedRoute(gen.saved_message_id));
   // Superseded by an edit-note fork — this row is no longer the active one.
   if (gen.superseded_at) redirect(ROUTES.messagesNew);
   // Not ready to preview — A5's territory once it's built (see header note).
