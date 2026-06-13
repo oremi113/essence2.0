@@ -43,6 +43,25 @@
   ║     (--duration-medium 800ms). Reduced-motion media query already     ║
   ║     handled at :root level. Stone state stays "ready" throughout      ║
   ║     A4, transitions to "working" only when generation starts on A5.   ║
+  ║                                                                       ║
+  ║  ─── AMENDMENTS (design-architect pass, 2026-06-12) ─────────────── ║
+  ║  0. Entrance uses a backwards fill (earlier same-day fix): the old    ║
+  ║     forwards fill pinned the question's opacity and killed the        ║
+  ║     documented recede-while-typing behavior.                          ║
+  ║  1. --pip-w-rest/--pip-w-active defined (were referenced but never    ║
+  ║     declared — pips and pulse dots collapsed to zero).                ║
+  ║  2. Empty-skip path gated: routes to a "skips to A5" placeholder,     ║
+  ║     never the honoring moment (it quoted words the user didn't        ║
+  ║     write). Demo-string hydration is dev-rail-only.                   ║
+  ║  3. stoneBreath is scale-only (brightness filter forced repaints).    ║
+  ║  4. Textarea labeled via aria-labelledby="promptQuestion".            ║
+  ║  5. --shadow-mineral re-keyed warm (teal was stale vs live mineral);  ║
+  ║     matches the production globals re-key (FOLLOW_UPS #40).           ║
+  ║  6. Honoring quote steps down to 20px past 80 chars (near-cap notes   ║
+  ║     ran 7+ lines at display size).                                    ║
+  ║  Also: --color-status-warning promoted to :root; halo offset to 5.5s  ║
+  ║  (de-lockstepped from the 4s body); footer scrim flattened (siblings  ║
+  ║  don't overlap); seam note "→ A5" appears after the 2.4s hold.        ║
   ╚═══════════════════════════════════════════════════════════════════════╝
 -->
 
@@ -66,8 +85,11 @@
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  /* Re-keyed warm 2026-06-12 (amendment 5): the old teal rgba(74,107,126,.3)
+     predated the live --color-mineral and cast bluer than the button. */
+  --shadow-mineral: 0 4px 14px rgba(110, 80, 40, 0.20);
   --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
+  --color-status-warning: #8A5A1E;
 
   --font-display: 'Spectral', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -111,6 +133,12 @@
 
   --size-avatar: 44px;
   --size-control-md: 52px;
+  /* Amendment 1 (2026-06-12): these were referenced by the backbar pips
+     and honoring pulse dots but never defined here — undefined custom
+     properties invalidated the width/height/gap declarations and both
+     dot rows collapsed to zero. */
+  --pip-w-rest: 6px;
+  --pip-w-active: 20px;
 
   --stone-sm: 120px;
   --stone-md: 160px;
@@ -244,25 +272,24 @@ button { font-family: inherit; }
 
 /* ═══ ENTRANCE CHOREOGRAPHY ═══
    Stone → question → textarea, staggered 200ms apart.
-   Each element fades in + drifts up 8px. */
+   Each element fades in + drifts up 8px.
+   Amendment 2026-06-12: `backwards` fill, not `forwards` + opacity-0
+   base — a forwards fill kept the keyframe's opacity:1 applied forever,
+   overriding the .is-writing recede below (animation fill beats the
+   normal cascade), so the documented "question recedes" behavior never
+   fired. Backwards hides elements through their delay, then releases
+   them to natural styles. */
 @keyframes stageReveal {
   from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 .stage .stone {
-  opacity: 0;
-  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
-  animation-delay: 100ms;
+  animation: stageReveal var(--duration-small) var(--ease-essence) 100ms backwards;
 }
 .stage .prompt-question {
-  opacity: 0;
-  animation: stageReveal var(--duration-small) var(--ease-essence) forwards;
-  animation-delay: 300ms;
+  animation: stageReveal var(--duration-small) var(--ease-essence) 300ms backwards;
 }
 .stage .note-wrap {
-  opacity: 0;
-  animation: stageReveal var(--duration-medium) var(--ease-essence) forwards;
-  animation-delay: 500ms;
+  animation: stageReveal var(--duration-medium) var(--ease-essence) 500ms backwards;
 }
 
 /* ═══ QUESTION RECEDES WHEN TYPING ═══
@@ -300,7 +327,8 @@ button { font-family: inherit; }
 .stone::before {
   content: ''; position: absolute; inset: -28%; border-radius: 999px;
   background: radial-gradient(circle, rgba(255,220,160,0.22), transparent 62%);
-  animation: stoneHalo 4s var(--ease-essence) infinite;
+  /* 5.5s vs the body's 4s — offset tempos remove the lockstep tell. */
+  animation: stoneHalo 5.5s var(--ease-essence) infinite;
 }
 .stone::after {
   content: ''; position: absolute; top: 15%; left: 22%;
@@ -317,9 +345,11 @@ button { font-family: inherit; }
     inset 12px 12px 28px rgba(255,245,220,0.30);
   animation: stoneBreath 4s var(--ease-essence) infinite;
 }
+/* Scale only — no brightness filter (filter animations force repaints;
+   the halo opacity loop carries luminosity). Amendment 3, 2026-06-12. */
 @keyframes stoneBreath {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.025); filter: brightness(1.015); }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
 }
 @keyframes stoneHalo {
   0%, 100% { transform: scale(1); opacity: 0.12; }
@@ -403,7 +433,7 @@ button { font-family: inherit; }
   transition: opacity var(--duration-small) var(--ease-essence);
 }
 .note-counter.is-visible { opacity: 1; }
-.note-counter.is-warning { color: var(--color-status-warning, #8A5A1E); }
+.note-counter.is-warning { color: var(--color-status-warning); }
 
 /* ════════════════════════════════════════════════
    STAGE B — honoring moment (Direction 5)
@@ -448,6 +478,14 @@ button { font-family: inherit; }
 .honoring__quote::before { content: '\201C'; margin-right: 4px; }
 .honoring__quote::after  { content: '\201D'; margin-left: 4px; }
 
+/* Long notes (80+ chars) step down so a near-cap quote still composes
+   in the centered column instead of running 7+ lines at display size.
+   Amendment 6, 2026-06-12. */
+.honoring__quote--long {
+  font-size: 20px;
+  line-height: 1.5;
+}
+
 .honoring__ack {
   margin-top: var(--space-2xl);
   font-family: var(--font-body);
@@ -479,12 +517,10 @@ button { font-family: inherit; }
 .footer {
   padding: var(--space-md) var(--space-xl) var(--space-2xl);
   border-top: 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--color-bg-warm-2) 24px,
-    var(--color-bg-warm-2) 100%
-  );
+  /* Flat fill (amendment, 2026-06-12) — body and footer are
+     non-overlapping siblings; the scrim gradient implied a scroll-under
+     occlusion that can't happen. */
+  background: var(--color-bg-warm-2);
   flex-shrink: 0;
   display: flex; flex-direction: column; gap: var(--space-sm);
   transition: opacity var(--duration-small) var(--ease-essence);
@@ -567,6 +603,19 @@ button { font-family: inherit; }
 }
 
 .stage--hidden { display: none; }
+
+/* Seam affordance — quiet, arrives after the honoring hold (2.4s). */
+.seam-note {
+  margin-top: var(--space-2xl);
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  opacity: 0;
+  transition: opacity var(--duration-medium) var(--ease-essence);
+}
+.seam-note.is-visible { opacity: 1; }
 </style>
 </head>
 <body>
@@ -636,6 +685,7 @@ button { font-family: inherit; }
             <textarea
               class="note-field"
               id="noteField"
+              aria-labelledby="promptQuestion"
               placeholder="Say what comes to mind."
               maxlength="200"
               rows="3"
@@ -662,6 +712,18 @@ button { font-family: inherit; }
               <span class="honoring__pulse-dot"></span>
               <span class="honoring__pulse-dot"></span>
             </div>
+            <!-- Seam affordance (amendment, 2026-06-12): the 2.4s → A5
+                 hand-off was comment-only; now reviewable. -->
+            <p class="seam-note" id="seamNote">&rarr; routes to A5 &middot; Generation</p>
+          </div>
+        </div>
+
+        <!-- ═══ SKIP placeholder (amendment 2, 2026-06-12) — the empty
+             path routes directly to A5 and must NEVER enter the honoring
+             moment (it would quote words the user didn't write). -->
+        <div class="stage stage--hidden" id="stageSkip">
+          <div class="honoring is-visible">
+            <p class="honoring__ack">Skipped &mdash; routes directly to A5 &middot; Generation with the template default. No honoring moment.</p>
           </div>
         </div>
 
@@ -681,32 +743,45 @@ const state = {
   noteText: '',
 };
 
-function applyStage(stage) {
+let seamTimer = null;
+
+function applyStage(stage, opts = {}) {
   state.stage = stage;
-  document.getElementById('variantLabel').textContent = `A4 · Stage ${stage === 'input' ? 'A' : 'B'}`;
+  const stageLabel = { input: 'Stage A', honoring: 'Stage B', skip: 'Skip → A5' }[stage];
+  document.getElementById('variantLabel').textContent = `A4 · ${stageLabel}`;
 
   const input = document.getElementById('stageInput');
   const honoring = document.getElementById('stageHonoring');
+  const skip = document.getElementById('stageSkip');
   const honoringContent = document.getElementById('honoringContent');
   const footer = document.getElementById('footer');
+  const seamNote = document.getElementById('seamNote');
+
+  input.classList.toggle('stage--hidden', stage !== 'input');
+  honoring.classList.toggle('stage--hidden', stage !== 'honoring');
+  skip.classList.toggle('stage--hidden', stage !== 'skip');
+  footer.classList.toggle('is-hidden', stage !== 'input');
+  if (seamTimer) { clearTimeout(seamTimer); seamTimer = null; }
+  seamNote.classList.remove('is-visible');
 
   if (stage === 'input') {
-    input.classList.remove('stage--hidden');
-    honoring.classList.add('stage--hidden');
     honoringContent.classList.remove('is-visible');
-    footer.classList.remove('is-hidden');
-  } else {
-    input.classList.add('stage--hidden');
-    honoring.classList.remove('stage--hidden');
-    footer.classList.add('is-hidden');
-    // Hydrate the quote from current note text, fall back to demo string
-    const noteText = state.noteText || 'Whatever happens Friday, you were braver than you think.';
-    document.getElementById('honoringQuote').textContent = noteText;
-    // Trigger fade-in
+  } else if (stage === 'honoring') {
+    // Hydrate from REAL input only on the user path; the demo string is
+    // dev-rail-only (amendment 2: the empty user path must never reach
+    // this stage with words the user didn't write).
+    const noteText = opts.demo
+      ? 'Whatever happens Friday, you were braver than you think.'
+      : state.noteText;
+    const quote = document.getElementById('honoringQuote');
+    quote.textContent = noteText;
+    quote.classList.toggle('honoring__quote--long', noteText.length > 80);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => honoringContent.classList.add('is-visible'));
     });
-    // After ~2.4s, would route to A5 in production. Here we just hold the moment.
+    // The 2.4s hold, made reviewable: the seam note arrives where
+    // production routes to A5.
+    seamTimer = setTimeout(() => seamNote.classList.add('is-visible'), 2400);
   }
 
   document.querySelectorAll('#devNav button').forEach(b => {
@@ -715,7 +790,10 @@ function applyStage(stage) {
 }
 
 document.querySelectorAll('#devNav button').forEach(b => {
-  b.addEventListener('click', () => applyStage(b.dataset.stage));
+  // Dev-rail entry to Stage B may use the demo string; the user path
+  // (CTA click) always hydrates from real input.
+  b.addEventListener('click', () =>
+    applyStage(b.dataset.stage, { demo: b.dataset.stage === 'honoring' && !state.noteText }));
 });
 
 // Note field — Direction 4: button copy changes based on input state
@@ -773,13 +851,13 @@ noteField.addEventListener('blur', () => {
 primaryBtn.classList.add('btn--ghost');
 
 primaryBtn.addEventListener('click', () => {
-  if (state.noteText.length > 0) {
-    // Has content — show honoring moment
+  if (state.noteText.trim().length > 0) {
+    // Write path — honoring moment, hydrated from the user's words.
     applyStage('honoring');
   } else {
-    // Empty — would route directly to A5 (generation) in production
-    // For prototype demo, show honoring with placeholder content
-    applyStage('honoring');
+    // Skip path — straight to A5, NO honoring moment (amendment 2: the
+    // screen must never quote words the user didn't write).
+    applyStage('skip');
   }
 });
 
