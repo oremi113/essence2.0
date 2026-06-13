@@ -68,10 +68,10 @@ the outside is what's left.
 |---|---|---|
 | **A2** Recipient | Who's this for? | 🟡 Built, not proven (only screen with code) |
 | **A3** Category | Birthday / comfort / etc. | ⬜ prototyped, not built |
-| **A4** Note | Optional personal note | ⬜ prototyped, not built |
-| **A5** Generating | The "shaping your message" wait | ⬜ prototyped, not built |
+| **A4** Note | Optional personal note | ✅ **Built + reshape-wired (Chunk 4, 2026-06-12)** — screen + `/dev/messages-note`; reshape path live at `/messages/new/g/[id]/reshape`, A6→A4→A6 candidate loop browser-verified against the real backend. Forward-flow entry (A3→A4) waits on A3. See `Step6_A4_Screen_Chunk4.md`. |
+| **A5** Generating | The "shaping your message" wait | ⬜ prototyped, not built — **next** |
 | **A6** Preview & Refine | Hear / re-draft / commit / save | ✅ **Proven (deferred variant)** — screen (Chunk 1) + live route/wiring/telemetry (Chunk 2), browser-verified against the real server + DB. Only the commit-success voice render (vendor spend) remains unproven. Control-arm variant not built. |
-| **A7** Saved | The saved message | ⬜ prototyped, not built |
+| **A7** Saved | The saved message | ✅ **Built + wired (Chunk 3, 2026-06-12)** — screen + `/dev/messages-saved`; live route `/messages/saved/[messageId]`, A6 save-success + already-saved redirect repointed here, browser-verified. See `Step6_A7_Screen_Chunk3.md`. |
 | **C1–C3** | Ceremony / Waitlist / Vault Limit | ⬜ not started (Save backend already routes to C3 at the cap) |
 
 **Takeaway:** the screens are essentially all the remaining work. A6 is the big
@@ -139,8 +139,14 @@ proven with zero vendor spend.
    verified against the real backend. See
    `Step6_A6_Screen_Chunk2.md` + FOLLOW_UPS #36–#38 for the interim stop-gaps
    (cookie latches, estimated duration, A7/C3/A4 exit paths).
-2. **The spine screens** — A3 / A4 / A5 / A7 from their prototypes, then C1–C3.
-   A6's exit paths (FOLLOW_UPS #38) repoint as each lands.
+2. **The spine screens**, built per-screen (one screen → design pass →
+   architect review → wiring → live verify → commit stack). Done: A7
+   (Chunk 3), A4 (Chunk 4). **Next: A5 (Generation)**, then A3 (Category),
+   then C1–C3. A6's exit paths (FOLLOW_UPS #38) repoint as each lands —
+   reshape resolved (A4); still open: C3 vault-limit, C1 ceiling CTA.
+   Before each chunk, run `node scripts/step6-token-sweep.mjs` and read
+   `Step6_Prototype_Token_Reconciliation.md` (token mapping + footgun
+   checklist — the prototypes' `:root` blocks drift from production).
 3. **Manual real-voice render check** for `/generate` + `/commit` (needs a cloned voice).
 
 ---
@@ -148,5 +154,7 @@ proven with zero vendor spend.
 ## Reference docs
 - **Flow contract + Deferred-Audio decisions:** `docs/session-8/Step6_OpenContracts.md` (Q1–Q7 baseline; Amendment A1 the upgrade).
 - **A6 deferred design handoff:** `docs/session-8/Step6_A6_Deferred_Audio_Handoff.md`.
+- **Spine chunk docs:** `Step6_A7_Screen_Chunk3.md`, `Step6_A4_Screen_Chunk4.md` (per-screen build records + design-architect amendments).
+- **Prototype token reconciliation:** `docs/session-8/Step6_Prototype_Token_Reconciliation.md` (run before each remaining chunk).
 - **API behavior:** `docs/API_CONTRACTS.md`.
 - **Deferred items:** `docs/FOLLOW_UPS.md` (open: #28, #30, #26-CI; rest resolved).
