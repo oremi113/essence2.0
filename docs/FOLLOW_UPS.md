@@ -2,14 +2,51 @@
 
 Tech-debt and deferred items surfaced during other work. Revisit when touching the related area.
 
+## Priority queue (seed scan 2026-06-12 — see docs/REFACTORING_SYSTEM.md)
+
+Health at scan time: typecheck ✅ · lint ✅ · unit tests 176/176 ✅.
+Re-scored every run. "Decision" = blocked on an owner choice, not code.
+
+| # | P | One-liner | Agent-fixable now? |
+|---|---|---|---|
+| 22 | P2 | Voice creation has zero payment gating — ElevenLabs cost exposure | ❌ decision (gate or not, before launch) |
+| 34 | P2 | Two parallel message-creation routes; one is legacy | ❌ decision (pick canonical) + overlaps active Step 6 work |
+| 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
+| 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
+| 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
+| 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ add error check + throw |
+| 5 | P3 | Cancelling an upload reads as a failure internally | ✅ **next up** |
+| 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ |
+| 2 | P3 | Failed upload leaves stale internal state between retries | ✅ |
+| 26 | P3 | Generated DB types: only the CI drift-check remains | ✅ |
+| 16 | P3 | B2/B3 motion surfaces shipped with no analytics events | ⚠️ needs event-naming input |
+| 6 | P3 | Non-square photos will render wrong in the circle | ✅ when photo upload goes fully live |
+| 7 | P3 | Photo success is silent for screen-reader users | ✅ (batch with a11y pass) |
+| 8 | P3 | Reduced-motion fallback for stone beat + upload ring | ✅ (in B3 scope) |
+| 9 | P3 | Going "back" to the photo screen wrongly resets it | ✅ when Screen 10 production build lands |
+| 12 | P3 | No way to remove a photo after upload | ❌ decision (settings roadmap) |
+| 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
+| 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
+| 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ⏳ blocked on C3/A4/C1 builds |
+| 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
+| 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
+| 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
+| 4 | P4 | Dead fallback import in audio/commit route | ✅ |
+| 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
+| 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
+| 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ reorder record/update |
+| 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
+
+**Next-up fixable queue:** #5 → #1 → #2 → #26 (CI check) → #4.
+
 ## RecordingUpload / useUploadPipeline (from PR #33, 2026-04-19)
 
-### 1. Prompt auto-advance uses ref-during-render
+### 1. [P3] Prompt auto-advance uses ref-during-render
 `src/components/audio/RecordingUpload.tsx` — the prompt auto-advance block reads/writes a ref during render. It was previously masked by the component's size; after extracting `useUploadPipeline`, the shrunken component now trips `react-hooks/refs`. Worked around with targeted `eslint-disable-next-line` comments.
 
 **Fix:** restructure the auto-advance into a `useEffect` that keys off `promptIndex` and reset-equivalent state.
 
-### 2. Upload failure leaves hook status stuck at `'failed'`
+### 2. [P3] Upload failure leaves hook status stuck at `'failed'`
 `src/components/audio/RecordingUpload.tsx` — on upload error the component surfaces its own error state but never calls `uploadPipeline.reset()`. The hook's internal `status` stays `'failed'` until a new `upload()` call is initiated.
 
 **Why it's harmless today:** nothing outside `onStageChange` reads hook status.
@@ -18,14 +55,14 @@ Tech-debt and deferred items surfaced during other work. Revisit when touching t
 
 ## audio/commit route (from PR #31, 2026-04-19)
 
-### 4. `AUDIO_BUCKET` import is only a fallback
+### 4. [P4] `AUDIO_BUCKET` import is only a fallback
 `src/app/api/audio/commit/route.ts:7` — imports `AUDIO_BUCKET` but uses it only as a fallback (`row.storage_bucket || AUDIO_BUCKET`). The `storage_bucket` column is set on insert in `audio/init-upload` and is non-null in practice, so the fallback is dead weight.
 
 **Fix:** drop the fallback and the import, or confirm the column can legitimately be null and document why.
 
 ## useUploadPipeline cancel (from PR #38, 2026-04-19)
 
-### 5. `cancel()` lands the hook in `'failed'`, not a cancelled/idle state
+### 5. [P3 — next up] `cancel()` lands the hook in `'failed'`, not a cancelled/idle state
 `src/lib/upload/useUploadPipeline.ts` — the hook's `try/catch` wraps the whole pipeline, so when `cancel()` triggers an `AbortError`, it hits the catch block like any other error and sets `status: 'failed'`. Consumers calling `cancel()` will observe a failed state with an abort-error message.
 
 **Why it matters:** most cancel-aware hook APIs distinguish abort-caused rejections (typically → `'idle'` or `'cancelled'`) from real failures. Dashboards or retry UIs that key off `status: 'failed'` will falsely fire on user-initiated cancels.
@@ -35,40 +72,40 @@ Tech-debt and deferred items surfaced during other work. Revisit when touching t
 
 Omissions surfaced during the Screen 10 photo control review. Named as follow-ups rather than folded into the B1 Terminal doc because they're production-layer, adjacent-flow, or accessibility-layer concerns that deserve their own treatment.
 
-### 6. Photo fit inside circle (object-fit + aspect handling)
+### 6. [P3] Photo fit inside circle (object-fit + aspect handling)
 Real uploads are rarely square. Portrait 9:16 photos, landscape DSLR exports, and panorama captures all hit Supabase Storage at native aspect ratio. The prototype pretends the photo is already square.
 
 **Where it surfaces:** the `<img>` that replaces the empty circle state. Needs `object-fit: cover` + `object-position: center` at minimum. Server-side thumbnail generation (Supabase Storage transform or a separate render step) is the real fix.
 **Pick up when:** Screen 10 moves from prototype to first real Supabase Storage integration. Probably during the B1 Terminal pass, but treated here because thumbnail strategy spans onboarding + Screen 9 + Home B + all downstream message cards. One decision, many consumers.
 
-### 7. Screen reader announcement on photo success
+### 7. [P3] Screen reader announcement on photo success
 When the photo lands, nothing is announced to assistive tech. The stone beating to `ready` is `aria-hidden="true"` by design. "Looking good" is visible text but not in a live region. VoiceOver/TalkBack users get silence on what is supposed to be a small positive moment.
 
 **Fix shape:** add `role="status"` + `aria-live="polite"` to the "Looking good" paragraph, OR use a dedicated `<p class="sr-only" role="status" aria-live="polite">Photo added.</p>` that announces independently of visible copy.
 **Pick up when:** accessibility pass on onboarding (not yet scheduled). Deferred out of B1 because it's a pattern decision that should cover all onboarding success beats, not just Screen 10.
 
-### 8. Reduced-motion fallback for stone beat + upload ring
+### 8. [P3] Reduced-motion fallback for stone beat + upload ring
 The in-flight breathing ring and the success-state stone beat (idle → ready → idle) both depend on motion. Under `prefers-reduced-motion: reduce`, the ring should be a static mineral-tinted border, and the stone state change should still occur (the color/glow endpoint is semantically meaningful) but without the 1200ms lerp.
 
 **Pick up when:** Bucket B3 (Reduced-motion fallbacks). Already in scope there — cross-reference this entry so it doesn't get missed.
 
-### 9. Re-entry state for previously-uploaded photo
+### 9. [P3] Re-entry state for previously-uploaded photo
 If a user navigates forward past Screen 10 and then navigates back via Screen 9's "Change" link or browser back, Screen 10 currently resets (`prototypes/voice-recording-flow.html:1890`, `if (n === 10) resetPhoto()`). That's wrong for production. The circle should show the previously-uploaded photo with the "Replace" link visible and the CTA showing "Continue."
 
 **Pick up when:** B1 Terminal doc lands and moves into Session 4 onboarding build. This is a state-persistence concern that lives in the parent `useOnboardingForm` hook, not the Screen 10 component spec.
 
-### 10. File name surfacing on error copy
+### 10. [P4] File name surfacing on error copy
 Current error copy ("That photo didn't come through. Try another, or continue without one.") is file-name-agnostic. For a user picking from multiple similar files, knowing *which* file failed helps recovery. But long file names have layout problems.
 
 **Fix shape (when picked up):** if the file name is under ~24 chars, surface it inline (*"`IMG_4392.heic` didn't come through."*); if over 24, omit. Needs an error-card layout that accommodates a monospace file name without breaking the warm register.
 **Pick up when:** low priority. Only matters if telemetry shows repeated errors during photo upload. Not an onboarding-polish concern.
 
-### 11. Network offline state
+### 11. [P4] Network offline state
 If the user is fully offline when they tap the circle and pick a file, the upload fails differently than a rate-limited or size-rejected upload. Current error copy covers all three cases generically, which is probably fine, but a dedicated offline message ("You're offline. Try again when you're back online, or continue without a photo.") would be warmer and more accurate.
 
 **Pick up when:** production QA reveals the generic copy doesn't guide users well enough through the offline path. Might never matter — flagged only.
 
-### 12. Photo deletion path
+### 12. [P3 · decision] Photo deletion path
 Current spec has "Add photo" and "Replace" but no "Remove." If a user uploads a photo, moves through onboarding, and later decides they want no photo at all, the only path today is upload then delete account. Settings page needs a "Remove photo" control downstream.
 
 **Pick up when:** Settings page Bucket work. Not an onboarding concern — flagged here so it doesn't fall through the cracks between onboarding and settings design passes.
@@ -83,25 +120,25 @@ Declared deferred with explicit pairing constraint in the B2 Terminal doc's "Out
 ### 14. ~~Act-transition wash while an earlier wash is still playing~~ — RESOLVED 2026-04-20
 `chrome.tsx` now uses an `actTransitionActive` boolean state that sets `false` only on `onAnimationEnd`. While the wash is playing, rapid re-entries into the 6 → 7 transition are no-ops (`setActTransitionActive(true)` on an already-true state is a no-op setState). Behavior is: one wash at a time, second qualifying arrival within the 900ms window is ignored. Documented in the component comment above the state hooks.
 
-### 15. Act-transition wash on Screen 7 re-entry
+### 15. [P4] Act-transition wash on Screen 7 re-entry
 If the user goes 7 → back → 6 → 7 again via the back button or `←` key, does the wash replay? With the #14 fix, the answer is now: yes, if the previous wash has finished (≥900ms elapsed since the last 6 → 7 arrival). If the user re-enters within the 900ms window, the in-flight wash continues without restart. This resolves the rapid-back-and-forth case; the "fresh wash on every *completed* re-entry" case remains — which is the defensible design: the user deliberately chose to re-experience the act transition, so the wash accompanies it.
 
 If telemetry later shows users find the re-play distracting, revisit with a `hasPlayedThisSession` ref scoped to the OnboardingScreen mount.
 **Pick up when:** observation-driven, not scheduled.
 
-### 16. Analytics instrumentation for B2 / B3 surfaces
+### 16. [P3 · needs event-naming input] Analytics instrumentation for B2 / B3 surfaces
 Neither doc specifies events. The act-transition wash is a named gesture and may warrant a `screen_act_transition_viewed` or similar; reduced-motion activation rate is useful for product understanding (how many users hit the RM code paths, which screens, how often does it toggle mid-session). Without guidance, Terminal will either invent events or ship nothing.
 
 **Why flag it now:** telemetry decisions are cheap during design, expensive after a feature ships and retroactive events have to be added.
 **Pick up when:** whoever owns the onboarding analytics contract next touches `docs/analytics/`. Not blocking; capture a single line in B2/B3 Terminal docs saying "analytics: see docs/analytics/ — not in scope here."
 
-### 17. Dark mode behavior for act transition + reduced motion
+### 17. [P4] Dark mode behavior for act transition + reduced motion
 B2 declares dark mode out of scope explicitly. B3 does not — and reduced-motion + dark mode is a plausible user combination (e.g., vestibular issues + night-mode OS-wide). The warm-ceramic BreathStone gradient, the mineral wash color, and the `mix-blend-mode: multiply` layer all read entirely differently against a dark surface.
 
 **Where it surfaces:** `globals.css` palette tokens, `breathStoneEngine.ts` body gradient (locked per design rules), wash overlay color.
 **Pick up when:** Bucket C4 dark-mode token map lands. Cross-reference both B2 (wash color/blend) and B3 (ensure RM rules don't assume light surfaces) so the dark-mode pass covers the act-transition surface area.
 
-### 18. BreathStone initialization / lerp-interrupt state during 6 → 7
+### 18. [P4] BreathStone initialization / lerp-interrupt state during 6 → 7
 If the canvas is still initializing (first-paint not yet rendered) or the state lerp is mid-flight when the 6 → 7 trigger fires on a slow device, what does the wash land on top of? On older Android at 4× throttle, the stone may still be lerping idle → guidance when the wash plays, producing a half-warmed body under a peak wash — potentially a muddy mineral-on-cool composite.
 
 **Why flag it now:** low probability, not zero. The 4× throttle verification in B3 exercised RM but not the default-motion slow-device path.
@@ -115,7 +152,7 @@ Declared explicitly in the B3 Terminal doc's new §8: **t=0 of the crossfade** (
 
 ## Supabase migrations (from Session 7b, 2026-04-20)
 
-### 21. Duplicate migration version IDs block CLI `db push`
+### 21. [folded into #30] Duplicate migration version IDs block CLI `db push`
 `supabase/migrations/` contains multiple files sharing the same date-only version: three with `20260214_*` and two with `20260412_*`. Supabase's `supabase_migrations.schema_migrations` table uses `version` as the primary key, so only one row per version can exist. Running `npx supabase migration repair --status applied <version>` marks one file per version as applied; the remaining files with the same version show an empty Remote column in `migration list`. On the next `db push`, the CLI tries to re-apply those "unmatched" files, whose DDL has already been run against the remote DB — a collision. Worked around in 7b by running the new `20260420_add_subscriptions.sql` via Dashboard SQL Editor and then repairing it as applied.
 
 **Affected files:**
@@ -130,7 +167,7 @@ Declared explicitly in the B3 Terminal doc's new §8: **t=0 of the crossfade** (
 
 ## Voice-creation payment gate (from Session 7c Chunk 1, 2026-04-21)
 
-### 22. Should `/api/voice-profiles/[id]/start` gate on paid status?
+### 22. [P2 · decision] Should `/api/voice-profiles/[id]/start` gate on paid status?
 Session 7c's spec called for a "voice processing trigger" on `checkout.session.completed` (Site A) and on the `created → collecting` transition (Site B), so that paid users would land in `voice_profiles.status = 'processing'`. Both sites were **dropped from 7c** because the repo's `'processing'` status semantically means "ElevenLabs is currently running," and flipping to it without invoking ElevenLabs would leave profiles stuck (the `/start` route's 3-minute staleness check would eventually treat them as timed out).
 
 The real underlying question is a product one: **should voice creation require a paid subscription before ElevenLabs is invoked?**
@@ -146,7 +183,7 @@ The real underlying question is a product one: **should voice creation require a
 
 ## Stripe / restore surface (from Session 7c, 2026-04-21)
 
-### 23. Customer Portal cannot resurrect a deleted subscription — restore screen dead-ends for lapsed users
+### 23. [P2 · 2 confirmations needed] Customer Portal cannot resurrect a deleted subscription — restore screen dead-ends for lapsed users
 After Smart Retries exhausts its attempts, Stripe fires `customer.subscription.deleted` with `cancellation_details.reason = 'payment_failed'`, and our webhook writes `status = 'lapsed'`. A lapsed user who lands on `/app/vault/restore` and taps "Bring my vault back" opens the Customer Portal. The Portal lets them update their card — but Stripe does **not** automatically recreate a deleted subscription. Card update has no effect on a fully-lapsed user. They land back on `/app/vault/restore` still in `status = 'lapsed'`, confused about why nothing changed.
 
 `past_due` users (subscription still exists, retry cycle still active) are fine — Portal → update card → next retry succeeds → webhook flips status back to `active`. The gap is specifically the lapsed/cancelled case.
@@ -170,7 +207,7 @@ After Smart Retries exhausts its attempts, Stripe fires `customer.subscription.d
 
 These two entries capture the orphaned-First-Breath gap discovered while scoping Session 8. The polling infra, success state, First Breath screen, and guards all exist — what's undecided is routing. Both are explicit "connection pass" work, deliberately deferred so Sessions 8/9/10 can build surfaces in isolation.
 
-### 24. `VoiceCreationView` success state routes to `/app/messages/new` instead of First Breath
+### 24. [P2 · hold: overlaps active Step 6 work] `VoiceCreationView` success state routes to `/app/messages/new` instead of First Breath
 `src/components/voice/VoiceCreationView.tsx:243` — on `status === 'ready'`, the success screen's primary CTA pushes to `/app/messages/new`, skipping the ceremonial First Breath Stone moment at `/app/record/complete` entirely.
 
 **Affected file:** `src/components/voice/VoiceCreationView.tsx` — the `onClick={() => router.push("/app/messages/new")}` in the success branch (~line 243–246).
@@ -181,7 +218,7 @@ These two entries capture the orphaned-First-Breath gap discovered while scoping
 
 **Pick up when:** connection pass after Sessions 8/9/10 land the surfaces. Grep-verify that nothing else routes to `/app/messages/new` directly from the voice-creation flow at that time.
 
-### 25. `FirstBreathSequence` exits to `/app/record/complete/stub` — decide final destination
+### 25. [P2 · decision] `FirstBreathSequence` exits to `/app/record/complete/stub` — decide final destination
 `src/components/screens/FirstBreathSequence.tsx:100` — the CTA handler pushes to `/app/record/complete/stub` with an inline TODO (`// TODO: replace with router.push('/app/checkout') when Session 7 is complete`). Session 7 is complete (7a/7b/7c shipped), but the stub hasn't been replaced because the destination is still a design decision.
 
 **Candidates:**
@@ -195,7 +232,9 @@ These two entries capture the orphaned-First-Breath gap discovered while scoping
 
 ## Supabase generated types not wired up (from Session 8 micro-pass, 2026-04-21)
 
-### 26. DB enum types are hand-written unions; no generated types file
+### 26. [P3 — mostly resolved; CI check remains] DB enum types are hand-written unions; no generated types file
+
+**Update (seed scan, 2026-06-12):** steps 1–3 of the fix shape have landed — `src/lib/supabase/types.ts` exists (generated), and `MessageCategory` in `src/lib/messageTemplates.ts:32` now derives from `Database['public']['Enums']['message_category']`. Remaining: step 4 only — a CI/pre-commit drift check that regenerates types and fails on diff. Original entry below.
 This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced by `supabase gen types typescript`. TS files that need DB enum types currently hand-write string-literal unions that mirror the Postgres enums.
 
 **Current instance:** `src/lib/messageTemplates.ts:26` defines `MessageCategory` as an inline union with a comment pinning it to `supabase/migrations/20260421120000_messages_category.sql`. Same pattern will repeat for future DB-typed work unless the generation workflow lands.
@@ -223,7 +262,7 @@ This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced b
 **Fix shape:** extend `GenerateSpeechParams` with an optional `voiceSettings` and forward it in the TTS request body (`voice_settings`); pass `getCategoryVoiceSettings(category)` from both generation routes. Keep defaults when omitted so existing callers (`/api/messages` POST) are unaffected.
 **Pick up when:** first voice-quality pass on Step 6 audio, or when tuning ElevenLabs output.
 
-### 28. Pending audio lives in `essence-audio`, not the contract's `messages` bucket
+### 28. [P3 · decision] Pending audio lives in `essence-audio`, not the contract's `messages` bucket
 `src/lib/audio/storage-paths.ts` `pendingGenerationAudioPath()` writes pending Step 6 audio to `essence-audio` under a `users/{userId}/pending/` prefix. The API contract (`docs/API_CONTRACTS.md`) and the `pending_generations` migration comment describe the path as `messages/{userId}/pending/{generationId}.mp3` — implying a separate `messages` bucket.
 
 **Why the deviation:** provisioning a second storage bucket is infra (Supabase dashboard) with its own RLS; reusing the existing `essence-audio` bucket keeps one RLS surface and one set of path helpers. The copy-then-delete Save promotion (Q5) is unchanged — pending and permanent paths are still distinct and deterministic.
@@ -241,7 +280,7 @@ This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced b
 
 ## Supabase migration history reconciliation (from Session 8, 2026-06-10)
 
-### 30. `db push` blocked by version-collision in early migration history
+### 30. [P3 · owner-paired — touches migrations] `db push` blocked by version-collision in early migration history (absorbs #21)
 After fixing the CLI's database connection (added `SUPABASE_DB_PASSWORD` to `.env.local`, which cleared the `cli_login_postgres` permission error), `supabase db push --dry-run` reports: *"Remote migration versions not found in local migrations directory"* and suggests `supabase migration repair --status reverted 20260421` / `supabase db pull`.
 
 **Root cause:** several early migration files use short, non-unique version stubs — e.g. three `20260214*` files all parse to version `20260214`, two `20260412*` files to `20260412`, and `20260421_add_failed_attempt_count.sql` to `20260421`. The remote `supabase_migrations.schema_migrations` table (whose `version` is a primary key) can't hold one row per file when versions collide, so the CLI sees the same version as both "local-only" and "remote-only" and refuses to push. The *schema itself is correct* (verified via `gen types` — all expected tables/columns/enums exist); this is purely a bookkeeping mismatch in the migration-history table.
@@ -274,7 +313,7 @@ Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_g
 
 ## RecordingUpload clips-list fetch (from FU-1 refactor, 2026-06-11)
 
-### 32. Clips-list effect uses synchronous-setState-in-effect (eslint-disabled) — ✅ MOSTLY RESOLVED 2026-06-11
+### 32. [remaining half: P4] Clips-list effect uses synchronous-setState-in-effect (eslint-disabled) — ✅ MOSTLY RESOLVED 2026-06-11
 `src/components/audio/RecordingUpload.tsx` — the `voiceProfileId`-keyed clips-list data fetch reset list/loading/error state synchronously in the effect body (the conventional pre-fetch pattern), tripping `react-hooks/set-state-in-effect` and carrying a block-level disable. The same hand-rolled `fetch`-in-effect triad also lived in `MemoryShelf`.
 
 **Resolved (the consolidation half):** extracted `src/lib/data/useResource.ts` — a generic `fetch`-in-effect-with-loading/error hook (status machine, AbortController-per-fetch stale-response guard, imperative `refetch`, `setData` for optimistic/silent patches, falsy-`key` disabled state). Both `RecordingUpload`'s clips list (keyed on `voiceProfileId`) and `MemoryShelf` (fetch-once + retry) now consume it; neither component carries the `set-state-in-effect` disable anymore. The disable now lives in exactly ONE documented place — the hook's fetch effect. Unit-tested in `tests/unit/useResource.test.tsx` (11 cases: status transitions, keyed/imperative refetch, disabled key, setData, abort/stale-response guard). MemoryShelf verified in-browser (loading → success → empty). RecordingUpload's clips list is mic-gated headless so not browser-verified, but runs the identical hook logic.
@@ -284,7 +323,7 @@ Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_g
 
 ## Step 6 message routes — error-response convention (from shared-helpers refactor, 2026-06-11)
 
-### 33. Step 6 error responses — `retryable` consistency — ✅ RESOLVED 2026-06-11
+### 33. [remaining half: P4] Step 6 error responses — `retryable` consistency — ✅ RESOLVED 2026-06-11
 **Resolved (the retryable-consistency half):** every Step 6 error body that carries an `error` message now also carries a `retryable` boolean. Added `retryable: false` to the 7 inline validation/precondition returns (generate recipient-not-found; save not-found/not-ready/subscription-lapsed; commit no-candidate; discard already-saved; regenerate no-cached-text) plus the two shared helpers (`pendingNotFoundResponse`, `loadReadyVoiceProfile` in `route-helpers.ts`). The partial-success responses (carrying `generationId`/`textStatus`/`audioStatus`/`committed`) already carried `retryable: true`. Test-enforced: smoke assertions in `tests/smoke/messages.spec.ts` now check `retryable === false` on the 404/409/403 paths.
 
 **Deliberately left as-is:** the code-only business-outcome responses — `cost_limit_blocked` (429, carries `limit_kind`) and `vault_limit_reached` (403, code-only) — have no `error` message and their `code` drives client behavior, so `retryable` is redundant there. The rule applied is: *a body with an `error` field has a `retryable` field.*
@@ -294,7 +333,7 @@ Under `DEFERRED_AUDIO_ENABLED`, `/regenerate` writes a candidate into `pending_g
 
 ## Route map — two routing inconsistencies surfaced (from route-centralization, 2026-06-11)
 
-### 34. `/messages/new` vs `/app/messages/new` — two live message-creation routes
+### 34. [P2 · decision] `/messages/new` vs `/app/messages/new` — two live message-creation routes
 Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 **(a) `/app/home` bug — FIXED.** `src/app/app/vault/seal/actions.tsx` dismiss handler pushed to `/app/home`, which is not a route (the home route is `/home`) — it would 404. Fixed to `ROUTES.home` during centralization. No follow-up needed; recorded here for traceability.
@@ -306,7 +345,7 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 ## A6 Preview & Refine — screen build (from Step 6 A6 wiring chunk 1, 2026-06-11)
 
-### 35. Canvas BreathStone reads softer/duller than the prototypes' golden CSS stones (A6 + A7, any light ground)
+### 35. [P4 · user-deferred] Canvas BreathStone reads softer/duller than the prototypes' golden CSS stones (A6 + A7, any light ground)
 **Files:** `src/components/screens/messages/PreviewRefineScreen.tsx` and `src/components/screens/messages/SaveConfirmationScreen.tsx` (the `<BreathStone …>` renders); `src/components/breath-stone/breathStoneEngine.ts` (the palette that would change).
 **What:** the Step 6 prototypes draw rich honey-gold CSS-gradient stones (A6: Ready/Playback/Working; A7: the `infused` ceremonial amber, `essence-step6-a7.html`). Production reuses the shared canvas `BreathStone` — the architecturally correct call (one stone grammar across onboarding + Voice Training + vault + Step 6), and the state mapping is clean. But on light grounds the canvas stone renders pale-taupe, noticeably less ceremonial than the prototypes' gold orbs. Confirmed against the reference sandbox (`/dev/breath-stone`): this is the settled engine look, not a usage bug. **2026-06-12, A7 design pass:** user agrees it reads "quite dull"; revisit deliberately deferred because warming the engine touches every stone usage (VaultSeal, FirstBreath, RecordScreen, A6, A7) — a lift of its own. A7 partially compensates with the prototype's 7s amber halo as a CSS layer behind the canvas (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`).
 **Why it matters:** the stone is the emotional anchor of the preview and save-confirmation moments; a washed-out stone undersells "here it is, in your voice" and the ceremonial close. Cosmetic, not functional — states are correct and motion holds at 4× CPU.
@@ -333,16 +372,16 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Fix shape:** measure duration server-side when the render lands (parse the mp3 or take it from the vendor response), store it on `pending_generations` (needs a column → migration bundle, #30) and return it from `/commit`; populate `messages.audio_duration_ms` on save while there.
 **Pick up when:** with the #36 migration bundle, or if the estimate visibly misleads during QA.
 
-### 38. A6 exit-path stop-gaps: C3, the reshape return, and A7's ceiling CTA land short (A7 save-success ✅ 2026-06-12)
+### 38. [P3 · blocked on C3/A4/C1 builds] A6 exit-path stop-gaps: C3, the reshape return, and A7's ceiling CTA land short (A7 save-success ✅ 2026-06-12)
 **Files:** `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx`, `src/app/messages/saved/[messageId]/SaveConfirmationPageClient.tsx`.
 **Resolved (Chunk 3, 2026-06-12):** Save success now routes to A7 Saved at `/messages/saved/[messageId]`, and the already-saved redirect in the A6 `page.tsx` replays the same A7 — both verified live.
+**Resolved (Chunk 4, 2026-06-12):** Reshape ("What it says") and the A6 back chevron now route to A4 at `/messages/new/g/[generationId]/reshape`; the deferred reshape writes a candidate back onto the same row and returns to its A6 in the candidate state — verified live (real LLM reshape, depth cap + 404 guards).
 **Still open:**
 - `vault_limit_reached` on save → Home (should be C3 Vault Limit, and `step6.vault_limit_blocked` should fire when C3 is shown — it deliberately doesn't fire now).
-- Reshape ("What it says") and the back chevron → `/messages/new` flow start (should be A4 with `fromGenerationId`, returning to A6 as a candidate).
 - **New with A7:** the `third` variant's "See what's coming" CTA → Home (should be C1 Three Shaped).
 `subscription_lapsed` correctly routes to the existing `/app/vault/restore` gate.
-**Why it matters:** the flows are safe but lossy — a reshape restarts the flow instead of editing the note, and capped users get no ceiling moment.
-**Fix shape:** as C3 / A4 / C1 land (Step 6 spine + ceiling screens), repoint each handler at the real route, and wire `step6.vault_limit_blocked` into C3.
+**Why it matters:** the flows are safe but lossy — capped users get no ceiling moment (C3), and the third-message ceremony (C1) is skipped.
+**Fix shape:** as C3 / C1 land, repoint each handler at the real route, and wire `step6.vault_limit_blocked` into C3.
 **Pick up when:** each remaining screen's build chunk — this entry is the checklist.
 
 ### 39. Saved-message immutability trigger crashes on every saved-row update (dangling `kind` reference) — ✅ RESOLVED 2026-06-12
@@ -356,9 +395,66 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 ## A7 design-architect pass (Step 6 spine, Chunk 3, 2026-06-12)
 
-### 40. `--shadow-mineral` is keyed to a retired teal, not the live mineral
-**Files:** `src/app/globals.css:54` (the token), consumers at `globals.css:3131`, `globals.css:3413`, `src/components/screens/messages/PreviewRefineScreen.css.ts:328`, `src/components/screens/messages/RecipientSetupScreen.tsx:215`.
-**What:** `--shadow-mineral` is `rgba(74, 107, 126, 0.3)` — a teal-blue left over from an earlier mineral — while the live `--color-mineral` is `#7A8088` (rgba 122, 128, 136). Every mineral button casts a shadow bluer than itself, and on warm grounds the cool cast reads off-temperature. Caught in the A7 design-architect pass; A7 deliberately uses a locally warm-keyed shadow instead (`SaveConfirmationScreen.css.ts`, with a pointer to this entry).
-**Why it matters:** cosmetic but systemic — the token drifts further from the palette every time a new warm screen uses it, and per-screen workarounds (A7's) re-split what should be one decision.
-**Fix shape:** re-key the token to the live mineral (e.g. `rgba(122, 128, 136, 0.3)`) or split into `--shadow-mineral` (cool grounds) + a warm-keyed sibling for amber/gold grounds; re-verify the five consumers visually (recording button states, A6 commit button, A2 continue).
+### 40. `--shadow-mineral` keyed to a retired teal — ✅ RESOLVED 2026-06-12 (Chunk 4)
+**Resolution:** re-keyed warm in `globals.css` to `0 4px 14px rgba(110, 80, 40, 0.20)`. Verified live that all consumers now render the warm value: A4 CTA, A7, A6 (Save + "Hear this in your voice"), and the two globals consumers (`.vault-cta`, `.vault-restore-screen__cta`). A7's interim local override (set during Chunk 3) graduated into the token. Every consumer sits on a warm ground, so one warm value holds app-wide — no cool/warm split needed.
+**Original:** `--shadow-mineral` was `rgba(74, 107, 126, 0.3)`, a teal-blue from an earlier mineral, while the live `--color-mineral` is `#7A8088`. Every mineral button cast a shadow bluer than itself; on warm grounds the cool cast read off-temperature. Flagged on two consecutive screens (A7, A4) by the design architect.
 **Pick up when:** any tokens/visual-polish pass — pairs naturally with the stone-warmth pass (#35), same screens get re-verified.
+
+## First Breath audio layer (from refactoring-system seed scan, 2026-06-12)
+
+### 41. [P4] First Breath audio is spec'd only in code TODOs, untracked here
+
+**Files:** `src/components/screens/FirstBreathSequence.tsx:65–75`, `src/components/screens/FirstBreathSequence.phases.ts:95,104`.
+**What:** five in-code TODOs spec the First Breath audio design (soft pad 4:30 seamless loop at −24 LUFS, harmonic-cluster one-shot, low resonant bell on the bloom peak) with no corresponding FOLLOW_UPS entry — the only marker debt in `src/` not already tracked (house rule: no in-code TODO without an entry). This entry adopts them.
+**Why it matters:** the ceremony currently plays silent; the audio layer is a designed-but-unbuilt half of the First Breath moment. No functional risk.
+**Fix shape:** source/produce the three assets per the in-code spec and wire them in the consumer (the phases file deliberately leaves wiring to the consumer), or explicitly descope audio and convert the TODOs into a pointer at this entry.
+**Pick up when:** a First Breath polish pass, or whenever audio-asset work is scheduled. Pairs with the #25 exit-destination decision since both touch the same sequence.
+
+## Discovery pass (triage 2026-06-13)
+
+Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: typecheck ✅ · lint ✅ · unit tests 154/154 ✅ (all green on `main`). Active feature branch `feat/step6-a6-screen` (last commit 2026-06-13) is mid-construction across the whole Step 6 message-creation flow — those files were treated as work-in-progress and excluded from this pass. A recurring pattern surfaced across stable subsystems: a Supabase write whose `{ error }` is not checked, so a failed save resolves as if it succeeded. The five below are the distinct, real instances; the Stripe webhook handlers and `upsertSubscription` were reviewed and found correctly guarded (errors throw, upserts are idempotent) — no entry warranted there.
+
+### 42. [P2] Onboarding completion swallows a failed save — the user's profile is silently discarded
+`src/app/onboarding/page.tsx:121-133` — the `completeOnboarding` server action runs the final `profiles` UPDATE (first/last name, DOB, city, state, `onboarding_completed_at`) but never inspects the returned `error`. The `uploadAvatar` action directly below it (`page.tsx:179-186`) *does* check and throw, so this is an asymmetry, not a house pattern. `OnboardingPageClient.handleComplete` (`OnboardingPageClient.tsx:38-39`) awaits the action then unconditionally `router.push(ROUTES.record)`. A second swallow sits at `page.tsx:109` (`if (!user) return;` — a silent no-op on an expired session).
+
+**Why it matters:** if that UPDATE fails (RLS, transient DB error, constraint), the action resolves as though it saved, the wizard navigates the user into the app, and everything they typed during onboarding is lost — `onboarding_completed_at` stays null, so they're treated as not-onboarded next visit. This is the first flow every new user hits, so a misconfiguration here loses data for *all* new users, invisibly.
+**Fix shape:** capture `{ error }` on the update and `throw` on failure (mirror `uploadAvatar`); throw rather than silently return on the expired-session branch; have `handleComplete` surface the error instead of navigating. The smallest correct fix is to make the failure loud so the user can retry rather than lose input.
+**Pick up when:** soon — shipping-path data integrity. Agent-fixable (error check + throw); the only product touch is the eventual error-UI copy, which can be a separate follow-up.
+
+### 43. [P3] Voice-creation success doesn't verify its DB write — user can be told "ready" while the profile stays "processing"
+`src/app/api/voice-profiles/[id]/start/route.ts:302-315` — on a successful ElevenLabs result the route updates `voice_profiles` to `status='ready'` (+ `vendor_voice_id`) but doesn't check the returned error, then returns `{ status: "ready" }`. Both *failure*-path updates in the same route (≈lines 131 and 177) are error-checked — again an asymmetry within one file.
+
+**Why it matters:** if that write fails (or the `.eq("status","processing")` monotonic guard matches zero rows), the client is told the voice is ready while the row is still `processing` / has no `vendor_voice_id`. The ElevenLabs voice was created and billed, but the result isn't persisted — the profile then drifts into the 3-minute staleness window and reads as timed-out/failed, so the user sees failure after a successful, paid creation.
+**Fix shape:** destructure `{ error }` on the success update; on error, log and return 500 (the voice exists at the vendor but local state is lost — surface it rather than 200-ing). Consider logging when the monotonic guard updates zero rows.
+**Pick up when:** next time the voice-creation pipeline is touched. Agent-fixable.
+
+### 44. [P3 · owner-paired (Stripe)] Checkout doesn't check the customer-id save — a failed write spawns duplicate Stripe customers
+`src/lib/stripe/create-checkout-session.ts:85-88` — after creating a new Stripe customer the code writes `stripe_customer_id` back to `profiles` without checking the error. The profile *lookup* a few lines up (`:40`) is checked and throws loudly; the write isn't.
+
+**Why it matters:** if that write fails the current checkout still works (the id is held in memory), but the profile keeps `stripe_customer_id = null`. The next checkout attempt finds no stored id (`:63`) and creates *another* Stripe customer — so a user accumulates duplicate customer records in Stripe, splintering their billing/subscription history across customers. Money-path hygiene.
+**Fix shape:** capture `{ error }` on the update and throw (matching the lookup's pattern) so a failed persist aborts before checkout rather than silently leaking a duplicate-customer path. Owner-paired because it sits in the Stripe surface.
+**Pick up when:** before public launch, or the next Stripe-surface pass.
+
+### 45. [P4] Signed-URL routes log usage as "success" before the work that can fail
+`src/app/api/audio/init-upload/route.ts:74-80` and `src/app/api/audio/playback-url/route.ts:38-44` — both call `recordUsageEvent(..., outcome: "success")` *before* the operations that can still fail (the DB insert + `createSignedUploadUrl` in init-upload; the clip fetch, ownership/status checks, and `createSignedUrl` in playback-url). The established pattern — `recordUsageEvent` defaults to `outcome: "started"`, then `updateUsageEventOutcome` finalizes, used correctly by `/voice-profiles/[id]/start` — is bypassed here.
+
+**Why it matters:** the usage ledger records failed attempts as "success" (telemetry is wrong), and because the row is written before the work, a failed sign still consumes the per-minute signed-URL budget. Low blast radius — sign failures are rare and it's the user's own budget — but it's a correctness drift from the ledger pattern used elsewhere.
+**Fix shape:** record with the default `"started"` up front and call `updateUsageEventOutcome(..., "success")` after the URL is actually signed, or simply move the `recordUsageEvent` call below the sign.
+**Pick up when:** any pass touching rate-limit/usage telemetry. Agent-fixable.
+
+### 46. [P3] init-upload's storage_path write isn't checked — a silent failure breaks commit; plus a no-op extension ternary
+`src/app/api/audio/init-upload/route.ts:115-118` — after computing the object path the route updates `training_clips.storage_path` from `"pending"` to the real path but doesn't check the error (the insert above and the sign below both *are* checked). `audio/commit` (`route.ts:49-52`) reads `row.storage_path` and downloads from it; if the update silently failed, the path stays `"pending"`, so commit downloads a non-existent object and returns "Object not found in storage" — the clip the user just recorded fails to commit with a confusing error. Adjacent: `:112` has `const ext = mime.includes("webm") ? "webm" : "webm"` — identical branches, a no-op ternary that hard-codes `webm` regardless of mime (dead/placeholder logic; harmless today but misleading, and a latent bug if non-webm clips ever flow through).
+
+**Why it matters:** the unchecked write turns a rare DB hiccup into a lost recording with an unhelpful error, on the core voice-training upload path.
+**Fix shape:** capture `{ error }` on the storage_path update and return 500 on failure (match the insert/sign handling). Separately, delete the dead ternary (`const ext = "webm"`) or derive the extension from `mime` if multiple formats are intended.
+**Pick up when:** next time the audio-upload pipeline is touched. Agent-fixable.
+
+## Discovery notes — triggers that came true (triage 2026-06-13)
+
+Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx`) is now live with real Supabase avatar upload (`usePhotoUpload` + the `uploadAvatar` action in `page.tsx`), so several Screen 10 photo follow-ups have had their "Pick up when" triggers fire:
+
+- **#6 (photo fit in circle):** the client-side half shipped — `globals.css:1446` sets `object-fit: cover; object-position: center;` on `.onboarding-photo__img`. Only the server-side thumbnail half remains; #6 should be narrowed to that.
+- **#7 (screen-reader announcement on photo success):** appears implemented — `Screen10.tsx:156-158` renders `<p class="sr-only" role="status" aria-live="polite">Profile photo added.`, which is #7's exact fix shape. Recommend the fixer verify and strike.
+- **#9 (re-entry shows previously-uploaded photo):** appears addressed — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl`, replacing the prototype's `resetPhoto()`. Recommend the fixer verify and strike.
+
+These are left for the fixer to strike (resolution strikes are the fixer's lane per the coordination rule); flagged here so they don't linger as falsely-open.

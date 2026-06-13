@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, "refactor/**", "triage/**"]
 
 jobs:
   ci:
@@ -28,6 +28,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Test (unit)
+        run: npm run test:unit
 
       - name: Check Supabase env (values hidden)
         run: |
