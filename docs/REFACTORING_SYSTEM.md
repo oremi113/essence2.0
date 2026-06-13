@@ -180,7 +180,7 @@ Granted by the owner on 2026-06-12, scoped **exclusively to this system**:
 | `git push` | ✅ Only `refactor/*` branches (cloud runs must push to deliver — a pushed branch merges nothing) |
 | Update `docs/FOLLOW_UPS.md` priorities/entries | ✅ On the refactor branch |
 | Append to `docs/REFACTORING_LOG.md` (the run journal, §8) | ✅ On the refactor branch |
-| Open a PR | ❌ Ask first |
+| Open a PR **for its own `refactor/*` branch** | ✅ (gives the owner a CI badge + one-tap merge surface; the agent still never merges it) |
 | Merge anything, touch `main` or `feat/*` branches | ❌ Never |
 | `--amend`, `--no-verify`, force-push | ❌ Never (house rule) |
 | New migrations, deps, or `.env` changes | ❌ Ask first |
@@ -234,32 +234,66 @@ still applies in full.
 
 > Read `docs/REFACTORING_SYSTEM.md` and follow it exactly: scan, score,
 > fix the single top fixable item on a `refactor/fu-<n>-<slug>` branch,
-> push that branch, and produce the owner report in the format §3
-> defines. Respect §4 consent limits and §5 safety rails without
-> exception. If nothing is fixable this run (all top items need decisions
-> or overlap active work), do the scan/score pass only and say so plainly.
+> push that branch, **open a PR for it** (so CI runs and the owner gets a
+> one-tap merge surface — but never merge it yourself), and produce the
+> owner report in the format §3 defines. Respect §4 consent limits and §5
+> safety rails without exception. If nothing is fixable this run (all top
+> items need decisions, overlap active work, or already have an open
+> branch), do the scan/score pass only and say so plainly.
 
 - **On-demand runs:** the owner can also open any Claude Code session and
   say *"run the refactoring system"* — same document, same rules, with
   the addition that local runs use `git worktree` for isolation and skip
   the push (the branch is already local).
 
-## 7. The owner's weekly ritual (~15 minutes)
+## 7. The owner's review ritual (~15 minutes)
+
+The owner is non-technical and **cannot review the code itself** — and the
+system is built so they don't have to. Two different jobs live in a review,
+and only one is the owner's:
+
+- **"Is the code correct?"** — handled by **CI** (mechanical pass/fail, §9)
+  and by the **reviewing session** (a second AI that re-reads the diff
+  against the root-cause claim and explains it in plain English). The owner
+  does not do this.
+- **"Is this change something I actually want?"** — *this* is the owner's
+  job: a judgment about intent and product behavior that no test and no AI
+  can make. The owner approves the **what**, not the **how**.
+
+The ritual:
 
 1. Read the report (2 min).
-2. For the **Fixed** item: skim the plain-language summary. If it sounds
-   right, tell a session: *"review and merge refactor/fu-N"* — the
-   session diffs it, re-runs tests, explains anything surprising, and
-   merges only on your go-ahead. (You never need to read the diff
-   yourself; you need to agree with what it *says it does*.)
+2. For the **Fixed** item: open its PR. Check the **CI badge is green**
+   (that's the correctness gate), then read the plain-language summary. To
+   go deeper, tell a session *"review and merge the PR for refactor/fu-N"* —
+   it explains what changed and why in plain English, then merges only on
+   your go-ahead. You're agreeing with what it *says it does*, never reading
+   the diff yourself.
 3. Answer anything in **Needs your decision** — even "not now" is an
    answer; the agent records it and stops re-asking.
-4. Optionally reorder **Top 5 next** ("do #34 before #5") — your call
-   always beats the score.
+4. Optionally reorder **Top 5 next** — your call always beats the score.
 
-If a fixed branch sits unreviewed for 3+ weeks, the next run flags it
-rather than piling up more branches — maximum 3 unmerged refactor
-branches at any time.
+### Tiering your attention (where to spend it)
+
+Not every change deserves equal scrutiny. Spend your judgment where only
+*you* add value:
+
+- **Behavior-changing or unfamiliar** (a fix that alters what users
+  experience, or whose purpose you don't understand) → look closely; have
+  the reviewing session explain it fully, or hold it for a conversation.
+- **Mechanical / low-stakes** (dead-code removal, a cosmetic token, a
+  rename) → green CI + a glance at the summary is enough; merge.
+
+> **Auto-merge is deliberately OFF.** Tiering is about *attention depth* —
+> every change still passes through your merge, with CI green as the
+> precondition. Letting the low-stakes tier merge *without* you is a future
+> step to consider **only after a calibration period** — once you've watched
+> the fixer reliably produce clean, root-caused fixes over several runs.
+> Trust is earned by observation, not granted on setup day. Until then,
+> review everything (lightly for the low tier, closely for the high).
+
+If a fixed PR sits unreviewed for 3+ weeks, the next run flags it rather
+than piling up more — maximum 3 open refactor PRs at any time.
 
 ---
 
@@ -294,14 +328,18 @@ sure you can always *find* the right one.
 ## 9. Independent verification (CI)
 
 GitHub Actions (`.github/workflows/ci.yml`) re-runs `lint`, `typecheck`,
-`test:unit`, and `build` on every branch and pull request — independently
-of the agent. This is the referee: the agent's "checks pass" claim in its
-report is **verified by GitHub**, not taken on trust, which is the
-structural backstop against a self-reported false "done" (and against
-band-aids that quietly break something else).
+`test:unit`, and `build` independently of the agent. It triggers on every
+pull request **and on every push to `main`, `refactor/**`, and
+`triage/**`** — so an agent branch is vetted the instant it's pushed, PR or
+not. This is the referee: the agent's "checks pass" claim is **verified by
+GitHub**, not taken on trust — the structural backstop against a
+self-reported false "done" (and against band-aids that quietly break
+something else).
 
-- A red ❌ on a `refactor/*` branch means **do not merge** — the fix is
-  incomplete regardless of what the report says.
-- Recommended (owner, one-time): in GitHub branch-protection for `main`,
-  require the CI check to pass before merging. Then even a hurried review
-  cannot land broken code on `main`.
+- A red ❌ on a `refactor/*` or `triage/*` branch means **do not merge** —
+  the work is incomplete regardless of what the report says.
+- **`main` requires the `ci` check to pass before any merge** (branch
+  protection, enabled 2026-06-13; strict, admins included, force-push and
+  deletion blocked). Even a hurried review cannot land broken code on
+  `main`. This is the part of the safety net that does not depend on the
+  owner at all.
