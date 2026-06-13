@@ -84,36 +84,88 @@ description, fixable-by-agent yes/no).
 
 ### Fix (the top fixable item, one per run)
 
-- One item per run, smallest correct fix. No scope creep: if the fix
+- One item per run, smallest **correct** fix. "Smallest" qualifies
+  *correct* — it means the least code that addresses the **cause**, never
+  the least code that hides the **symptom**. No scope creep: if the fix
   reveals an adjacent problem, **log it** as a new entry, don't fix it in
   the same branch.
+- **Skip in-flight work.** Before picking an item, list existing
+  `refactor/*` branches (`git branch -r --list 'origin/refactor/*'`). If
+  the top item already has an unmerged branch, it is "done pending the
+  owner's review" — skip it and take the next fixable item. Never re-fix
+  an item that already has an open branch.
 - Branch name: `refactor/fu-<number>-<slug>` (e.g.
   `refactor/fu-5-cancel-status`).
 - Definition of done: typecheck + lint + unit tests pass; new behavior
   has a test where the house "extract, then test" pattern applies; the
   FOLLOW_UPS entry is updated with a `— ✅ RESOLVED <date>` strike
-  matching the existing house style **in the same branch**.
-- If the fix turns out to be larger than ~2 hours of agent work or
-  touches anything in §5's never-touch list: stop, don't half-ship.
-  Downgrade to a written plan in the report instead.
+  matching the existing house style **in the same branch**; the run log
+  (§8) gets its entry.
+- If the cause can't be named, the fix is larger than ~2 hours of agent
+  work, or it touches anything in §5's never-touch list: stop, don't
+  half-ship. Downgrade to a written investigation/plan in the report
+  instead.
+
+#### Root-cause discipline (no band-aids)
+
+The owner is non-technical and cannot read a diff to tell a real fix from
+a patch that merely hides the symptom — so the agent must make its
+reasoning visible and must not paper over causes. Non-negotiable:
+
+1. **Name the cause before fixing.** Every fix records, in plain
+   language: *symptom → underlying cause → why this change fixes the
+   cause, not the symptom.* This goes in the report **and** the run log.
+   If the cause cannot be named, the agent may not "fix" it — it writes
+   an investigation instead.
+2. **Banned moves** (unless explicitly justified in the report as the
+   genuine root-cause fix): swallowing or silencing an error;
+   adding a guard that hides a `null`/`undefined` without explaining why
+   it occurs; loosening or widening a type to make an error disappear;
+   adding `eslint-disable` / `@ts-expect-error` / `@ts-ignore` to mute
+   rather than fix; adding a retry or timeout to mask a race; and — most
+   important — **weakening, skipping, or deleting an existing test to make
+   it pass.** Tests assert correct behavior; they are not the obstacle.
+3. **Fix the cause or escalate — never a partial patch.** If the true
+   cause sits outside safe scope (never-touch list, too large, or needs a
+   product decision), STOP and write it up. Shipping a cosmetic patch to
+   close the item is the failure mode this rule exists to prevent.
+4. **"Fixed" and "worked around" are different words.** If the change is a
+   genuine root-cause fix, say "fixed." If it is a deliberate stopgap, say
+   "worked around" — loudly — and log a new FOLLOW_UPS entry for the real
+   fix. Never call a workaround a fix.
+5. **Recurrence is a red flag.** If the item being fixed was previously
+   resolved and reopened, or the area has had a prior fix, treat that as a
+   sign the earlier attempt band-aided the symptom — find the deeper cause
+   this time, and say so in the report.
 
 ### Report
 
 End every run with a report the owner can read in two minutes, in this
 order:
 
-1. **Fixed:** what was wrong, in one user-relevant sentence ("Cancelling
-   an upload used to leave the app thinking the upload failed; now it
-   resets cleanly"), branch name, proof it works (tests run + result).
+1. **Fixed (or worked around):** what was wrong in one user-relevant
+   sentence ("Cancelling an upload used to leave the app thinking the
+   upload failed; now it resets cleanly"), the plain-language root-cause
+   line (§3 Root-cause discipline), the branch name and commit ID, and
+   proof it works (which checks ran + result). Use the word "fixed" only
+   for genuine root-cause fixes; say "worked around" otherwise.
 2. **Needs your decision:** items blocked on product choices, each with
    2–3 options and a recommendation in plain language.
 3. **Top 5 next:** the current ranked queue, one line each.
 4. **New discoveries:** anything found this run, already logged to
    FOLLOW_UPS.
 
+If the run **failed or did nothing** (couldn't install dependencies,
+couldn't run the checks, nothing fixable), say so plainly as the first
+line — a silent or ambiguous report is worse than "this run accomplished
+nothing because X." Never imply coverage that didn't happen.
+
 No jargon in sections 1–2. "The database trigger referenced a dropped
 column" is fine in FOLLOW_UPS; the report says "saving-related updates
 would have crashed once we built vault management."
+
+The same content is appended to the run log (§8) on the branch, so the
+report is durable and not just a transient session message.
 
 ---
 
@@ -127,6 +179,7 @@ Granted by the owner on 2026-06-12, scoped **exclusively to this system**:
 | `git commit` | ✅ Only on `refactor/*` branches |
 | `git push` | ✅ Only `refactor/*` branches (cloud runs must push to deliver — a pushed branch merges nothing) |
 | Update `docs/FOLLOW_UPS.md` priorities/entries | ✅ On the refactor branch |
+| Append to `docs/REFACTORING_LOG.md` (the run journal, §8) | ✅ On the refactor branch |
 | Open a PR | ❌ Ask first |
 | Merge anything, touch `main` or `feat/*` branches | ❌ Never |
 | `--amend`, `--no-verify`, force-push | ❌ Never (house rule) |
@@ -157,6 +210,19 @@ still applies in full.
   on the most recent `feat/*` branch). Skip items overlapping those files
   — proximity makes them *higher priority for later*, not safe to grab
   now.
+- **Honest verification.** Run the checks (`typecheck`, `lint`,
+  `test:unit`) and report their *actual* output. If the environment can't
+  install dependencies or run them, the fix is **not** done — say the run
+  was blocked; never claim a check passed that didn't run. (CI on GitHub
+  re-runs these independently on every branch — see §9 — so a false
+  "passed" claim gets caught, but don't make it in the first place.)
+- **Backlog-file coordination** (matters once the discovery agent also
+  runs): the fixer only edits its **own** item's entry in
+  `docs/FOLLOW_UPS.md` (the resolution strike) plus the priority table.
+  Bulk discovery/append of new entries is the discovery agent's job on its
+  own `triage/*` branch. This keeps the two from colliding on the same
+  file. If a merge conflict on `FOLLOW_UPS.md` arises anyway, the agent
+  re-syncs from latest `main` and reapplies only its own change.
 
 ---
 
@@ -194,3 +260,48 @@ still applies in full.
 If a fixed branch sits unreviewed for 3+ weeks, the next run flags it
 rather than piling up more branches — maximum 3 unmerged refactor
 branches at any time.
+
+---
+
+## 8. The run log (`docs/REFACTORING_LOG.md`)
+
+The backward-looking journal — the answer to *"what did the agent do, and
+when?"* when something feels off. `FOLLOW_UPS.md` says what's still
+*outstanding*; the run log says what was *done*. Every run appends one
+dated entry (newest first) **on its branch**, so the log travels with the
+work and lands on `main` when the branch merges.
+
+Each entry carries:
+
+- **Date + run type** (scheduled / on-demand / discovery).
+- **Fixed (or worked around):** the item, the plain-language root-cause
+  line, the **branch name and commit ID** — this is the
+  pickle-recovery line: it ties a change to an exact, revertible commit.
+- **Health checks:** what ran (`typecheck` / `lint` / `test:unit`) and the
+  result at that moment.
+- **Scanned / discovered:** one line each.
+- **Merged:** stamped in later, when the owner merges the branch, so the
+  log records what actually entered the app and when.
+
+**In a pickle:** find the suspect change in the log, then tell a session
+*"revert the change from log entry <date>"* — it reverts that exact
+commit cleanly. Because every change is an isolated commit that never
+auto-merges, nothing the agent does is unrecoverable; the log just makes
+sure you can always *find* the right one.
+
+---
+
+## 9. Independent verification (CI)
+
+GitHub Actions (`.github/workflows/ci.yml`) re-runs `lint`, `typecheck`,
+`test:unit`, and `build` on every branch and pull request — independently
+of the agent. This is the referee: the agent's "checks pass" claim in its
+report is **verified by GitHub**, not taken on trust, which is the
+structural backstop against a self-reported false "done" (and against
+band-aids that quietly break something else).
+
+- A red ❌ on a `refactor/*` branch means **do not merge** — the fix is
+  incomplete regardless of what the report says.
+- Recommended (owner, one-time): in GitHub branch-protection for `main`,
+  require the CI check to pass before merging. Then even a hurried review
+  cannot land broken code on `main`.
