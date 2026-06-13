@@ -132,7 +132,7 @@
   --color-border:         rgba(0, 0, 0, 0.06);
   --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-mineral:       0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-mineral: 0 4px 14px rgba(110, 80, 40, 0.20); /* re-keyed warm 2026-06-12, token-reconciliation sweep (FOLLOW_UPS #40): old teal predated the live mineral */
   --shadow-focus-ring:    0 0 0 4px rgba(122, 128, 136, 0.18);
 
   --font-display: 'Spectral', Georgia, serif;
@@ -409,8 +409,8 @@ button { font-family: inherit; }
   animation-delay: var(--duration-large);
 }
 @keyframes stoneBreathInfused {
-  0%, 100% { transform: scale(1);    filter: brightness(1); }
-  50%      { transform: scale(1.04); filter: brightness(1.06); }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
 }
 @keyframes stoneHaloInfused {
   0%, 100% { transform: scale(1);    opacity: 0.18; }
@@ -445,8 +445,8 @@ button { font-family: inherit; }
   animation-delay: var(--duration-large);
 }
 @keyframes stoneBreathShimmer {
-  0%, 100% { transform: scale(1);    filter: brightness(1); }
-  50%      { transform: scale(1.03); filter: brightness(1.04); }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
 }
 @keyframes stoneHaloShimmer {
   0%, 100% { transform: scale(1);    opacity: 0.08; }
