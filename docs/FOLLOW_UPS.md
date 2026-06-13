@@ -14,6 +14,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
+| 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ add error check + throw |
 | 5 | P3 | Cancelling an upload reads as a failure internally | ✅ **next up** |
 | 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ |
 | 2 | P3 | Failed upload leaves stale internal state between retries | ✅ |
@@ -27,9 +28,13 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
 | 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ⏳ blocked on C3/A4/C1 builds |
+| 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
+| 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
+| 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
+| 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ reorder record/update |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
 **Next-up fixable queue:** #5 → #1 → #2 → #26 (CI check) → #4.
@@ -404,3 +409,52 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Why it matters:** the ceremony currently plays silent; the audio layer is a designed-but-unbuilt half of the First Breath moment. No functional risk.
 **Fix shape:** source/produce the three assets per the in-code spec and wire them in the consumer (the phases file deliberately leaves wiring to the consumer), or explicitly descope audio and convert the TODOs into a pointer at this entry.
 **Pick up when:** a First Breath polish pass, or whenever audio-asset work is scheduled. Pairs with the #25 exit-destination decision since both touch the same sequence.
+
+## Discovery pass (triage 2026-06-13)
+
+Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: typecheck ✅ · lint ✅ · unit tests 154/154 ✅ (all green on `main`). Active feature branch `feat/step6-a6-screen` (last commit 2026-06-13) is mid-construction across the whole Step 6 message-creation flow — those files were treated as work-in-progress and excluded from this pass. A recurring pattern surfaced across stable subsystems: a Supabase write whose `{ error }` is not checked, so a failed save resolves as if it succeeded. The five below are the distinct, real instances; the Stripe webhook handlers and `upsertSubscription` were reviewed and found correctly guarded (errors throw, upserts are idempotent) — no entry warranted there.
+
+### 42. [P2] Onboarding completion swallows a failed save — the user's profile is silently discarded
+`src/app/onboarding/page.tsx:121-133` — the `completeOnboarding` server action runs the final `profiles` UPDATE (first/last name, DOB, city, state, `onboarding_completed_at`) but never inspects the returned `error`. The `uploadAvatar` action directly below it (`page.tsx:179-186`) *does* check and throw, so this is an asymmetry, not a house pattern. `OnboardingPageClient.handleComplete` (`OnboardingPageClient.tsx:38-39`) awaits the action then unconditionally `router.push(ROUTES.record)`. A second swallow sits at `page.tsx:109` (`if (!user) return;` — a silent no-op on an expired session).
+
+**Why it matters:** if that UPDATE fails (RLS, transient DB error, constraint), the action resolves as though it saved, the wizard navigates the user into the app, and everything they typed during onboarding is lost — `onboarding_completed_at` stays null, so they're treated as not-onboarded next visit. This is the first flow every new user hits, so a misconfiguration here loses data for *all* new users, invisibly.
+**Fix shape:** capture `{ error }` on the update and `throw` on failure (mirror `uploadAvatar`); throw rather than silently return on the expired-session branch; have `handleComplete` surface the error instead of navigating. The smallest correct fix is to make the failure loud so the user can retry rather than lose input.
+**Pick up when:** soon — shipping-path data integrity. Agent-fixable (error check + throw); the only product touch is the eventual error-UI copy, which can be a separate follow-up.
+
+### 43. [P3] Voice-creation success doesn't verify its DB write — user can be told "ready" while the profile stays "processing"
+`src/app/api/voice-profiles/[id]/start/route.ts:302-315` — on a successful ElevenLabs result the route updates `voice_profiles` to `status='ready'` (+ `vendor_voice_id`) but doesn't check the returned error, then returns `{ status: "ready" }`. Both *failure*-path updates in the same route (≈lines 131 and 177) are error-checked — again an asymmetry within one file.
+
+**Why it matters:** if that write fails (or the `.eq("status","processing")` monotonic guard matches zero rows), the client is told the voice is ready while the row is still `processing` / has no `vendor_voice_id`. The ElevenLabs voice was created and billed, but the result isn't persisted — the profile then drifts into the 3-minute staleness window and reads as timed-out/failed, so the user sees failure after a successful, paid creation.
+**Fix shape:** destructure `{ error }` on the success update; on error, log and return 500 (the voice exists at the vendor but local state is lost — surface it rather than 200-ing). Consider logging when the monotonic guard updates zero rows.
+**Pick up when:** next time the voice-creation pipeline is touched. Agent-fixable.
+
+### 44. [P3 · owner-paired (Stripe)] Checkout doesn't check the customer-id save — a failed write spawns duplicate Stripe customers
+`src/lib/stripe/create-checkout-session.ts:85-88` — after creating a new Stripe customer the code writes `stripe_customer_id` back to `profiles` without checking the error. The profile *lookup* a few lines up (`:40`) is checked and throws loudly; the write isn't.
+
+**Why it matters:** if that write fails the current checkout still works (the id is held in memory), but the profile keeps `stripe_customer_id = null`. The next checkout attempt finds no stored id (`:63`) and creates *another* Stripe customer — so a user accumulates duplicate customer records in Stripe, splintering their billing/subscription history across customers. Money-path hygiene.
+**Fix shape:** capture `{ error }` on the update and throw (matching the lookup's pattern) so a failed persist aborts before checkout rather than silently leaking a duplicate-customer path. Owner-paired because it sits in the Stripe surface.
+**Pick up when:** before public launch, or the next Stripe-surface pass.
+
+### 45. [P4] Signed-URL routes log usage as "success" before the work that can fail
+`src/app/api/audio/init-upload/route.ts:74-80` and `src/app/api/audio/playback-url/route.ts:38-44` — both call `recordUsageEvent(..., outcome: "success")` *before* the operations that can still fail (the DB insert + `createSignedUploadUrl` in init-upload; the clip fetch, ownership/status checks, and `createSignedUrl` in playback-url). The established pattern — `recordUsageEvent` defaults to `outcome: "started"`, then `updateUsageEventOutcome` finalizes, used correctly by `/voice-profiles/[id]/start` — is bypassed here.
+
+**Why it matters:** the usage ledger records failed attempts as "success" (telemetry is wrong), and because the row is written before the work, a failed sign still consumes the per-minute signed-URL budget. Low blast radius — sign failures are rare and it's the user's own budget — but it's a correctness drift from the ledger pattern used elsewhere.
+**Fix shape:** record with the default `"started"` up front and call `updateUsageEventOutcome(..., "success")` after the URL is actually signed, or simply move the `recordUsageEvent` call below the sign.
+**Pick up when:** any pass touching rate-limit/usage telemetry. Agent-fixable.
+
+### 46. [P3] init-upload's storage_path write isn't checked — a silent failure breaks commit; plus a no-op extension ternary
+`src/app/api/audio/init-upload/route.ts:115-118` — after computing the object path the route updates `training_clips.storage_path` from `"pending"` to the real path but doesn't check the error (the insert above and the sign below both *are* checked). `audio/commit` (`route.ts:49-52`) reads `row.storage_path` and downloads from it; if the update silently failed, the path stays `"pending"`, so commit downloads a non-existent object and returns "Object not found in storage" — the clip the user just recorded fails to commit with a confusing error. Adjacent: `:112` has `const ext = mime.includes("webm") ? "webm" : "webm"` — identical branches, a no-op ternary that hard-codes `webm` regardless of mime (dead/placeholder logic; harmless today but misleading, and a latent bug if non-webm clips ever flow through).
+
+**Why it matters:** the unchecked write turns a rare DB hiccup into a lost recording with an unhelpful error, on the core voice-training upload path.
+**Fix shape:** capture `{ error }` on the storage_path update and return 500 on failure (match the insert/sign handling). Separately, delete the dead ternary (`const ext = "webm"`) or derive the extension from `mime` if multiple formats are intended.
+**Pick up when:** next time the audio-upload pipeline is touched. Agent-fixable.
+
+## Discovery notes — triggers that came true (triage 2026-06-13)
+
+Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx`) is now live with real Supabase avatar upload (`usePhotoUpload` + the `uploadAvatar` action in `page.tsx`), so several Screen 10 photo follow-ups have had their "Pick up when" triggers fire:
+
+- **#6 (photo fit in circle):** the client-side half shipped — `globals.css:1446` sets `object-fit: cover; object-position: center;` on `.onboarding-photo__img`. Only the server-side thumbnail half remains; #6 should be narrowed to that.
+- **#7 (screen-reader announcement on photo success):** appears implemented — `Screen10.tsx:156-158` renders `<p class="sr-only" role="status" aria-live="polite">Profile photo added.`, which is #7's exact fix shape. Recommend the fixer verify and strike.
+- **#9 (re-entry shows previously-uploaded photo):** appears addressed — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl`, replacing the prototype's `resetPhoto()`. Recommend the fixer verify and strike.
+
+These are left for the fixer to strike (resolution strikes are the fixer's lane per the coordination rule); flagged here so they don't linger as falsely-open.
