@@ -51,7 +51,7 @@
   --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg:            0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-mineral:       0 4px 12px rgba(74, 107, 126, 0.3); /* recording button — mineral-tinted */
+  --shadow-mineral:       0 4px 14px rgba(110, 80, 40, 0.20); /* primary-action lift — warm-keyed for the app's warm grounds (re-keyed 2026-06-12, FOLLOW_UPS #40: the old teal rgba(74,107,126,.3) predated the live --color-mineral and cast bluer than the buttons it sat under) */
   --shadow-terracotta:    0 4px 12px rgba(156, 53, 40, 0.3);  /* anchored on --color-status-error — recording button (terracotta state) */
 
   /* ─── TYPOGRAPHY ──────────────────────────────────── */

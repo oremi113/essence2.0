@@ -184,10 +184,9 @@ export const SAVE_CONFIRMATION_CSS = `
   border: 0; border-radius: var(--radius-lg);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
-  /* Warm-keyed lift so the CTA belongs to the amber world — deliberately
-     NOT --shadow-mineral, whose teal key is stale against the live mineral
-     and off-temperature here (FOLLOW_UPS #40). */
-  box-shadow: 0 4px 14px rgba(110, 80, 40, 0.22);
+  /* Warm-keyed lift via the shared token (re-keyed warm in the #40 pass —
+     this screen's interim local value graduated into it). */
+  box-shadow: var(--shadow-mineral);
   transition: background var(--duration-micro) var(--ease-essence),
               transform var(--duration-small) var(--ease-press);
 }
@@ -197,7 +196,7 @@ export const SAVE_CONFIRMATION_CSS = `
   outline: none;
   /* Ring layers OVER the warm lift — the CTA is focused by default after
      the entrance, so replacing the shadow would flatten it at rest. */
-  box-shadow: 0 4px 14px rgba(110, 80, 40, 0.22),
+  box-shadow: var(--shadow-mineral),
               0 0 0 4px rgba(122, 128, 136, 0.18);
 }
 
