@@ -17,6 +17,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { generateSpeech } from "@/lib/elevenlabs";
 import { AUDIO_BUCKET, pendingGenerationAudioPath } from "@/lib/audio/storage-paths";
+import { mp3DurationMsFromByteLength } from "@/lib/audio/mp3-duration";
 import { NextResponse } from "next/server";
 import { ErrorCode } from "@/lib/errors";
 import { logEvent, durationSince } from "@/lib/logger";
@@ -111,6 +112,7 @@ export const POST = defineRoute(
 
     // --- Success: promote candidate -> committed, bump the render count -----
     const nextRenderCount = gen.audio_render_count + 1;
+    const audioDurationMs = mp3DurationMsFromByteLength(tts.audioBuffer.length);
     await supabase
       .from("pending_generations")
       .update({
@@ -119,6 +121,7 @@ export const POST = defineRoute(
         audio_path: audioPath,
         audio_status: "succeeded",
         text_status: "succeeded",
+        audio_duration_ms: audioDurationMs,
         audio_render_count: nextRenderCount,
         candidate_text: null,
         candidate_template_variant: null,
@@ -140,6 +143,7 @@ export const POST = defineRoute(
       committed: true,
       audioStatus: "succeeded",
       audioRenderCount: nextRenderCount,
+      audioDurationMs,
     });
   },
 );

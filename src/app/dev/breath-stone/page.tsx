@@ -7,7 +7,7 @@ const STATES: Array<{ id: BreathStoneState; label: string; description: string }
   { id: 'idle',      label: 'Idle',      description: 'Resting heartbeat — lightest, slowest, coolest.' },
   { id: 'ready',     label: 'Ready',     description: 'Awake and attentive — warm spark, subtle glow.' },
   { id: 'recording', label: 'Recording', description: 'A moment happening — strongest amplitude, warm bloom.' },
-  { id: 'working',   label: 'Working',   description: 'Patient processing — slow, cool, almost still.' },
+  { id: 'working',   label: 'Working',   description: 'Patient processing — slow + cool, but alive (4.8s breath).' },
   { id: 'celebrate', label: 'Celebrate', description: 'A single swell — warm, bright, expansive. Returns to idle.' },
   { id: 'playback',  label: 'Playback',  description: 'Memory echo — rhythmic speech cadence, slight vignette.' },
   { id: 'shimmer',   label: 'Shimmer',   description: 'Ceremonial stillness — surface sheen moves, body barely breathes.' },

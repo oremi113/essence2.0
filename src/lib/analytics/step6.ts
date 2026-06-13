@@ -18,6 +18,7 @@
 import { track } from './client';
 
 const FLOW_ID_STORAGE_KEY = 'step6.current_flow_id';
+const FLOW_STARTED_AT_STORAGE_KEY = 'step6.current_flow_started_at';
 const SESSION_ID_STORAGE_KEY = 'analytics.session_id';
 const SCHEMA_VERSION = 1;
 
@@ -27,12 +28,30 @@ export function mintFlowId(): string {
   if (typeof window !== 'undefined') {
     try {
       window.sessionStorage.setItem(FLOW_ID_STORAGE_KEY, id);
+      window.sessionStorage.setItem(FLOW_STARTED_AT_STORAGE_KEY, String(Date.now()));
     } catch {
       // SessionStorage unavailable (private mode, quota). Lose persistence
       // but proceed — analytics without flow_id is still useful.
     }
   }
   return id;
+}
+
+/**
+ * Epoch-ms when the current flow_id was minted, or null if no flow is
+ * active (deep link into mid-flow, cleared storage). Feeds
+ * `time_from_flow_start_ms` on step6.message_saved.
+ */
+export function getFlowStartedAt(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(FLOW_STARTED_AT_STORAGE_KEY);
+    if (!raw) return null;
+    const ts = Number(raw);
+    return Number.isFinite(ts) ? ts : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Read the current flow_id, or null if none is active. */
@@ -50,6 +69,7 @@ export function clearFlowId(): void {
   if (typeof window === 'undefined') return;
   try {
     window.sessionStorage.removeItem(FLOW_ID_STORAGE_KEY);
+    window.sessionStorage.removeItem(FLOW_STARTED_AT_STORAGE_KEY);
   } catch {
     // best-effort
   }

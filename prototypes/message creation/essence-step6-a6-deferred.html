@@ -135,7 +135,7 @@
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-mineral: 0 4px 14px rgba(110, 80, 40, 0.20); /* re-keyed warm 2026-06-12, token-reconciliation sweep (FOLLOW_UPS #40): old teal predated the live mineral */
   --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
 
   /* Type */
@@ -463,8 +463,8 @@ button { font-family: inherit; }
   animation: stoneBreath 4s var(--ease-essence) infinite;
 }
 @keyframes stoneBreath {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.025); filter: brightness(1.015); }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
 }
 @keyframes stoneHalo {
   0%, 100% { transform: scale(1); opacity: 0.12; }
@@ -482,8 +482,8 @@ button { font-family: inherit; }
   animation: stoneBreathPlayback 5s var(--ease-essence) infinite;
 }
 @keyframes stoneBreathPlayback {
-  0%, 100% { transform: scale(1);    filter: brightness(1); }
-  50%      { transform: scale(1.04); filter: brightness(1.04); }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
 }
 @keyframes stoneHaloPlayback {
   0%, 100% { transform: scale(1);    opacity: 0.20; }
@@ -539,6 +539,9 @@ button { font-family: inherit; }
 }
 .phone__screen.is-playing .play-hint,
 .phone__screen.is-played .play-hint { opacity: 0; height: 0; margin: calc(-1 * var(--space-sm)) 0; pointer-events: none; }
+/* Once the gesture is LEARNED (first play tap ever, not per message), the
+   hint never renders again — screens arrive without it, no collapse. */
+.phone__screen.is-hint-learned .play-hint { display: none; }
 
 .player__bar {
   width: 100%;
@@ -733,18 +736,26 @@ button { font-family: inherit; }
 .sheet-layer.is-open { visibility: visible; pointer-events: auto; }
 .sheet-backdrop {
   position: absolute; inset: 0;
-  background: rgba(28,26,24,0.40);
+  background: rgba(28,26,24,0.45);
   opacity: 0;
   transition: opacity var(--duration-small) var(--ease-essence);
 }
 .sheet-layer.is-open .sheet-backdrop { opacity: 1; }
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0;
-  background: var(--color-bg-warm-phase);
+  /* POLISH (2026-06-11): the sheet inherited the PAGE surface
+     (bg-warm-phase) from the control arm — survivable on the discard
+     sheet (a mineral button anchored it), invisible on the all-cream
+     change sheet. Lift to the lightest warm in the system so the stack
+     reads as three planes: dimmed page → lightest sheet → honey cards.
+     Light catch on the lip marks the boundary against the dimmed
+     transcript behind. */
+  background: var(--color-bg-warm-1);
+  border-top: 1px solid rgba(255,255,255,0.65);
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   padding: var(--space-xl);
   padding-top: var(--space-md);
-  box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 -12px 40px rgba(0,0,0,0.22);
   display: flex; flex-direction: column; align-items: center; text-align: center;
   transform: translateY(100%);
   transition: transform var(--duration-medium) var(--ease-essence);
@@ -752,8 +763,8 @@ button { font-family: inherit; }
 }
 .sheet-layer.is-open .sheet { transform: translateY(0); }
 .sheet__handle {
-  width: 36px; height: 4px; border-radius: var(--radius-full);
-  background: rgba(28,26,24,0.20);
+  width: 40px; height: 4px; border-radius: var(--radius-full);
+  background: rgba(28,26,24,0.28);
   margin-bottom: var(--space-xl);
 }
 .sheet__title {
@@ -774,6 +785,47 @@ button { font-family: inherit; }
 }
 .sheet .btn { margin-top: var(--space-xl); }
 .sheet .btn-link { margin-top: var(--space-sm); }
+
+/* ─── Change sheet (the door) ───
+   Two option cards, plain-language fork: "The way it's said" (free
+   re-roll) vs "What it says" (reshape → A4). Sequential choice framed as
+   a question the user can answer; reuses the card vocabulary learned in
+   A2. Built fresh on each open so cap / exhausted states are current. */
+.sheet-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 100%; text-align: left;
+  margin-top: var(--space-md);
+  padding: var(--space-lg) var(--space-lg);
+  /* Honey = the warm-invitation surface; reads as a tappable object on
+     the bg-warm-1 sheet (surface-card was 2 points off its ground —
+     below perceptual threshold under the dim). Gold + ring stays
+     reserved for SELECTION; these navigate on tap, so rest-fill only. */
+  background: var(--color-surface-honey);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  min-height: 44px;
+  font-family: var(--font-body);
+  transition: box-shadow var(--duration-small) var(--ease-essence),
+              transform var(--duration-small) var(--ease-essence);
+}
+.sheet-opt:hover { box-shadow: var(--shadow-md); }
+.sheet-opt:active { transform: translateY(1px); box-shadow: var(--shadow-sm); }
+.sheet-opt:focus-visible { outline: none; box-shadow: var(--shadow-focus-ring); }
+.sheet-opt__title { font-size: var(--text-body); font-weight: 600; color: var(--color-text-primary); }
+.sheet-opt__sub { font-size: var(--text-body); color: var(--color-text-secondary); line-height: 1.4; }
+/* Quiet in-sheet note (cap / reshape-exhausted copy), ceremonial register. */
+/* The change sheet's dismiss link needs more air below the cards than the
+   discard sheet's tighter title/body/button rhythm provides. */
+.sheet-layer--change .btn-link { margin-top: var(--space-lg); }
+
+.sheet__note {
+  margin-top: var(--space-md);
+  font-family: var(--font-display); font-style: italic;
+  font-size: var(--text-body); line-height: 1.5;
+  color: var(--color-text-secondary); text-align: left;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    PASS 2 — choreography support
@@ -888,6 +940,18 @@ button { font-family: inherit; }
 /* The card — containment is the semantic. An object being held and
    examined, not yet absorbed into the room. Fully legible: the user
    reads to decide; never dim a candidate. */
+/* Arrival line — the one-sentence education budget (d1 / first arrival
+   only). Ceremonial voice: Spectral italic, secondary, 16px floor held. */
+.arrival-line {
+  margin-top: var(--space-sm);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
 .candidate-card {
   width: 100%;
   margin-top: var(--space-sm);
@@ -903,6 +967,37 @@ button { font-family: inherit; }
   font-size: var(--text-body-lg);
   line-height: 1.55;
   color: var(--color-text-primary);
+  transition: opacity 150ms var(--ease-essence);
+}
+
+/* ─── Candidate arrival choreography ───
+   A re-roll must be an EVENT, not an in-place swap: skimmers miss state
+   changes, nobody misses an entrance. Three layers:
+   1. Exit/entrance: old text fades (150ms) while the stone works; the new
+      text settles in with a soft fade-and-rise (260ms).
+   2. A short-lived warm wash on the card (surface-warm → surface-card,
+      1.6s) that says "fresh" and then DECAYS — never a persistent tint
+      (a persistent tint becomes a status, and statuses invite questions).
+   3. The prompt line restates it ("Here's another way to say it").
+   No word-level diffing, no highlights, no badges — that is editor
+   language and variants are full rewrites anyway.
+   Reduced motion: entrance/exit animation off; the wash STAYS as the
+   no-motion arrival signal (atmosphere preserved, not stripped). */
+@keyframes candidateTextIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.candidate-card__text.is-exiting { opacity: 0; }
+.candidate-card__text.is-arriving { animation: candidateTextIn 260ms var(--ease-essence) both; }
+@keyframes candidateWash {
+  from { background-color: var(--color-surface-warm); }
+  to   { background-color: var(--color-surface-card); }
+}
+.candidate-card.is-fresh { animation: candidateWash 1600ms var(--ease-essence) both; }
+@media (prefers-reduced-motion: reduce) {
+  .candidate-card__text { transition: none; }
+  .candidate-card__text.is-exiting { opacity: 1; }
+  .candidate-card__text.is-arriving { animation: none; }
 }
 
 /* ─── Footer stacks: committed vs candidate ─── */
@@ -961,7 +1056,7 @@ button { font-family: inherit; }
    place (decision #6).
    COPY SLOT: "That's all the recordings for this one. When it feels right,
    keep the one you heard." */
-.phone__screen.is-cap .stack-committed [data-action="freedraft"] { display: none; }
+.phone__screen.is-cap .stack-committed [data-action="change"] { display: none; }
 .phone__screen.is-cap .stack-committed .cap-note--rec { display: block; }
 .phone__screen.is-cap .reroll-whisper { display: none; }
 /* Defensive: candidate-at-cap is unreachable by design (freedraft retires
@@ -995,7 +1090,10 @@ button { font-family: inherit; }
 .phone__screen.is-lastreroll .reroll-whisper { display: block; }
 .phone__screen.is-textcap [data-action="freedraft"] { display: none; }
 .phone__screen.is-textcap .reroll-whisper { display: none; }
-.phone__screen.is-textcap .stack-committed .cap-note--text { display: block; }
+/* Committed-context text-cap note now lives INSIDE the change sheet (the
+   "way it's said" option retires there with the note in its place); the
+   candidate-context note stays in the footer, where the direct free-draft
+   button lives. */
 .phone__screen.is-textcap .stack-candidate .cap-note--text { display: block; }
 
 /* ─── Candidate link group ───
@@ -1069,6 +1167,12 @@ button { font-family: inherit; }
         <div class="stage">
           <div class="stone" aria-hidden="true"><div class="stone__body"></div></div>
           <h1 class="prompt-question">Here it is, in your voice.</h1>
+          <!-- COPY SLOT (arrival line): the screen's entire education budget.
+               One orienting sentence, ceremonial register, FIRST ARRIVAL ONLY
+               in production (server: first generation, no prior interaction).
+               Present only in d1 here. Speaks the grammar: listen → change →
+               keep. Never a tooltip, never persistent. -->
+          <p class="arrival-line">Listen. If it's not quite right, you can change it.</p>
 
           <div class="player">
             <span class="play-hint">Tap to hear it.</span>
@@ -1102,15 +1206,16 @@ button { font-family: inherit; }
       <div class="footer">
         <div class="stack stack-committed">
           <button class="btn" data-action="save">Save this message</button>
-          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
-          <!-- COPY SLOT (text soft-cap whisper) -->
-          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (change door): committed mode offers ONE plain change
+               verb. The reword-vs-reshape fork lives behind it, in the change
+               sheet, where it arrives AFTER intent is declared and is framed
+               as a question ("is it the wording, or what I said?") instead of
+               two ambient near-synonym links. Retired at recording cap (a
+               change that can never be heard is a dead end). -->
+          <button class="btn-secondary" data-action="change">Make a change</button>
           <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
           <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
-          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
-          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
           <div class="link-group">
-            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
             <button class="btn-link" data-action="discard">Discard</button>
           </div>
         </div>
@@ -1212,15 +1317,16 @@ button { font-family: inherit; }
       <div class="footer">
         <div class="stack stack-committed">
           <button class="btn" data-action="save">Save this message</button>
-          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
-          <!-- COPY SLOT (text soft-cap whisper) -->
-          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (change door): committed mode offers ONE plain change
+               verb. The reword-vs-reshape fork lives behind it, in the change
+               sheet, where it arrives AFTER intent is declared and is framed
+               as a question ("is it the wording, or what I said?") instead of
+               two ambient near-synonym links. Retired at recording cap (a
+               change that can never be heard is a dead end). -->
+          <button class="btn-secondary" data-action="change">Make a change</button>
           <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
           <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
-          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
-          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
           <div class="link-group">
-            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
             <button class="btn-link" data-action="discard">Discard</button>
           </div>
         </div>
@@ -1323,15 +1429,16 @@ button { font-family: inherit; }
       <div class="footer">
         <div class="stack stack-committed">
           <button class="btn" data-action="save">Save this message</button>
-          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
-          <!-- COPY SLOT (text soft-cap whisper) -->
-          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (change door): committed mode offers ONE plain change
+               verb. The reword-vs-reshape fork lives behind it, in the change
+               sheet, where it arrives AFTER intent is declared and is framed
+               as a question ("is it the wording, or what I said?") instead of
+               two ambient near-synonym links. Retired at recording cap (a
+               change that can never be heard is a dead end). -->
+          <button class="btn-secondary" data-action="change">Make a change</button>
           <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
           <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
-          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
-          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
           <div class="link-group">
-            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
             <button class="btn-link" data-action="discard">Discard</button>
           </div>
         </div>
@@ -1434,15 +1541,16 @@ button { font-family: inherit; }
       <div class="footer">
         <div class="stack stack-committed">
           <button class="btn" data-action="save">Save this message</button>
-          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
-          <!-- COPY SLOT (text soft-cap whisper) -->
-          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (change door): committed mode offers ONE plain change
+               verb. The reword-vs-reshape fork lives behind it, in the change
+               sheet, where it arrives AFTER intent is declared and is framed
+               as a question ("is it the wording, or what I said?") instead of
+               two ambient near-synonym links. Retired at recording cap (a
+               change that can never be heard is a dead end). -->
+          <button class="btn-secondary" data-action="change">Make a change</button>
           <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
           <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
-          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
-          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
           <div class="link-group">
-            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
             <button class="btn-link" data-action="discard">Discard</button>
           </div>
         </div>
@@ -1544,15 +1652,16 @@ button { font-family: inherit; }
       <div class="footer">
         <div class="stack stack-committed">
           <button class="btn" data-action="save">Save this message</button>
-          <button class="btn-secondary" data-action="freedraft">See another way to say it</button>
-          <!-- COPY SLOT (text soft-cap whisper) -->
-          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (change door): committed mode offers ONE plain change
+               verb. The reword-vs-reshape fork lives behind it, in the change
+               sheet, where it arrives AFTER intent is declared and is framed
+               as a question ("is it the wording, or what I said?") instead of
+               two ambient near-synonym links. Retired at recording cap (a
+               change that can never be heard is a dead end). -->
+          <button class="btn-secondary" data-action="change">Make a change</button>
           <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
           <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
-          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
-          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
           <div class="link-group">
-            <button class="btn-link" data-reshape data-goto="reshape">Reshape your note</button>
             <button class="btn-link" data-action="discard">Discard</button>
           </div>
         </div>
@@ -1654,15 +1763,16 @@ button { font-family: inherit; }
       <div class="footer">
         <div class="stack stack-committed">
           <button class="btn" data-action="save" tabindex="-1">Save this message</button>
-          <button class="btn-secondary" data-action="freedraft" tabindex="-1">See another way to say it</button>
-          <!-- COPY SLOT (text soft-cap whisper) -->
-          <p class="reroll-whisper">One more after this.</p>
+          <!-- COPY SLOT (change door): committed mode offers ONE plain change
+               verb. The reword-vs-reshape fork lives behind it, in the change
+               sheet, where it arrives AFTER intent is declared and is framed
+               as a question ("is it the wording, or what I said?") instead of
+               two ambient near-synonym links. Retired at recording cap (a
+               change that can never be heard is a dead end). -->
+          <button class="btn-secondary" data-action="change" tabindex="-1">Make a change</button>
           <!-- COPY SLOT (recording cap, decision #6: keyed to recordings) -->
           <p class="cap-note cap-note--rec">That's all the recordings for this one. When it feels right, keep the one you heard.</p>
-          <!-- COPY SLOT (text cap, committed context: points at keeping) -->
-          <p class="cap-note cap-note--text">That's all the new wordings for now. When it feels right, keep it.</p>
           <div class="link-group">
-            <button class="btn-link" data-reshape data-goto="reshape" tabindex="-1">Reshape your note</button>
             <button class="btn-link" data-action="discard" tabindex="-1">Discard</button>
           </div>
         </div>
@@ -1704,6 +1814,45 @@ button { font-family: inherit; }
 <!-- ══════════════════════════════════════════════════════════════════════
      DESIGN OPEN markers (carried for the copy / production passes)
      ══════════════════════════════════════════════════════════════════════ -->
+<!-- DESIGN OPEN (previous-take flip, 2026-06-11, HELD for decision register
+     + wiring handoff): when a commit replaces a prior take, the prior take
+     is currently unrecoverable — the user paid a recording to LOSE
+     something they'd already heard in their own voice. Proposed: one
+     conditional link in committed mode ("Hear your other take", COPY SLOT)
+     that flips between the two takes; Save persists whichever is up. Hard
+     boundary: never deeper than two takes (two is comparison, three is a
+     library). NOT prototype-only — requires a spec edit (amendment 3.4
+     "committed take" becomes potentially plural-of-two; 5.6 preservation
+     rule extends to "retain previous committed take until save/discard")
+     and a server state-model line in the wiring handoff. Do not build
+     until the register closes it. Previous TEXT drafts stay unrecoverable
+     by design (free, finite variant pool, no carousel furniture). -->
+
+<!-- RESOLVED (two-verb collision, 2026-06-11): "See another way to say it"
+     and "Reshape your note" no longer coexist as ambient near-synonyms in
+     committed mode. One door ("Make a change", COPY SLOT) opens a sheet
+     where the fork is framed as a question: "The way it's said" (free
+     re-roll) vs "What it says" (reshape → A4). The distinction now arrives
+     AFTER intent is declared. Committed footer: Save / Make a change /
+     Discard — 3 interactive elements. Candidate footer unchanged (3): its
+     direct free-draft stays because the user is already inside the change
+     flow. Caps fold with it: the text-cap and reshape-exhausted notes
+     surface inside the sheet; the recording cap retires the door itself. -->
+
+<!-- RESOLVED (education question, 2026-06-11): the screen needs NO
+     onboarding. The entire education budget is one arrival line on first
+     listen ("Listen. If it's not quite right, you can change it." — COPY
+     SLOT, d1 only, first arrival only in production). If the screen needs
+     more education than that, the screen is wrong, not the user. -->
+
+<!-- RESOLVED (re-roll visibility, 2026-06-11): a new variant arrives as an
+     EVENT (exit fade → beat → fade-and-rise entrance + decaying warm wash
+     + body scroll reset), never as an in-place swap and never as markup
+     (no diff highlights, no badges — editor language). Reduced motion
+     keeps the wash as the arrival signal. Part of Pass 2's entrance
+     choreography, landed early because it carries comprehension, not just
+     polish. -->
+
 <!-- RESOLVED (candidate footer density, 2026-06-11): the candidate footer is
      now 3 interactive elements — Hear this in your voice / See another way to
      say it / Back to the take you heard. Save, Reshape, and Discard were
@@ -1752,6 +1901,12 @@ const screenHistory = ['d1'];
 
 /* ─── Compose state (orthogonal axes, re-applied on every screen show) ─── */
 let reshapeExhausted = false;
+/* "Tap to hear it" teaches a GESTURE, and a gesture is learned once per
+   person, not once per message. Latches on the first play tap (success OR
+   load-failure — the tap proves they found the control) and every screen
+   wired afterward arrives without the hint.
+   PROD: a persisted per-user flag (profile prefs), not per-message state. */
+let playHintLearned = false;
 let audioWillFail = false;   // committed-take playback failure (control arm's)
 let commitWillFail = false;  // commit round-trip failure (this arm's, §5.6)
 let maxTextOn = false;
@@ -1864,6 +2019,7 @@ function startPlayback(screen) {
 }
 
 function togglePlay(screen) {
+  playHintLearned = true; // gesture learned on the tap, whatever happens next
   const player = screen.querySelector('.player');
   // Audio-failure path (compose toggle): first play fails into a retry.
   // Distinct from commit failure — this is a committed clip failing to LOAD.
@@ -1883,6 +2039,7 @@ function showAudioFailure(screen) {
   const player = screen.querySelector('.player');
   if (!player) return;
   player.classList.add('is-failed');
+  screen.classList.add('is-hint-learned'); // hint + "Couldn't load it" would contradict
   if (player.querySelector('.audio-retry')) return;
   const retry = document.createElement('div');
   retry.className = 'audio-retry';
@@ -1931,17 +2088,47 @@ function freeDraft(root) {
   btns.forEach(b => b.disabled = true);
   rerollsRemaining--;
 
+  // Arrival choreography step 1: if a candidate is already up, its text
+  // exits (150ms fade) while the stone works — the gap is what registers
+  // as "something new is coming" in peripheral vision.
+  const exitingText = screen.classList.contains('is-candidate')
+    ? screen.querySelector('.candidate-card__text') : null;
+  if (exitingText) exitingText.classList.add('is-exiting');
+
   setTimeout(() => {
     if (stone) stone.classList.remove('is-working');
     variantIndex = (variantIndex + 1) % VARIANTS.length;
     const cardText = screen.querySelector('.candidate-card__text');
-    if (cardText) cardText.textContent = maxTextOn ? MAX_TEXT_200 : VARIANTS[variantIndex];
+    const card = screen.querySelector('.candidate-card');
+    if (cardText) {
+      cardText.textContent = maxTextOn ? MAX_TEXT_200 : VARIANTS[variantIndex];
+      // Step 2: entrance (fade-and-rise) + short-lived warm wash on the
+      // card that DECAYS back to the resting surface. Restart cleanly if
+      // classes linger from a fast re-tap.
+      cardText.classList.remove('is-exiting', 'is-arriving');
+      void cardText.offsetWidth;
+      cardText.classList.add('is-arriving');
+    }
+    if (card) {
+      card.classList.remove('is-fresh');
+      void card.offsetWidth;
+      card.classList.add('is-fresh');
+    }
+    // Step 3: if the body is scrolled mid-card, reset — arriving scrolled
+    // into the middle of new text is the one case where the change is
+    // genuinely undetectable.
+    const body = screen.querySelector('.body');
+    if (body) body.scrollTop = 0;
     const q = screen.querySelector('.prompt-question');
     if (q) q.textContent = CANDIDATE_PROMPT;
     screen.classList.remove('is-commitfail');
     screen.classList.add('is-candidate');
     applyCapStates(root);
     btns.forEach(b => b.disabled = false);
+    setTimeout(() => {
+      if (cardText) cardText.classList.remove('is-arriving');
+      if (card) card.classList.remove('is-fresh');
+    }, 1700);
   }, 900);
 }
 
@@ -2003,9 +2190,93 @@ function keepCurrent(root) {
   applyCapStates(root);
 }
 
+/* ─── Change sheet — the door (committed mode's single change verb) ───
+   Built fresh on every open so the option states reflect the CURRENT
+   caps: text cap retires "The way it's said" (note in its place),
+   reshape-exhausted retires "What it says". If both are capped the sheet
+   degrades to a single quiet note — informative, not a dead end.
+   COPY SLOTS throughout. */
+function openChangeSheet(root, trigger) {
+  const screen = root.querySelector('.phone__screen');
+  const layer = document.createElement('div');
+  layer.className = 'sheet-layer sheet-layer--change';
+  layer.setAttribute('role', 'dialog');
+  layer.setAttribute('aria-modal', 'true');
+  layer.setAttribute('aria-labelledby', 'changeSheetTitle');
+  layer._returnFocus = trigger || null;
+
+  const textCapped = rerollsRemaining <= 0;
+  const lastReroll = rerollsRemaining === 1;
+  let inner = '<div class="sheet-backdrop" data-action="dismiss"></div>' +
+    '<div class="sheet">' +
+      '<div class="sheet__handle" aria-hidden="true"></div>' +
+      '<h2 class="sheet__title" id="changeSheetTitle">What would you like to change?</h2>';
+  if (textCapped) {
+    inner += "<p class=\"sheet__note\">That's all the new wordings for now. When it feels right, keep it.</p>";
+  } else {
+    inner += '<button class="sheet-opt" data-action="sheet-reword">' +
+        "<span class=\"sheet-opt__title\">The way it's said</span>" +
+        '<span class="sheet-opt__sub">Same note, new words.</span>' +
+      '</button>';
+    if (lastReroll) inner += '<p class="sheet__note">One more after this.</p>';
+  }
+  if (reshapeExhausted) {
+    inner += "<p class=\"sheet__note\">This note's been reshaped as far as it goes.</p>";
+  } else {
+    inner += '<button class="sheet-opt" data-action="sheet-reshape" data-goto="reshape">' +
+        '<span class="sheet-opt__title">What it says</span>' +
+        '<span class="sheet-opt__sub">Go back and change your note.</span>' +
+      '</button>';
+  }
+  inner += '<button class="btn-link" data-action="dismiss">Never mind</button></div>';
+  layer.innerHTML = inner;
+  screen.appendChild(layer);
+
+  layer.querySelectorAll('[data-action="dismiss"]').forEach(el =>
+    el.addEventListener('click', () => closeChangeSheet(root)));
+  layer.querySelectorAll('[data-action="sheet-reword"]').forEach(el =>
+    el.addEventListener('click', () => {
+      closeChangeSheet(root, { restoreFocus: false });
+      setTimeout(() => freeDraft(root), 220);
+    }));
+  layer.querySelectorAll('[data-action="sheet-reshape"]').forEach(el =>
+    el.addEventListener('click', () => {
+      // prod: routes to A4; returns to A6 as a CANDIDATE (§5.8) with the
+      // same arrival choreography as a re-roll. Inert here.
+      closeChangeSheet(root);
+    }));
+
+  requestAnimationFrame(() => layer.classList.add('is-open'));
+  const focusables = layer.querySelectorAll('button');
+  if (focusables[0]) focusables[0].focus();
+  layer._keydown = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeChangeSheet(root); return; }
+    if (e.key === 'Tab') {
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', layer._keydown);
+}
+
+function closeChangeSheet(root, opts) {
+  const screen = root.querySelector('.phone__screen');
+  const layer = screen.querySelector('.sheet-layer--change');
+  if (!layer) return;
+  layer.classList.remove('is-open');
+  if (layer._keydown) document.removeEventListener('keydown', layer._keydown);
+  const back = layer._returnFocus;
+  const restore = !opts || opts.restoreFocus !== false;
+  setTimeout(() => {
+    if (restore && back && back.focus) back.focus();
+    layer.remove(); // never let getSheet() grab a stale change layer
+  }, 240);
+}
+
 /* ─── Discard sheet — inherited verbatim from the control arm ─── */
 function getSheet(screen) {
-  let sheet = screen.querySelector('.sheet-layer');
+  let sheet = screen.querySelector('.sheet-layer:not(.sheet-layer--change)');
   if (sheet) return sheet;
   sheet = document.createElement('div');
   sheet.className = 'sheet-layer';
@@ -2090,6 +2361,7 @@ function goBack() {
 
 function wireScreen(root) {
   const screen = root.querySelector('.phone__screen');
+  if (playHintLearned) screen.classList.add('is-hint-learned');
   applyReshapeState(root);
   paintRecDots(root);
   applyCapStates(root);
@@ -2119,6 +2391,9 @@ function wireScreen(root) {
 
   root.querySelectorAll('[data-action="freedraft"]').forEach(btn =>
     btn.addEventListener('click', () => freeDraft(root)));
+
+  root.querySelectorAll('[data-action="change"]').forEach(btn =>
+    btn.addEventListener('click', () => openChangeSheet(root, btn)));
 
   root.querySelectorAll('[data-action="commit"]').forEach(btn =>
     btn.addEventListener('click', () => commit(root)));

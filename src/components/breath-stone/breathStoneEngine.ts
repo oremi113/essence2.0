@@ -139,7 +139,11 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     peakHold: 0.07,
   },
   working: {
-    // Patient processing — very slow, cooler, almost still
+    // Patient processing — slow + cool, but alive. Speed (not amplitude) is
+    // what reads as "breathing" on a long wait: 4.8s is livelier than the
+    // old near-static 6s while staying clearly slower than ready's 4s, so it
+    // still reads "patient." Shared by A5 (generation) + RecordScreen
+    // (session setup / voice shaping). [2026-06-12, A5 polish]
     glowIntensity: 0.04,
     breathAmplitude: 0.02,
     irregularity: 0.03,
@@ -148,7 +152,7 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
     spark: 0,
     innerPulse: 0,
     vignette: 0,
-    breathSpeed: 6000,
+    breathSpeed: 4800,
     voiceReactive: 0,
     sheen: 0,
     peakHold: 0.07,

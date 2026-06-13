@@ -164,6 +164,7 @@ export type Database = {
       }
       pending_generations: {
         Row: {
+          audio_duration_ms: number | null
           audio_path: string | null
           audio_render_count: number
           audio_status: string
@@ -192,6 +193,7 @@ export type Database = {
           voice_profile_id: string
         }
         Insert: {
+          audio_duration_ms?: number | null
           audio_path?: string | null
           audio_render_count?: number
           audio_status?: string
@@ -220,6 +222,7 @@ export type Database = {
           voice_profile_id: string
         }
         Update: {
+          audio_duration_ms?: number | null
           audio_path?: string | null
           audio_render_count?: number
           audio_status?: string
@@ -296,6 +299,7 @@ export type Database = {
           stripe_customer_id: string | null
           suspended_reason: string | null
           timezone: string | null
+          ui_flags: Json
           updated_at: string
           user_id: string
         }
@@ -316,6 +320,7 @@ export type Database = {
           stripe_customer_id?: string | null
           suspended_reason?: string | null
           timezone?: string | null
+          ui_flags?: Json
           updated_at?: string
           user_id: string
         }
@@ -336,6 +341,7 @@ export type Database = {
           stripe_customer_id?: string | null
           suspended_reason?: string | null
           timezone?: string | null
+          ui_flags?: Json
           updated_at?: string
           user_id?: string
         }

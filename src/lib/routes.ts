@@ -66,3 +66,17 @@ export function vaultContinuityWithPlan(plan: string): string {
 export function messageGenerationRoute(generationId: string): string {
   return `${ROUTES.messagesNew}/g/${generationId}`;
 }
+
+/** `/messages/saved/<messageId>` — A7 Save Confirmation (ceremonial close). */
+export function messageSavedRoute(messageId: string): string {
+  return `/messages/saved/${messageId}`;
+}
+
+/**
+ * `/messages/new/g/<generationId>/reshape` — A4 Personal Note in the
+ * reshape ("What it says") path. `generationId` is the row being
+ * reshaped; submit writes a candidate back onto it and returns to its A6.
+ */
+export function messageReshapeRoute(generationId: string): string {
+  return `${ROUTES.messagesNew}/g/${generationId}/reshape`;
+}

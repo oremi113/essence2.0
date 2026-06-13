@@ -71,6 +71,19 @@
   ║  ceremonial mode is silence with weight, not spectacle. The warm      ║
   ║  light and stone breathing IS the celebration.                        ║
   ║                                                                       ║
+  ║  ─── AMENDMENTS (design-architect pass, 2026-06-12) ─────────────── ║
+  ║  1. Reduced motion pins loops to explicit 50% values (pausing       ║
+  ║     during the delay window fell back to base styles → halo/shimmer ║
+  ║     snapped to opacity 1, overshooting their peaks).                ║
+  ║  2. stoneBreathInfused is scale-only (brightness filter forced      ║
+  ║     per-frame repaints; halo + shimmer carry the luminosity).       ║
+  ║  3. Timestamp: 16px warm sepia #6E5E44 (~5:1) — tertiary grey at    ║
+  ║     14px was ~1.9:1 and under the 45-70 floor.                      ║
+  ║  4. Aside: "until she needs it." (verb no longer dangles).          ║
+  ║  5. Primary CTA gets a warm-keyed shadow; --shadow-mineral is       ║
+  ║     stale (teal) vs the live mineral — global re-key tracked in     ║
+  ║     docs/FOLLOW_UPS.md #40.                                         ║
+  ║                                                                     ║
   ║  ─── V2 BACKLOG ────────────────────────────────────────────────── ║
   ║  - Sound design hook: subtle chime synced to stone arrival at 1200ms. ║
   ║  - Repeat-view compression: detect prior saves, compress entrance to  ║
@@ -105,7 +118,7 @@
   --color-border: rgba(0, 0, 0, 0.06);
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-mineral: 0 4px 14px rgba(110, 80, 40, 0.20); /* re-keyed warm 2026-06-12, token-reconciliation sweep (FOLLOW_UPS #40): old teal predated the live mineral */
   --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
 
   --font-display: 'Spectral', Georgia, serif;
@@ -172,25 +185,9 @@ body {
   display: flex; flex-direction: column; align-items: center;
   padding: 32px 12px 60px; gap: 24px;
 }
-@media (prefers-reduced-motion: reduce) {
-  /* Freeze looping atmospheric breath at mid-frame, keep composition */
-  .phone::before,
-  .stone::before,
-  .stone::after,
-  .stone__body {
-    animation-play-state: paused !important;
-  }
-  /* Entrance animations collapse to instant (user already on screen) */
-  .stone,
-  .confirm-title,
-  .confirm-aside,
-  .confirm-timestamp,
-  .footer .btn,
-  .footer .btn--link {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
-  }
-}
+/* (Reduced-motion block moved to the end of this sheet — it pins loops at
+   equal specificity, so it must come after the base rules to win the
+   cascade. Amendment 2026-06-12.) */
 button { font-family: inherit; }
 
 .prototype-wrapper {
@@ -325,9 +322,11 @@ button { font-family: inherit; }
 @keyframes stoneArrival {
   to { opacity: 1; transform: scale(1); }
 }
+/* Scale only — no brightness filter (filter animations force repaints;
+   the halo + shimmer carry the luminosity breath). Amendment 2026-06-12. */
 @keyframes stoneBreathInfused {
-  0%, 100% { transform: scale(1);    filter: brightness(1); }
-  50%      { transform: scale(1.04); filter: brightness(1.06); }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
 }
 @keyframes stoneHaloInfused {
   0%, 100% { transform: scale(1);    opacity: 0.18; }
@@ -383,13 +382,15 @@ button { font-family: inherit; }
   text-wrap: balance;
 }
 
-/* Timestamp attestation — museum label voice. Italic serif, tertiary color,
-   quiet proof of when this was committed. */
+/* Timestamp attestation — museum label voice. Italic serif, warm sepia,
+   quiet proof of when this was committed. Amendment 2026-06-12: tertiary
+   grey was ~1.9:1 on the gold field and 14px sat under the 16px floor;
+   #6E5E44 is ~5:1 and on-temperature — hierarchy via color, not size. */
 .confirm-timestamp {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: var(--text-small);
-  color: var(--color-text-tertiary);
+  font-size: var(--text-body);
+  color: #6E5E44;
   letter-spacing: 0.01em;
   line-height: 1.5;
 }
@@ -419,6 +420,9 @@ button { font-family: inherit; }
   border: 0; border-radius: var(--radius-lg);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  /* Warm-keyed lift (amendment 2026-06-12) — NOT --shadow-mineral, whose
+     teal key is stale against the live mineral and off-temperature here. */
+  box-shadow: 0 4px 14px rgba(110, 80, 40, 0.22);
   transition: background var(--duration-micro) var(--ease-essence),
               transform var(--duration-small) var(--ease-press);
 }
@@ -489,6 +493,26 @@ button { font-family: inherit; }
   color: rgba(255,255,255,0.55);
   border: 1px dashed rgba(255,255,255,0.2);
 }
+
+/* ── REDUCED MOTION (amendment 2026-06-12) ──
+   Pin every loop to its explicit 50% (mid-frame) values — never pause.
+   Pausing inside an animation-delay window falls back to base styles:
+   the halo/shimmer declare no base opacity, so they'd snap to 1.0,
+   overshooting their animated peaks (0.32 / 0.80). Last in the sheet:
+   these pins are equal-specificity with the base rules and must win
+   the cascade. */
+@media (prefers-reduced-motion: reduce) {
+  .stone         { opacity: 1; transform: scale(1); animation: none; }
+  .stone__body   { animation: none; transform: scale(1.04); }
+  .stone::before { animation: none; opacity: 0.32; transform: scale(1.12); }
+  .stone::after  { animation: none; opacity: 0.80; }
+  .phone::before { animation: none; opacity: 1; transform: scale(1.04); }
+  /* Entrance collapses to complete (user already on screen) */
+  .confirm-title, .confirm-aside, .confirm-timestamp,
+  .footer .btn, .footer .btn--link {
+    opacity: 1; transform: none; animation: none;
+  }
+}
 </style>
 </head>
 <body>
@@ -525,7 +549,7 @@ button { font-family: inherit; }
         </div>
 
         <h1 class="confirm-title" id="confirmTitle">Your voice is on the shelf for Sarah.</h1>
-        <p class="confirm-aside" id="confirmAside">She won&rsquo;t know it&rsquo;s there until she needs to.</p>
+        <p class="confirm-aside" id="confirmAside">She won&rsquo;t know it&rsquo;s there until she needs it.</p>
         <p class="confirm-timestamp" id="confirmTimestamp">Kept on Apr 23, 2026 &middot; 9:41pm</p>
       </div>
 
@@ -562,13 +586,13 @@ function formatTimestamp(date) {
 const COPY = {
   default: {
     title: 'Your voice is on the shelf for Sarah.',
-    aside: 'She won\u2019t know it\u2019s there until she needs to.',
+    aside: 'She won\u2019t know it\u2019s there until she needs it.',
     primary: 'View on Memory Shelf',
     secondary: 'Create another, when you\u2019re ready',
   },
   third: {
     title: 'Your voice is on the shelf for Sarah.',
-    aside: 'She won\u2019t know it\u2019s there until she needs to.',
+    aside: 'She won\u2019t know it\u2019s there until she needs it.',
     primary: 'View on Memory Shelf',
     secondary: 'See what\u2019s coming',
   },

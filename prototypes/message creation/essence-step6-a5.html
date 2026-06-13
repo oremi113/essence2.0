@@ -13,9 +13,9 @@
   ║  NOTE FOR CODE ARCHITECT — A5 Generation                              ║
   ║                                                                       ║
   ║  Stage progression in production:                                     ║
-  ║   1. "Shaping your message." (0–4s)                                   ║
-  ║   2. "Listening for the right tone." (4–9s if still pending)          ║
-  ║   3. "Almost there." (9s+ if still pending)                           ║
+  ║   1. "Shaping your message." (0–5s)                                   ║
+  ║   2. "Listening for the right tone." (5–10s if still pending)         ║
+  ║   3. "Almost in your voice." (10s+ — terminal hold)                   ║
   ║   → routes to A6 Preview when LLM + ElevenLabs both return            ║
   ║                                                                       ║
   ║  Atmosphere stack (ceremonial mode):                                  ║
@@ -45,6 +45,45 @@
   ║   - Repeat-view treatment (compressed copy beats on retry)            ║
   ║   - Screen reader: aria-live on failed title, autofocus on primary    ║
   ╚═══════════════════════════════════════════════════════════════════════╝
+
+  ┌───────────────────────────────────────────────────────────────────────┐
+  │  AMENDMENTS — production build (Chunk 5, 2026-06-12)                   │
+  │  Synced from the A5 production screen                                  │
+  │  (src/components/screens/messages/GenerationScreen.*). The prototype   │
+  │  stays the design source of truth for motion/copy/composition; these  │
+  │  note where the production port diverged and why.                     │
+  │                                                                       │
+  │  1. AUTO-PLAY added (this file). The working stage now runs its real  │
+  │     timed choreography on load — entrance, then beat 1 → 2 (4s) →     │
+  │     3 (9s) — so motion is assessable without clicking. ↻ Replay       │
+  │     re-arms it; the manual beat buttons still override (they pause    │
+  │     auto-play). Default + Replay restart the entrance via reflow.     │
+  │                                                                       │
+  │  2. Entrance fill: production uses a BACKWARDS fill (not forwards),   │
+  │     so the title/aside release to natural styles and the beat cross- │
+  │     fade can take over (a forwards fill would pin the keyframe        │
+  │     opacity and the dim would never apply — the A4 question-recede    │
+  │     bug's twin, flagged for A5 by the token-reconciliation sweep).    │
+  │     The prototype's forwards-fill + JS is-settled/is-fading override  │
+  │     is functionally equivalent and left as-is; production took the    │
+  │     cleaner CSS-only path. NB for any future port: with a backwards   │
+  │     fill the base style must be the END state (opacity:1), NOT the    │
+  │     prototype's opacity:0 base — else elements end invisible.         │
+  │                                                                       │
+  │  3. CSS stone dropped in production for the shared canvas BreathStone │
+  │     (working tone breathing → ready tone on failure; size 180→160).  │
+  │     The prototype keeps its CSS stone as the visual reference.        │
+  │                                                                       │
+  │  4. Reduced motion: production PINS the ambient glow to a mid frame   │
+  │     (opacity .92 / scale 1.02) rather than `animation-play-state:     │
+  │     paused` — pausing during a delay falls back to base (overshoot,   │
+  │     the A7 halo lesson). This prototype still uses paused for the     │
+  │     atmospheric loops; harmless here (no delayed loop), noted for     │
+  │     parity.                                                            │
+  │                                                                       │
+  │  5. --shadow-mineral already re-keyed warm in the 2026-06-12 token    │
+  │     sweep (FOLLOW_UPS #40); no change needed here.                    │
+  └───────────────────────────────────────────────────────────────────────┘
 -->
 
 <style>
@@ -66,7 +105,7 @@
   --color-border: rgba(0, 0, 0, 0.06);
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-mineral: 0 4px 12px rgba(74, 107, 126, 0.3);
+  --shadow-mineral: 0 4px 14px rgba(110, 80, 40, 0.20); /* re-keyed warm 2026-06-12, token-reconciliation sweep (FOLLOW_UPS #40): old teal predated the live mineral */
   --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
 
   --font-display: 'Spectral', Georgia, serif;
@@ -134,19 +173,24 @@ body {
   padding: 32px 12px 60px; gap: 24px;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Freeze looping atmospheric breath at mid-frame, keep composition */
-  .phone::before,
-  .stone::before,
-  .stone::after,
-  .stone__body {
-    animation-play-state: paused !important;
-  }
-  /* Entrance animations collapse to instant (user already on screen) */
+  /* Pin each atmospheric loop to its 50% PEAK — the fullest, most-alive
+     frame — rather than pausing (pause freezes at 0%, the trough of every
+     breath, so reduced-motion users got the most washed-out scene). This
+     file is the design source of truth, so it shows the intended still. */
+  .phone::before { animation: none !important; opacity: 1;    transform: scale(1.04); }
+  .stone::before { animation: none !important; opacity: 0.20; transform: scale(1.08); }
+  .stone__body  { animation: none !important; transform: scale(1.025); }
+  .stone::after  { animation: none !important; opacity: 0.70; }
+  /* Entrance animations collapse to instant (user already on screen). Zero
+     the DELAY too, not just the duration — the staggered 300–700ms delays
+     would otherwise leave each element on its opacity:0 base (forwards
+     fill) for up to 0.7s before snapping in. */
   .crumb-wrap,
   .stone,
   .gen-title,
   .gen-aside {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
   }
   /* Copy beat transitions stay, softened, so the screen doesn't freeze silent */
   .gen-title, .gen-aside {
@@ -154,6 +198,11 @@ body {
   }
 }
 button { font-family: inherit; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 
 .prototype-wrapper {
   width: 390px; height: 812px;
@@ -282,14 +331,16 @@ button { font-family: inherit; }
   width: var(--stone-lg); height: var(--stone-lg);
   margin-bottom: var(--space-3xl);
   opacity: 0;
+  /* Scale-bloom (0.94 → 1), not a slide — the stone materialises into the
+     wait rather than sliding in. Title/aside keep the 8px rise. */
   animation:
-    stoneEntrance var(--duration-medium) var(--ease-essence) 300ms forwards;
+    stoneBloom var(--duration-medium) var(--ease-essence) 300ms forwards;
 }
 /* Halo — 6s tempo (breathing body's companion) */
 .stone::before {
   content: ''; position: absolute; inset: -28%; border-radius: var(--radius-full);
   background: radial-gradient(circle, rgba(160, 180, 200, 0.16), transparent 62%);
-  animation: stoneHaloWorking 6s var(--ease-essence) infinite;
+  animation: stoneHaloWorking 4.8s var(--ease-essence) infinite;
 }
 /* Specular highlight + third breathing tempo at 9s — subtle shimmer */
 .stone::after {
@@ -306,19 +357,27 @@ button { font-family: inherit; }
     0 20px 40px rgba(120, 100, 70, 0.16),
     inset -16px -24px 50px rgba(80, 60, 30, 0.32),
     inset 16px 16px 36px rgba(255, 245, 220, 0.28);
-  animation: stoneBreathWorking 6s var(--ease-essence) infinite;
+  animation: stoneBreathWorking 4.8s var(--ease-essence) infinite;
 }
 @keyframes stoneEntrance {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes stoneBloom {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
 }
 @keyframes atmosphereFadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes stoneBreathWorking {
-  0%, 100% { transform: scale(1);     filter: brightness(1); }
-  50%      { transform: scale(1.025); filter: brightness(1.04); }
+  /* Amplitude stays 2.5%; liveliness comes from CADENCE — the 6s loop read
+     near-static, so the tempo moved to 4.8s (still slower than the 3s ready
+     stone, so it stays "patient processing"). Speed reads as alive more than
+     reach does. Mirrors the engine's working breathSpeed: 4800. */
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.025); }
 }
 @keyframes stoneHaloWorking {
   0%, 100% { transform: scale(1);    opacity: 0.12; }
@@ -351,8 +410,8 @@ button { font-family: inherit; }
   opacity: 0.5;
 }
 @keyframes stoneBreathReady {
-  0%, 100% { transform: scale(1);    filter: brightness(1); }
-  50%      { transform: scale(1.05); filter: brightness(1.02); }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
 }
 @keyframes stoneHaloReady {
   0%, 100% { transform: scale(1);   opacity: 0.15; }
@@ -369,10 +428,19 @@ button { font-family: inherit; }
   max-width: 300px;
   margin-bottom: var(--space-md);
   text-wrap: pretty;
+  /* Reserve the 2-line footprint (36px × 1.25 × 2) and centre within it, so
+     a shorter beat doesn't collapse the block and jump the centred group
+     upward mid-swap. One-off; specific to this 2-line title. */
+  min-height: 90px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
   opacity: 0;
   animation:
     stoneEntrance var(--duration-medium) var(--ease-essence) 500ms forwards;
-  transition: opacity var(--duration-medium) var(--ease-essence);
+  /* --duration-small so the dim-out reaches its trough exactly at the 400ms
+     text swap (the JS swaps at 400ms); was --duration-medium, which swapped
+     copy at half-opacity — a blink, not a crossfade. */
+  transition: opacity var(--duration-small) var(--ease-essence);
 }
 .gen-aside {
   font-family: var(--font-display);
@@ -385,12 +453,13 @@ button { font-family: inherit; }
   opacity: 0;
   animation:
     stoneEntrance var(--duration-medium) var(--ease-essence) 700ms forwards;
-  transition: opacity var(--duration-medium) var(--ease-essence);
+  transition: opacity var(--duration-small) var(--ease-essence);
 }
-/* Mid-stage copy swap (between beats) overrides animation */
+/* Mid-stage copy swap (between beats) overrides animation. Trough at 0.2
+   (not 0.3) so the text is hidden enough to swap cleanly behind the fade. */
 .gen-title.is-fading, .gen-aside.is-fading {
   animation: none;
-  opacity: 0.3;
+  opacity: 0.2;
 }
 .gen-title.is-settled, .gen-aside.is-settled {
   animation: none;
@@ -419,8 +488,11 @@ button { font-family: inherit; }
 }
 .failed-reassurance {
   font-family: var(--font-body);
-  font-size: var(--text-small);
-  color: var(--color-text-tertiary);
+  /* The anxiety-reducer must not be the faintest line in the frame: 16px
+     floor + secondary ink, not 14px tertiary (below the 45–70 contrast
+     floor on the cream ground). */
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
   margin-bottom: var(--space-2xl);
   letter-spacing: 0.01em;
 }
@@ -428,9 +500,13 @@ button { font-family: inherit; }
   display: flex; flex-direction: column; align-items: center;
   gap: var(--space-md);
   width: 100%; max-width: 280px;
+  /* Stone + copy stay top-anchored; the recovery tap drops into the
+     lower-third thumb zone instead of floating mid-frame. */
+  margin-top: auto;
+  margin-bottom: var(--space-3xl);
 }
 
-/* Failed stage shifts to task mode: content pushed higher, actions above fold */
+/* Failed stage shifts to task mode: content top-anchored, actions in reach */
 .stage--failed {
   justify-content: flex-start;
   padding-top: var(--space-4xl);
@@ -450,6 +526,16 @@ button { font-family: inherit; }
 }
 .btn:not(:disabled):hover { background: var(--color-mineral-dark); }
 .btn:not(:disabled):active { transform: scale(var(--scale-press)); }
+/* Keyboard retry needs a visible focus — was missing entirely. */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-mineral), var(--shadow-focus-ring);
+}
+.btn--link:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  border-radius: var(--radius-sm);
+}
 
 .btn--link {
   background: transparent;
@@ -476,6 +562,16 @@ button { font-family: inherit; }
   letter-spacing: 0.2em; text-transform: uppercase;
   color: rgba(255,255,255,0.4);
 }
+.dev-rail__scope {
+  font-family: var(--font-body); font-size: 11px; line-height: 1.5;
+  color: rgba(255,255,255,0.62);
+  max-width: 460px; text-align: center;
+  padding: 7px 12px; margin-bottom: 2px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+}
+.dev-rail__scope strong { color: rgba(255,235,200,0.95); font-weight: 600; }
 .dev-rail__nav, .dev-rail__row {
   display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
   max-width: 480px;
@@ -515,6 +611,9 @@ button { font-family: inherit; }
 
 <div class="dev-rail">
   <div class="dev-rail__label">A5 — Generation</div>
+  <div class="dev-rail__scope">
+    Review scope: <strong>A5 only.</strong> A2 / A4 / A6 / A7 were reviewed in their own passes — this file is the A5 polish surface. Auto-plays the working choreography on load; ↻ Replay to rerun, beat buttons to scrub, variant row for the failed states.
+  </div>
   <div class="dev-rail__nav" id="devNav">
     <button data-state="default" class="is-current">Default (with note)</button>
     <button data-state="failed-with-note">Failed · with note</button>
@@ -524,7 +623,8 @@ button { font-family: inherit; }
     <span class="dev-row-label">Copy beat:</span>
     <button data-beat="1" class="is-on">1 · Shaping</button>
     <button data-beat="2">2 · Listening</button>
-    <button data-beat="3">3 · Almost there</button>
+    <button data-beat="3">3 · In your voice</button>
+    <button id="replayBtn" style="margin-left:6px;">↻ Replay</button>
   </div>
 </div>
 
@@ -553,18 +653,23 @@ button { font-family: inherit; }
         </div>
       </div>
 
-      <!-- Working stage -->
-      <div class="stage" id="stageWorking">
-        <div class="stone" id="workingStone">
+      <!-- Working stage. aria-busy + ONE sr-only status (not aria-live on
+           the title, which would re-announce every beat swap ~5s). The
+           visible beats are decorative; the stone is decorative. -->
+      <div class="stage" id="stageWorking" aria-busy="true">
+        <div class="stone" id="workingStone" aria-hidden="true">
           <div class="stone__body"></div>
         </div>
-        <h1 class="gen-title" id="genTitle">Shaping your message.</h1>
-        <p class="gen-aside" id="genAside">A minute, no more.</p>
+        <p class="sr-only" role="status">Creating your message.</p>
+        <div aria-hidden="true">
+          <h1 class="gen-title" id="genTitle">Shaping your message.</h1>
+          <p class="gen-aside" id="genAside">A minute, no more.</p>
+        </div>
       </div>
 
       <!-- Failed stage — smaller stone, content shifted higher, task-oriented -->
       <div class="stage stage--failed stage--hidden" id="stageFailed">
-        <div class="stone stone--failed">
+        <div class="stone stone--failed" aria-hidden="true">
           <div class="stone__body"></div>
         </div>
         <h2 class="failed-title" id="failedTitle">Couldn&rsquo;t quite land it.</h2>
@@ -584,7 +689,7 @@ button { font-family: inherit; }
 const COPY_BEATS = {
   1: { title: 'Shaping your message.',          aside: 'A minute, no more.' },
   2: { title: 'Listening for the right tone.',  aside: 'Choosing the words that fit.' },
-  3: { title: 'Almost there.',                  aside: 'Nothing is lost.' },
+  3: { title: 'Almost in your voice.',          aside: 'The right words take a moment.' },
 };
 const FAILED_COPY = {
   'failed-with-note': {
@@ -675,11 +780,57 @@ function applyBeat(beat) {
   });
 }
 
-document.querySelectorAll('#devNav button').forEach(b => b.addEventListener('click', () => applyVariant(b.dataset.state)));
-document.querySelectorAll('#copyRow button').forEach(b => b.addEventListener('click', () => applyBeat(parseInt(b.dataset.beat, 10))));
+// ── Auto-play: run the working stage's real timed choreography so motion
+//    is assessable without clicking. Entrance replays via reflow, then
+//    beat 1 → 2 (4s) → 3 (9s), matching production's GenerationScreen
+//    cadence. Manual beat clicks pause it; ↻ Replay re-arms it. ──
+let autoTimers = [];
+function clearAuto() { autoTimers.forEach(clearTimeout); autoTimers = []; }
+
+function restartEntrance() {
+  // Reset the beat-swap state so applyBeat(1) takes the first-boot path,
+  // then re-trigger the entrance keyframes via a reflow.
+  const els = [
+    document.querySelector('.crumb-wrap'),
+    document.getElementById('workingStone'),
+    document.getElementById('genTitle'),
+    document.getElementById('genAside'),
+  ];
+  [document.getElementById('genTitle'), document.getElementById('genAside')]
+    .forEach(el => el.classList.remove('is-settled', 'is-fading'));
+  els.forEach(el => {
+    el.style.animation = 'none';
+    void el.offsetWidth;       // force reflow so the animation re-fires
+    el.style.animation = '';
+  });
+}
+
+function autoPlay() {
+  clearAuto();
+  restartEntrance();
+  applyBeat(1);
+  // 5s / 10s (was 4s/9s): beat 1 gets real settled dwell after the ~1.5s
+  // entrance instead of being eaten by it; beat 3 is the terminal hold.
+  autoTimers.push(setTimeout(() => applyBeat(2), 5000));
+  autoTimers.push(setTimeout(() => applyBeat(3), 10000));
+}
+
+document.querySelectorAll('#devNav button').forEach(b => b.addEventListener('click', () => {
+  applyVariant(b.dataset.state);
+  if (b.dataset.state === 'default') autoPlay();
+  else clearAuto();
+}));
+document.querySelectorAll('#copyRow button[data-beat]').forEach(b => b.addEventListener('click', () => {
+  clearAuto();                 // manual scrub pauses the timed run
+  applyBeat(parseInt(b.dataset.beat, 10));
+}));
+document.getElementById('replayBtn').addEventListener('click', () => {
+  applyVariant('default');
+  autoPlay();
+});
 
 applyVariant('default');
-applyBeat(1);
+autoPlay();
 </script>
 </body>
 </html>

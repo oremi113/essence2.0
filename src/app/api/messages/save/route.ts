@@ -46,7 +46,7 @@ export const POST = defineRoute(
     const { data: gen } = await supabase
       .from("pending_generations")
       .select(
-        "generation_id, voice_profile_id, recipient_id, pending_recipient_name, pending_recipient_relationship, category, generated_text, audio_path, audio_status, regenerate_count, saved_message_id",
+        "generation_id, voice_profile_id, recipient_id, pending_recipient_name, pending_recipient_relationship, category, generated_text, audio_path, audio_status, audio_duration_ms, regenerate_count, saved_message_id",
       )
       .eq("generation_id", generationId)
       .eq("user_id", user.id)
@@ -149,6 +149,7 @@ export const POST = defineRoute(
         status: "saved",
         storage_bucket: AUDIO_BUCKET,
         storage_path: permanentPath,
+        audio_duration_ms: gen.audio_duration_ms,
         regenerate_count: gen.regenerate_count,
         source_generation_id: generationId,
         generation_completed_at: new Date().toISOString(),
