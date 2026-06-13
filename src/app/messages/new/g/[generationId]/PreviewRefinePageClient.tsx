@@ -12,11 +12,12 @@
  * docs/analytics/2026-06-01-step6-events.md and the 2026-06-11 A6
  * wiring note).
  *
- * Save success routes to A7 (/messages/saved/[messageId]). Interim
- * navigation (FOLLOW_UPS #38): C3 (Vault Limit) and the A4 reshape
- * return-path aren't built, so vault-limit and discard land on Home and
- * reshape/back land on the flow start. A lapsed subscription routes to
- * the existing restore gate.
+ * Save success routes to A7 (/messages/saved/[messageId]); reshape and
+ * the back chevron route to A4 (/messages/new/g/[id]/reshape), which
+ * writes a candidate back onto this row and returns here. Interim
+ * navigation (FOLLOW_UPS #38): C3 (Vault Limit) isn't built, so a
+ * vault-limit save and discard both land on Home. A lapsed subscription
+ * routes to the existing restore gate.
  */
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -29,7 +30,7 @@ import type {
 } from "@/components/screens/messages/PreviewRefineScreen.types";
 import { clearFlowId, getFlowStartedAt, trackStep6 } from "@/lib/analytics/step6";
 import { estimateSpeechDurationSec } from "@/lib/messages/speech-duration";
-import { messageSavedRoute, ROUTES } from "@/lib/routes";
+import { messageReshapeRoute, messageSavedRoute, ROUTES } from "@/lib/routes";
 
 /** One-way per-user latches in profiles.ui_flags this screen owns. */
 export type A6UiFlag = "a6_play_hint_learned" | "a6_visited";
@@ -283,15 +284,16 @@ export function PreviewRefinePageClient({
     void onPersistUiFlag("a6_play_hint_learned").catch(() => {});
   }, [onPersistUiFlag]);
 
-  // Reshape returns to A4 with fromGenerationId once A4 exists; until then
-  // the flow restarts (FOLLOW_UPS #38).
+  // Reshape ("What it says") and the back chevron go to A4 with this
+  // generation as fromGenerationId; the deferred reshape writes a
+  // candidate back onto this row and returns here in the candidate state.
   const handleReshape = useCallback(() => {
-    router.push(ROUTES.messagesNew);
-  }, [router]);
+    router.push(messageReshapeRoute(generationId));
+  }, [generationId, router]);
 
   const handleBack = useCallback(() => {
-    router.push(ROUTES.messagesNew);
-  }, [router]);
+    router.push(messageReshapeRoute(generationId));
+  }, [generationId, router]);
 
   const handleSaved = useCallback(
     (messageId: string) => {
