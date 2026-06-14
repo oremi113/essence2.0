@@ -4,27 +4,41 @@ import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { MessageCreationFlow } from '@/components/screens/messages/MessageCreationFlow';
 import { clearFlowId } from '@/lib/analytics/step6';
+import type { GenerateRequest } from '@/components/screens/messages/MessageCreationFlow.types';
 import type { PersonalNoteSubmitResult } from '@/components/screens/messages/PersonalNoteScreen.types';
 import type { ExistingRecipient } from '@/components/screens/messages/RecipientSetupScreen.types';
-import { ROUTES } from '@/lib/routes';
+import { ROUTES, messageGenerationRoute } from '@/lib/routes';
 
 /**
- * Client wrapper for /messages/new. Provides router-driven exit and
- * clears the active flow_id when the user backs out of the flow.
+ * Client wrapper for /messages/new. Owns the two page-layer concerns the
+ * orchestrator bubbles out (CLAUDE.md three-layer rule — screens never
+ * fetch or redirect):
  *
- * onGenerate (A4 submit handoff) is a stub for now: the forward cold-
- * start /generate call needs the user's voiceProfileId (a page-side
- * fetch) and resolves the "A5 wait vs A6 preview" landing — that is the
- * A4→A5 forward-wiring chunk. Until then it resolves not-ok so A4 never
- * dead-ends. See docs/FOLLOW_UPS.md (A3 chunk: forward /generate wiring).
+ *  • onExitFlow — clears the active flow_id, routes to /home.
+ *  • onGenerate — the A4-submit cold-start handoff. POSTs /generate
+ *    (synchronous: LLM text + ElevenLabs render run inline) and, on
+ *    success, pushes to the new generation's A6 (/messages/new/g/[id]).
+ *    A5 ("shaping your message") is the orchestrator's in-flight wait;
+ *    success unmounts it via this navigation, failure resolves not-ok and
+ *    the orchestrator flips A5 to its retry state.
+ *
+ * Note: the A6 generation route renders only under DEFERRED_AUDIO_ENABLED
+ * (the control-arm A6 isn't built). With the flag off, a successful
+ * generate lands on a 404 — expected until the control-arm A6 exists.
  */
 
 interface MessagesNewPageClientProps {
   existingRecipients: ExistingRecipient[];
+  /** The user's ready, cloned voice profile (page guarantees one exists). */
+  voiceProfileId: string;
+  /** Saved-message count — drives A3's "last of three" + flow_started. */
+  savedCountBefore: number;
 }
 
 export function MessagesNewPageClient({
   existingRecipients,
+  voiceProfileId,
+  savedCountBefore,
 }: MessagesNewPageClientProps) {
   const router = useRouter();
 
@@ -34,20 +48,47 @@ export function MessagesNewPageClient({
   }, [router]);
 
   const handleGenerate = useCallback(
-    async (): Promise<PersonalNoteSubmitResult> => {
-      // Placeholder until the A4→A5 chunk wires the cold-start /generate
-      // call + the generation-route push.
-      console.warn(
-        '[messages/new] forward /generate not yet wired (A4→A5 chunk)',
-      );
+    async ({ recipient, category, note }: GenerateRequest): Promise<PersonalNoteSubmitResult> => {
+      const body: Record<string, unknown> = {
+        voiceProfileId,
+        category,
+        ...(note ? { note } : {}),
+        ...(recipient.kind === 'existing'
+          ? { recipientId: recipient.recipientId }
+          : {
+              pendingRecipientName: recipient.name,
+              pendingRecipientRelationship: recipient.relationship,
+              ...(recipient.descriptor
+                ? { pendingRecipientDescriptor: recipient.descriptor }
+                : {}),
+            }),
+      };
+
+      try {
+        const res = await fetch('/api/messages/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          generationId?: string;
+        };
+        if (res.status === 200 && data.generationId) {
+          router.push(messageGenerationRoute(data.generationId));
+          return { ok: true };
+        }
+      } catch {
+        // network/parse failure → not-ok (A5 shows the retry)
+      }
       return { ok: false };
     },
-    [],
+    [voiceProfileId, router],
   );
 
   return (
     <MessageCreationFlow
       existingRecipients={existingRecipients}
+      savedCountBefore={savedCountBefore}
       onExitFlow={handleExit}
       onGenerate={handleGenerate}
     />

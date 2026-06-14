@@ -63,6 +63,7 @@ export default function MessagesFlowDevPage() {
   const [count, setCount] = useState<number>(0);
   const [runId, setRunId] = useState(0);
   const [lastGen, setLastGen] = useState<string | null>(null);
+  const [failNext, setFailNext] = useState(false);
 
   const handleExit = useCallback(() => {
     console.log('[dev/messages-flow] onExitFlow');
@@ -71,22 +72,24 @@ export default function MessagesFlowDevPage() {
   }, []);
 
   const handleGenerate = useCallback(async (request: GenerateRequest) => {
-    // Mock the A4-submit /generate handoff (the real one — POST /generate
-    // + router.push to A5/A6 — lands in the A4→A5 chunk).
-    //
-    // A4's note path holds the honoring moment until the PARENT navigates
-    // away. Production navigates on success; this sandbox can't, so we
-    // stand in for that navigation: let the honoring beat play, then
-    // remount the flow (back to A2). Without this the honoring dots would
-    // hang forever — a dev-only dead end, not a product bug.
+    // Mock the A4-submit /generate handoff. A5 ("shaping your message") is
+    // on screen during this wait (the orchestrator shows it after A4's
+    // honoring beat hands off). Real /generate runs LLM + TTS, then:
+    //   success → router.push to A6 (A5 unmounts);
+    //   failure → A5 flips to its retry state (A5.b).
+    // This sandbox can't navigate, so a mock success stands in with a
+    // remount (back to A2). Toggle "Fail generate" to exercise A5.b.
     console.log('[dev/messages-flow] onGenerate', request);
     const noteLabel = request.note ? `note "${request.note}"` : 'generic (no note)';
-    // Hold past A4's 2.4s honoring min-hold so the moment reads fully.
-    await new Promise((r) => setTimeout(r, 2700));
-    setLastGen(`${request.category} · ${noteLabel} → looped (prod routes to A5/A6).`);
+    await new Promise((r) => setTimeout(r, 5000));
+    if (failNext) {
+      setLastGen(`${request.category} · ${noteLabel} → generate FAILED → A5.b retry.`);
+      return { ok: false as const };
+    }
+    setLastGen(`${request.category} · ${noteLabel} → success → would route to A6 (looped).`);
     setRunId((id) => id + 1);
     return { ok: true as const };
-  }, []);
+  }, [failNext]);
 
   return (
     <>
@@ -137,11 +140,28 @@ export default function MessagesFlowDevPage() {
               {n} {n === 1 ? 'recipient' : 'recipients'}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setFailNext((v) => !v)}
+            style={{
+              background: failNext ? '#8A5A1E' : 'rgba(255,255,255,0.06)',
+              color: failNext ? '#fff' : 'rgba(255,255,255,0.6)',
+              border: `1px solid ${failNext ? '#8A5A1E' : 'rgba(255,255,255,0.10)'}`,
+              borderRadius: 14,
+              padding: '4px 10px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              marginLeft: 8,
+            }}
+          >
+            ⚠ Fail generate
+          </button>
         </div>
         <span style={{ opacity: 0.5, textAlign: 'center' }}>
           {lastGen
             ? `↻ ${lastGen}`
-            : 'A2→A3→A4 spine. A4 submit loops back here (prod routes to A5/A6 — A4→A5 chunk).'}
+            : 'A2→A3→A4→A5 spine. A4 submit → A5 wait → success loops back (prod routes to A6); toggle Fail for A5.b.'}
         </span>
       </div>
       <div style={{ paddingTop: 60 }}>

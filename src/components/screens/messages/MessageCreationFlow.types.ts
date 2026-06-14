@@ -11,21 +11,25 @@ import type {
  * at /messages/new/g/[generationId] per Step6_OpenContracts.md Q7 — the
  * orchestrator hands off to a different route once a generation exists.
  *
- * Renders A2 → A3 → A4 (the pre-generation form spine). A4 submit hands
- * off to the page via onGenerate, which owns /generate + the route push.
+ * Renders A2 → A3 → A4 → A5 (the form spine + the in-flight generation
+ * wait). A4 submit fires onGenerate (page owns /generate + the route push
+ * to A6); A5 is the client-side wait the orchestrator shows while that
+ * call is in flight — success navigates to A6 (A5 unmounts), failure
+ * flips A5 to its retry state.
  */
-export type FlowStep = 'recipient' | 'category' | 'note';
+export type FlowStep = 'recipient' | 'category' | 'note' | 'generating';
 
 /**
  * Staged inputs collected through the form steps. Holds nothing until
  * the user submits each step. None of these are persisted server-side
  * until A4 submit triggers /api/messages/generate (per Q1 — message is
- * ephemeral pre-save). The note is not staged here — it is captured at
- * A4 submit and passed straight to onGenerate.
+ * ephemeral pre-save). The note is staged so A5's "Adjust your note"
+ * failure path can route back to A4 with it pre-filled.
  */
 export interface StagedFlowState {
   recipient: RecipientSelection | null;
   category: MessageCategory | null;
+  note: string | null;
 }
 
 /**
@@ -44,6 +48,11 @@ export interface GenerateRequest {
 export interface MessageCreationFlowProps {
   /** Existing recipients fetched from the server. Empty array = first-ever path. */
   existingRecipients: ExistingRecipient[];
+  /**
+   * Saved-message count at flow start. Drives A3's "last of three"
+   * variant (=== 2) and the flow_started telemetry. Defaults to 0.
+   */
+  savedCountBefore?: number;
   /** Called when the user backs out of the entire flow (typically routes to Home). */
   onExitFlow: () => void;
   /**

@@ -67,9 +67,9 @@ the outside is what's left.
 | Screen | What it is | Status |
 |---|---|---|
 | **A2** Recipient | Who's this for? | 🟡 Built, not proven (only screen with code) |
-| **A3** Category | Birthday / comfort / etc. | ✅ **Built + wired (Chunk 6, 2026-06-13)** — screen + `/dev/messages-category`; A2→A3→A4 client spine wired in `MessageCreationFlow` (name resolution, category staging, crumb context, back-nav preserves selection), dev-verified at 4× CPU throttle. Prototype copy + order promoted into the canonical registry (one source of truth). Forward `/generate` handoff stubbed (FOLLOW_UPS #47, A4→A5 chunk). See `Step6_A3_Screen_Chunk6.md`. |
-| **A4** Note | Optional personal note | ✅ **Built + reshape-wired (Chunk 4, 2026-06-12)** — screen + `/dev/messages-note`; reshape path live at `/messages/new/g/[id]/reshape`, A6→A4→A6 candidate loop browser-verified against the real backend. Forward-flow entry (A3→A4) waits on A3. See `Step6_A4_Screen_Chunk4.md`. |
-| **A5** Generating | The "shaping your message" wait | 🟡 **Built (Chunk 5, 2026-06-12)** — pure screen + `/dev/messages-generation`; working (3 copy beats @ 4s/9s), failed-with-note + failed-skip. Browser-smoke-tested (4× CPU avg 8.3ms; reduced-motion glow pinned). Forward-flow wiring (A3→A4→A5→A6) waits on A3; no independent route (reshape holds in A4). Awaiting design polish. See `Step6_A5_Screen_Chunk5.md`. |
+| **A3** Category | Birthday / comfort / etc. | ✅ **Built + wired (Chunk 6, 2026-06-13)** — screen + `/dev/messages-category`; A2→A3→A4 client spine wired in `MessageCreationFlow` (name resolution, category staging, crumb context, back-nav preserves selection), dev-verified at 4× CPU throttle. Prototype copy + order promoted into the canonical registry (one source of truth). Forward `/generate` handoff now live (Chunk 7). See `Step6_A3_Screen_Chunk6.md`. |
+| **A4** Note | Optional personal note | ✅ **Built + fully wired (Chunk 4 + Chunk 7)** — screen + `/dev/messages-note`; reshape path live at `/messages/new/g/[id]/reshape`; forward entry (A3→A4) and the A4→A5 `/generate` handoff (honoring→A5 seam) now live. See `Step6_A4_Screen_Chunk4.md` + `Step6_A4A5_Wiring_Chunk7.md`. |
+| **A5** Generating | The "shaping your message" wait | ✅ **Built + forward-wired (Chunk 5 + Chunk 7, 2026-06-13)** — pure screen + `/dev/messages-generation`; now reached in the forward flow as the orchestrator's `generating` step. A4 submit fires the real `/generate` (honoring→A5 overlapped seam); success → A6, failure → A5.b (Try again / Adjust note). Live-verified failure path (fake-vendor 502); success→A6 dev-mocked. See `Step6_A4A5_Wiring_Chunk7.md`. |
 | **A6** Preview & Refine | Hear / re-draft / commit / save | ✅ **Proven (deferred variant)** — screen (Chunk 1) + live route/wiring/telemetry (Chunk 2), browser-verified against the real server + DB. Only the commit-success voice render (vendor spend) remains unproven. Control-arm variant not built. |
 | **A7** Saved | The saved message | ✅ **Built + wired (Chunk 3, 2026-06-12)** — screen + `/dev/messages-saved`; live route `/messages/saved/[messageId]`, A6 save-success + already-saved redirect repointed here, browser-verified. See `Step6_A7_Screen_Chunk3.md`. |
 | **C1–C3** | Ceremony / Waitlist / Vault Limit | ⬜ not started (Save backend already routes to C3 at the cap) |
@@ -142,10 +142,10 @@ proven with zero vendor spend.
 2. **The spine screens**, built per-screen (one screen → design pass →
    architect review → wiring → live verify → commit stack). Done: A7
    (Chunk 3), A4 (Chunk 4), A5 screen (Chunk 5 — pending polish + forward
-   wiring), A3 (Chunk 6 — built + A2→A3→A4 client spine wired). **Next:
-   A4→A5 forward wiring** — the cold-start `/generate` handoff
-   (FOLLOW_UPS #47: `voiceProfileId` fetch + generation-route push +
-   `isFinalOfThree` saved-count) — then C1–C3. A6's exit paths
+   wiring), A3 (Chunk 6 — built + A2→A3→A4 client spine wired), A4→A5
+   forward wiring (Chunk 7 — live `/generate` handoff, honoring→A5 seam,
+   `voiceProfileId` fetch, `isFinalOfThree`/saved-count; FOLLOW_UPS #47
+   resolved). **Next: C1–C3** (ceremony / waitlist / vault-limit). A6's exit paths
    (FOLLOW_UPS #38) repoint as each lands — reshape resolved (A4); still
    open: C3 vault-limit, C1 ceiling CTA. Before each chunk, run
    `node scripts/step6-token-sweep.mjs` and read

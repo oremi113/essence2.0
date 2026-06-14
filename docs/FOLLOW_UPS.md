@@ -449,7 +449,10 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 **Fix shape:** capture `{ error }` on the storage_path update and return 500 on failure (match the insert/sign handling). Separately, delete the dead ternary (`const ext = "webm"`) or derive the extension from `mime` if multiple formats are intended.
 **Pick up when:** next time the audio-upload pipeline is touched. Agent-fixable.
 
-### 47. [P2] Step 6 forward `/generate` handoff is stubbed — A4 submit dead-ends in production; plus `isFinalOfThree` is hardcoded false
+### 47. [P2] ✅ RESOLVED (Chunk 7, 2026-06-13) — Step 6 forward `/generate` handoff is stubbed — A4 submit dead-ends in production; plus `isFinalOfThree` is hardcoded false
+**Resolution:** A4→A5 forward wiring landed (`Step6_A4A5_Wiring_Chunk7.md`). `/messages/new/page.tsx` fetches the ready `voiceProfileId` + saved count; `MessagesNewPageClient.onGenerate` POSTs `/generate` and routes to A6 on success; the orchestrator added the `generating` step (A5) with the honoring→A5 overlapped seam, retry, and Adjust-note. `isFinalOfThree` + `flow_started.saved_count_before` now derive from the real saved count. Live-verified the failure path (fake-vendor 502 → A5.b); success→A6 dev-mocked per the verify decision. Original entry below for history.
+
+
 `src/app/messages/new/MessagesNewPageClient.tsx` — `handleGenerate` is a placeholder that `console.warn`s and resolves `{ ok: false }`. The A3 chunk (2026-06-13) wired the A2→A3→A4 client spine and exposed the `onGenerate(GenerateRequest)` handoff on `MessageCreationFlow`, but the real cold-start generation is deferred to the A4→A5 chunk. Separately, `MessageCreationFlow.tsx` passes `isFinalOfThree={false}` to A3 unconditionally — the "last of three" variant (ceiling note + warm tone + softer copy) never shows in production because the saved-count is not fetched.
 
 **Why it matters:** on production `/messages/new` a user can walk A2→A3→A4 and tap "Shape it from this" / "Use a generic message", and nothing happens (not-ok returns A4 to input) — the spine is visibly incomplete until generate is wired. And every third-message user sees the default A3 instead of the intended ceiling-moment variant. Neither is a data risk; both are completeness gaps the spine build expects.
