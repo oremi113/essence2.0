@@ -34,6 +34,8 @@ export const ROUTES = {
   /** C3 Vault Limit Reached — the capped steady-state (3/3 saved). Routed
    *  from the A2-entry UX gate and the /save race-case 403. */
   messagesLimit: "/messages/limit",
+  /** C2 Waitlist — the "look ahead" signup. Routed from C3 and (later) C1. */
+  messagesWaitlist: "/messages/waitlist",
 
   vaultContinuity: "/app/vault/continuity",
   vaultProtect: "/app/vault/protect",

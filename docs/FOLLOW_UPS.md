@@ -29,7 +29,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
 | 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ⏳ C3+A4 done; C1 ceiling CTA still open |
 | 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ⏳ one real-voice pass before Step 6 ships |
-| 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ⏳ repoint when C2 builds |
+| 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
@@ -398,12 +398,9 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 4. Assert: audio actually plays, `messages` row gets storage_path + duration + bytes, `usage_events` records the render outcomes.
 **Pick up when:** the happy path is wired end-to-end and Step 6 is about to merge to `main` / before any real-user exposure. Not blocking C2/C1 (both static, zero render) — keep building on the fake voice until then.
 
-### 52. [P4 · blocked on C2 build] C3 "See what's coming" routes to Home until C2 Waitlist exists
+### 52. [P4] C3 "See what's coming" routes to Home until C2 Waitlist exists — ✅ RESOLVED 2026-06-14 (Chunk 9)
 **File:** `src/app/messages/limit/VaultLimitPageClient.tsx` (`handleSeeWhatsComing`).
-**What:** C3's secondary link should route to C2 Waitlist (`/messages/waitlist`), but C2 isn't built. Interim lands on Home, matching the A7 "See what's coming" precedent (#38). The link is otherwise fully wired (reveal, focus order, copy).
-**Why it matters:** the "look ahead" the C-screens are designed around dead-ends at Home — capped users can't express V2 demand. Low impact (no data loss) but it's the whole point of the ceiling moment.
-**Fix shape:** add `messagesWaitlist` to `ROUTES`, repoint `handleSeeWhatsComing`. One line once the route exists.
-**Pick up when:** the C2 Waitlist build chunk (next on the spine).
+**Resolution:** C2 Waitlist shipped (`/messages/waitlist`); C3's "See what's coming" now routes to `/messages/waitlist?from=c3` (attribution threaded into the durable `legacy_waitlist.source` + `step6.waitlist_joined.surfaced_from`). Live-verified end-to-end. The only remaining "See what's coming" interim is A7's `third` variant → C1 (FOLLOW_UPS #38).
 
 ### 39. Saved-message immutability trigger crashes on every saved-row update (dangling `kind` reference) — ✅ RESOLVED 2026-06-12
 **Resolution:** `20260611233000_fix_messages_immutability_trigger.sql` applied in the 2026-06-11 bundle. Probed live post-apply: mutable updates on saved rows pass, immutable mutations raise the intended "Message is immutable after saved", and the `source_generation_id` SET NULL cascade (promoted-pending-row deletes) works.

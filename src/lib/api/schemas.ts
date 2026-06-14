@@ -201,3 +201,29 @@ export const messageGenerationRefSchema = z
   .loose();
 
 export type MessageGenerationRefBody = z.infer<typeof messageGenerationRefSchema>;
+
+// ---------------------------------------------------------------------------
+// POST /api/messages/waitlist  (C2 Waitlist join)
+// ---------------------------------------------------------------------------
+
+/** Email only — feature picks are telemetry-only (not persisted) per the C2
+ *  data-model decision. Trimmed + lowercased so the unique(user_id) row's
+ *  email stays canonical. */
+export const waitlistJoinSchema = z
+  .object(
+    {
+      email: z
+        .string({ error: "email is required" })
+        .transform((v) => v.trim().toLowerCase())
+        .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+          message: "A valid email is required",
+        }),
+      // Attribution for the durable row's `source` column (c1 ceremony / direct
+      // nav / c3 vault-limit). Optional — falls back to the table default.
+      source: z.enum(["c1", "c2_direct", "c3"]).optional(),
+    },
+    { error: "Invalid JSON body" },
+  )
+  .loose();
+
+export type WaitlistJoinBody = z.infer<typeof waitlistJoinSchema>;

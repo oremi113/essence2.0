@@ -41,10 +41,8 @@ export function VaultLimitPageClient({ surfacedFrom }: VaultLimitPageClientProps
   }, [router]);
 
   const handleSeeWhatsComing = useCallback(() => {
-    // C2 (Waitlist) isn't built yet — Home is the interim landing, matching
-    // the A7 "See what's coming" precedent (FOLLOW_UPS #52). Repoint to
-    // ROUTES.messagesWaitlist when C2 lands.
-    router.push(ROUTES.home);
+    // → C2 Waitlist, attributed to the C3 surface (FOLLOW_UPS #52 resolved).
+    router.push(`${ROUTES.messagesWaitlist}?from=c3`);
   }, [router]);
 
   return (
