@@ -28,7 +28,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
 | 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ✅ FULLY RESOLVED (Chunk 10 — C1 + repoint) |
-| 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ⏳ one real-voice pass before Step 6 ships |
+| 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ✅ VERIFIED 2026-06-14 (both arms, real audio) |
 | 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ durable profile flag when migrations unblock |
 | 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ⏳ wrap the status assertion in waitFor |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
@@ -397,17 +397,13 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Fix shape:** wrap the status assertion in `waitFor` (`await waitFor(() => expect(result.current.status).toBe('success'))`) so it polls instead of sampling once.
 **Pick up when:** next time the suite is touched, or a test-hardening pass.
 
-### 53. [P2 · pre-merge verification gate] Real ElevenLabs voice render is unverified end-to-end
-**What:** Every Step 6 path has been proven against the real server + DB *except the one that spends vendor money* — a real cloned voice rendering real audio. The test user's `voice_profile` is a fake-vendor voice: ElevenLabs rejects it (502, no synthesis billed), which is exactly what makes failure-path + caps + routing + telemetry testing free. Two paths stay unproven because the fake voice can't render:
-- `/generate` **success** → A6 (today the success round-trip is dev-mocked; only the 502 failure is live-proven).
-- `/commit` **success** render — A6's "Hear this in your voice" spend (Deferred-Audio path, behind `DEFERRED_AUDIO_ENABLED`).
-**Why it matters:** the render plumbing (signed URLs, storage paths, duration/bytes, the A6 commit-success beat, audio quality) has never run for real. A bug the fake voice masks would surface to the first real user.
-**Fix shape (one deliberate pass, spend once):**
-1. Create a real cloned voice via the voice-creation flow (`/app/voice/create`) — itself an ElevenLabs clone call, so budget clone + a few renders.
-2. Walk `/generate` **and** `/commit` in the **same** session so the one voice covers both render paths.
-3. Decide the `DEFERRED_AUDIO_ENABLED` state for the pass (off = control-arm render at generate; on = deferred commit render) — flip inline per the Step 6 live-verify protocol.
-4. Assert: audio actually plays, `messages` row gets storage_path + duration + bytes, `usage_events` records the render outcomes.
-**Pick up when:** the happy path is wired end-to-end and Step 6 is about to merge to `main` / before any real-user exposure. Not blocking C2/C1 (both static, zero render) — keep building on the fake voice until then.
+### 53. Real ElevenLabs voice render — ✅ VERIFIED 2026-06-14 (both arms, real audio)
+**What it was:** Every Step 6 path was proven against the real server + DB *except the one that spends vendor money* — real audio rendering. The fake-vendor voice 502s, which made all the failure/caps/routing/telemetry testing free; the render itself had never run for real.
+**How it was verified (no clone needed):** reused an existing real cloned voice already in the ElevenLabs account (`vendor_voice_id 0t4EwPRMYoEXgdXWO9ul`, confirmed live via `GET /voices`). Temporarily pointed the test user's `voice_profile` at it (restored the fake id after), then ran both arms against the live backend as the authenticated test user:
+- **Control arm** (`DEFERRED_AUDIO_ENABLED` off): `POST /generate` rendered inline → `audio_status=succeeded`, `audio_duration_ms=6142`, object in `essence-audio` storage (HEAD 200, 98,264 bytes, `audio/mpeg`), signed-URL playback OK. Real on-tone text generated.
+- **Deferred arm** (flag on, server restarted inline): `/generate` first-listen rendered; `/regenerate` returned a **text-only** candidate (free re-roll — the cost model holds); **`/commit` rendered the candidate** → `committed=true`, `audio_status=succeeded`, `audioRenderCount=1`, `audioDurationMs=6612`, object in storage (HEAD 200, 105,787 bytes, `audio/mpeg`).
+**Result:** the render plumbing (TTS call, storage write, duration measure, signed-URL playback) works for real on both arms, and the deferred cost model (render only on commit, free text re-rolls, render-count tracking) is confirmed. Cleanup: fake voice id restored, test pending rows deleted, dev server returned to flag-off default.
+**Residual (minor):** `pending_generations.audio_bytes` reads null on the row (the real file is correctly sized in storage); bytes are stamped on the `messages` row at save, not the pending row — confirm that's intended vs a small gap if byte-accounting on pending rows is ever needed.
 
 ### 52. [P4] C3 "See what's coming" routes to Home until C2 Waitlist exists — ✅ RESOLVED 2026-06-14 (Chunk 9)
 **File:** `src/app/messages/limit/VaultLimitPageClient.tsx` (`handleSeeWhatsComing`).

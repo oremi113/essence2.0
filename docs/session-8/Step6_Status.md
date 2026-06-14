@@ -93,10 +93,11 @@ Also done + proven: deferred reshape (same-row candidate), the `keep`
 candidate-clear, split caps, and the failure-safe commit (a failed render keeps
 the prior take and burns no allowance).
 
-**One manual check owed:** the full `/generate` and `/commit` → *real* ElevenLabs
-voice render (needs an actual cloned voice; the render call itself is already
-live via the older `/api/messages` route). Everything *around* the render is
-proven with zero vendor spend.
+**Real-voice render: ✅ verified 2026-06-14** (FOLLOW_UPS #53). Both arms
+rendered real audio against the live backend using an existing cloned voice —
+control-arm `/generate` inline render and deferred `/commit` candidate render,
+with storage + duration + signed-URL playback all confirmed. Everything around
+the render was already proven with zero vendor spend; now the render itself is too.
 
 ---
 
@@ -158,7 +159,7 @@ proven with zero vendor spend.
    `node scripts/step6-token-sweep.mjs` and read
    `Step6_Prototype_Token_Reconciliation.md` (token mapping + footgun
    checklist — the prototypes' `:root` blocks drift from production).
-3. **Manual real-voice render check** for `/generate` + `/commit` (needs a cloned voice) — now tracked as FOLLOW_UPS #53 (P2 pre-merge gate: one deliberate real-voice pass, spend once, before Step 6 ships).
+3. ~~**Manual real-voice render check** for `/generate` + `/commit`~~ ✅ **DONE 2026-06-14** (FOLLOW_UPS #53). Reused an existing real cloned voice (`0t4EwPRMYoEXgdXWO9ul`); both arms rendered real audio against the live backend — control-arm `/generate` (98KB mp3, 6.1s) and deferred `/commit` (105KB mp3, 6.6s, free text re-rolls confirmed). Test artifacts cleaned up.
 
 ---
 
