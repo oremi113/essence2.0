@@ -227,5 +227,8 @@ throttle: avg 8.3ms / worst 9.4ms.
 - [x] Working-stone breath resolved (speed → 4.8s, shared engine;
   RecordScreen re-checked) + beat-3 copy deconflicted (#6, #8)
 - [ ] Owner visual pass on the breath speed + beat-3 copy (live)
-- [ ] Forward-flow wiring (A3→A4→A5→A6) — lands with the A3 chunk
+- [x] Forward-flow wiring (A3→A4→A5→A6) — landed in Chunk 7
+  (`Step6_A4A5_Wiring_Chunk7.md`): A5 is the orchestrator's `generating`
+  step; live `/generate` handoff with the honoring→A5 overlapped seam;
+  A5.b failure live-verified (fake-vendor 502)
 - [ ] Commit (awaiting go-ahead)

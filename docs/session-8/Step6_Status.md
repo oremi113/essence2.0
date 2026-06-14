@@ -1,6 +1,6 @@
 # Step 6 (Message Creation) — Status & What's Pending
 
-**Living doc. Last updated: 2026-06-11.**
+**Living doc. Last updated: 2026-06-14.**
 
 Plain-language map of where message-creation stands, written to be read without
 diving into code. The sections that need *you* are **"Decisions"** and **"What's
@@ -67,15 +67,18 @@ the outside is what's left.
 | Screen | What it is | Status |
 |---|---|---|
 | **A2** Recipient | Who's this for? | 🟡 Built, not proven (only screen with code) |
-| **A3** Category | Birthday / comfort / etc. | ⬜ prototyped, not built |
-| **A4** Note | Optional personal note | ✅ **Built + reshape-wired (Chunk 4, 2026-06-12)** — screen + `/dev/messages-note`; reshape path live at `/messages/new/g/[id]/reshape`, A6→A4→A6 candidate loop browser-verified against the real backend. Forward-flow entry (A3→A4) waits on A3. See `Step6_A4_Screen_Chunk4.md`. |
-| **A5** Generating | The "shaping your message" wait | 🟡 **Built (Chunk 5, 2026-06-12)** — pure screen + `/dev/messages-generation`; working (3 copy beats @ 4s/9s), failed-with-note + failed-skip. Browser-smoke-tested (4× CPU avg 8.3ms; reduced-motion glow pinned). Forward-flow wiring (A3→A4→A5→A6) waits on A3; no independent route (reshape holds in A4). Awaiting design polish. See `Step6_A5_Screen_Chunk5.md`. |
+| **A3** Category | Birthday / comfort / etc. | ✅ **Built + wired (Chunk 6, 2026-06-13)** — screen + `/dev/messages-category`; A2→A3→A4 client spine wired in `MessageCreationFlow` (name resolution, category staging, crumb context, back-nav preserves selection), dev-verified at 4× CPU throttle. Prototype copy + order promoted into the canonical registry (one source of truth). Forward `/generate` handoff now live (Chunk 7). See `Step6_A3_Screen_Chunk6.md`. |
+| **A4** Note | Optional personal note | ✅ **Built + fully wired (Chunk 4 + Chunk 7)** — screen + `/dev/messages-note`; reshape path live at `/messages/new/g/[id]/reshape`; forward entry (A3→A4) and the A4→A5 `/generate` handoff (honoring→A5 seam) now live. See `Step6_A4_Screen_Chunk4.md` + `Step6_A4A5_Wiring_Chunk7.md`. |
+| **A5** Generating | The "shaping your message" wait | ✅ **Built + forward-wired (Chunk 5 + Chunk 7, 2026-06-13)** — pure screen + `/dev/messages-generation`; now reached in the forward flow as the orchestrator's `generating` step. A4 submit fires the real `/generate` (honoring→A5 overlapped seam); success → A6, failure → A5.b (Try again / Adjust note). Live-verified failure path (fake-vendor 502); success→A6 dev-mocked. See `Step6_A4A5_Wiring_Chunk7.md`. |
 | **A6** Preview & Refine | Hear / re-draft / commit / save | ✅ **Proven (deferred variant)** — screen (Chunk 1) + live route/wiring/telemetry (Chunk 2), browser-verified against the real server + DB. Only the commit-success voice render (vendor spend) remains unproven. Control-arm variant not built. |
 | **A7** Saved | The saved message | ✅ **Built + wired (Chunk 3, 2026-06-12)** — screen + `/dev/messages-saved`; live route `/messages/saved/[messageId]`, A6 save-success + already-saved redirect repointed here, browser-verified. See `Step6_A7_Screen_Chunk3.md`. |
-| **C1–C3** | Ceremony / Waitlist / Vault Limit | ⬜ not started (Save backend already routes to C3 at the cap) |
+| **C3** Vault Limit | The capped steady-state (3/3 saved) | ✅ **Built + wired (Chunk 8, 2026-06-14)** — screen + `/dev/messages-limit`; live route `/messages/limit`, A2-entry cap gate + `/save` race-403 both repointed here (Home dead-route closed), `step6.vault_limit_blocked` now fires. Dev-verified (visual + a11y + live entrance timing) **and live seam-walked** (seeded 3/3 user → `/messages/new` redirects to `/messages/limit?from=a2_entry`, `vault_limit_blocked` asserted in `usage_events`). Save-race path verified by inspection. See `Step6_C3_Screen_Chunk8.md`. |
+| **C2** Waitlist | The "look ahead" V2 signup | ✅ **Built + wired + live-proven (Chunk 9, 2026-06-14)** — screen + `/dev/messages-waitlist`; live route `/messages/waitlist`, `POST /api/messages/waitlist` (idempotent join → `legacy_waitlist`), `step6.waitlist_joined` (surfaced_from + telemetry-only feature picks). C3's "See what's coming" repointed here. Live-walked (real submit → row `source=c3` + event asserted). See `Step6_C2_Screen_Chunk9.md`. |
+| **C1** Three Shaped | One-time ceremony after the 3rd save | ✅ **Built + wired + live-proven (Chunk 10, 2026-06-14)** — `ThreeShapedScreen` + `/dev/messages-three-shaped`; `?ceremony=three-shaped` overlay on A7 (auto on 3rd save), once-per-device localStorage latch, A7 `third` CTA repointed → C2. Live-walked (overlay renders + latch falls back to A7 on revisit). Trigger verified by inspection (needs a real 3rd save). FOLLOW_UPS #38 fully resolved. See `Step6_C1_Screen_Chunk10.md`. |
 
-**Takeaway:** the screens are essentially all the remaining work. A6 is the big
-one and is fully prototyped (control + deferred).
+**Takeaway:** the spine (A2–A7) and all three boundary screens (C1/C2/C3) are
+built, wired, and live-verified. The only remaining pre-ship work is the
+real-voice render pass (FOLLOW_UPS #53) and merging the branch to `main`.
 
 ---
 
@@ -90,10 +93,11 @@ Also done + proven: deferred reshape (same-row candidate), the `keep`
 candidate-clear, split caps, and the failure-safe commit (a failed render keeps
 the prior take and burns no allowance).
 
-**One manual check owed:** the full `/generate` and `/commit` → *real* ElevenLabs
-voice render (needs an actual cloned voice; the render call itself is already
-live via the older `/api/messages` route). Everything *around* the render is
-proven with zero vendor spend.
+**Real-voice render: ✅ verified 2026-06-14** (FOLLOW_UPS #53). Both arms
+rendered real audio against the live backend using an existing cloned voice —
+control-arm `/generate` inline render and deferred `/commit` candidate render,
+with storage + duration + signed-URL playback all confirmed. Everything around
+the render was already proven with zero vendor spend; now the render itself is too.
 
 ---
 
@@ -142,13 +146,20 @@ proven with zero vendor spend.
 2. **The spine screens**, built per-screen (one screen → design pass →
    architect review → wiring → live verify → commit stack). Done: A7
    (Chunk 3), A4 (Chunk 4), A5 screen (Chunk 5 — pending polish + forward
-   wiring). **Next: A3 (Category)** — unblocks the A4→A5→A6 forward flow —
-   then C1–C3. A6's exit paths (FOLLOW_UPS #38) repoint as each lands —
-   reshape resolved (A4); still open: C3 vault-limit, C1 ceiling CTA.
-   Before each chunk, run `node scripts/step6-token-sweep.mjs` and read
+   wiring), A3 (Chunk 6 — built + A2→A3→A4 client spine wired), A4→A5
+   forward wiring (Chunk 7 — live `/generate` handoff, honoring→A5 seam,
+   `voiceProfileId` fetch, `isFinalOfThree`/saved-count; FOLLOW_UPS #47
+   resolved), C3 vault-limit (Chunk 8 — screen + cap gate + save-race repoint
+   + `vault_limit_blocked`), C2 waitlist (Chunk 9 — screen + `/api/messages/
+   waitlist` join + `waitlist_joined`, C3→C2 repoint, live-walked), C1 Three
+   Shaped (Chunk 10 — `?ceremony` overlay on A7 + one-time latch, A7→C2 repoint,
+   live-walked). **The spine + all C-screens are built.** A6's exit paths
+   (FOLLOW_UPS #38) repoint as each lands — reshape resolved (A4); still
+   open: C1 ceiling CTA (C3 vault-limit resolved Chunk 8). Before each chunk, run
+   `node scripts/step6-token-sweep.mjs` and read
    `Step6_Prototype_Token_Reconciliation.md` (token mapping + footgun
    checklist — the prototypes' `:root` blocks drift from production).
-3. **Manual real-voice render check** for `/generate` + `/commit` (needs a cloned voice).
+3. ~~**Manual real-voice render check** for `/generate` + `/commit`~~ ✅ **DONE 2026-06-14** (FOLLOW_UPS #53). Reused an existing real cloned voice (`0t4EwPRMYoEXgdXWO9ul`); both arms rendered real audio against the live backend — control-arm `/generate` (98KB mp3, 6.1s) and deferred `/commit` (105KB mp3, 6.6s, free text re-rolls confirmed). Test artifacts cleaned up.
 
 ---
 

@@ -27,7 +27,11 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 12 | P3 | No way to remove a photo after upload | ❌ decision (settings roadmap) |
 | 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
-| 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ⏳ blocked on C3/A4/C1 builds |
+| 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ✅ FULLY RESOLVED (Chunk 10 — C1 + repoint) |
+| 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ✅ VERIFIED 2026-06-14 (both arms, real audio) |
+| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ durable profile flag when migrations unblock |
+| 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ⏳ wrap the status assertion in waitFor |
+| 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
@@ -372,17 +376,38 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Fix shape:** measure duration server-side when the render lands (parse the mp3 or take it from the vendor response), store it on `pending_generations` (needs a column → migration bundle, #30) and return it from `/commit`; populate `messages.audio_duration_ms` on save while there.
 **Pick up when:** with the #36 migration bundle, or if the estimate visibly misleads during QA.
 
-### 38. [P3 · blocked on C3/A4/C1 builds] A6 exit-path stop-gaps: C3, the reshape return, and A7's ceiling CTA land short (A7 save-success ✅ 2026-06-12)
+### 38. A6 exit-path stop-gaps: C3, the reshape return, and A7's ceiling CTA — ✅ FULLY RESOLVED 2026-06-14 (Chunk 10)
 **Files:** `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx`, `src/app/messages/saved/[messageId]/SaveConfirmationPageClient.tsx`.
 **Resolved (Chunk 3, 2026-06-12):** Save success now routes to A7 Saved at `/messages/saved/[messageId]`, and the already-saved redirect in the A6 `page.tsx` replays the same A7 — both verified live.
 **Resolved (Chunk 4, 2026-06-12):** Reshape ("What it says") and the A6 back chevron now route to A4 at `/messages/new/g/[generationId]/reshape`; the deferred reshape writes a candidate back onto the same row and returns to its A6 in the candidate state — verified live (real LLM reshape, depth cap + 404 guards).
-**Still open:**
-- `vault_limit_reached` on save → Home (should be C3 Vault Limit, and `step6.vault_limit_blocked` should fire when C3 is shown — it deliberately doesn't fire now).
-- **New with A7:** the `third` variant's "See what's coming" CTA → Home (should be C1 Three Shaped).
-`subscription_lapsed` correctly routes to the existing `/app/vault/restore` gate.
-**Why it matters:** the flows are safe but lossy — capped users get no ceiling moment (C3), and the third-message ceremony (C1) is skipped.
-**Fix shape:** as C3 / C1 land, repoint each handler at the real route, and wire `step6.vault_limit_blocked` into C3.
-**Pick up when:** each remaining screen's build chunk — this entry is the checklist.
+**Resolved (Chunk 8, 2026-06-14):** `vault_limit_reached` on save now routes to C3 Vault Limit at `/messages/limit?from=save_race` (push, not exitFlow, so flow_id survives for correlation); C3's mount fires `step6.vault_limit_blocked` with `surfaced_from` and clears the flow. The A2-entry cap gate (`/messages/new` → `/messages/limit?from=a2_entry`) is also live. See `docs/session-8/Step6_C3_Screen_Chunk8.md`.
+**Resolved (Chunk 10, 2026-06-14):** C1 Three Shaped shipped as the one-time `?ceremony=three-shaped` overlay on the 3rd save; the A7 `third` "See what's coming" now routes to C2 (`/messages/waitlist?from=c1`) — on a revisit it skips straight to the waitlist (the ceremony is the one-time auto-overlay, not a revisit CTA). `subscription_lapsed` correctly routes to `/app/vault/restore`. **All A6 exit paths now land on their real screens — entry closed.**
+
+### 54. [P4 · blocked on migration unblock] C1 "once per lifetime" is a per-device localStorage latch
+**File:** `src/app/messages/saved/[messageId]/ThreeShapedPageClient.tsx` (`SEEN_KEY`).
+**What:** The contract says the C1 Three Shaped ceremony fires "once per user lifetime." With no profile flag and `db push` blocked (#30), V1 uses a `localStorage` latch — per-device, not per-lifetime. A cleared store or a second device can replay the ceremony.
+**Why it matters:** low (replaying a warm, no-cost moment is harmless), but it's a spec divergence: "per lifetime" isn't actually guaranteed.
+**Fix shape:** add a `profiles.three_shaped_ceremony_seen_at timestamptz` (or similar) column; the A7 page reads it server-side to decide the C1 branch and stamps it on first show. One column + one read/write; replaces the latch. Needs the Dashboard migration bundle (#30).
+**Pick up when:** the next migration bundle, or any profile-flag work.
+
+### 55. [P3] `useResource` keyed-refetch test is flaky under full-suite load
+**File:** `tests/unit/useResource.test.tsx` (`keyed refetch > refetches when the key changes`, ~line 118).
+**What:** The test rerenders with a new key, `waitFor`s the fetcher to be called twice, then synchronously asserts `status === 'success'` — but the state can still be `'loading'` when that assertion runs. Passes in isolation; fails intermittently (~30-40%) in the full `vitest run` (timing/concurrency). Surfaced during Chunk 10 gates; not caused by it (Step 6 changes don't touch `useResource`).
+**Why it matters:** a flaky gate erodes trust in "181/181" and can red-herring a real regression.
+**Fix shape:** wrap the status assertion in `waitFor` (`await waitFor(() => expect(result.current.status).toBe('success'))`) so it polls instead of sampling once.
+**Pick up when:** next time the suite is touched, or a test-hardening pass.
+
+### 53. Real ElevenLabs voice render — ✅ VERIFIED 2026-06-14 (both arms, real audio)
+**What it was:** Every Step 6 path was proven against the real server + DB *except the one that spends vendor money* — real audio rendering. The fake-vendor voice 502s, which made all the failure/caps/routing/telemetry testing free; the render itself had never run for real.
+**How it was verified (no clone needed):** reused an existing real cloned voice already in the ElevenLabs account (`vendor_voice_id 0t4EwPRMYoEXgdXWO9ul`, confirmed live via `GET /voices`). Temporarily pointed the test user's `voice_profile` at it (restored the fake id after), then ran both arms against the live backend as the authenticated test user:
+- **Control arm** (`DEFERRED_AUDIO_ENABLED` off): `POST /generate` rendered inline → `audio_status=succeeded`, `audio_duration_ms=6142`, object in `essence-audio` storage (HEAD 200, 98,264 bytes, `audio/mpeg`), signed-URL playback OK. Real on-tone text generated.
+- **Deferred arm** (flag on, server restarted inline): `/generate` first-listen rendered; `/regenerate` returned a **text-only** candidate (free re-roll — the cost model holds); **`/commit` rendered the candidate** → `committed=true`, `audio_status=succeeded`, `audioRenderCount=1`, `audioDurationMs=6612`, object in storage (HEAD 200, 105,787 bytes, `audio/mpeg`).
+**Result:** the render plumbing (TTS call, storage write, duration measure, signed-URL playback) works for real on both arms, and the deferred cost model (render only on commit, free text re-rolls, render-count tracking) is confirmed. Cleanup: fake voice id restored, test pending rows deleted, dev server returned to flag-off default.
+**Residual (minor):** `pending_generations.audio_bytes` reads null on the row (the real file is correctly sized in storage); bytes are stamped on the `messages` row at save, not the pending row — confirm that's intended vs a small gap if byte-accounting on pending rows is ever needed.
+
+### 52. [P4] C3 "See what's coming" routes to Home until C2 Waitlist exists — ✅ RESOLVED 2026-06-14 (Chunk 9)
+**File:** `src/app/messages/limit/VaultLimitPageClient.tsx` (`handleSeeWhatsComing`).
+**Resolution:** C2 Waitlist shipped (`/messages/waitlist`); C3's "See what's coming" now routes to `/messages/waitlist?from=c3` (attribution threaded into the durable `legacy_waitlist.source` + `step6.waitlist_joined.surfaced_from`). Live-verified end-to-end. The only remaining "See what's coming" interim is A7's `third` variant → C1 (FOLLOW_UPS #38).
 
 ### 39. Saved-message immutability trigger crashes on every saved-row update (dangling `kind` reference) — ✅ RESOLVED 2026-06-12
 **Resolution:** `20260611233000_fix_messages_immutability_trigger.sql` applied in the 2026-06-11 bundle. Probed live post-apply: mutable updates on saved rows pass, immutable mutations raise the intended "Message is immutable after saved", and the `source_generation_id` SET NULL cascade (promoted-pending-row deletes) works.
@@ -448,6 +473,16 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 **Why it matters:** the unchecked write turns a rare DB hiccup into a lost recording with an unhelpful error, on the core voice-training upload path.
 **Fix shape:** capture `{ error }` on the storage_path update and return 500 on failure (match the insert/sign handling). Separately, delete the dead ternary (`const ext = "webm"`) or derive the extension from `mime` if multiple formats are intended.
 **Pick up when:** next time the audio-upload pipeline is touched. Agent-fixable.
+
+### 47. [P2] ✅ RESOLVED (Chunk 7, 2026-06-13) — Step 6 forward `/generate` handoff is stubbed — A4 submit dead-ends in production; plus `isFinalOfThree` is hardcoded false
+**Resolution:** A4→A5 forward wiring landed (`Step6_A4A5_Wiring_Chunk7.md`). `/messages/new/page.tsx` fetches the ready `voiceProfileId` + saved count; `MessagesNewPageClient.onGenerate` POSTs `/generate` and routes to A6 on success; the orchestrator added the `generating` step (A5) with the honoring→A5 overlapped seam, retry, and Adjust-note. `isFinalOfThree` + `flow_started.saved_count_before` now derive from the real saved count. Live-verified the failure path (fake-vendor 502 → A5.b); success→A6 dev-mocked per the verify decision. Original entry below for history.
+
+
+`src/app/messages/new/MessagesNewPageClient.tsx` — `handleGenerate` is a placeholder that `console.warn`s and resolves `{ ok: false }`. The A3 chunk (2026-06-13) wired the A2→A3→A4 client spine and exposed the `onGenerate(GenerateRequest)` handoff on `MessageCreationFlow`, but the real cold-start generation is deferred to the A4→A5 chunk. Separately, `MessageCreationFlow.tsx` passes `isFinalOfThree={false}` to A3 unconditionally — the "last of three" variant (ceiling note + warm tone + softer copy) never shows in production because the saved-count is not fetched.
+
+**Why it matters:** on production `/messages/new` a user can walk A2→A3→A4 and tap "Shape it from this" / "Use a generic message", and nothing happens (not-ok returns A4 to input) — the spine is visibly incomplete until generate is wired. And every third-message user sees the default A3 instead of the intended ceiling-moment variant. Neither is a data risk; both are completeness gaps the spine build expects.
+**Fix shape:** (1) In the A4→A5 chunk, implement `handleGenerate`: fetch the user's `voiceProfileId` server-side in `/messages/new/page.tsx` (it already fetches recipients), thread it down, POST `/api/messages/generate` with the recipient branch (existing `recipientId` vs pending name/relationship/descriptor) + category + note per `messageGenerateSchema`, and on success `router.push(messageGenerationRoute(generationId))` — resolving the "A5 wait vs A6 preview" landing. (2) Fetch the saved-message count (the same query Q4's vault-cap UX gate needs — see the `/messages/new/page.tsx` note) and pass `isFinalOfThree={savedCount === 2}` through the orchestrator (also replaces the hardcoded `saved_count_before: 0` in `flow_started`).
+**Pick up when:** the A4→A5 forward-wiring chunk (next on the Step 6 spine after A3). Both halves live in the same page-layer fetch.
 
 ## Discovery notes — triggers that came true (triage 2026-06-13)
 

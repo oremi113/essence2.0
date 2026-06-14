@@ -17,15 +17,19 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { messageSavedRoute, signInWithNext } from "@/lib/routes";
 import { STEP6_LIMITS } from "@/lib/messages/cost-controls";
 import { SaveConfirmationPageClient } from "./SaveConfirmationPageClient";
+import { ThreeShapedPageClient } from "./ThreeShapedPageClient";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function MessageSavedPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ messageId: string }>;
+  searchParams: Promise<{ ceremony?: string }>;
 }) {
   const { messageId } = await params;
+  const { ceremony } = await searchParams;
   if (!UUID_RE.test(messageId)) notFound();
 
   const supabase = await createSupabaseServerClient();
@@ -58,19 +62,27 @@ export default async function MessageSavedPage({
   }
 
   // Third-of-three: this user's saved count has reached the vault cap →
-  // the secondary CTA becomes "See what's coming" (→ C1 when it exists).
+  // the secondary CTA becomes "See what's coming" (→ C2 Waitlist).
   const { count: savedCount } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .eq("status", "saved");
-  const variant =
-    (savedCount ?? 0) >= STEP6_LIMITS.maxSavedMessages ? ("third" as const) : ("default" as const);
+  const isThird = (savedCount ?? 0) >= STEP6_LIMITS.maxSavedMessages;
+
+  // C1 Three Shaped — the one-time ceremony after the 3rd save. Triggered by
+  // ?ceremony=three-shaped (added by the 3rd-save redirect), and only when the
+  // user is actually at the cap (param can't conjure the ceremony early). The
+  // client enforces the once-per-device latch; a revisit with a stale param
+  // falls back to the normal A7 confirmation.
+  if (ceremony === "three-shaped" && isThird) {
+    return <ThreeShapedPageClient messageId={messageId} />;
+  }
 
   return (
     <SaveConfirmationPageClient
       recipientName={recipientName}
-      variant={variant}
+      variant={isThird ? "third" : "default"}
       savedAtIso={message.created_at}
     />
   );

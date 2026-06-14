@@ -31,6 +31,11 @@ export const ROUTES = {
   // caller keeps the route it already used.
   messagesNew: "/messages/new",
   appMessagesNew: "/app/messages/new",
+  /** C3 Vault Limit Reached — the capped steady-state (3/3 saved). Routed
+   *  from the A2-entry UX gate and the /save race-case 403. */
+  messagesLimit: "/messages/limit",
+  /** C2 Waitlist — the "look ahead" signup. Routed from C3 and (later) C1. */
+  messagesWaitlist: "/messages/waitlist",
 
   vaultContinuity: "/app/vault/continuity",
   vaultProtect: "/app/vault/protect",
@@ -67,9 +72,18 @@ export function messageGenerationRoute(generationId: string): string {
   return `${ROUTES.messagesNew}/g/${generationId}`;
 }
 
-/** `/messages/saved/<messageId>` — A7 Save Confirmation (ceremonial close). */
-export function messageSavedRoute(messageId: string): string {
-  return `/messages/saved/${messageId}`;
+/**
+ * `/messages/saved/<messageId>` — A7 Save Confirmation (ceremonial close).
+ * Pass `{ ceremony: true }` on the 3rd (final) save to add
+ * `?ceremony=three-shaped`, which the A7 page renders as the one-time C1
+ * Three Shaped ceremony (Open Contracts: a query-param overlay, not a route).
+ */
+export function messageSavedRoute(
+  messageId: string,
+  opts?: { ceremony?: boolean },
+): string {
+  const base = `/messages/saved/${messageId}`;
+  return opts?.ceremony ? `${base}?ceremony=three-shaped` : base;
 }
 
 /**

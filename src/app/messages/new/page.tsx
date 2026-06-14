@@ -4,6 +4,7 @@ import { MessagesNewPageClient } from './MessagesNewPageClient';
 import type { ExistingRecipient } from '@/components/screens/messages/RecipientSetupScreen.types';
 import type { RelationshipKey } from '@/lib/messageTemplates';
 import { ROUTES, signInWithNext } from '@/lib/routes';
+import { STEP6_LIMITS } from '@/lib/messages/cost-controls';
 
 /**
  * /messages/new — entry point for Step 6 (message creation) per
@@ -14,12 +15,11 @@ import { ROUTES, signInWithNext } from '@/lib/routes';
  * This page is a thin data-shuttle per CLAUDE.md three-layer rules:
  * auth check, fetch existing recipients, render the client orchestrator.
  *
- * NOTE: The lifetime-cap (3 saved messages on Vault) UX gate per
- * Step6_OpenContracts.md Q4 is not enforced here yet — wire it in when
- * the saved-message-count query lands (subscription + count(*) on
- * messages.user_id). Until then, the server gate in /api/messages/save
- * is the only block; the client UX may let capped users start the flow
- * and hit the race-case 403.
+ * Lifetime-cap (3 saved messages on Vault) UX gate per
+ * Step6_OpenContracts.md Q4: capped users are redirected to C3
+ * (/messages/limit) before the flow starts. The server gate in
+ * /api/messages/save remains the race-safe block; this gate just spares
+ * a capped user the whole flow only to hit the 403 at the end.
  */
 
 const VALID_RELATIONSHIPS: ReadonlySet<string> = new Set([
@@ -49,12 +49,43 @@ export default async function MessagesNewPage() {
     redirect(signInWithNext(ROUTES.messagesNew));
   }
 
+  // The forward /generate handoff (A4→A5) needs a ready cloned voice. No
+  // voice yet → send the user to make one first (you can't shape a message
+  // in a voice that doesn't exist). Most-recent ready profile wins, matching
+  // the legacy /app/messages/new query.
+  const { data: readyVoice } = await supabase
+    .from('voice_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'ready')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!readyVoice?.id) {
+    redirect(ROUTES.voiceCreate);
+  }
+
   const { data: rawRecipients } = await supabase
     .from('recipients')
     .select('id, name, relationship')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .order('created_at', { ascending: false });
+
+  // Saved-message count drives A3's "last of three" variant (saved === 2),
+  // the flow_started telemetry, and the Q4 vault-cap gate below.
+  const { count: savedCount } = await supabase
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('status', 'saved');
+
+  // Q4 cap gate — already at 3/3 → C3 (Vault Limit), not the flow. The
+  // /save server gate still enforces race-safe; this just spares a capped
+  // user the round-trip. `from=a2_entry` splits surfaced_from on the C3 event.
+  if ((savedCount ?? 0) >= STEP6_LIMITS.maxSavedMessages) {
+    redirect(`${ROUTES.messagesLimit}?from=a2_entry`);
+  }
 
   // V1: skip the duplicate-name disambiguator join. If the user has
   // two recipients with the same name + relationship, both cards
@@ -70,5 +101,11 @@ export default async function MessagesNewPage() {
     })
   );
 
-  return <MessagesNewPageClient existingRecipients={existingRecipients} />;
+  return (
+    <MessagesNewPageClient
+      existingRecipients={existingRecipients}
+      voiceProfileId={readyVoice.id}
+      savedCountBefore={savedCount ?? 0}
+    />
+  );
 }
