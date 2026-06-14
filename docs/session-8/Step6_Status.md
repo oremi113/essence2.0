@@ -67,7 +67,7 @@ the outside is what's left.
 | Screen | What it is | Status |
 |---|---|---|
 | **A2** Recipient | Who's this for? | 🟡 Built, not proven (only screen with code) |
-| **A3** Category | Birthday / comfort / etc. | ⬜ prototyped, not built |
+| **A3** Category | Birthday / comfort / etc. | ✅ **Built + wired (Chunk 6, 2026-06-13)** — screen + `/dev/messages-category`; A2→A3→A4 client spine wired in `MessageCreationFlow` (name resolution, category staging, crumb context, back-nav preserves selection), dev-verified at 4× CPU throttle. Prototype copy + order promoted into the canonical registry (one source of truth). Forward `/generate` handoff stubbed (FOLLOW_UPS #47, A4→A5 chunk). See `Step6_A3_Screen_Chunk6.md`. |
 | **A4** Note | Optional personal note | ✅ **Built + reshape-wired (Chunk 4, 2026-06-12)** — screen + `/dev/messages-note`; reshape path live at `/messages/new/g/[id]/reshape`, A6→A4→A6 candidate loop browser-verified against the real backend. Forward-flow entry (A3→A4) waits on A3. See `Step6_A4_Screen_Chunk4.md`. |
 | **A5** Generating | The "shaping your message" wait | 🟡 **Built (Chunk 5, 2026-06-12)** — pure screen + `/dev/messages-generation`; working (3 copy beats @ 4s/9s), failed-with-note + failed-skip. Browser-smoke-tested (4× CPU avg 8.3ms; reduced-motion glow pinned). Forward-flow wiring (A3→A4→A5→A6) waits on A3; no independent route (reshape holds in A4). Awaiting design polish. See `Step6_A5_Screen_Chunk5.md`. |
 | **A6** Preview & Refine | Hear / re-draft / commit / save | ✅ **Proven (deferred variant)** — screen (Chunk 1) + live route/wiring/telemetry (Chunk 2), browser-verified against the real server + DB. Only the commit-success voice render (vendor spend) remains unproven. Control-arm variant not built. |
@@ -142,10 +142,13 @@ proven with zero vendor spend.
 2. **The spine screens**, built per-screen (one screen → design pass →
    architect review → wiring → live verify → commit stack). Done: A7
    (Chunk 3), A4 (Chunk 4), A5 screen (Chunk 5 — pending polish + forward
-   wiring). **Next: A3 (Category)** — unblocks the A4→A5→A6 forward flow —
-   then C1–C3. A6's exit paths (FOLLOW_UPS #38) repoint as each lands —
-   reshape resolved (A4); still open: C3 vault-limit, C1 ceiling CTA.
-   Before each chunk, run `node scripts/step6-token-sweep.mjs` and read
+   wiring), A3 (Chunk 6 — built + A2→A3→A4 client spine wired). **Next:
+   A4→A5 forward wiring** — the cold-start `/generate` handoff
+   (FOLLOW_UPS #47: `voiceProfileId` fetch + generation-route push +
+   `isFinalOfThree` saved-count) — then C1–C3. A6's exit paths
+   (FOLLOW_UPS #38) repoint as each lands — reshape resolved (A4); still
+   open: C3 vault-limit, C1 ceiling CTA. Before each chunk, run
+   `node scripts/step6-token-sweep.mjs` and read
    `Step6_Prototype_Token_Reconciliation.md` (token mapping + footgun
    checklist — the prototypes' `:root` blocks drift from production).
 3. **Manual real-voice render check** for `/generate` + `/commit` (needs a cloned voice).

@@ -120,7 +120,7 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
   birthday: {
     key: 'birthday',
     label: 'Birthday',
-    description: 'A warm note to mark someone’s day.',
+    description: 'For the day itself, or the night before.',
     emotionalGoal: 'Warm, celebratory, never cheesy',
     voiceSettings: VOICE_SETTINGS.birthday,
     templates: [
@@ -148,7 +148,7 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
   encouragement: {
     key: 'encouragement',
     label: 'Encouragement',
-    description: 'A grounded reminder when things feel heavy.',
+    description: 'For when they’re up against something hard.',
     emotionalGoal: 'Supportive, grounding, hopeful',
     voiceSettings: VOICE_SETTINGS.encouragement,
     templates: [
@@ -166,8 +166,8 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
 
   daily_reminder: {
     key: 'daily_reminder',
-    label: 'Daily Reminder',
-    description: 'A small, familiar voice in the everyday.',
+    label: 'Daily reminder',
+    description: 'Something to wake up to. Like a good-morning call.',
     emotionalGoal: 'Gentle, familiar',
     voiceSettings: VOICE_SETTINGS.daily_reminder,
     templates: [
@@ -185,8 +185,8 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
 
   future_message: {
     key: 'future_message',
-    label: 'A Message for the Future',
-    description: 'Something to find you later, when it’s time.',
+    label: 'A message for the future',
+    description: 'Saved now. Opened on a date you choose.',
     emotionalGoal: 'Continuity, care across time',
     voiceSettings: VOICE_SETTINGS.future_message,
     templates: [
@@ -205,7 +205,7 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
   comfort: {
     key: 'comfort',
     label: 'Comfort',
-    description: 'Tenderness, without needing to fix anything.',
+    description: 'For the quiet, heavy hours.',
     emotionalGoal: 'Tender reassurance without assuming details',
     voiceSettings: VOICE_SETTINGS.comfort,
     templates: [
@@ -224,7 +224,7 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
   holiday: {
     key: 'holiday',
     label: 'Holiday',
-    description: 'A note for the seasons that mean something to you.',
+    description: 'A familiar voice at the door.',
     emotionalGoal: 'Seasonal warmth, no religious or cultural assumptions',
     voiceSettings: VOICE_SETTINGS.holiday,
     templates: [
@@ -242,8 +242,8 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
 
   checking_in: {
     key: 'checking_in',
-    label: 'Just Checking In',
-    description: 'A light hello, no agenda.',
+    label: 'Just checking in',
+    description: 'No reason at all. You came to mind.',
     emotionalGoal: 'Light, friendly, low pressure',
     voiceSettings: VOICE_SETTINGS.checking_in,
     templates: [
@@ -263,18 +263,20 @@ export const MESSAGE_CATEGORIES: Record<MessageCategory, MessageCategoryDefiniti
 // ---------- Display Order ----------
 
 /**
- * The order the seven categories appear in the UI category selector.
+ * The order the seven categories appear in the UI category selector (A3).
  * Order is intentional — most-used / lowest-cognitive-load categories first.
- * Final order may be adjusted during Pass 3 product review.
+ * Matches the A3 prototype (prototypes/message creation/essence-step6-a3.html),
+ * promoted into this canonical registry on 2026-06-13 so the screen has a
+ * single source of truth for label + description + order (Step6 A3 chunk).
  */
 export const CATEGORY_DISPLAY_ORDER: readonly MessageCategory[] = [
   'birthday',
   'encouragement',
-  'checking_in',
-  'comfort',
   'daily_reminder',
-  'holiday',
   'future_message',
+  'comfort',
+  'holiday',
+  'checking_in',
 ] as const;
 
 // ---------- Helpers ----------

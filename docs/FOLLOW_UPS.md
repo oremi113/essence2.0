@@ -449,6 +449,13 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 **Fix shape:** capture `{ error }` on the storage_path update and return 500 on failure (match the insert/sign handling). Separately, delete the dead ternary (`const ext = "webm"`) or derive the extension from `mime` if multiple formats are intended.
 **Pick up when:** next time the audio-upload pipeline is touched. Agent-fixable.
 
+### 47. [P2] Step 6 forward `/generate` handoff is stubbed — A4 submit dead-ends in production; plus `isFinalOfThree` is hardcoded false
+`src/app/messages/new/MessagesNewPageClient.tsx` — `handleGenerate` is a placeholder that `console.warn`s and resolves `{ ok: false }`. The A3 chunk (2026-06-13) wired the A2→A3→A4 client spine and exposed the `onGenerate(GenerateRequest)` handoff on `MessageCreationFlow`, but the real cold-start generation is deferred to the A4→A5 chunk. Separately, `MessageCreationFlow.tsx` passes `isFinalOfThree={false}` to A3 unconditionally — the "last of three" variant (ceiling note + warm tone + softer copy) never shows in production because the saved-count is not fetched.
+
+**Why it matters:** on production `/messages/new` a user can walk A2→A3→A4 and tap "Shape it from this" / "Use a generic message", and nothing happens (not-ok returns A4 to input) — the spine is visibly incomplete until generate is wired. And every third-message user sees the default A3 instead of the intended ceiling-moment variant. Neither is a data risk; both are completeness gaps the spine build expects.
+**Fix shape:** (1) In the A4→A5 chunk, implement `handleGenerate`: fetch the user's `voiceProfileId` server-side in `/messages/new/page.tsx` (it already fetches recipients), thread it down, POST `/api/messages/generate` with the recipient branch (existing `recipientId` vs pending name/relationship/descriptor) + category + note per `messageGenerateSchema`, and on success `router.push(messageGenerationRoute(generationId))` — resolving the "A5 wait vs A6 preview" landing. (2) Fetch the saved-message count (the same query Q4's vault-cap UX gate needs — see the `/messages/new/page.tsx` note) and pass `isFinalOfThree={savedCount === 2}` through the orchestrator (also replaces the hardcoded `saved_count_before: 0` in `flow_started`).
+**Pick up when:** the A4→A5 forward-wiring chunk (next on the Step 6 spine after A3). Both halves live in the same page-layer fetch.
+
 ## Discovery notes — triggers that came true (triage 2026-06-13)
 
 Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx`) is now live with real Supabase avatar upload (`usePhotoUpload` + the `uploadAvatar` action in `page.tsx`), so several Screen 10 photo follow-ups have had their "Pick up when" triggers fire:
