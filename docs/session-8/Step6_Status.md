@@ -74,10 +74,11 @@ the outside is what's left.
 | **A7** Saved | The saved message | ✅ **Built + wired (Chunk 3, 2026-06-12)** — screen + `/dev/messages-saved`; live route `/messages/saved/[messageId]`, A6 save-success + already-saved redirect repointed here, browser-verified. See `Step6_A7_Screen_Chunk3.md`. |
 | **C3** Vault Limit | The capped steady-state (3/3 saved) | ✅ **Built + wired (Chunk 8, 2026-06-14)** — screen + `/dev/messages-limit`; live route `/messages/limit`, A2-entry cap gate + `/save` race-403 both repointed here (Home dead-route closed), `step6.vault_limit_blocked` now fires. Dev-verified (visual + a11y + live entrance timing) **and live seam-walked** (seeded 3/3 user → `/messages/new` redirects to `/messages/limit?from=a2_entry`, `vault_limit_blocked` asserted in `usage_events`). Save-race path verified by inspection. See `Step6_C3_Screen_Chunk8.md`. |
 | **C2** Waitlist | The "look ahead" V2 signup | ✅ **Built + wired + live-proven (Chunk 9, 2026-06-14)** — screen + `/dev/messages-waitlist`; live route `/messages/waitlist`, `POST /api/messages/waitlist` (idempotent join → `legacy_waitlist`), `step6.waitlist_joined` (surfaced_from + telemetry-only feature picks). C3's "See what's coming" repointed here. Live-walked (real submit → row `source=c3` + event asserted). See `Step6_C2_Screen_Chunk9.md`. |
-| **C1** Three Shaped | One-time ceremony after the 3rd save | ⬜ not started — last C-screen; `?ceremony=three-shaped` overlay on A7, repoints A7's `third` CTA (FOLLOW_UPS #38) |
+| **C1** Three Shaped | One-time ceremony after the 3rd save | ✅ **Built + wired + live-proven (Chunk 10, 2026-06-14)** — `ThreeShapedScreen` + `/dev/messages-three-shaped`; `?ceremony=three-shaped` overlay on A7 (auto on 3rd save), once-per-device localStorage latch, A7 `third` CTA repointed → C2. Live-walked (overlay renders + latch falls back to A7 on revisit). Trigger verified by inspection (needs a real 3rd save). FOLLOW_UPS #38 fully resolved. See `Step6_C1_Screen_Chunk10.md`. |
 
-**Takeaway:** the screens are essentially all the remaining work. A6 is the big
-one and is fully prototyped (control + deferred).
+**Takeaway:** the spine (A2–A7) and all three boundary screens (C1/C2/C3) are
+built, wired, and live-verified. The only remaining pre-ship work is the
+real-voice render pass (FOLLOW_UPS #53) and merging the branch to `main`.
 
 ---
 
@@ -149,8 +150,9 @@ proven with zero vendor spend.
    `voiceProfileId` fetch, `isFinalOfThree`/saved-count; FOLLOW_UPS #47
    resolved), C3 vault-limit (Chunk 8 — screen + cap gate + save-race repoint
    + `vault_limit_blocked`), C2 waitlist (Chunk 9 — screen + `/api/messages/
-   waitlist` join + `waitlist_joined`, C3→C2 repoint, live-walked). **Next: C1
-   Three Shaped (last C-screen).** A6's exit paths
+   waitlist` join + `waitlist_joined`, C3→C2 repoint, live-walked), C1 Three
+   Shaped (Chunk 10 — `?ceremony` overlay on A7 + one-time latch, A7→C2 repoint,
+   live-walked). **The spine + all C-screens are built.** A6's exit paths
    (FOLLOW_UPS #38) repoint as each lands — reshape resolved (A4); still
    open: C1 ceiling CTA (C3 vault-limit resolved Chunk 8). Before each chunk, run
    `node scripts/step6-token-sweep.mjs` and read

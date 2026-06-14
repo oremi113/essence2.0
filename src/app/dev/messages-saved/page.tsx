@@ -84,7 +84,7 @@ export default function MessagesSavedDevPage() {
           savedAtIso={new Date().toISOString()}
           onViewShelf={() => alert('Mock — routes to Memory Shelf (Step 7).')}
           onCreateAnother={() => alert('Mock — routes to message-creation entry.')}
-          onSeeWhatsComing={() => alert('Mock — routes to C1 Three Shaped (not built yet).')}
+          onSeeWhatsComing={() => alert('Mock — routes to C2 Waitlist (?from=c1).')}
         />
       </div>
     </>

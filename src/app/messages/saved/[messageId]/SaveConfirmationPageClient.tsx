@@ -39,9 +39,10 @@ export function SaveConfirmationPageClient({
   }, [router]);
 
   const handleSeeWhatsComing = useCallback(() => {
-    // C1 (Three Shaped) isn't built — Home is the interim landing
-    // (FOLLOW_UPS #38).
-    router.push(ROUTES.home);
+    // A7 `third` revisit → C2 Waitlist. The C1 ceremony is the one-time moment
+    // shown via ?ceremony on the 3rd save; on later revisits "See what's
+    // coming" goes straight to the waitlist (FOLLOW_UPS #38 resolved).
+    router.push(`${ROUTES.messagesWaitlist}?from=c1`);
   }, [router]);
 
   return (

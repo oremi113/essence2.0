@@ -27,8 +27,10 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 12 | P3 | No way to remove a photo after upload | ❌ decision (settings roadmap) |
 | 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
-| 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ⏳ C3+A4 done; C1 ceiling CTA still open |
+| 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ✅ FULLY RESOLVED (Chunk 10 — C1 + repoint) |
 | 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ⏳ one real-voice pass before Step 6 ships |
+| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ durable profile flag when migrations unblock |
+| 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ⏳ wrap the status assertion in waitFor |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
@@ -374,17 +376,26 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Fix shape:** measure duration server-side when the render lands (parse the mp3 or take it from the vendor response), store it on `pending_generations` (needs a column → migration bundle, #30) and return it from `/commit`; populate `messages.audio_duration_ms` on save while there.
 **Pick up when:** with the #36 migration bundle, or if the estimate visibly misleads during QA.
 
-### 38. [P3 · blocked on C3/A4/C1 builds] A6 exit-path stop-gaps: C3, the reshape return, and A7's ceiling CTA land short (A7 save-success ✅ 2026-06-12)
+### 38. A6 exit-path stop-gaps: C3, the reshape return, and A7's ceiling CTA — ✅ FULLY RESOLVED 2026-06-14 (Chunk 10)
 **Files:** `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx`, `src/app/messages/saved/[messageId]/SaveConfirmationPageClient.tsx`.
 **Resolved (Chunk 3, 2026-06-12):** Save success now routes to A7 Saved at `/messages/saved/[messageId]`, and the already-saved redirect in the A6 `page.tsx` replays the same A7 — both verified live.
 **Resolved (Chunk 4, 2026-06-12):** Reshape ("What it says") and the A6 back chevron now route to A4 at `/messages/new/g/[generationId]/reshape`; the deferred reshape writes a candidate back onto the same row and returns to its A6 in the candidate state — verified live (real LLM reshape, depth cap + 404 guards).
 **Resolved (Chunk 8, 2026-06-14):** `vault_limit_reached` on save now routes to C3 Vault Limit at `/messages/limit?from=save_race` (push, not exitFlow, so flow_id survives for correlation); C3's mount fires `step6.vault_limit_blocked` with `surfaced_from` and clears the flow. The A2-entry cap gate (`/messages/new` → `/messages/limit?from=a2_entry`) is also live. See `docs/session-8/Step6_C3_Screen_Chunk8.md`.
-**Still open:**
-- **New with A7:** the `third` variant's "See what's coming" CTA → Home (should be C1 Three Shaped).
-`subscription_lapsed` correctly routes to the existing `/app/vault/restore` gate.
-**Why it matters:** the flows are safe but lossy — the third-message ceremony (C1) is still skipped.
-**Fix shape:** as C1 lands, repoint the A7 `third` "See what's coming" handler at the real route.
-**Pick up when:** the C1 build chunk — this entry is the checklist.
+**Resolved (Chunk 10, 2026-06-14):** C1 Three Shaped shipped as the one-time `?ceremony=three-shaped` overlay on the 3rd save; the A7 `third` "See what's coming" now routes to C2 (`/messages/waitlist?from=c1`) — on a revisit it skips straight to the waitlist (the ceremony is the one-time auto-overlay, not a revisit CTA). `subscription_lapsed` correctly routes to `/app/vault/restore`. **All A6 exit paths now land on their real screens — entry closed.**
+
+### 54. [P4 · blocked on migration unblock] C1 "once per lifetime" is a per-device localStorage latch
+**File:** `src/app/messages/saved/[messageId]/ThreeShapedPageClient.tsx` (`SEEN_KEY`).
+**What:** The contract says the C1 Three Shaped ceremony fires "once per user lifetime." With no profile flag and `db push` blocked (#30), V1 uses a `localStorage` latch — per-device, not per-lifetime. A cleared store or a second device can replay the ceremony.
+**Why it matters:** low (replaying a warm, no-cost moment is harmless), but it's a spec divergence: "per lifetime" isn't actually guaranteed.
+**Fix shape:** add a `profiles.three_shaped_ceremony_seen_at timestamptz` (or similar) column; the A7 page reads it server-side to decide the C1 branch and stamps it on first show. One column + one read/write; replaces the latch. Needs the Dashboard migration bundle (#30).
+**Pick up when:** the next migration bundle, or any profile-flag work.
+
+### 55. [P3] `useResource` keyed-refetch test is flaky under full-suite load
+**File:** `tests/unit/useResource.test.tsx` (`keyed refetch > refetches when the key changes`, ~line 118).
+**What:** The test rerenders with a new key, `waitFor`s the fetcher to be called twice, then synchronously asserts `status === 'success'` — but the state can still be `'loading'` when that assertion runs. Passes in isolation; fails intermittently (~30-40%) in the full `vitest run` (timing/concurrency). Surfaced during Chunk 10 gates; not caused by it (Step 6 changes don't touch `useResource`).
+**Why it matters:** a flaky gate erodes trust in "181/181" and can red-herring a real regression.
+**Fix shape:** wrap the status assertion in `waitFor` (`await waitFor(() => expect(result.current.status).toBe('success'))`) so it polls instead of sampling once.
+**Pick up when:** next time the suite is touched, or a test-hardening pass.
 
 ### 53. [P2 · pre-merge verification gate] Real ElevenLabs voice render is unverified end-to-end
 **What:** Every Step 6 path has been proven against the real server + DB *except the one that spends vendor money* — a real cloned voice rendering real audio. The test user's `voice_profile` is a fake-vendor voice: ElevenLabs rejects it (502, no synthesis billed), which is exactly what makes failure-path + caps + routing + telemetry testing free. Two paths stay unproven because the fake voice can't render:

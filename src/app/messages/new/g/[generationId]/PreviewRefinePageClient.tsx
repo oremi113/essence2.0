@@ -298,9 +298,19 @@ export function PreviewRefinePageClient({
 
   const handleSaved = useCallback(
     (messageId: string) => {
-      exitFlow(messageSavedRoute(messageId));
+      // 3rd (final) save → A7 with the one-time C1 Three Shaped ceremony.
+      // savedCountBefore === 2 means this save is the 3rd (saved_ordinal 3).
+      // Literal 2 (= cap - 1, default cap 3) matches the existing
+      // `isFinalOfThree` convention. Not derived from STEP6_LIMITS here on
+      // purpose: the cap reads a server-only env (STEP6_MAX_SAVED_MESSAGES);
+      // a client import would silently fall back to the default and read as
+      // cap-aware while not being. If the cap ever becomes runtime-configurable,
+      // move this boundary server-side (pass an isFinalSave prop).
+      exitFlow(
+        messageSavedRoute(messageId, { ceremony: savedCountBefore === 2 }),
+      );
     },
-    [exitFlow],
+    [exitFlow, savedCountBefore],
   );
 
   const handleDiscarded = useCallback(() => {
