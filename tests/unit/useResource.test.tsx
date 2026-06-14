@@ -115,7 +115,10 @@ describe('useResource — keyed refetch', () => {
 
     rerender({ k: 'b' });
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
-    expect(result.current.status).toBe('success');
+    // Poll, don't sample: the refetch fires the fetcher (asserted above) a tick
+    // before status flushes to 'success'. A bare expect here races and flakes
+    // under full-suite load (FOLLOW_UPS #55).
+    await waitFor(() => expect(result.current.status).toBe('success'));
   });
 });
 
