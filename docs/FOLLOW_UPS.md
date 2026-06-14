@@ -29,8 +29,8 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
 | 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ✅ FULLY RESOLVED (Chunk 10 — C1 + repoint) |
 | 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ✅ VERIFIED 2026-06-14 (both arms, real audio) |
-| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ durable profile flag when migrations unblock |
-| 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ⏳ wrap the status assertion in waitFor |
+| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ deferred behind #30 (revisited 2026-06-14 — latch is proportionate) |
+| 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ✅ RESOLVED 2026-06-14 (waitFor) |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
@@ -388,14 +388,13 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **What:** The contract says the C1 Three Shaped ceremony fires "once per user lifetime." With no profile flag and `db push` blocked (#30), V1 uses a `localStorage` latch — per-device, not per-lifetime. A cleared store or a second device can replay the ceremony.
 **Why it matters:** low (replaying a warm, no-cost moment is harmless), but it's a spec divergence: "per lifetime" isn't actually guaranteed.
 **Fix shape:** add a `profiles.three_shaped_ceremony_seen_at timestamptz` (or similar) column; the A7 page reads it server-side to decide the C1 branch and stamps it on first show. One column + one read/write; replaces the latch. Needs the Dashboard migration bundle (#30).
-**Pick up when:** the next migration bundle, or any profile-flag work.
+**Revisited 2026-06-14 — deferred, intentionally.** Considered two migration-free durable alternatives and rejected both for a P4: (a) a `usage_events` marker via the analytics path — `usage_events` is never pruned, but the write is best-effort (204-on-failure), so it can't *guarantee* once-per-lifetime; (b) a dedicated awaited write endpoint + an A7-render query — reliable, but disproportionate surface area for a harmless-replay edge. The localStorage latch is proportionate to the failure mode (a user who clears storage / switches device re-sees a warm, no-cost ceremony). The clean fix (the column above) waits on #30 — don't hand-apply a migration onto the broken history just for this.
+**Pick up when:** #30 is resolved (migration pipeline fixed), or any other profiles-column work ships and this can ride along.
 
-### 55. [P3] `useResource` keyed-refetch test is flaky under full-suite load
-**File:** `tests/unit/useResource.test.tsx` (`keyed refetch > refetches when the key changes`, ~line 118).
-**What:** The test rerenders with a new key, `waitFor`s the fetcher to be called twice, then synchronously asserts `status === 'success'` — but the state can still be `'loading'` when that assertion runs. Passes in isolation; fails intermittently (~30-40%) in the full `vitest run` (timing/concurrency). Surfaced during Chunk 10 gates; not caused by it (Step 6 changes don't touch `useResource`).
-**Why it matters:** a flaky gate erodes trust in "181/181" and can red-herring a real regression.
-**Fix shape:** wrap the status assertion in `waitFor` (`await waitFor(() => expect(result.current.status).toBe('success'))`) so it polls instead of sampling once.
-**Pick up when:** next time the suite is touched, or a test-hardening pass.
+### 55. `useResource` keyed-refetch test flaky under full-suite load — ✅ RESOLVED 2026-06-14
+**File:** `tests/unit/useResource.test.tsx` (`keyed refetch > refetches when the key changes`).
+**Was:** after the key change, the test `waitFor`'d the fetcher to be called twice, then *synchronously* asserted `status === 'success'` — but status flushes a tick after the fetcher fires, so it raced and failed ~30-40% under full `vitest run` (passed in isolation). Surfaced during Chunk 10 gates; not caused by it.
+**Resolution:** wrapped the status assertion in `waitFor` so it polls instead of sampling once. Verified 5/5 clean full-suite runs after the change.
 
 ### 53. Real ElevenLabs voice render — ✅ VERIFIED 2026-06-14 (both arms, real audio)
 **What it was:** Every Step 6 path was proven against the real server + DB *except the one that spends vendor money* — real audio rendering. The fake-vendor voice 502s, which made all the failure/caps/routing/telemetry testing free; the render itself had never run for real.
