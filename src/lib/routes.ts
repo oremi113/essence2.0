@@ -31,6 +31,9 @@ export const ROUTES = {
   // caller keeps the route it already used.
   messagesNew: "/messages/new",
   appMessagesNew: "/app/messages/new",
+  /** C3 Vault Limit Reached — the capped steady-state (3/3 saved). Routed
+   *  from the A2-entry UX gate and the /save race-case 403. */
+  messagesLimit: "/messages/limit",
 
   vaultContinuity: "/app/vault/continuity",
   vaultProtect: "/app/vault/protect",

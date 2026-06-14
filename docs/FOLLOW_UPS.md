@@ -27,7 +27,9 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 12 | P3 | No way to remove a photo after upload | ❌ decision (settings roadmap) |
 | 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
-| 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ⏳ blocked on C3/A4/C1 builds |
+| 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ⏳ C3+A4 done; C1 ceiling CTA still open |
+| 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ⏳ one real-voice pass before Step 6 ships |
+| 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ⏳ repoint when C2 builds |
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
@@ -376,13 +378,32 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Files:** `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx`, `src/app/messages/saved/[messageId]/SaveConfirmationPageClient.tsx`.
 **Resolved (Chunk 3, 2026-06-12):** Save success now routes to A7 Saved at `/messages/saved/[messageId]`, and the already-saved redirect in the A6 `page.tsx` replays the same A7 — both verified live.
 **Resolved (Chunk 4, 2026-06-12):** Reshape ("What it says") and the A6 back chevron now route to A4 at `/messages/new/g/[generationId]/reshape`; the deferred reshape writes a candidate back onto the same row and returns to its A6 in the candidate state — verified live (real LLM reshape, depth cap + 404 guards).
+**Resolved (Chunk 8, 2026-06-14):** `vault_limit_reached` on save now routes to C3 Vault Limit at `/messages/limit?from=save_race` (push, not exitFlow, so flow_id survives for correlation); C3's mount fires `step6.vault_limit_blocked` with `surfaced_from` and clears the flow. The A2-entry cap gate (`/messages/new` → `/messages/limit?from=a2_entry`) is also live. See `docs/session-8/Step6_C3_Screen_Chunk8.md`.
 **Still open:**
-- `vault_limit_reached` on save → Home (should be C3 Vault Limit, and `step6.vault_limit_blocked` should fire when C3 is shown — it deliberately doesn't fire now).
 - **New with A7:** the `third` variant's "See what's coming" CTA → Home (should be C1 Three Shaped).
 `subscription_lapsed` correctly routes to the existing `/app/vault/restore` gate.
-**Why it matters:** the flows are safe but lossy — capped users get no ceiling moment (C3), and the third-message ceremony (C1) is skipped.
-**Fix shape:** as C3 / C1 land, repoint each handler at the real route, and wire `step6.vault_limit_blocked` into C3.
-**Pick up when:** each remaining screen's build chunk — this entry is the checklist.
+**Why it matters:** the flows are safe but lossy — the third-message ceremony (C1) is still skipped.
+**Fix shape:** as C1 lands, repoint the A7 `third` "See what's coming" handler at the real route.
+**Pick up when:** the C1 build chunk — this entry is the checklist.
+
+### 53. [P2 · pre-merge verification gate] Real ElevenLabs voice render is unverified end-to-end
+**What:** Every Step 6 path has been proven against the real server + DB *except the one that spends vendor money* — a real cloned voice rendering real audio. The test user's `voice_profile` is a fake-vendor voice: ElevenLabs rejects it (502, no synthesis billed), which is exactly what makes failure-path + caps + routing + telemetry testing free. Two paths stay unproven because the fake voice can't render:
+- `/generate` **success** → A6 (today the success round-trip is dev-mocked; only the 502 failure is live-proven).
+- `/commit` **success** render — A6's "Hear this in your voice" spend (Deferred-Audio path, behind `DEFERRED_AUDIO_ENABLED`).
+**Why it matters:** the render plumbing (signed URLs, storage paths, duration/bytes, the A6 commit-success beat, audio quality) has never run for real. A bug the fake voice masks would surface to the first real user.
+**Fix shape (one deliberate pass, spend once):**
+1. Create a real cloned voice via the voice-creation flow (`/app/voice/create`) — itself an ElevenLabs clone call, so budget clone + a few renders.
+2. Walk `/generate` **and** `/commit` in the **same** session so the one voice covers both render paths.
+3. Decide the `DEFERRED_AUDIO_ENABLED` state for the pass (off = control-arm render at generate; on = deferred commit render) — flip inline per the Step 6 live-verify protocol.
+4. Assert: audio actually plays, `messages` row gets storage_path + duration + bytes, `usage_events` records the render outcomes.
+**Pick up when:** the happy path is wired end-to-end and Step 6 is about to merge to `main` / before any real-user exposure. Not blocking C2/C1 (both static, zero render) — keep building on the fake voice until then.
+
+### 52. [P4 · blocked on C2 build] C3 "See what's coming" routes to Home until C2 Waitlist exists
+**File:** `src/app/messages/limit/VaultLimitPageClient.tsx` (`handleSeeWhatsComing`).
+**What:** C3's secondary link should route to C2 Waitlist (`/messages/waitlist`), but C2 isn't built. Interim lands on Home, matching the A7 "See what's coming" precedent (#38). The link is otherwise fully wired (reveal, focus order, copy).
+**Why it matters:** the "look ahead" the C-screens are designed around dead-ends at Home — capped users can't express V2 demand. Low impact (no data loss) but it's the whole point of the ceiling moment.
+**Fix shape:** add `messagesWaitlist` to `ROUTES`, repoint `handleSeeWhatsComing`. One line once the route exists.
+**Pick up when:** the C2 Waitlist build chunk (next on the spine).
 
 ### 39. Saved-message immutability trigger crashes on every saved-row update (dangling `kind` reference) — ✅ RESOLVED 2026-06-12
 **Resolution:** `20260611233000_fix_messages_immutability_trigger.sql` applied in the 2026-06-11 bundle. Probed live post-apply: mutable updates on saved rows pass, immutable mutations raise the intended "Message is immutable after saved", and the `source_generation_id` SET NULL cascade (promoted-pending-row deletes) works.

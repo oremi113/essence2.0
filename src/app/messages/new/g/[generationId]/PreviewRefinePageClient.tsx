@@ -222,9 +222,11 @@ export function PreviewRefinePageClient({
     });
 
     if (data.code === "vault_limit_reached") {
-      // C3 (Vault Limit) isn't built — Home is the interim landing
-      // (FOLLOW_UPS #38). step6.vault_limit_blocked fires when C3 exists.
-      exitFlow(ROUTES.home);
+      // Race-case 403: another tab saved the 3rd while this flow was open.
+      // Route to C3 (Vault Limit). Push (don't exitFlow) so flow_id survives
+      // into C3 — its mount fires step6.vault_limit_blocked (with that
+      // flow_id for correlation) and clears the flow afterward.
+      router.push(`${ROUTES.messagesLimit}?from=save_race`);
       return { ok: false, code: "vault_limit_reached" };
     }
     if (data.code === "subscription_lapsed") {
@@ -241,7 +243,6 @@ export function PreviewRefinePageClient({
     editNoteDepth,
     hadNote,
     savedCountBefore,
-    exitFlow,
     router,
   ]);
 

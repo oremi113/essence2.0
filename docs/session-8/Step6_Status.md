@@ -1,6 +1,6 @@
 # Step 6 (Message Creation) — Status & What's Pending
 
-**Living doc. Last updated: 2026-06-11.**
+**Living doc. Last updated: 2026-06-14.**
 
 Plain-language map of where message-creation stands, written to be read without
 diving into code. The sections that need *you* are **"Decisions"** and **"What's
@@ -72,7 +72,8 @@ the outside is what's left.
 | **A5** Generating | The "shaping your message" wait | ✅ **Built + forward-wired (Chunk 5 + Chunk 7, 2026-06-13)** — pure screen + `/dev/messages-generation`; now reached in the forward flow as the orchestrator's `generating` step. A4 submit fires the real `/generate` (honoring→A5 overlapped seam); success → A6, failure → A5.b (Try again / Adjust note). Live-verified failure path (fake-vendor 502); success→A6 dev-mocked. See `Step6_A4A5_Wiring_Chunk7.md`. |
 | **A6** Preview & Refine | Hear / re-draft / commit / save | ✅ **Proven (deferred variant)** — screen (Chunk 1) + live route/wiring/telemetry (Chunk 2), browser-verified against the real server + DB. Only the commit-success voice render (vendor spend) remains unproven. Control-arm variant not built. |
 | **A7** Saved | The saved message | ✅ **Built + wired (Chunk 3, 2026-06-12)** — screen + `/dev/messages-saved`; live route `/messages/saved/[messageId]`, A6 save-success + already-saved redirect repointed here, browser-verified. See `Step6_A7_Screen_Chunk3.md`. |
-| **C1–C3** | Ceremony / Waitlist / Vault Limit | ⬜ not started (Save backend already routes to C3 at the cap) |
+| **C3** Vault Limit | The capped steady-state (3/3 saved) | ✅ **Built + wired (Chunk 8, 2026-06-14)** — screen + `/dev/messages-limit`; live route `/messages/limit`, A2-entry cap gate + `/save` race-403 both repointed here (Home dead-route closed), `step6.vault_limit_blocked` now fires. Dev-verified (visual + a11y + live entrance timing) **and live seam-walked** (seeded 3/3 user → `/messages/new` redirects to `/messages/limit?from=a2_entry`, `vault_limit_blocked` asserted in `usage_events`). Save-race path verified by inspection. See `Step6_C3_Screen_Chunk8.md`. |
+| **C1–C2** | Ceremony / Waitlist | ⬜ not started — C2 next (repoints C3's "See what's coming"), then C1 |
 
 **Takeaway:** the screens are essentially all the remaining work. A6 is the big
 one and is fully prototyped (control + deferred).
@@ -145,13 +146,14 @@ proven with zero vendor spend.
    wiring), A3 (Chunk 6 — built + A2→A3→A4 client spine wired), A4→A5
    forward wiring (Chunk 7 — live `/generate` handoff, honoring→A5 seam,
    `voiceProfileId` fetch, `isFinalOfThree`/saved-count; FOLLOW_UPS #47
-   resolved). **Next: C1–C3** (ceremony / waitlist / vault-limit). A6's exit paths
+   resolved), C3 vault-limit (Chunk 8 — screen + cap gate + save-race repoint
+   + `vault_limit_blocked`). **Next: C2 waitlist, then C1 ceremony.** A6's exit paths
    (FOLLOW_UPS #38) repoint as each lands — reshape resolved (A4); still
-   open: C3 vault-limit, C1 ceiling CTA. Before each chunk, run
+   open: C1 ceiling CTA (C3 vault-limit resolved Chunk 8). Before each chunk, run
    `node scripts/step6-token-sweep.mjs` and read
    `Step6_Prototype_Token_Reconciliation.md` (token mapping + footgun
    checklist — the prototypes' `:root` blocks drift from production).
-3. **Manual real-voice render check** for `/generate` + `/commit` (needs a cloned voice).
+3. **Manual real-voice render check** for `/generate` + `/commit` (needs a cloned voice) — now tracked as FOLLOW_UPS #53 (P2 pre-merge gate: one deliberate real-voice pass, spend once, before Step 6 ships).
 
 ---
 
