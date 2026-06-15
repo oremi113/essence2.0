@@ -62,7 +62,7 @@ const QUESTION_BY_CATEGORY: Record<MessageCategory, string> = {
  * which read as an opt-out. Exact wording is owner-approved.
  */
 const SUBTITLE =
-  'A memory, a few words, even just a feeling we’ll turn it into a full message. Or leave it blank and we’ll write a warm one for you.';
+  'A memory, a few words, even just a feeling — we’ll turn it into a full message. Or leave it blank and we’ll write a warm one for you.';
 
 /**
  * An example in the box — the strongest clarity lever for this audience: it

@@ -27,7 +27,7 @@ phone width. Owner picked a combination.
 | Slot | Copy |
 |---|---|
 | Question | *What do you want them to know?* (unchanged — the emotional anchor) |
-| **Subtitle (new)** | *A memory, a few words, even just a feeling we'll turn it into a full message. Or leave it blank and we'll write a warm one for you.* |
+| **Subtitle (new)** | *A memory, a few words, even just a feeling — we'll turn it into a full message. Or leave it blank and we'll write a warm one for you.* |
 | **Box placeholder** | *Example: Happy birthday, sweetheart. I'm so proud of the woman you've become.* |
 | **Empty button** | *Skip and write it for me* |
 | **Typed button** | *Write my message* |
@@ -36,8 +36,8 @@ The word "generic" is gone. The example is the biggest clarity lever — it *sho
 what a note looks like and that one sentence is enough, no instructions needed.
 
 ## Decisions / notes
-- **Subtitle wording is owner-exact** (no comma after "feeling"). I flagged that
-  it reads slightly run-on; owner kept it as written.
+- **Subtitle wording is owner-exact**, with an em-dash after "feeling" (added
+  2026-06-15 for readability — the clause break the sentence needs).
 - **The morphing button stays** (one button, two labels) — but the labels now
   make the choice legible: empty = a clear skip, typed = "use what I wrote."
 - **The example is birthday-flavoured while the copy is category-agnostic.** On a
