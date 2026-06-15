@@ -31,6 +31,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ✅ VERIFIED 2026-06-14 (both arms, real audio) |
 | 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ deferred behind #30 (revisited 2026-06-14 — latch is proportionate) |
 | 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ✅ RESOLVED 2026-06-14 (waitFor) |
+| 56 | P4 | A4 example placeholder is birthday-flavoured but copy is category-agnostic | ⏳ per-category examples (+ question/subtitle) |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
@@ -390,6 +391,13 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Fix shape:** add a `profiles.three_shaped_ceremony_seen_at timestamptz` (or similar) column; the A7 page reads it server-side to decide the C1 branch and stamps it on first show. One column + one read/write; replaces the latch. Needs the Dashboard migration bundle (#30).
 **Revisited 2026-06-14 — deferred, intentionally.** Considered two migration-free durable alternatives and rejected both for a P4: (a) a `usage_events` marker via the analytics path — `usage_events` is never pruned, but the write is best-effort (204-on-failure), so it can't *guarantee* once-per-lifetime; (b) a dedicated awaited write endpoint + an A7-render query — reliable, but disproportionate surface area for a harmless-replay edge. The localStorage latch is proportionate to the failure mode (a user who clears storage / switches device re-sees a warm, no-cost ceremony). The clean fix (the column above) waits on #30 — don't hand-apply a migration onto the broken history just for this.
 **Pick up when:** #30 is resolved (migration pipeline fixed), or any other profiles-column work ships and this can ride along.
+
+### 56. [P4] A4 example placeholder is birthday-flavoured but the copy is category-agnostic
+**File:** `src/components/screens/messages/PersonalNoteScreen.tsx` (`NOTE_PLACEHOLDER`).
+**What:** The 2026-06-15 clarity pass put an example in the note box — *"Example: Happy birthday, sweetheart. I'm so proud of the woman you've become."* It's the strongest clarity lever (shows what a note looks like), but it's birthday-specific while A4's copy is currently the same for all seven categories. On a comfort / holiday / future / checking-in message the birthday example is a mild mismatch.
+**Why it matters:** small, but a "Happy birthday" example under a *Comfort* crumb reads slightly off for the exact audience we simplified this for.
+**Fix shape:** make the example (and ideally the question + subtitle) category-aware — the `QUESTION_BY_CATEGORY` table already establishes the per-category pattern; add parallel `EXAMPLE_BY_CATEGORY` (and optionally `SUBTITLE_BY_CATEGORY`). Pairs naturally with the long-standing "category-aware question copy" placeholder the A4 prototype header already calls for.
+**Pick up when:** the category-aware-copy workshop lands (it's the same single-table change A4 has always wanted), or any A4 copy revisit.
 
 ### 55. `useResource` keyed-refetch test flaky under full-suite load — ✅ RESOLVED 2026-06-14
 **File:** `tests/unit/useResource.test.tsx` (`keyed refetch > refetches when the key changes`).

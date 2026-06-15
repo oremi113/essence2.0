@@ -11,9 +11,11 @@
  *
  * The two-stage shape:
  *   Stage A (input)    — ready stone as companion, italic category-aware
- *                        question, recessed serif textarea. The CTA
- *                        morphs: empty → ghost "Use a generic message";
- *                        content → solid "Shape it from this".
+ *                        question, a plain-language subtitle (the mechanic +
+ *                        that blank is allowed), example-led textarea. The CTA
+ *                        morphs: empty → ghost "Skip and write it for me";
+ *                        content → solid "Write my message". (Clarity pass
+ *                        2026-06-15 — see Step6_A4_Copy_Clarity.md.)
  *   Stage B (honoring) — the note quoted back in the user's words with a
  *                        quiet ack + pulsing dots while /generate runs
  *                        behind it (min-hold 2.4s so the moment is never
@@ -52,6 +54,26 @@ const QUESTION_BY_CATEGORY: Record<MessageCategory, string> = {
   holiday: 'What do you want them to know?',
   checking_in: 'What do you want them to know?',
 };
+
+/**
+ * Plain-language helper under the question — explains the mechanic (a few words
+ * → a full message) and that blank is allowed. Clarity pass for a boomer/Gen-X
+ * audience (2026-06-15): the prior screen leaned on a morphing button alone,
+ * which read as an opt-out. Exact wording is owner-approved.
+ */
+const SUBTITLE =
+  'A memory, a few words, even just a feeling — we’ll turn it into a full message. Or leave it blank and we’ll write a warm one for you.';
+
+/**
+ * An example in the box — the strongest clarity lever for this audience: it
+ * shows what a note looks like and that a sentence is enough. Birthday-flavoured
+ * for now (copy is category-agnostic — see FOLLOW_UPS for per-category examples).
+ */
+const NOTE_PLACEHOLDER =
+  'Example: Happy birthday, sweetheart. I’m so proud of the woman you’ve become.';
+
+const SKIP_LABEL = 'Skip and write it for me';
+const SUBMIT_LABEL = 'Write my message';
 
 /** PLACEHOLDER ack — may become category-aware (same single-table shape). */
 const HONORING_ACK = 'We’ll bring this into your voice.';
@@ -163,12 +185,15 @@ export function PersonalNoteScreen({
             <p className="prompt-question" id="pn-question">
               {QUESTION_BY_CATEGORY[category]}
             </p>
+            <p className="prompt-subtitle" id="pn-subtitle">
+              {SUBTITLE}
+            </p>
 
             <div className="note-wrap">
               <textarea
                 className="note-field"
-                aria-labelledby="pn-question"
-                placeholder="Say what comes to mind."
+                aria-labelledby="pn-question pn-subtitle"
+                placeholder={NOTE_PLACEHOLDER}
                 maxLength={NOTE_MAX_CHARS}
                 rows={3}
                 value={note}
@@ -221,7 +246,7 @@ export function PersonalNoteScreen({
           onClick={handleSubmit}
           disabled={pending}
         >
-          {hasContent ? 'Shape it from this' : 'Use a generic message'}
+          {hasContent ? SUBMIT_LABEL : SKIP_LABEL}
         </button>
       </div>
     </div>

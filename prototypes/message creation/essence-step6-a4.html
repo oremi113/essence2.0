@@ -62,6 +62,19 @@
   ║  Also: --color-status-warning promoted to :root; halo offset to 5.5s  ║
   ║  (de-lockstepped from the 4s body); footer scrim flattened (siblings  ║
   ║  don't overlap); seam note "→ A5" appears after the 2.4s hold.        ║
+  ║                                                                       ║
+  ║  ─── AMENDMENT 3 — COPY CLARITY PASS (owner, 2026-06-15) ────────── ║
+  ║  Audience is boomers/Gen X; clarity beats cleverness. The screen had  ║
+  ║  leaned on the morphing button alone, which read as an opt-out and    ║
+  ║  hid the "a few words → a full message" mechanic. Locked:             ║
+  ║   • New plain subtitle under the question (explains the mechanic +    ║
+  ║     that blank is allowed).                                           ║
+  ║   • Textarea now shows an EXAMPLE (demonstrates a note + that a       ║
+  ║     sentence is enough) instead of "Say what comes to mind."          ║
+  ║   • Buttons: "Use a generic message" → "Skip and write it for me";    ║
+  ║     "Shape it from this" → "Write my message".                        ║
+  ║  The example is birthday-flavoured while copy stays category-agnostic ║
+  ║  — per-category examples are a logged follow-up.                      ║
   ╚═══════════════════════════════════════════════════════════════════════╝
 -->
 
@@ -366,6 +379,26 @@ button { font-family: inherit; }
   max-width: 280px;
   margin-top: var(--space-xl);
   text-wrap: pretty;
+}
+
+/* Subtitle — plain-language helper (amendment 3, 2026-06-15 clarity pass).
+   Body, not display: this line is for comprehension. Recedes with the question
+   while writing. */
+.prompt-subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  max-width: 300px;
+  margin-top: var(--space-sm);
+  text-wrap: pretty;
+  transition:
+    opacity var(--duration-medium) var(--ease-essence),
+    transform var(--duration-medium) var(--ease-essence);
+}
+.stage.is-writing .prompt-subtitle {
+  opacity: 0.2;
+  transform: translateY(-4px);
 }
 
 /* Writing area wrapper — ambient warmth behind the textarea */
@@ -676,17 +709,21 @@ button { font-family: inherit; }
             <div class="stone__body"></div>
           </div>
 
-          <!-- PLACEHOLDER COPY — see header note for production strings -->
+          <!-- Copy locked in the 2026-06-15 clarity pass (amendment 3). -->
           <p class="prompt-question" id="promptQuestion">
             What do you want them to know?
+          </p>
+          <p class="prompt-subtitle" id="promptSubtitle">
+            A memory, a few words, even just a feeling &mdash; we&rsquo;ll turn it
+            into a full message. Or leave it blank and we&rsquo;ll write a warm one for you.
           </p>
 
           <div class="note-wrap">
             <textarea
               class="note-field"
               id="noteField"
-              aria-labelledby="promptQuestion"
-              placeholder="Say what comes to mind."
+              aria-labelledby="promptQuestion promptSubtitle"
+              placeholder="Example: Happy birthday, sweetheart. I&rsquo;m so proud of the woman you&rsquo;ve become."
               maxlength="200"
               rows="3"
             ></textarea>
@@ -730,7 +767,7 @@ button { font-family: inherit; }
       </div>
 
       <div class="footer" id="footer">
-        <button class="btn" id="primaryBtn">Use a generic message</button>
+        <button class="btn" id="primaryBtn">Skip and write it for me</button>
       </div>
 
     </div>
@@ -810,11 +847,11 @@ noteField.addEventListener('input', e => {
 
   // Button copy and styling shift based on input state
   if (len > 0) {
-    primaryBtn.textContent = 'Shape it from this';
+    primaryBtn.textContent = 'Write my message';
     primaryBtn.classList.remove('btn--ghost');
     stageInput.classList.add('has-content');
   } else {
-    primaryBtn.textContent = 'Use a generic message';
+    primaryBtn.textContent = 'Skip and write it for me';
     primaryBtn.classList.add('btn--ghost');
     stageInput.classList.remove('has-content', 'has-long-content');
   }

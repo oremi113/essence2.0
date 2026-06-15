@@ -139,6 +139,27 @@ export const PERSONAL_NOTE_CSS = `
   transform: translateY(-4px);
 }
 
+/* Subtitle — the plain-language helper that explains the mechanic + that
+   blank is allowed. Body (not display italic): this line is for comprehension,
+   so it stays legible and unfussy. Recedes with the question while writing. */
+.personal-note .prompt-subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  max-width: 300px;
+  margin-top: var(--space-sm);
+  text-wrap: pretty;
+  animation: pn-stageReveal var(--duration-small) var(--ease-essence) 420ms backwards;
+  transition:
+    opacity var(--duration-medium) var(--ease-essence),
+    transform var(--duration-medium) var(--ease-essence);
+}
+.personal-note .stage.is-writing .prompt-subtitle {
+  opacity: 0.2;
+  transform: translateY(-4px);
+}
+
 /* Writing area — ambient warmth that answers the user's effort. */
 .personal-note .note-wrap {
   position: relative;
