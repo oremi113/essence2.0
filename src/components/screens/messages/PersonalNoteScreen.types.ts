@@ -38,8 +38,8 @@ export interface PersonalNoteScreenProps {
   /** Reshape pre-fill (A6 "Reshape your note" path). Empty for the forward flow. */
   initialNote?: string;
   /**
-   * Submit. `note` is the trimmed text, or null for the skip path ("Use
-   * a generic message" — template default, no honoring moment). The
+   * Submit. `note` is the trimmed text, or null for the skip path ("Skip
+   * and write it for me" — template default, no honoring moment). The
    * screen holds the honoring moment (note path) or a pending CTA (skip
    * path) until this resolves; on ok the parent navigates away.
    */
