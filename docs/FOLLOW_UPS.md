@@ -14,7 +14,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
-| 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ add error check + throw |
+| 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost | ✅ RESOLVED 2026-06-16 (refactor/fu-42 — throws on failed save) |
 | 5 | P3 | Cancelling an upload reads as a failure internally | ✅ **next up** |
 | 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ |
 | 2 | P3 | Failed upload leaves stale internal state between retries | ✅ |
@@ -40,6 +40,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
 | 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ reorder record/update |
+| 57 | P4 | Onboarding completion failure resets silently — no visible "couldn't save, try again" message *(new 2026-06-16)* | ⚠️ UI copy + needs browser verify |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
 **Next-up fixable queue:** #5 → #1 → #2 → #26 (CI check) → #4.
@@ -450,7 +451,12 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: typecheck ✅ · lint ✅ · unit tests 154/154 ✅ (all green on `main`). Active feature branch `feat/step6-a6-screen` (last commit 2026-06-13) is mid-construction across the whole Step 6 message-creation flow — those files were treated as work-in-progress and excluded from this pass. A recurring pattern surfaced across stable subsystems: a Supabase write whose `{ error }` is not checked, so a failed save resolves as if it succeeded. The five below are the distinct, real instances; the Stripe webhook handlers and `upsertSubscription` were reviewed and found correctly guarded (errors throw, upserts are idempotent) — no entry warranted there.
 
-### 42. [P2] Onboarding completion swallows a failed save — the user's profile is silently discarded
+### 42. [P2] Onboarding completion swallows a failed save — the user's profile is silently discarded — ✅ RESOLVED 2026-06-16 (refactor/fu-42)
+**Resolution:** the final `profiles` UPDATE now runs through `persistOnboardingCompletion` (`src/lib/onboarding/completeOnboarding.ts`), which captures `{ error }` and **throws** on failure — mirroring the sibling `uploadAvatar` action. The expired-session branch (`if (!user) return;`) now **throws** instead of silently returning. With the action throwing, the existing client chain already does the right thing: `OnboardingPageClient.handleComplete` awaits the action, so a rejection skips `router.push` and propagates to `OnboardingScreen.handleComplete`'s `try/catch`, which resets `isSubmitting` and keeps the draft — the user stays on the final screen and can retry instead of losing input. New write extracted to a client-injectable helper and unit-tested (`tests/unit/complete-onboarding.test.ts`): throws on a returned error, resolves on success, writes the fields + completion stamp scoped to the user. The eventual user-facing error-UI copy remains a separate (P4) follow-up — see below. Original entry follows.
+
+---
+*Original entry (for reference):*
+
 `src/app/onboarding/page.tsx:121-133` — the `completeOnboarding` server action runs the final `profiles` UPDATE (first/last name, DOB, city, state, `onboarding_completed_at`) but never inspects the returned `error`. The `uploadAvatar` action directly below it (`page.tsx:179-186`) *does* check and throw, so this is an asymmetry, not a house pattern. `OnboardingPageClient.handleComplete` (`OnboardingPageClient.tsx:38-39`) awaits the action then unconditionally `router.push(ROUTES.record)`. A second swallow sits at `page.tsx:109` (`if (!user) return;` — a silent no-op on an expired session).
 
 **Why it matters:** if that UPDATE fails (RLS, transient DB error, constraint), the action resolves as though it saved, the wizard navigates the user into the app, and everything they typed during onboarding is lost — `onboarding_completed_at` stays null, so they're treated as not-onboarded next visit. This is the first flow every new user hits, so a misconfiguration here loses data for *all* new users, invisibly.
@@ -504,3 +510,12 @@ Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx
 - **#9 (re-entry shows previously-uploaded photo):** appears addressed — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl`, replacing the prototype's `resetPhoto()`. Recommend the fixer verify and strike.
 
 These are left for the fixer to strike (resolution strikes are the fixer's lane per the coordination rule); flagged here so they don't linger as falsely-open.
+
+## Onboarding completion error surface (from FU-42 fix, 2026-06-16)
+
+### 57. [P4] Onboarding completion failure resets the wizard silently — no visible message
+`src/components/screens/OnboardingScreen.tsx:113-130` — FU-42 made `completeOnboarding` throw on a failed save (good: input is no longer lost, the draft is kept and `router.push` is skipped). But the screen's `handleComplete` catch only `console.error`s and resets `isSubmitting`. So on failure the user sees the "begin" button simply re-enable with no explanation — they don't know the save failed or that tapping again will retry.
+
+**Why it matters:** the data-loss bug is fixed, but the recovery moment is mute. A user whose save fails (rare: RLS/transient DB/constraint) gets a silent button reset, not a "Something went wrong saving — tap to try again." Small, low-frequency, and purely UI copy + a visible error region.
+**Fix shape:** add an error state to `OnboardingScreen` (set it in the catch), render a short retry message on Screen 12, and clear it on the next attempt. This is the "eventual error-UI copy" the FU-42 entry deferred. Visual change → needs in-browser verification (Playwright), so it's out of scope for a non-visual refactor run.
+**Pick up when:** an onboarding polish / a11y pass, or the next time Screen 12 is touched.
