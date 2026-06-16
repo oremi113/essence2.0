@@ -1,30 +1,13 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { NewMessageView } from "@/components/messages/NewMessageView";
-import { TabNav } from "@/components/nav/TabNav";
-import { ROUTES, signInWithNext } from "@/lib/routes";
+import { ROUTES } from "@/lib/routes";
 
-export default async function NewMessagePage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect(signInWithNext(ROUTES.appMessagesNew));
-  }
-
-  // Fetch voice profiles that are ready
-  const { data: profiles } = await supabase
-    .from("voice_profiles")
-    .select("id, label, status")
-    .eq("user_id", user.id)
-    .eq("status", "ready")
-    .order("created_at", { ascending: false });
-
-  return (
-    <>
-      <TabNav current="new-message" />
-      <NewMessageView voiceProfiles={profiles ?? []} />
-    </>
-  );
+/**
+ * Legacy message-creation route — RETIRED in M0 (FOLLOW_UPS #34).
+ *
+ * The old `NewMessageView` flow is gone; the canonical creation flow is the
+ * Step 6 spine at `/messages/new`. This route is kept only as a permanent
+ * redirect so any stray link to the old path still lands in the right place.
+ */
+export default function LegacyNewMessageRedirect() {
+  redirect(ROUTES.messagesNew);
 }

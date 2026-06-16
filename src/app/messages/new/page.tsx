@@ -51,8 +51,7 @@ export default async function MessagesNewPage() {
 
   // The forward /generate handoff (A4→A5) needs a ready cloned voice. No
   // voice yet → send the user to make one first (you can't shape a message
-  // in a voice that doesn't exist). Most-recent ready profile wins, matching
-  // the legacy /app/messages/new query.
+  // in a voice that doesn't exist). Most-recent ready profile wins.
   const { data: readyVoice } = await supabase
     .from('voice_profiles')
     .select('id')

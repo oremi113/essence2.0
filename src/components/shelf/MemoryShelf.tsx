@@ -85,7 +85,7 @@ export function MemoryShelf() {
           No messages yet. Create your first message to see it here.
         </p>
         <a
-          href={ROUTES.appMessagesNew}
+          href={ROUTES.messagesNew}
           style={{
             display: "inline-block",
             marginTop: 12,
@@ -168,7 +168,7 @@ export function MemoryShelf() {
       )}
 
       <div style={{ marginTop: 24, textAlign: "center" }}>
-        <a href={ROUTES.appMessagesNew} style={{ color: "#555", fontSize: 14 }}>
+        <a href={ROUTES.messagesNew} style={{ color: "#555", fontSize: 14 }}>
           + Create a new message
         </a>
       </div>
