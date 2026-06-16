@@ -3,6 +3,8 @@ import { getOrCreateProfile } from "@/lib/profile";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "./sign-out-button";
 import { ROUTES, signInWithNext } from "@/lib/routes";
+import { JourneyBeacon } from "@/components/analytics/JourneyBeacon";
+import { JOURNEY_EVENTS } from "@/lib/analytics/journey";
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient();
@@ -23,6 +25,13 @@ export default async function HomePage() {
 
   return (
     <>
+      {/*
+        Return/retention signal: an authenticated, onboarded app entry. New
+        users are redirected to onboarding above, so reaching here is a real
+        returning session. Retention = distinct users firing app_opened on a
+        day after their signup day (see the analytics note).
+      */}
+      <JourneyBeacon event={JOURNEY_EVENTS.appOpened} />
       <h1>Home</h1>
       <p>Signed in as {user.email ?? "unknown"}.</p>
       <p>

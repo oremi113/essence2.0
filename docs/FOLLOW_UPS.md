@@ -504,3 +504,12 @@ Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx
 - **#9 (re-entry shows previously-uploaded photo):** appears addressed — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl`, replacing the prototype's `resetPhoto()`. Recommend the fixer verify and strike.
 
 These are left for the fixer to strike (resolution strikes are the fixer's lane per the coordination rule); flagged here so they don't linger as falsely-open.
+
+## Analytics funnel (from feat/analytics-funnel, 2026-06-16)
+
+### 57. [P4] Analytics context helpers are duplicated between `step6.ts` and `context.ts`
+`src/lib/analytics/context.ts` (new) and `src/lib/analytics/step6.ts` each carry their own copies of the same client-context helpers — `getOrCreateSessionId`, `getPlatform`, `getDeviceType`, `generateId` (plus the env/version reads). `context.ts` was added so the new `journey.*` family attaches the same global-prop envelope as `step6.*` without editing `step6.ts`, which was off-limits during parallel M1 work (it's the already-instrumented Step 6 surface).
+
+**Why it matters:** low risk today (the copies are byte-identical and both covered by unit tests), but two definitions of the session/platform/device envelope can drift — e.g. a future change to device-type detection applied to one family and not the other would silently split the envelope across `step6.*` and `journey.*`.
+**Fix shape:** delete the four private helpers from `step6.ts` and import them from `@/lib/analytics/context`; keep `step6.ts`'s flow_id + schema-version logic local. Pure refactor, no behavior change — both `step6-analytics` and `journey-analytics` suites should stay green.
+**Pick up when:** the next time `step6.ts` is intentionally touched (so the change rides a Step 6 review surface, not a surprise). Agent-fixable.
