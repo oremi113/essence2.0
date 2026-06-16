@@ -40,7 +40,7 @@ Entry template (the agent appends one per run):
   `await`, so `router.push` is skipped and the existing `OnboardingScreen`
   `try/catch` keeps the user on the final screen with their draft intact. This
   fixes the swallow at its source (the unchecked error), not a downstream symptom.
-- Branch / commit: refactor/fu-42-onboarding-save-check @ <filled at commit>
+- Branch / commit: refactor/fu-42-onboarding-save-check @ 1971c6c
 - Checks: typecheck ✅ · lint ✅ · test:unit ✅ (184/184; +3 new in
   tests/unit/complete-onboarding.test.ts). Non-visual change (server action +
   helper); no browser verification needed.
