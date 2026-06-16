@@ -76,11 +76,16 @@ The prototype's dev rail switches all eight.
 
 ---
 
-## Open decisions (only one left)
+## Open decisions
 
-- **Category enum mapping.** Confirm the DB `category` values match the
-  prototype's `CATEGORY_LABEL` map (birthday / comfort / encouragement / holiday
-  / future / daily / checkin). If they differ, reconcile the labels.
+- ~~**Category enum mapping.**~~ **Resolved (Chunk 1).** The DB enum and the
+  prototype's `CATEGORY_LABEL` keys diverge on three values: DB
+  `daily_reminder`/`future_message`/`checking_in` vs prototype
+  `daily`/`future`/`checkin` (the other four — birthday, comfort,
+  encouragement, holiday — already match). The API now exposes `category` as the
+  **raw DB enum value** (no lossy transform in the data layer). **Chunk 2 action:**
+  update the screen's `CATEGORY_LABEL` map to key off the DB enum values, i.e.
+  `daily_reminder` / `future_message` / `checking_in`.
 
 > Resolved (were open earlier, confirmed in `src/lib/routes.ts`):
 > the "create another" route is canonically `/messages/new` (legacy
