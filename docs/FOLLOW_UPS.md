@@ -26,7 +26,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 9 | P3 | Going "back" to the photo screen wrongly resets it | ✅ when Screen 10 production build lands |
 | 12 | P3 | No way to remove a photo after upload | ❌ decision (settings roadmap) |
 | 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
-| 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ❌ owner-paired (touches migrations — never-touch list) |
+| 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ✅ RESOLVED 2026-06-16 (M0 — history reconciled, db push clean) |
 | 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ✅ FULLY RESOLVED (Chunk 10 — C1 + repoint) |
 | 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ✅ VERIFIED 2026-06-14 (both arms, real audio) |
 | 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ deferred behind #30 (revisited 2026-06-14 — latch is proportionate) |
@@ -285,7 +285,12 @@ This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced b
 
 ## Supabase migration history reconciliation (from Session 8, 2026-06-10)
 
-### 30. [P3 · owner-paired — touches migrations] `db push` blocked by version-collision in early migration history (absorbs #21)
+### 30. `db push` blocked by version-collision in early migration history — ✅ RESOLVED 2026-06-16 (M0)
+**Resolution:** reconciled the migration history exactly as the fix shape below describes. Renamed the 6 colliding short-stub files to unique 14-digit versions (`20260214_*` → `20260214000000/000100/000200`, `20260412_*` → `20260412000000/000100`, `20260421_add_failed_attempt_count` → `20260421000000`), then `supabase migration repair --status applied <new versions>` (records them applied, runs **no** SQL — schema was already correct) followed by `--status reverted 20260214 20260412 20260421` (drops the stale duplicate rows). Also removed the redundant `RUN_IN_DASHBOARD_voice_profiles_attempt_tracking.sql` (all its changes are in tracked migrations: `phase5_voice_profile_lifecycle`, `voice_profiles_attempt_tracking`). **`supabase db push --dry-run` now reports "Remote database is up to date"** with no skips — `db push` is usable again. The remote `schema_migrations` ledger was edited live; the file renames are in this branch.
+
+---
+*Original entry (for reference):*
+
 After fixing the CLI's database connection (added `SUPABASE_DB_PASSWORD` to `.env.local`, which cleared the `cli_login_postgres` permission error), `supabase db push --dry-run` reports: *"Remote migration versions not found in local migrations directory"* and suggests `supabase migration repair --status reverted 20260421` / `supabase db pull`.
 
 **Root cause:** several early migration files use short, non-unique version stubs — e.g. three `20260214*` files all parse to version `20260214`, two `20260412*` files to `20260412`, and `20260421_add_failed_attempt_count.sql` to `20260421`. The remote `supabase_migrations.schema_migrations` table (whose `version` is a primary key) can't hold one row per file when versions collide, so the CLI sees the same version as both "local-only" and "remote-only" and refuses to push. The *schema itself is correct* (verified via `gen types` — all expected tables/columns/enums exist); this is purely a bookkeeping mismatch in the migration-history table.
