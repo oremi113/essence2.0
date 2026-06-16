@@ -23,6 +23,32 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-06-16 — scheduled (fix)
+- Outcome: Fixed — onboarding's final "save my details" step used to navigate the
+  user into the app even when the save silently failed, losing everything they
+  typed; it now stops and lets them retry.
+- Item: FU-42 [P2] — Onboarding completion swallows a failed save → profile silently lost.
+- Root cause: symptom — a new user finishes onboarding, the profile write fails
+  (RLS / transient DB / constraint), and they're sent into the app anyway with
+  their name/DOB/city gone and `onboarding_completed_at` still null (treated as
+  not-onboarded next visit). Cause — the `completeOnboarding` server action ran
+  the `profiles` UPDATE but never inspected the returned `{ error }`, so a failed
+  write resolved as success; the expired-session branch (`if (!user) return;`)
+  likewise resolved silently. Why this addresses the cause — the write now goes
+  through `persistOnboardingCompletion`, which throws on a returned error, and
+  the expired-session branch throws too. A thrown action rejects the client
+  `await`, so `router.push` is skipped and the existing `OnboardingScreen`
+  `try/catch` keeps the user on the final screen with their draft intact. This
+  fixes the swallow at its source (the unchecked error), not a downstream symptom.
+- Branch / commit: refactor/fu-42-onboarding-save-check @ <filled at commit>
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (184/184; +3 new in
+  tests/unit/complete-onboarding.test.ts). Non-visual change (server action +
+  helper); no browser verification needed.
+- Discovered: FU-57 [P4] — onboarding completion failure now resets the wizard
+  silently (no visible "couldn't save, try again" message). Logged, not fixed
+  (UI copy → needs in-browser verification, out of scope for this run).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-13 — discovery (scheduled triage)
 - Outcome: Scan-only (read-only) — logged 5 new backlog items; no code touched.
 - Scanned: health checks on `main` (typecheck ✅ · lint ✅ · test:unit 154/154 ✅);
