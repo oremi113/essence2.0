@@ -1,8 +1,27 @@
 # Session · Step 7 — Memory Shelf build
 
-**Status:** design done, build not started. This folder is the authoritative
-entry point for the build — a fresh context window should start here.
+**Status:** Chunk 1 (data) + Chunk 2 (screen) built and verified; Chunk 3
+(formal verify) folded into Chunk 2's Playwright pass. This folder is the
+authoritative entry point — a fresh context window should start here.
 **Created:** 2026-06-16
+
+**Build log (2026-06-16):**
+- Chunk 1 — `GET /api/messages` widened (`played`, `durationSeconds`, `category`,
+  plus full `body` for the transcript) via an extracted, unit-tested
+  `serializeShelfMessage`. Analytics note dropped. Category enum reconciled (see
+  Open decisions below).
+- Chunk 2 — `src/components/shelf/*` relocated to
+  `src/components/screens/shelf/*` (CLAUDE.md fix); skin rebuilt to mirror the
+  prototype on `@theme` tokens (`.shelf-*` block appended to `globals.css`,
+  prototype-local effect vars scoped to `.shelf`). Pure props-driven screen +
+  `ShelfPageClient` (owns `useResource` + `usePlaybackController`) +
+  `/dev/shelf` with an 8-state dev rail. Playback engine extended additively
+  with a real `currentTime`/`duration`/`ended` (live element timer, not a faked
+  interval). All 8 states verified via Playwright at **390×844 / 4× CPU**.
+- **Decision (2026-06-16):** on the empty state the persistent "Memory Shelf"
+  header is **suppressed** so it doesn't stack with the empty hero's "Your
+  Memory Shelf" title. A deliberate divergence from the prototype (which kept
+  the header); the header still shows in loading / error / loaded states.
 
 ---
 

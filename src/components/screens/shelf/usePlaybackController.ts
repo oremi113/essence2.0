@@ -9,10 +9,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *
  * Lifecycle:
  *   - Audio element is created lazily on first play and reused after.
- *   - "ended" / "error" listeners attach exactly once when the element
- *     is created.
+ *   - "ended" / "error" / "timeupdate" / "loadedmetadata" listeners attach
+ *     exactly once when the element is created.
  *   - On unmount, the element is paused and detached so it stops if
  *     the user navigates away mid-play.
+ *
+ * The ceremonial overlay reads `currentTime` / `duration` for its live timer
+ * (real element time, never a faked setInterval that would drift from audio)
+ * and `ended` to know when to move from the playing phase to complete.
  */
 export interface PlaybackController {
   /** ID of the currently active message (whether playing OR paused), or null when idle. */
@@ -23,8 +27,17 @@ export interface PlaybackController {
   audioLoading: boolean;
   /** Last user-facing error from playback. */
   audioError: string | null;
-  /** Start (or toggle pause/resume on) the message with this id. */
-  play: (messageId: string) => Promise<void>;
+  /** Elapsed seconds in the active track (live element time, not a faked interval). */
+  currentTime: number;
+  /** Total seconds of the active track once metadata loads; 0 until known. */
+  duration: number;
+  /** True once the active track played through to its end; cleared on next play/stop. */
+  ended: boolean;
+  /** Start (or toggle pause/resume on) the message with this id. Resolves
+   *  `true` once audio is playing (or was toggled), `false` if the play
+   *  attempt failed — callers branch on this instead of reacting to
+   *  `audioError` in an effect. */
+  play: (messageId: string) => Promise<boolean>;
   /** Hard stop and reset to idle. */
   stop: () => void;
   /** Clear the error banner without changing playback state. */
@@ -38,6 +51,9 @@ export function usePlaybackController(): PlaybackController {
   const [isPaused, setIsPaused] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [ended, setEnded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Remember the last id we tried to play so the Retry button can
   // replay it after a failure (which clears playingId in the catch).
@@ -47,7 +63,15 @@ export function usePlaybackController(): PlaybackController {
     if (audioRef.current) return audioRef.current;
     const el = new Audio();
     el.addEventListener("ended", () => {
+      setEnded(true);
+      setIsPaused(false);
       setPlayingId(null);
+    });
+    el.addEventListener("timeupdate", () => {
+      setCurrentTime(el.currentTime || 0);
+    });
+    el.addEventListener("loadedmetadata", () => {
+      setDuration(Number.isFinite(el.duration) ? el.duration : 0);
     });
     el.addEventListener("error", () => {
       // Ignore errors from deliberate src reset (empty string / page URL).
@@ -71,7 +95,7 @@ export function usePlaybackController(): PlaybackController {
           audioRef.current.pause();
           setIsPaused(true);
         }
-        return;
+        return true;
       }
 
       // Switching to a different message — stop whatever's playing.
@@ -85,6 +109,9 @@ export function usePlaybackController(): PlaybackController {
       setIsPaused(false);
       setAudioLoading(true);
       setAudioError(null);
+      setEnded(false);
+      setCurrentTime(0);
+      setDuration(0);
 
       try {
         const res = await fetch(`/api/messages/${messageId}/play`);
@@ -99,10 +126,12 @@ export function usePlaybackController(): PlaybackController {
         el.src = data.url;
         setAudioLoading(false);
         await el.play();
+        return true;
       } catch (err) {
         setAudioError(err instanceof Error ? err.message : "Audio unavailable");
         setAudioLoading(false);
         setPlayingId(null);
+        return false;
       }
     },
     [playingId, ensureAudioElement]
@@ -117,6 +146,9 @@ export function usePlaybackController(): PlaybackController {
     setIsPaused(false);
     setAudioError(null);
     setAudioLoading(false);
+    setEnded(false);
+    setCurrentTime(0);
+    setDuration(0);
   }, []);
 
   const clearError = useCallback(() => setAudioError(null), []);
@@ -138,5 +170,17 @@ export function usePlaybackController(): PlaybackController {
     };
   }, []);
 
-  return { playingId, isPaused, audioLoading, audioError, play, stop, clearError, retry };
+  return {
+    playingId,
+    isPaused,
+    audioLoading,
+    audioError,
+    currentTime,
+    duration,
+    ended,
+    play,
+    stop,
+    clearError,
+    retry,
+  };
 }
