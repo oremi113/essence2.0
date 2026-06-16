@@ -10,7 +10,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | # | P | One-liner | Agent-fixable now? |
 |---|---|---|---|
 | 22 | P2 | Voice creation has zero payment gating — ElevenLabs cost exposure | ❌ decision (gate or not, before launch) |
-| 34 | P2 | Two parallel message-creation routes; one is legacy | ❌ decision (pick canonical) + overlaps active Step 6 work |
+| 34 | P2 | Two parallel message-creation routes; one is legacy | ✅ RESOLVED 2026-06-16 (M0 — legacy retired) |
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
@@ -345,8 +345,7 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 **(b) Two parallel message-creation routes — NEEDS A DECISION.** Both `/messages/new` (`src/app/messages/new/`) and `/app/messages/new` (`src/app/app/messages/new/`) exist and render. App surfaces (TabNav, MemoryShelf, VaultSealed, VoiceCreationView) push to `/app/messages/new`; the doc-described Step 6 entry is `/messages/new`. The route map keeps both (`ROUTES.messagesNew`, `ROUTES.appMessagesNew`) and preserved each caller's current target — no behavior change — but one is almost certainly canonical and the other dead/legacy.
 
-**Fix shape:** during the stitch, decide which message-creation route is canonical, repoint all callers to it via the single route constant, and delete the other route tree + its page/dev scaffolding. The route map makes this a one-constant change.
-**Pick up when:** the prototype-stitching pass that wires voice-creation → First Breath (FOLLOW_UPS #24/#25) → message creation, since that's when the entry point gets pinned.
+**Resolved (M0, 2026-06-16):** `/messages/new` (the Step 6 spine) is canonical. All callers (TabNav, MemoryShelf, VaultSealed, VoiceCreationView, record page) repointed to `ROUTES.messagesNew`; `ROUTES.appMessagesNew` removed. The legacy `/app/messages/new` is now a **permanent redirect** to `/messages/new`, and its old `NewMessageView` component (orphaned) was deleted. Redirect + 404 boundary verified live.
 
 ## A6 Preview & Refine — screen build (from Step 6 A6 wiring chunk 1, 2026-06-11)
 

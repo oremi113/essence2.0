@@ -241,7 +241,7 @@ export function VoiceCreationView() {
         <div style={{ marginTop: 16 }}>
           <button
             type="button"
-            onClick={() => router.push(ROUTES.appMessagesNew)}
+            onClick={() => router.push(ROUTES.messagesNew)}
           >
             Create a message
           </button>
