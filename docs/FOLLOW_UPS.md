@@ -10,7 +10,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | # | P | One-liner | Agent-fixable now? |
 |---|---|---|---|
 | 22 | P2 | Voice creation has zero payment gating — ElevenLabs cost exposure | ❌ decision (gate or not, before launch) |
-| 34 | P2 | Two parallel message-creation routes; one is legacy | ❌ decision (pick canonical) + overlaps active Step 6 work |
+| 34 | P2 | Two message-creation routes — **trigger FIRED 2026-06-16**: Step 6 spine now live on `/messages/new`, but all app nav still points at legacy `/app/messages/new` → new flow unreachable | ❌ decision (pick canonical), then mechanical repoint — no longer overlaps active work |
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
@@ -36,6 +36,8 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
+| 57 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ add error checks |
+| 58 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ comment fix |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
@@ -500,3 +502,31 @@ Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx
 - **#9 (re-entry shows previously-uploaded photo):** appears addressed — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl`, replacing the prototype's `resetPhoto()`. Recommend the fixer verify and strike.
 
 These are left for the fixer to strike (resolution strikes are the fixer's lane per the coordination rule); flagged here so they don't linger as falsely-open.
+
+## Discovery pass (triage 2026-06-16)
+
+Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: typecheck ✅ · lint ✅ · unit tests 181/181 ✅ (all green on `main`). The Step 6 message-creation spine — `feat/step6-a6-screen`, treated as work-in-progress and **excluded** in the 2026-06-13 pass — has since merged to `main` (PRs #49 + #51, 2026-06-15), so this run reviewed it as shipping code. There is no active `feat/*` branch right now. Deep reads: the new page-layer data-shuttles (`/messages/new`, `/messages/new/g/[id]`, its `/reshape`, `/messages/saved/[id]`, `/messages/limit`, `/messages/waitlist`), the generate/regenerate/save/discard/waitlist API routes, the A6 reducer + A5 screen, and the new lib helpers. The `/save` route (recipient promotion → audio copy → immutable insert → mark → delete) and the waitlist route were reviewed and found correctly guarded and idempotent — no entry warranted. The A6 reducer and A5 screen are clean and tested.
+
+### FU-34 update — trigger FIRED (the new flow is unreachable from app navigation)
+The "Pick up when" on #34 (*the prototype-stitching pass that wires voice-creation → message creation, since that's when the entry point gets pinned*) has come true. The Step 6 spine now renders on `/messages/new` (`src/app/messages/new/page.tsx` → `MessagesNewPageClient` → the A2→A7 orchestrator). But `/app/messages/new` still renders the **legacy** `NewMessageView` (`src/app/app/messages/new/page.tsx:27`), and **every app surface still routes to the legacy one** via `ROUTES.appMessagesNew`: `TabNav.tsx:13` (the "New Message" tab), `MemoryShelf.tsx:88` + `:171`, `src/app/app/vault/sealed/actions.tsx:11`, `src/app/app/record/page.tsx:65`, and `VoiceCreationView.tsx:244`. So the freshly-shipped message-creation flow is **dark** — a real user clicking "New Message" lands on the old screen; nothing in the app reaches the new spine. This is no longer hypothetical drift (as #34 was logged), it's a live entry-point gap. The `+ overlaps active Step 6 work` caveat is now stale — Step 6 has merged, which makes the repoint *safer* to do now, not blocked. Still **not agent-fixable**: choosing which route is canonical (and whether the legacy `/app/messages/new` tree is deleted) is an owner decision; once chosen, repointing the callers is one route-constant change. Two adjacent connection-pass items also have their triggers met now and should be resolved in the same pass: **#24** (`VoiceCreationView` success → `/app/messages/new` vs First Breath) and **#25** (`FirstBreathSequence` still exits to `/app/record/complete/stub`, `FirstBreathSequence.tsx:103`).
+
+### 57. [P3] Step 6 generate pipeline reports success without checking its `pending_generations` status writes
+The synchronous generate pipeline writes its terminal "succeeded" state to `pending_generations` without inspecting the returned `{ error }`, then reports success to the client regardless. Three concrete instances, all on the success path:
+- `src/lib/messages/audio.ts:87-91` — the audio-success write (`audio_status: "succeeded"`, `audio_path`, `audio_duration_ms`); `generateAndStoreAudio` then `return { ok: true }`.
+- `src/app/api/messages/generate/route.ts:301-305` — the text-success write (`generated_text`, `text_status: "succeeded"`); the route later returns `textStatus: "succeeded"`.
+- `src/app/api/messages/regenerate/route.ts:257-261` — the same text-success write on the control-arm re-roll.
+
+This is the same unchecked-Supabase-write pattern catalogued in #42–#46, in a different subsystem (the one excluded as WIP last pass). The failure-path writes in these files (marking `"failed"`) are deliberately best-effort and fine to leave; the **success** writes are the consequential ones.
+
+**Why it matters:** if any of these writes fails (RLS, transient DB error, the monotonic row no longer matching), the in-memory text/audio still flows forward, so the route answers `succeeded` and the client navigates to A6 — but the row was left non-ready (`text_status`/`audio_status` not `"succeeded"`, or no `audio_path`). A6's page guard (`src/app/messages/new/g/[generationId]/page.tsx:58`) then bounces the user back to `/messages/new` with no error shown, *after* a paid ElevenLabs render that wasn't persisted. The deferred candidate writes (`generate/route.ts:144-153`, `regenerate/route.ts:162-170`) are unchecked the same way — a failed write silently drops a reshape / re-roll the route reported as `candidate: true`, so the returning A6 won't show it.
+**Fix shape:** destructure `{ error }` on each success-path update; on error, log and return 500 (leave the row recoverable — the text/audio is regenerable on retry) rather than 200-ing a state that didn't persist. Mirror the existing checked writes in the same files (e.g. `generate/route.ts:251` insert, `regenerate/route.ts:210` bump). Agent-fixable; not owner-paired (no Stripe/auth/migration surface), though the ElevenLabs-spend angle makes it worth the owner knowing about.
+**Pick up when:** next time the Step 6 generate pipeline is touched, or paired with the #42–#46 unchecked-write batch — they're one class of fix.
+
+### 58. [P4] Stale Step 6 doc-comments now contradict the shipped code
+Two header/JSDoc comments in shipping Step 6 files describe a world that the Chunk 8–10 work has since changed, so they now mislead a maintainer reading the file:
+- `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx:16-20` — *"Interim navigation (FOLLOW_UPS #38): C3 (Vault Limit) isn't built, so a vault-limit save and discard both land on Home."* C3 shipped (Chunk 8, #38 resolved) and the code routes a vault-limit save **to C3** (`:229`, `${ROUTES.messagesLimit}?from=save_race`); only discard lands on Home.
+- `src/lib/messages/speech-duration.ts:4-9` — *"Nothing in the pipeline measures real audio duration yet — `pending_generations` has no duration column and the TTS call doesn't report one (FOLLOW_UPS #37)."* #37 is resolved: the `audio_duration_ms` column exists, `mp3-duration.ts` derives the real duration, and `audio.ts:89` writes it. The wpm estimate is now only a pre-load fallback, not the sole source.
+
+**Why it matters:** comments that assert a screen "isn't built" or a column "doesn't exist" when both now ship will send the next maintainer down a wrong path. Pure documentation, no functional risk.
+**Fix shape:** update both comments to match current behavior (C3 is built and is the vault-limit destination; duration is measured, the estimate is a fallback). Trivial; fold into any Step 6 touch.
+**Pick up when:** any Step 6 file pass, or the next docs/comment sweep.

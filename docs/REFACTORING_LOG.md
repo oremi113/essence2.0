@@ -23,6 +23,34 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-06-16 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 2 new backlog items + refined/promoted 1 existing; no code touched.
+- Scanned: health checks on `main` (typecheck ✅ · lint ✅ · test:unit 181/181 ✅). The Step 6
+  message-creation spine — excluded as WIP on `feat/step6-a6-screen` last pass — merged to `main`
+  (PRs #49 + #51, 2026-06-15), so it was reviewed as shipping code this run. No active `feat/*`
+  branch currently. Deep reads: the new `/messages/*` page-layer data-shuttles, the
+  generate/regenerate/save/discard/waitlist API routes, the A6 reducer + A5 screen, the new lib
+  helpers (mp3-duration, speech-duration, audio).
+- Triggers came true: **FU-34** — the Step 6 spine is now live on `/messages/new`, but every app
+  surface (TabNav, MemoryShelf, VaultSealed, record page, VoiceCreationView) still routes to the
+  legacy `/app/messages/new` → the new flow is unreachable from app navigation. Refined #34 and
+  promoted it (its "overlaps active work" caveat is now stale; the repoint is safer post-merge).
+  Adjacent connection-pass triggers #24 and #25 are also now met. Still owner-decision items
+  (which route is canonical; the FirstBreath exit destination) — not agent-fixable.
+- Discovered (new FOLLOW_UPS entries):
+  - FU-57 [P3] Step 6 generate pipeline reports success without checking its `pending_generations`
+    status writes (`audio.ts:87`, `generate/route.ts:301`, `regenerate/route.ts:257`) → a paid
+    render is reported "ready" but not persisted; A6's page guard bounces the user. Same
+    unchecked-write class as #42–#46, new subsystem.
+  - FU-58 [P4] Stale Step 6 doc-comments — C3 "isn't built" and FU-37 "no duration column" now
+    contradict the shipped code.
+- Reviewed-and-cleared: the `/save` route (recipient promotion → audio copy → immutable insert →
+  mark → delete, idempotent + race-guarded) and the `/waitlist` route (unique-violation handled as
+  idempotent success) — correctly guarded, no entry warranted. A6 reducer + A5 screen clean + tested.
+- Branch / commit: `triage/2026-06-16` @ <this commit>
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-13 — discovery (scheduled triage)
 - Outcome: Scan-only (read-only) — logged 5 new backlog items; no code touched.
 - Scanned: health checks on `main` (typecheck ✅ · lint ✅ · test:unit 154/154 ✅);
