@@ -36,6 +36,9 @@ export type ShelfMessageItem = {
   id: string;
   status: string;
   title: string | null;
+  /** Full message text — drives the ceremonial overlay + transcript. */
+  body: string | null;
+  /** Single-line preview (capped); the card clamps `body` visually instead. */
   bodyExcerpt: string | null;
   recipientName: string | null;
   category: MessageCategory;
@@ -80,6 +83,7 @@ export function serializeShelfMessage(row: ShelfMessageRow): ShelfMessageItem {
     id: row.id,
     status: row.status,
     title: row.title,
+    body: row.body_text,
     bodyExcerpt: toExcerpt(row.body_text),
     recipientName: extractRecipientName(row.recipients),
     category: row.category,

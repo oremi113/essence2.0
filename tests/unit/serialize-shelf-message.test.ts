@@ -27,12 +27,26 @@ describe("serializeShelfMessage", () => {
       id: "msg_1",
       status: "saved",
       title: "For Maya",
+      body: "Happy birthday, sweetheart.",
       bodyExcerpt: "Happy birthday, sweetheart.",
       recipientName: "Maya",
       category: "birthday",
       durationSeconds: 42,
       played: false,
       createdAt: "2026-06-16T12:00:00.000Z",
+    });
+  });
+
+  describe("body (full transcript text)", () => {
+    it("passes the full body through untruncated, even past the excerpt cap", () => {
+      const long = "z".repeat(200);
+      const out = serializeShelfMessage(row({ body_text: long }));
+      expect(out.body).toBe(long); // full text, not clamped
+      expect(out.bodyExcerpt).toBe("z".repeat(80) + "…"); // excerpt still capped
+    });
+
+    it("is null when body_text is null", () => {
+      expect(serializeShelfMessage(row({ body_text: null })).body).toBe(null);
     });
   });
 
