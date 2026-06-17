@@ -11,6 +11,7 @@ import {
 } from '@/lib/profile';
 import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen.types';
 import { OnboardingPageClient } from './OnboardingPageClient';
+import { persistOnboardingCompletion } from '@/lib/onboarding/persistOnboardingCompletion';
 import { ROUTES, signInWithNext } from '@/lib/routes';
 
 /**
@@ -106,7 +107,10 @@ export default async function OnboardingPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    // Expired/lost session: throw rather than silently return — a silent return
+    // resolves the action as "saved" and the wizard would navigate away,
+    // discarding everything the user typed (FOLLOW_UPS #42).
+    if (!user) throw new Error('Your session expired. Please sign in again.');
 
     const cleanedFirst = smartCase(firstName);
     const cleanedLast = smartCase(lastName);
@@ -118,19 +122,18 @@ export default async function OnboardingPage() {
 
     const displayName = [cleanedFirst, cleanedLast].filter(Boolean).join(' ');
 
-    await supabase
-      .from('profiles')
-      .update({
-        first_name: cleanedFirst,
-        last_name: cleanedLast,
-        display_name: displayName,
-        date_of_birth: dateOfBirth,
-        birth_year: birthYear,
-        city: cleanedCity,
-        state: stateCode,
-        onboarding_completed_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id);
+    // Throws on a write error so the screen keeps the user on the wizard with
+    // their draft intact instead of navigating into the app on a silent save
+    // failure (FOLLOW_UPS #42).
+    await persistOnboardingCompletion(supabase, user.id, {
+      first_name: cleanedFirst,
+      last_name: cleanedLast,
+      display_name: displayName,
+      date_of_birth: dateOfBirth,
+      birth_year: birthYear,
+      city: cleanedCity,
+      state: stateCode,
+    });
   }
 
   // Server action — uploads the Screen 10 photo to the private

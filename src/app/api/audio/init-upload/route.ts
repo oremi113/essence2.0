@@ -14,6 +14,7 @@ import { logEvent, logError } from "@/lib/logger";
 import { assertCanUploadClip } from "@/lib/guards";
 import { recordUsageEvent } from "@/lib/rate-limit";
 import { TOTAL_PROMPT_COUNT } from "@/lib/voice-training/script";
+import { promoteTrainingClipPath } from "@/lib/voice-training/promoteTrainingClipPath";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { audioInitUploadSchema } from "@/lib/api/schemas";
 
@@ -109,13 +110,21 @@ export const POST = defineRoute(
     }
 
     const clipId = row.id;
-    const ext = mime.includes("webm") ? "webm" : "webm";
+    // Training clips are always recorded as webm (see the recorder); the path
+    // extension is fixed rather than derived from the (untrusted) mime hint.
+    const ext = "webm";
     const objectPath = trainingClipObjectPath(user.id, voiceProfileId, clipId, ext);
 
-    await supabaseAuth
-      .from("training_clips")
-      .update({ storage_path: objectPath, mime_type: mime })
-      .eq("id", clipId);
+    // Promote the row from its placeholder "pending" path to the real object
+    // path. Throws on a write error so a silent failure can't leave the path
+    // "pending" (the later commit would lose the upload — FOLLOW_UPS #46). The
+    // stale "uploading" row is cleared by the next init-upload attempt.
+    try {
+      await promoteTrainingClipPath(supabaseAuth, clipId, { objectPath, mime });
+    } catch (pathError) {
+      logError({ event: "init_upload_path_update_failed", requestId, userId: user.id, voiceProfileId, error: pathError });
+      return NextResponse.json({ error: "Failed to prepare upload" }, { status: 500 });
+    }
 
     const { data: signData, error: signError } = await service.storage
       .from(AUDIO_BUCKET)

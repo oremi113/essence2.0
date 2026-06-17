@@ -11,6 +11,7 @@ import { createVoiceFromClips } from "@/lib/elevenlabs";
 import { NextResponse } from "next/server";
 import { logEvent, logError, durationSince } from "@/lib/logger";
 import { assertCanStartVoiceCreation } from "@/lib/guards";
+import { persistVoiceReady } from "@/lib/voice-training/persistVoiceReady";
 import { recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
 import {
   VOICE_PROFILE_MAX_ATTEMPTS,
@@ -298,21 +299,48 @@ export const POST = defineRoute<true, { id: string }>(
 
     if (result.ok) {
       const now = new Date().toISOString();
-      // Monotonic: only update if still "processing"
-      await supabase
-        .from("voice_profiles")
-        .update({
-          status: "ready",
-          vendor_voice_id: result.voice_id,
-          processing_completed_at: now,
-          ready_at: now,
-          last_error_code: null,
-          last_error_message: null,
-          last_error_at: null,
-        })
-        .eq("id", voiceProfileId)
-        .eq("user_id", user.id)
-        .eq("status", "processing"); // monotonic guard
+
+      // The vendor voice was created and billed; persist it locally. Throws on a
+      // write error — surface that rather than telling the client "ready" while
+      // the row stays "processing" (it would drift into the staleness window and
+      // read as a timed-out failure after a successful, paid creation —
+      // FOLLOW_UPS #43).
+      let persistResult;
+      try {
+        persistResult = await persistVoiceReady(supabase, {
+          voiceProfileId,
+          userId: user.id,
+          voiceId: result.voice_id,
+          completedAt: now,
+        });
+      } catch (persistError) {
+        logError({
+          event: "voice_create_persist_failed",
+          requestId,
+          userId: user.id,
+          voiceProfileId,
+          error: persistError,
+        });
+        await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
+        return NextResponse.json(
+          { error: "Your voice was created but we couldn't finish saving it. Please try again." },
+          { status: 500 },
+        );
+      }
+
+      // Zero rows updated → the monotonic guard matched nothing (the row wasn't
+      // "processing"). Usually a benign concurrent finisher already persisted
+      // ready; log it for observability and continue.
+      if (!persistResult.applied) {
+        logEvent({
+          event: "voice_create_persist_noop",
+          requestId,
+          userId: user.id,
+          voiceProfileId,
+          outcome: "rejected",
+          meta: { reason: "monotonic_guard_zero_rows" },
+        });
+      }
 
       const totalDurationMs = durationSince(startMs);
       logEvent({
