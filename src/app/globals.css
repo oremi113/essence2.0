@@ -1132,7 +1132,8 @@
 
     .onboarding-photo-confirmation,
     .onboarding-photo__replace,
-    .onboarding-photo-error {
+    .onboarding-photo-error,
+    .onboarding-ready-error {
       animation: none !important;
       opacity: 1 !important;
     }
@@ -1543,6 +1544,21 @@
 
   @keyframes onb-photo-error-fade-in {
     to { opacity: 1; }
+  }
+
+  /* Surfaces a failed final save on Screen 12 (lost session, DB write error).
+     Same warm register as the photo error; sits above the Begin button so the
+     user can retry in place — their answers are never discarded on failure. */
+  .onboarding-ready-error {
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-status-error);
+    margin: 0 auto var(--space-sm);
+    max-width: 320px;
+    line-height: 1.5;
+    opacity: 0;
+    animation: onb-photo-error-fade-in 200ms var(--ease-essence) forwards;
   }
 
   /* Round photo on the review card — sits above the data rows so the

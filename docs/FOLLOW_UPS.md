@@ -14,10 +14,10 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
-| 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ add error check + throw |
-| 5 | P3 | Cancelling an upload reads as a failure internally | ✅ **next up** |
+| 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (error check + throw shipped; retry-in-place error UI now landed — the deferred sibling) |
+| 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED (commit 35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
 | 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ |
-| 2 | P3 | Failed upload leaves stale internal state between retries | ✅ |
+| 2 | P3 | Failed upload leaves stale internal state between retries | ✅ RESOLVED (commit 35d7372 — catch path calls `resetPipeline()`; unit-tested) |
 | 26 | P3 | Generated DB types: only the CI drift-check remains | ✅ |
 | 16 | P3 | B2/B3 motion surfaces shipped with no analytics events | ⚠️ needs event-naming input |
 | 6 | P3 | Non-square photos will render wrong in the circle | ✅ when photo upload goes fully live |
@@ -42,7 +42,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ reorder record/update |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
-**Next-up fixable queue:** #5 → #1 → #2 → #26 (CI check) → #4.
+**Next-up fixable queue:** ~~#5~~ → ~~#1~~ → ~~#2~~ (all resolved in commit 35d7372) → #26 (CI check) → ~~#4~~. Remaining agent-fixable: #26 (CI drift-check), #43, #46.
 
 ## RecordingUpload / useUploadPipeline (from PR #33, 2026-04-19)
 
@@ -51,7 +51,9 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 **Fix:** restructure the auto-advance into a `useEffect` that keys off `promptIndex` and reset-equivalent state.
 
-### 2. [P3] Upload failure leaves hook status stuck at `'failed'`
+### 2. [P3] ✅ RESOLVED (commit 35d7372) — Upload failure leaves hook status stuck at `'failed'`
+**Resolution:** `RecordingUpload.tsx`'s `stopAndUpload` catch path now calls `resetPipeline()` after setting its own error state (`RecordingUpload.tsx:238`), so the hook's terminal `'failed'`/`'cancelled'` status no longer lingers between attempts for a future status consumer. Original entry below.
+
 `src/components/audio/RecordingUpload.tsx` — on upload error the component surfaces its own error state but never calls `uploadPipeline.reset()`. The hook's internal `status` stays `'failed'` until a new `upload()` call is initiated.
 
 **Why it's harmless today:** nothing outside `onStageChange` reads hook status.
@@ -67,7 +69,9 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 ## useUploadPipeline cancel (from PR #38, 2026-04-19)
 
-### 5. [P3 — next up] `cancel()` lands the hook in `'failed'`, not a cancelled/idle state
+### 5. [P3] ✅ RESOLVED (commit 35d7372) — `cancel()` lands the hook in `'failed'`, not a cancelled/idle state
+**Resolution:** `useUploadPipeline.ts` now has a dedicated `'cancelled'` terminal status and an `isAbortError()` check in the catch block — a `cancel()`-triggered `AbortError` lands in `'cancelled'` (no error message, `onStageChange?.('cancelled')`) while real failures still land in `'failed'`. The rejection is still re-thrown so awaiting callers can branch. Covered by `tests/unit/useUploadPipeline.test.tsx` (cancel-mid-init/mid-PUT lands `cancelled`; `onStageChange` fires `cancelled` not `failed`). Original entry below.
+
 `src/lib/upload/useUploadPipeline.ts` — the hook's `try/catch` wraps the whole pipeline, so when `cancel()` triggers an `AbortError`, it hits the catch block like any other error and sets `status: 'failed'`. Consumers calling `cancel()` will observe a failed state with an abort-error message.
 
 **Why it matters:** most cancel-aware hook APIs distinguish abort-caused rejections (typically → `'idle'` or `'cancelled'`) from real failures. Dashboards or retry UIs that key off `status: 'failed'` will falsely fire on user-initiated cancels.
@@ -461,7 +465,11 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: typecheck ✅ · lint ✅ · unit tests 154/154 ✅ (all green on `main`). Active feature branch `feat/step6-a6-screen` (last commit 2026-06-13) is mid-construction across the whole Step 6 message-creation flow — those files were treated as work-in-progress and excluded from this pass. A recurring pattern surfaced across stable subsystems: a Supabase write whose `{ error }` is not checked, so a failed save resolves as if it succeeded. The five below are the distinct, real instances; the Stripe webhook handlers and `upsertSubscription` were reviewed and found correctly guarded (errors throw, upserts are idempotent) — no entry warranted there.
 
-### 42. [P2] Onboarding completion swallows a failed save — the user's profile is silently discarded
+### 42. [P2] ✅ RESOLVED (2026-06-17) — Onboarding completion swallows a failed save — the user's profile is silently discarded
+**Resolution (two halves):**
+1. *Loud failure (shipped earlier):* `completeOnboarding` throws on a lost session (`page.tsx:113`) and delegates the write to `persistOnboardingCompletion`, which throws on a write error. `OnboardingPageClient.handleComplete` lets that rejection bubble (navigation is skipped on failure — only a confirmed save reaches `router.push`).
+2. *Retry-in-place error UI (the deferred sibling, 2026-06-17):* `OnboardingScreen.handleComplete`'s catch now maps the error to user-facing copy in `submitError` state instead of only `console.error`-ing. Two variants — transient ("Something kept us from saving just now. Your answers are safe — tap Begin to try again.") vs. session loss ("Your session timed out. Please refresh and sign in again — your answers are saved on this device."). `Screen12Ready` renders it as a `role="alert"` above the still-enabled Begin button (`.onboarding-ready-error`, warm register mirroring the photo-error style + reduced-motion rule). The draft is never cleared on failure, so every answer survives the retry. `/dev/onboarding` gained a "simulate save failure" toggle (transient/session) to exercise both copy variants without a real DB/session error; both verified in-browser. Unit-tested in `tests/unit/onboarding-screen12.test.tsx`. Original entry below.
+
 `src/app/onboarding/page.tsx:121-133` — the `completeOnboarding` server action runs the final `profiles` UPDATE (first/last name, DOB, city, state, `onboarding_completed_at`) but never inspects the returned `error`. The `uploadAvatar` action directly below it (`page.tsx:179-186`) *does* check and throw, so this is an asymmetry, not a house pattern. `OnboardingPageClient.handleComplete` (`OnboardingPageClient.tsx:38-39`) awaits the action then unconditionally `router.push(ROUTES.record)`. A second swallow sits at `page.tsx:109` (`if (!user) return;` — a silent no-op on an expired session).
 
 **Why it matters:** if that UPDATE fails (RLS, transient DB error, constraint), the action resolves as though it saved, the wizard navigates the user into the app, and everything they typed during onboarding is lost — `onboarding_completed_at` stays null, so they're treated as not-onboarded next visit. This is the first flow every new user hits, so a misconfiguration here loses data for *all* new users, invisibly.
