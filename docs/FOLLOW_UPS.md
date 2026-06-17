@@ -523,3 +523,21 @@ Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx
 - **#9 (re-entry shows previously-uploaded photo):** appears addressed — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl`, replacing the prototype's `resetPhoto()`. Recommend the fixer verify and strike.
 
 These are left for the fixer to strike (resolution strikes are the fixer's lane per the coordination rule); flagged here so they don't linger as falsely-open.
+
+## Step 8 Home B — deferred wiring (from the Home B build, 2026-06-17)
+
+The completed-user hub shipped (`src/components/screens/home/HomeBScreen.tsx`,
+`/home` branch, `/dev/home-b`, unit tests). Three connection-pass gaps were
+deliberately left, each safe to defer:
+
+### 57. [P3] First-arrival into Home B is param-driven but the upstream handoff isn't wired, and it isn't durable
+`src/app/home/page.tsx` reads `?welcome=1` → `firstArrival`, driving the visit-#1 beat (rich→cream ground settle, heavier stagger, the one-time "This is home now." line). **Nothing currently routes to `/home?welcome=1`** — the §6.4 arc lands the user on Home B "right after creating their first message," so the message-save → home handoff (Step 6 A7 / first-breath exit) should append `?welcome=1` on the *first* landing. Also, the beat is **not durable**: a refresh with the param still in the URL re-shows it. A once-per-lifetime guard (a `profiles` flag, e.g. alongside `three_shaped_ceremony_seen_at`, or stripping the param after first paint) would make it true to "visit #1."
+**Why it matters:** until wired, the §6.4 "new chapter" moment never fires in production (only the calm steady state shows). Low risk — purely additive.
+**Fix shape:** (1) set `?welcome=1` at the first-message→home handoff; (2) optional durable latch so it's once-per-lifetime, not once-per-param.
+**Pick up when:** the Step 6/Step 8 connection pass (after the message-creation flow lands its forward routing), or when First Breath's exit destination (FU-25) is decided.
+
+### 58. [P4] Home B settings affordance dead-links until Step 9
+`HomeBPageClient`'s `onSettings` is an intentional no-op — the gear renders (the affordance lives on Home B per the handoff) but Step 9 (Settings & Trust, M3) isn't built, so there's no route yet. Wire `onSettings` to the settings route when Step 9 lands. **Pick up when:** Step 9 / M3.
+
+### 59. [P3 · needs event-naming input] Home B has no analytics instrumentation
+The screen emits no events (home-B viewed, create tapped, restore tapped, waitlist tapped, preview-row → shelf). The prototype/handoff didn't specify an event contract (cf. FU-16 for the same gap on B2/B3 surfaces). **Why flag now:** telemetry decisions are cheap during design. **Pick up when:** whoever owns the analytics contract next touches `docs/analytics/` — capture Home B's events there, then instrument.

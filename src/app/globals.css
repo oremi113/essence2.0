@@ -34,11 +34,13 @@
 
   /* ─── PRIMARY ACCENT ──────────────────────────────── */
   --color-mineral:        #7A8088;  /* primary buttons, active states, recording */
-  --color-mineral-dark:   #656B73;  /* hover on primary buttons */
+  --color-mineral-dark:   #656B73;  /* AA-safe primary fill / hover — white clears 5.38:1 (vs 3.98:1 on --color-mineral) */
+  --color-mineral-darker: #565C63;  /* pressed/hover on a --color-mineral-dark fill (Home B create CTA) */
 
   /* ─── TEXT ────────────────────────────────────────── */
   --color-text-primary:   #1C1A18;  /* headlines, body — 17.8:1 contrast on bg-primary */
   --color-text-secondary: #6B6B6B;  /* supporting text — 5.8:1 contrast */
+  --color-text-secondary-strong: #5A5A5A;  /* supporting text on warm surfaces — clears AA where -secondary dips below 4.5:1 */
   --color-text-tertiary:  #ADA9A5;  /* disabled, subtle — large text only */
 
   /* ─── STATUS ──────────────────────────────────────── */
