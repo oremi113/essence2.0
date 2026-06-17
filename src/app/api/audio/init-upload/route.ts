@@ -70,15 +70,7 @@ export const POST = defineRoute(
       );
     }
 
-    // --- Record usage event ---
     const service = createSupabaseServiceClient();
-    await recordUsageEvent(service, {
-      userId: user.id,
-      action: "signed_url_upload",
-      requestId,
-      outcome: "success",
-      meta: { voiceProfileId, promptIndex },
-    });
 
     // Clear any stale "uploading" row
     await supabaseAuth
@@ -136,6 +128,17 @@ export const POST = defineRoute(
     }
 
     const expiresAt = new Date(Date.now() + UPLOAD_URL_EXPIRY_SEC * 1000).toISOString();
+
+    // Record usage only once the upload URL is actually issued — a failed
+    // insert/path-write/sign must not log "success" or consume the signed-URL
+    // budget (FOLLOW_UPS #45).
+    await recordUsageEvent(service, {
+      userId: user.id,
+      action: "signed_url_upload",
+      requestId,
+      outcome: "success",
+      meta: { voiceProfileId, promptIndex },
+    });
 
     logEvent({
       event: "init_upload_success",
