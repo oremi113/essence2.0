@@ -12,7 +12,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 22 | P2 | Voice creation has zero payment gating — ElevenLabs cost exposure | ❌ decision (gate or not, before launch) |
 | 34 | P2 | Two parallel message-creation routes; one is legacy | ✅ RESOLVED 2026-06-16 (M0 — legacy retired) |
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
-| 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
+| 23 | P2 | Lapsed subscribers dead-end on the restore screen | ✅ RESOLVED 2026-06-16 (stripe-hardening — confirmations answered, CTA branch built) |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
 | 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (error check + throw shipped; retry-in-place error UI now landed — the deferred sibling) |
 | 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED (commit 35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
@@ -34,7 +34,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 56 | P4 | A4 example placeholder is birthday-flavoured but copy is category-agnostic | ⏳ per-category examples (+ question/subtitle) |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
-| 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
+| 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ RESOLVED 2026-06-16 (stripe-hardening — write now checked + throws) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
@@ -192,7 +192,14 @@ The real underlying question is a product one: **should voice creation require a
 
 ## Stripe / restore surface (from Session 7c, 2026-04-21)
 
-### 23. [P2 · 2 confirmations needed] Customer Portal cannot resurrect a deleted subscription — restore screen dead-ends for lapsed users
+### 23. [P2] ✅ RESOLVED (stripe-hardening, 2026-06-16) — Customer Portal cannot resurrect a deleted subscription — restore screen dead-ends for lapsed users
+**Resolution (all 3 product confirmations answered by owner):**
+1. *Preserve prior plan* — confirmed. `resolveRestorePlan()` (`src/lib/subscription/restore-mode.ts`) re-checkouts a `lapsed`/`cancelled` user on their previous `billing_period` (read from `getSubscriptionStatus().billingPeriod`, the newest row), falling back to monthly only when unknown. A returning annual subscriber is never silently dropped to monthly.
+2. *Adapting CTA copy, clear-not-clever* — `VaultRestoreScreen` takes a `mode` prop: `past_due` → "Update my card" (Portal, existing behavior); `lapsed`/`cancelled` → "Restart my vault" (new checkout on the existing customer). The body's action line adapts too ("Updating your card…" vs "Starting again… same plan as before").
+3. *Fresh trial on restart* — confirmed acceptable; the standard `createCheckoutSession` 7-day trial carries over, watched for abuse.
+
+Wiring: `restore/page.tsx` resolves `{mode, plan}` and passes them to `restore/actions.tsx`, which branches the fetch (portal-session vs create-checkout-session). The webhook half is independently hardened (terminal state is now sticky — a stale event can't resurrect a dead subscription; a restart correctly mints a NEW id that wins on newest-row ordering). Pure helper unit-tested in `tests/unit/restore-mode.test.ts`; dev sandbox `/dev/lapse` shows all four mode×recordings variants; copy verified rendered server-side. Original entry below.
+
 After Smart Retries exhausts its attempts, Stripe fires `customer.subscription.deleted` with `cancellation_details.reason = 'payment_failed'`, and our webhook writes `status = 'lapsed'`. A lapsed user who lands on `/app/vault/restore` and taps "Bring my vault back" opens the Customer Portal. The Portal lets them update their card — but Stripe does **not** automatically recreate a deleted subscription. Card update has no effect on a fully-lapsed user. They land back on `/app/vault/restore` still in `status = 'lapsed'`, confused about why nothing changed.
 
 `past_due` users (subscription still exists, retry cycle still active) are fine — Portal → update card → next retry succeeds → webhook flips status back to `active`. The gap is specifically the lapsed/cancelled case.
@@ -483,7 +490,9 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 **Fix shape:** destructure `{ error }` on the success update; on error, log and return 500 (the voice exists at the vendor but local state is lost — surface it rather than 200-ing). Consider logging when the monotonic guard updates zero rows.
 **Pick up when:** next time the voice-creation pipeline is touched. Agent-fixable.
 
-### 44. [P3 · owner-paired (Stripe)] Checkout doesn't check the customer-id save — a failed write spawns duplicate Stripe customers
+### 44. [P3] ✅ RESOLVED (stripe-hardening, 2026-06-16) — Checkout doesn't check the customer-id save — a failed write spawns duplicate Stripe customers
+**Resolution:** the `stripe_customer_id` write-back in `create-checkout-session.ts` now captures `{ error }` and throws (`code: 'profile_lookup_failed'`, which the route already maps to a 500 "Account setup incomplete") — a failed persist aborts checkout instead of leaking a duplicate-customer path. Covered indirectly by the webhook-handler hardening suite; the write-back guard mirrors the existing checked-lookup pattern. Original entry below.
+
 `src/lib/stripe/create-checkout-session.ts:85-88` — after creating a new Stripe customer the code writes `stripe_customer_id` back to `profiles` without checking the error. The profile *lookup* a few lines up (`:40`) is checked and throws loudly; the write isn't.
 
 **Why it matters:** if that write fails the current checkout still works (the id is held in memory), but the profile keeps `stripe_customer_id = null`. The next checkout attempt finds no stored id (`:63`) and creates *another* Stripe customer — so a user accumulates duplicate customer records in Stripe, splintering their billing/subscription history across customers. Money-path hygiene.
