@@ -18,6 +18,16 @@ authoritative entry point — a fresh context window should start here.
   `/dev/shelf` with an 8-state dev rail. Playback engine extended additively
   with a real `currentTime`/`duration`/`ended` (live element timer, not a faked
   interval). All 8 states verified via Playwright at **390×844 / 4× CPU**.
+- **Live-verify + fix (2026-06-17):** walked the real `/app/shelf` (test
+  account, 390×844 / 4× CPU). Real data renders correctly (`daily_reminder` →
+  "A daily reminder", 19908ms → `0:20`, full body, unplayed glow) and real
+  signed-URL playback works (play route 200 + signed URL). The pass surfaced a
+  defect: **nothing wrote `played_count`**, so `played` was permanently `false`
+  and the glow never retired. Fixed — the play route now increments
+  `played_count` + stamps `last_played_at` on signed-URL issue (verified 0→1).
+  Analytics: corrected the wrong claim in `2026-06-16-step7-message-fields.md`
+  and added `2026-06-17-played-count-write.md` (new write + historical
+  discontinuity). M1 is closed.
 - **Decision (2026-06-16):** on the empty state the persistent "Memory Shelf"
   header is **suppressed** so it doesn't stack with the empty hero's "Your
   Memory Shelf" title. A deliberate divergence from the prototype (which kept

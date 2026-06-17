@@ -37,10 +37,13 @@ Landed on `main` with the Step 7 Chunk 1 PR (branch
 
 **What to watch**
 
-- `played` is a coarse "ever played" flag, not a count. It tracks `played_count`,
-  which is incremented by the playback path; if that increment ever regresses,
-  `played` silently reads false (unplayed glow stays on). Cross-check against
-  `played_count`/`last_played_at` directly when auditing engagement.
+- `played` is a coarse "ever played" flag, not a count. It reads
+  `played_count > 0`. **Caveat (corrected 2026-06-17):** at the time this field
+  was first exposed, *nothing wrote `played_count`* — so `played` was always
+  `false`. The write was added the next day (see
+  `2026-06-17-played-count-write.md`); rows played before then read `false`
+  regardless of actual history. Cross-check `played_count`/`last_played_at`
+  directly when auditing engagement.
 - `durationSeconds` is rounded; do not sum it for precise listening-time
   analytics — use `audio_duration_ms` at the source for that.
 - `category` is emitted as the DB enum (`daily_reminder`, `future_message`,
