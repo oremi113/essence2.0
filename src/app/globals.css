@@ -365,7 +365,7 @@
     justify-content: center;
     min-height: 52px;
     padding: 16px 24px;
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-primary);
     font-family: var(--font-body);
     font-size: 17px;
@@ -381,7 +381,7 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-mineral-dark);
+    background-color: var(--color-mineral-darker);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
@@ -3134,7 +3134,7 @@
   }
 
   .vault-cta {
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-neutral);
     font-family: var(--font-body);
     font-size: var(--text-ui);
@@ -3148,7 +3148,7 @@
     transition: background-color var(--duration-micro) var(--ease-essence);
     box-shadow: var(--shadow-mineral);
   }
-  .vault-cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-cta:hover { background-color: var(--color-mineral-darker); }
   .vault-cta:active { transform: translateY(1px); }
 
   .vault-card__reassurance {
@@ -3343,7 +3343,7 @@
 
   .vault-past-due-banner__cta {
     align-self: flex-start;
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-neutral);
     font-family: var(--font-body);
     font-size: var(--text-ui);
@@ -3355,7 +3355,7 @@
     cursor: pointer;
     transition: background-color var(--duration-micro) var(--ease-essence);
   }
-  .vault-past-due-banner__cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-past-due-banner__cta:hover { background-color: var(--color-mineral-darker); }
   .vault-past-due-banner__cta:active { transform: translateY(1px); }
 
   @media (min-width: 768px) {
@@ -3416,7 +3416,7 @@
   }
 
   .vault-restore-screen__cta {
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-neutral);
     font-family: var(--font-body);
     font-size: var(--text-ui);
@@ -3430,7 +3430,7 @@
     transition: background-color var(--duration-micro) var(--ease-essence);
     box-shadow: var(--shadow-mineral);
   }
-  .vault-restore-screen__cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-restore-screen__cta:hover { background-color: var(--color-mineral-darker); }
   .vault-restore-screen__cta:active { transform: translateY(1px); }
   .vault-restore-screen__cta:disabled {
     opacity: 0.5;
@@ -3567,7 +3567,7 @@
 
   /* ── Primary CTA (warm mineral lift) ────────────────────── */
   .shelf-btn-primary {
-    background: var(--color-mineral);
+    background: var(--color-mineral-dark);
     color: #fff;
     border: none;
     padding: var(--space-lg) var(--space-2xl);
@@ -3580,7 +3580,7 @@
     transition: background var(--duration-micro) var(--ease-essence),
                 transform var(--duration-micro) var(--ease-essence);
   }
-  .shelf-btn-primary:hover { background: var(--color-mineral-dark); transform: translateY(-1px); }
+  .shelf-btn-primary:hover { background: var(--color-mineral-darker); transform: translateY(-1px); }
   .shelf-btn-primary:active { transform: translateY(0); transition: transform 100ms var(--ease-press); }
 
   /* ── Message cards ──────────────────────────────────────── */
@@ -3664,7 +3664,7 @@
   }
 
   .shelf-btn-play {
-    background: var(--color-mineral);
+    background: var(--color-mineral-dark);
     border: none;
     color: #fff;
     font-size: var(--text-small);
@@ -3681,7 +3681,7 @@
                 transform var(--duration-micro) var(--ease-essence);
   }
   .shelf-btn-play::before { content: '\25B7'; font-size: 16px; margin-right: -2px; }
-  .shelf-btn-play:hover { background: var(--color-mineral-dark); transform: translateY(-1px); }
+  .shelf-btn-play:hover { background: var(--color-mineral-darker); transform: translateY(-1px); }
   .shelf-btn-play:active { transform: translateY(0); transition: transform 100ms var(--ease-press); }
 
   .shelf-card__unavailable-label {
@@ -3703,7 +3703,7 @@
   }
   .shelf-btn-retry {
     display: block;
-    background: var(--color-mineral);
+    background: var(--color-mineral-dark);
     color: #fff;
     border: none;
     padding: var(--space-sm) var(--space-lg);
@@ -3714,7 +3714,7 @@
     margin-top: var(--space-sm);
     transition: background var(--duration-micro) var(--ease-essence);
   }
-  .shelf-btn-retry:hover { background: var(--color-mineral-dark); }
+  .shelf-btn-retry:hover { background: var(--color-mineral-darker); }
 
   /* ── "Create another" (1–2 messages, calm) ──────────────── */
   .shelf-add { text-align: center; padding: var(--space-md) 0 var(--space-2xl); }
@@ -3891,7 +3891,7 @@
     animation: shelf-controls-fade var(--duration-small) 500ms var(--ease-essence) forwards;
   }
   .shelf-btn-modal-primary {
-    background: var(--color-mineral);
+    background: var(--color-mineral-dark);
     color: #fff;
     border: none;
     padding: var(--space-lg) var(--space-4xl);
@@ -3904,7 +3904,7 @@
     box-shadow: var(--shadow-mineral);
     transition: background var(--duration-micro) var(--ease-essence), transform var(--duration-micro) var(--ease-essence);
   }
-  .shelf-btn-modal-primary:hover:not(:disabled) { background: var(--color-mineral-dark); transform: scale(1.02); }
+  .shelf-btn-modal-primary:hover:not(:disabled) { background: var(--color-mineral-darker); transform: scale(1.02); }
   .shelf-btn-modal-primary:active:not(:disabled) { transform: scale(1); transition: transform 100ms var(--ease-press); }
   .shelf-btn-modal-primary:disabled { opacity: 0.55; cursor: progress; }
   .shelf-btn-modal-secondary {
