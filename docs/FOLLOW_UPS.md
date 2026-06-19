@@ -18,12 +18,12 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED (commit 35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
 | 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ |
 | 2 | P3 | Failed upload leaves stale internal state between retries | ✅ RESOLVED (commit 35d7372 — catch path calls `resetPipeline()`; unit-tested) |
-| 26 | P3 | Generated DB types: only the CI drift-check remains | ✅ |
+| 26 | P3 | Generated DB types + CI drift-check | ✅ RESOLVED 2026-06-19 (CI `types-drift` job regenerates from migrations, fails on diff) |
 | 16 | P3 | B2/B3 motion surfaces shipped with no analytics events | ⚠️ needs event-naming input |
-| 6 | P3 | Non-square photos will render wrong in the circle | ✅ when photo upload goes fully live |
-| 7 | P3 | Photo success is silent for screen-reader users | ✅ (batch with a11y pass) |
+| 6 | P3 | Non-square photos: client-side `object-fit` done; **server-side thumbnail remains** | ⏳ narrowed — needs Storage transform/render step |
+| 7 | P3 | Photo success is silent for screen-reader users | ✅ RESOLVED (B1 rework 88ff6e4 — `sr-only role="status"` announce) |
 | 8 | P3 | Reduced-motion fallback for stone beat + upload ring | ✅ (in B3 scope) |
-| 9 | P3 | Going "back" to the photo screen wrongly resets it | ✅ when Screen 10 production build lands |
+| 9 | P3 | Going "back" to the photo screen wrongly resets it | ✅ RESOLVED (Screen10 renders `preview ?? avatarUrl`) |
 | 12 | P3 | No way to remove a photo after upload | ❌ decision (settings roadmap) |
 | 28 | P3 | Pending-audio bucket differs from the documented contract | ❌ decision (ratify or provision) |
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ✅ RESOLVED 2026-06-16 (M0 — history reconciled, db push clean) |
@@ -33,16 +33,16 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ✅ RESOLVED 2026-06-14 (waitFor) |
 | 56 | P4 | A4 example placeholder is birthday-flavoured but copy is category-agnostic | ⏳ per-category examples (+ question/subtitle) |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
-| 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
+| 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — `persistVoiceReady` throws on error) |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ RESOLVED 2026-06-16 (stripe-hardening — write now checked + throws) |
-| 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
+| 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — path write throws; dead ternary removed) |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
-| 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ reorder record/update |
+| 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ RESOLVED 2026-06-18 (5fef4ea — record moved below the sign) |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
-**Next-up fixable queue:** ~~#5~~ → ~~#1~~ → ~~#2~~ (all resolved in commit 35d7372) → #26 (CI check) → ~~#4~~. Remaining agent-fixable: #26 (CI drift-check), #43, #46.
+**Next-up fixable queue:** ~~#5~~ → ~~#1~~ → ~~#2~~ (all resolved in commit 35d7372) → ~~#26~~ (CI drift-check, resolved 2026-06-19) → ~~#4~~ → ~~#43~~ → ~~#46~~ (both resolved a92e915, 2026-06-17). **No agent-fixable items remain in this queue** — every entry left in the table is a decision (❌), a scoped-trigger deferral (⏳), or already resolved.
 
 ## RecordingUpload / useUploadPipeline (from PR #33, 2026-04-19)
 
@@ -81,13 +81,16 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 Omissions surfaced during the Screen 10 photo control review. Named as follow-ups rather than folded into the B1 Terminal doc because they're production-layer, adjacent-flow, or accessibility-layer concerns that deserve their own treatment.
 
-### 6. [P3] Photo fit inside circle (object-fit + aspect handling)
-Real uploads are rarely square. Portrait 9:16 photos, landscape DSLR exports, and panorama captures all hit Supabase Storage at native aspect ratio. The prototype pretends the photo is already square.
+### 6. [P3 — narrowed 2026-06-19] Photo fit inside circle — client half done, **server-side thumbnail remains**
+**Client half shipped:** `src/app/globals.css:1449-1450` sets `object-fit: cover; object-position: center;` on `.onboarding-photo__img`, so non-square uploads no longer distort in the circle. The display-fit concern is closed.
+**Remaining (the real fix):** server-side thumbnail generation — Supabase Storage transform or a separate render step — so the full-resolution original isn't shipped to every consumer (onboarding + Screen 9 + Home B + all downstream message cards). `object-fit` masks the aspect ratio but still downloads the native-size file.
+**Pick up when:** a Storage/thumbnail strategy pass — one decision, many consumers (still worth doing together).
 
-**Where it surfaces:** the `<img>` that replaces the empty circle state. Needs `object-fit: cover` + `object-position: center` at minimum. Server-side thumbnail generation (Supabase Storage transform or a separate render step) is the real fix.
-**Pick up when:** Screen 10 moves from prototype to first real Supabase Storage integration. Probably during the B1 Terminal pass, but treated here because thumbnail strategy spans onboarding + Screen 9 + Home B + all downstream message cards. One decision, many consumers.
+Real uploads are rarely square. Portrait 9:16 photos, landscape DSLR exports, and panorama captures all hit Supabase Storage at native aspect ratio. The prototype pretended the photo is already square.
 
-### 7. [P3] Screen reader announcement on photo success
+### 7. [P3] ✅ RESOLVED (B1 rework 88ff6e4) — Screen reader announcement on photo success
+**Resolution:** `src/components/screens/onboarding/Screen10.tsx:156-158` renders `<p class="sr-only" role="status" aria-live="polite">Profile photo added.</p>` — exactly the fix shape below — so VoiceOver/TalkBack now announce the success beat independently of the visible "Looking good" copy. Original entry below.
+
 When the photo lands, nothing is announced to assistive tech. The stone beating to `ready` is `aria-hidden="true"` by design. "Looking good" is visible text but not in a live region. VoiceOver/TalkBack users get silence on what is supposed to be a small positive moment.
 
 **Fix shape:** add `role="status"` + `aria-live="polite"` to the "Looking good" paragraph, OR use a dedicated `<p class="sr-only" role="status" aria-live="polite">Photo added.</p>` that announces independently of visible copy.
@@ -98,7 +101,9 @@ The in-flight breathing ring and the success-state stone beat (idle → ready �
 
 **Pick up when:** Bucket B3 (Reduced-motion fallbacks). Already in scope there — cross-reference this entry so it doesn't get missed.
 
-### 9. [P3] Re-entry state for previously-uploaded photo
+### 9. [P3] ✅ RESOLVED — Re-entry state for previously-uploaded photo
+**Resolution:** the production Screen 10 mints a signed URL for an existing avatar (in `page.tsx`) and renders it via `displayUrl = preview ?? avatarUrl` (`src/components/screens/onboarding/Screen10.tsx:65`), so navigating back shows the previously-uploaded photo with the replace affordance instead of the prototype's `resetPhoto()`. Original entry below.
+
 If a user navigates forward past Screen 10 and then navigates back via Screen 9's "Change" link or browser back, Screen 10 currently resets (`prototypes/voice-recording-flow.html:1890`, `if (n === 10) resetPhoto()`). That's wrong for production. The circle should show the previously-uploaded photo with the "Replace" link visible and the CTA showing "Continue."
 
 **Pick up when:** B1 Terminal doc lands and moves into Session 4 onboarding build. This is a state-persistence concern that lives in the parent `useOnboardingForm` hook, not the Screen 10 component spec.
@@ -223,10 +228,10 @@ After Smart Retries exhausts its attempts, Stripe fires `customer.subscription.d
 
 These two entries capture the orphaned-First-Breath gap discovered while scoping Session 8. The polling infra, success state, First Breath screen, and guards all exist — what's undecided is routing. Both are explicit "connection pass" work, deliberately deferred so Sessions 8/9/10 can build surfaces in isolation.
 
-### 24. [P2 · hold: overlaps active Step 6 work] `VoiceCreationView` success state routes to `/app/messages/new` instead of First Breath
-`src/components/voice/VoiceCreationView.tsx:243` — on `status === 'ready'`, the success screen's primary CTA pushes to `/app/messages/new`, skipping the ceremonial First Breath Stone moment at `/app/record/complete` entirely.
+### 24. [P2 · hold: overlaps active Step 6 work] `VoiceCreationView` success state routes to message-creation instead of First Breath
+**Still open (specifics updated 2026-06-19):** on `status === 'ready'` the success CTA pushes to `ROUTES.messagesNew` (`src/components/voice/VoiceCreationView.tsx:244`), still skipping the ceremonial First Breath Stone at `/app/record/complete`. Note the target is no longer the literal `/app/messages/new` from the original entry — M0 made `/messages/new` canonical (see #34) and this caller was repointed to `ROUTES.messagesNew` with it. The First Breath bypass is unchanged; only the destination route string moved.
 
-**Affected file:** `src/components/voice/VoiceCreationView.tsx` — the `onClick={() => router.push("/app/messages/new")}` in the success branch (~line 243–246).
+**Affected file:** `src/components/voice/VoiceCreationView.tsx:244` — the `onClick={() => router.push(ROUTES.messagesNew)}` in the success branch.
 
 **Fix shape:** one-line change — swap the push target to `/app/record/complete`. First Breath's server-side guards at `src/app/app/record/complete/page.tsx:14–36` already admit `ready`/`processing`/`queued` profiles, so routing there on success is safe.
 
@@ -248,9 +253,15 @@ These two entries capture the orphaned-First-Breath gap discovered while scoping
 
 ## Supabase generated types not wired up (from Session 8 micro-pass, 2026-04-21)
 
-### 26. [P3 — mostly resolved; CI check remains] DB enum types are hand-written unions; no generated types file
+### 26. [P3] ✅ RESOLVED (2026-06-19) — DB enum types are generated and a CI drift-check guards them
 
-**Update (seed scan, 2026-06-12):** steps 1–3 of the fix shape have landed — `src/lib/supabase/types.ts` exists (generated), and `MessageCategory` in `src/lib/messageTemplates.ts:32` now derives from `Database['public']['Enums']['message_category']`. Remaining: step 4 only — a CI/pre-commit drift check that regenerates types and fails on diff. Original entry below.
+**Resolution (step 4 — the last open piece — landed 2026-06-19):** a CI job now regenerates `src/lib/supabase/types.ts` from the committed migrations and fails the build on any diff.
+- **Script** `scripts/gen-types.mjs` is the single source of the generation command (`supabase gen types typescript <source> --schema public`). Two modes: `--write` (regenerate + overwrite, exposed as `npm run gen:types`) and `--check` (regenerate → diff committed file → exit 1 with a rendered diff + remediation, exposed as `npm run check:types`). The `--schema public` flag is load-bearing — the committed file is public-only, so omitting it spuriously adds `graphql_public` and reports false drift. Schema source is selectable via `TYPES_SOURCE` (`local` default for CI; `linked` for local dev when Docker is absent).
+- **CI** a dedicated `types-drift` job in `.github/workflows/ci.yml` spins up a throwaway local Postgres (`supabase db start` + `supabase migration up --local`) from `supabase/migrations`, then runs `npm run check:types` with `TYPES_SOURCE=local`. **Self-contained: no secrets, no remote access** — migrations are the source of truth, so the check catches a migration that changes a table/enum without regenerating types (the exact drift `tsc` can't see).
+- **Why CI over pre-commit:** the check needs a Postgres to apply migrations against; running Docker on every local commit is too heavy, and no husky/pre-commit harness exists in the repo. CI is the proportionate gate.
+- **Verified 2026-06-19:** `--check` is byte-exact against the committed file when in sync (exit 0); catches a perturbation with a diff + exit 1; `--write` is idempotent; bad-mode/bad-source guards exit 2; lint clean. The script's full logic was exercised locally via `TYPES_SOURCE=linked` (Docker unavailable in the authoring env); the `--local` path is identical but for the connection flag, and `supabase db push --dry-run` reports "Remote database is up to date" — so migrations == remote == committed `types.ts` all agree, meaning the `--local` generation yields the same bytes. The Docker startup itself runs only in CI.
+
+Steps 1–3 had already landed (seed scan, 2026-06-12): `src/lib/supabase/types.ts` exists (generated), and `MessageCategory` in `src/lib/messageTemplates.ts:32` derives from `Database['public']['Enums']['message_category']`. Original entry below.
 This repo does not have a `src/lib/supabase/types.ts` (or equivalent) produced by `supabase gen types typescript`. TS files that need DB enum types currently hand-write string-literal unions that mirror the Postgres enums.
 
 **Current instance:** `src/lib/messageTemplates.ts:26` defines `MessageCategory` as an inline union with a comment pinning it to `supabase/migrations/20260421120000_messages_category.sql`. Same pattern will repeat for future DB-typed work unless the generation workflow lands.
@@ -483,7 +494,9 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 **Fix shape:** capture `{ error }` on the update and `throw` on failure (mirror `uploadAvatar`); throw rather than silently return on the expired-session branch; have `handleComplete` surface the error instead of navigating. The smallest correct fix is to make the failure loud so the user can retry rather than lose input.
 **Pick up when:** soon — shipping-path data integrity. Agent-fixable (error check + throw); the only product touch is the eventual error-UI copy, which can be a separate follow-up.
 
-### 43. [P3] Voice-creation success doesn't verify its DB write — user can be told "ready" while the profile stays "processing"
+### 43. [P3] ✅ RESOLVED (a92e915, 2026-06-17) — Voice-creation success doesn't verify its DB write
+**Resolution:** the success-path write is now `persistVoiceReady()` wrapped in a try-catch that throws on error (`src/app/api/voice-profiles/[id]/start/route.ts:309-329`), so a failed `status='ready'` / `vendor_voice_id` write surfaces as a 500 instead of 200-ing a client that then drifts into the staleness window. Shipped alongside #42 and #46 in the "make writes fail loud" pass. Original entry below.
+
 `src/app/api/voice-profiles/[id]/start/route.ts:302-315` — on a successful ElevenLabs result the route updates `voice_profiles` to `status='ready'` (+ `vendor_voice_id`) but doesn't check the returned error, then returns `{ status: "ready" }`. Both *failure*-path updates in the same route (≈lines 131 and 177) are error-checked — again an asymmetry within one file.
 
 **Why it matters:** if that write fails (or the `.eq("status","processing")` monotonic guard matches zero rows), the client is told the voice is ready while the row is still `processing` / has no `vendor_voice_id`. The ElevenLabs voice was created and billed, but the result isn't persisted — the profile then drifts into the 3-minute staleness window and reads as timed-out/failed, so the user sees failure after a successful, paid creation.
@@ -499,14 +512,18 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 **Fix shape:** capture `{ error }` on the update and throw (matching the lookup's pattern) so a failed persist aborts before checkout rather than silently leaking a duplicate-customer path. Owner-paired because it sits in the Stripe surface.
 **Pick up when:** before public launch, or the next Stripe-surface pass.
 
-### 45. [P4] Signed-URL routes log usage as "success" before the work that can fail
+### 45. [P4] ✅ RESOLVED (5fef4ea, 2026-06-18) — Signed-URL routes log usage as "success" before the work that can fail
+**Resolution:** both routes now call `recordUsageEvent(..., outcome: "success")` *after* the URL is issued — init-upload signs at `route.ts:123` then records at `:135`; playback-url signs at `:59` then records at `:68`. The ledger no longer counts a failed sign as success, and a failed sign no longer consumes the per-minute budget. (The fix took the doc's simpler "move record below the sign" option rather than the started→finalize split.) Original entry below.
+
 `src/app/api/audio/init-upload/route.ts:74-80` and `src/app/api/audio/playback-url/route.ts:38-44` — both call `recordUsageEvent(..., outcome: "success")` *before* the operations that can still fail (the DB insert + `createSignedUploadUrl` in init-upload; the clip fetch, ownership/status checks, and `createSignedUrl` in playback-url). The established pattern — `recordUsageEvent` defaults to `outcome: "started"`, then `updateUsageEventOutcome` finalizes, used correctly by `/voice-profiles/[id]/start` — is bypassed here.
 
 **Why it matters:** the usage ledger records failed attempts as "success" (telemetry is wrong), and because the row is written before the work, a failed sign still consumes the per-minute signed-URL budget. Low blast radius — sign failures are rare and it's the user's own budget — but it's a correctness drift from the ledger pattern used elsewhere.
 **Fix shape:** record with the default `"started"` up front and call `updateUsageEventOutcome(..., "success")` after the URL is actually signed, or simply move the `recordUsageEvent` call below the sign.
 **Pick up when:** any pass touching rate-limit/usage telemetry. Agent-fixable.
 
-### 46. [P3] init-upload's storage_path write isn't checked — a silent failure breaks commit; plus a no-op extension ternary
+### 46. [P3] ✅ RESOLVED (a92e915, 2026-06-17) — init-upload's storage_path write isn't checked; plus a no-op extension ternary
+**Resolution:** the `storage_path` promotion is now `promoteTrainingClipPath()` wrapped in a try-catch that throws on a failed write (`src/app/api/audio/init-upload/route.ts:114-119`), so a silent failure can no longer leave the path at `"pending"` and break a later commit. The dead `mime.includes("webm") ? "webm" : "webm"` ternary was replaced with `const ext = "webm"` (`:107`). Shipped with #42/#43 in the "make writes fail loud" pass. Original entry below.
+
 `src/app/api/audio/init-upload/route.ts:115-118` — after computing the object path the route updates `training_clips.storage_path` from `"pending"` to the real path but doesn't check the error (the insert above and the sign below both *are* checked). `audio/commit` (`route.ts:49-52`) reads `row.storage_path` and downloads from it; if the update silently failed, the path stays `"pending"`, so commit downloads a non-existent object and returns "Object not found in storage" — the clip the user just recorded fails to commit with a confusing error. Adjacent: `:112` has `const ext = mime.includes("webm") ? "webm" : "webm"` — identical branches, a no-op ternary that hard-codes `webm` regardless of mime (dead/placeholder logic; harmless today but misleading, and a latent bug if non-webm clips ever flow through).
 
 **Why it matters:** the unchecked write turns a rare DB hiccup into a lost recording with an unhelpful error, on the core voice-training upload path.
@@ -527,11 +544,11 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 
 Production Onboarding Screen 10 (`src/components/screens/onboarding/Screen10.tsx`) is now live with real Supabase avatar upload (`usePhotoUpload` + the `uploadAvatar` action in `page.tsx`), so several Screen 10 photo follow-ups have had their "Pick up when" triggers fire:
 
-- **#6 (photo fit in circle):** the client-side half shipped — `globals.css:1446` sets `object-fit: cover; object-position: center;` on `.onboarding-photo__img`. Only the server-side thumbnail half remains; #6 should be narrowed to that.
-- **#7 (screen-reader announcement on photo success):** appears implemented — `Screen10.tsx:156-158` renders `<p class="sr-only" role="status" aria-live="polite">Profile photo added.`, which is #7's exact fix shape. Recommend the fixer verify and strike.
-- **#9 (re-entry shows previously-uploaded photo):** appears addressed — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl`, replacing the prototype's `resetPhoto()`. Recommend the fixer verify and strike.
+- **#6 (photo fit in circle):** client-side half shipped — `globals.css:1449-1450` sets `object-fit: cover; object-position: center;` on `.onboarding-photo__img`. **Narrowed 2026-06-19** to the server-side thumbnail half only.
+- **#7 (screen-reader announcement on photo success):** **RESOLVED** — `Screen10.tsx:156-158` renders `<p class="sr-only" role="status" aria-live="polite">Profile photo added.`, #7's exact fix shape. Struck 2026-06-19.
+- **#9 (re-entry shows previously-uploaded photo):** **RESOLVED** — the page mints a signed URL for an existing avatar and Screen 10 renders it via `displayUrl = preview ?? avatarUrl` (`Screen10.tsx:65`), replacing the prototype's `resetPhoto()`. Struck 2026-06-19.
 
-These are left for the fixer to strike (resolution strikes are the fixer's lane per the coordination rule); flagged here so they don't linger as falsely-open.
+All three were verified against current code and reconciled in the 2026-06-19 staleness pass — no longer falsely-open.
 
 ## Step 8 Home B — deferred wiring (from the Home B build, 2026-06-17)
 
