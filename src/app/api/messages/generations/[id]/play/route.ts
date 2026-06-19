@@ -29,14 +29,6 @@ export const GET = defineRoute<true, { id: string }>(
     const limit = await checkSignedUrlLimit(service, user.id);
     assertAllowed(limit);
 
-    await recordUsageEvent(service, {
-      userId: user.id,
-      action: "signed_url_playback",
-      requestId,
-      outcome: "success",
-      meta: { generationId: id },
-    });
-
     const { data: gen, error } = await supabase
       .from("pending_generations")
       .select("generation_id, audio_status, audio_path, saved_message_id")
@@ -66,6 +58,17 @@ export const GET = defineRoute<true, { id: string }>(
       gen.audio_path,
       { event: "pending_play_sign_failed", requestId, userId: user.id, meta: { generationId: id } },
     );
+
+    // Record usage only once a URL is actually issued — a failed lookup/sign
+    // must not log "success" or consume the signed-URL budget. The other three
+    // signed-URL routes were fixed in 5fef4ea; this one was missed (FOLLOW_UPS #45).
+    await recordUsageEvent(service, {
+      userId: user.id,
+      action: "signed_url_playback",
+      requestId,
+      outcome: "success",
+      meta: { generationId: id },
+    });
 
     logEvent({
       event: "pending_play_signed_url",
