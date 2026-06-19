@@ -23,6 +23,37 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-06-19 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 2 new backlog items; no code touched.
+- Scanned: health checks on `main` (typecheck ✅ · lint ✅ · test:unit 184/184 ✅);
+  marker-debt grep over `src/` (all TODOs/disables already tracked or deliberate —
+  the `guards.ts` `assertPlanAllows` stub is a documented MVP hook, not debt); deep
+  reads of the cost-control / rate-limit layer (sound — fail-open is documented and
+  deliberate), the vault pricing struct, and the full `src/app/api/` route map for
+  orphaned endpoints.
+- Excluded as work-in-progress: a heavy in-flight week — 7 open PRs (#61 Step 7
+  Memory Shelf + the FU-42/43/45/46 unchecked-write batch; #58 durable ceremony
+  flag → FU-54; Stripe-hardening → FU-23/44; #59 analytics funnel; #62; prior
+  triage #54). All files those branches touch were treated as WIP. The prior triage
+  PR #54 already logged the Step 6 generate-pipeline unchecked-write finding and the
+  stale-Step-6-doc-comment finding — deliberately NOT re-logged (dedup). New numbers
+  start at 59 to avoid colliding with #54's pending #58.
+- Discovered (new FOLLOW_UPS entries):
+  - FU-59 [P3] Legacy message-creation API orphaned by M0 — `POST /api/messages` +
+    status-poll `GET /api/messages/:id` mounted but unreachable; the deleted
+    `NewMessageView` (M0/#55, commit 48079d8) was their sole caller. POST still spends
+    ElevenLabs with no Step 6 cost cap.
+  - FU-60 [P4] Dead `POST /api/onboarding/complete` route — superseded by the
+    `completeOnboarding` server action (FU-42 path); stamp-only partial duplicate, no caller.
+- Triggers came true: none newly actionable on `main` (FU-34's trigger was already
+  resolved on `main` by M0/#55; the prior triage #54 flagged it pre-M0).
+- Reviewed-and-cleared: cost-control/rate-limit layer, `VAULT_PRICING` placeholder
+  price IDs (display-struct cruft, checkout uses env IDs), and the live audio-upload
+  / voice-profiles / Step 6 routes — no entry warranted.
+- Branch / commit: `triage/2026-06-19` @ <this commit>
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-16 — scheduled (fix)
 - Outcome: Fixed — onboarding's final "save my details" step used to navigate the
   user into the app even when the save silently failed, losing everything they
