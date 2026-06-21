@@ -9,7 +9,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 | # | P | One-liner | Agent-fixable now? |
 |---|---|---|---|
-| 22 | P2 | Voice creation has zero payment gating — ElevenLabs cost exposure | ❌ decision (gate or not, before launch) |
+| 22 | P2 | Voice creation payment gating — ElevenLabs cost exposure | ⏳ decision RESOLVED (gate=yes, Step 3 lock); guard pre-built flag-OFF; wiring coupled to M2 Step 3 |
 | 34 | P2 | Two parallel message-creation routes; one is legacy | ✅ RESOLVED 2026-06-16 (M0 — legacy retired) |
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ✅ RESOLVED 2026-06-16 (stripe-hardening — confirmations answered, CTA branch built) |
@@ -181,19 +181,25 @@ Declared explicitly in the B3 Terminal doc's new §8: **t=0 of the crossfade** (
 
 ## Voice-creation payment gate (from Session 7c Chunk 1, 2026-04-21)
 
-### 22. [P2 · decision] Should `/api/voice-profiles/[id]/start` gate on paid status?
-Session 7c's spec called for a "voice processing trigger" on `checkout.session.completed` (Site A) and on the `created → collecting` transition (Site B), so that paid users would land in `voice_profiles.status = 'processing'`. Both sites were **dropped from 7c** because the repo's `'processing'` status semantically means "ElevenLabs is currently running," and flipping to it without invoking ElevenLabs would leave profiles stuck (the `/start` route's 3-minute staleness check would eventually treat them as timed out).
+### 22. [P2 · decision RESOLVED, wiring coupled to M2 Step 3] Gate voice creation on paid status
+**Decision (2026-06-21):** the product question — *should voice creation require a paid subscription before ElevenLabs is invoked?* — is **answered: yes, option (a), no free path.** The `docs/Step3_Card_Capture_Design_Handoff.md` lock settles it: *"Card is required before voice processing begins. No free path"* (§6) and *"Voice processing (~$6 cost) triggers only after successful card capture"* (l.137-140). At card capture `SubscriptionStatus` becomes `trial` (l.222), so the gate is `{trial, active}` — mirroring the existing `/api/messages/save` save-gate.
 
-The real underlying question is a product one: **should voice creation require a paid subscription before ElevenLabs is invoked?**
+**Why this can't just be switched on today (root cause, not a defer-for-defer's-sake):** the gate's correctness depends on **flow ordering**, and the two flows disagree:
+- *Current shipped flow:* processing → Reveal → *then* the card ask. Every user is `status = 'none'` when `/start` runs. A live gate would **402 the happy path** for everyone.
+- *New M2 Step 3 flow (design-gated, not built):* card capture → `trial` → processing. The reorder is the very thing that makes `trial` exist before `/start`. Only then is the gate non-breaking.
 
-**Current state:** `/api/voice-profiles/[id]/start` has zero payment gating. Any authenticated user with enough clips can trigger ElevenLabs on their voice profile. Voice creation and payment are entirely decoupled.
+So the gate is **coupled to the M2 Step 3 card-capture-before-processing reorder** — not blocked on a decision.
 
-**Options if this gets addressed:**
-- **(a)** Add a payment check inside `/start`; 401/402 if the user isn't on `trial`/`active`. Simple, but forecloses any "free preview" product decisions.
-- **(b)** Keep `/start` open; rely on storage/retention gates downstream (e.g., voice profiles for unpaid users are deleted after N days). More product work, more leeway.
-- **(c)** Keep status quo — voice creation is free, only vault storage/delivery gates on payment.
+**Pre-built (2026-06-21, this branch), flag-OFF so it's inert until M2 flips it:**
+- `assertCanCreateVoice(userId)` — `src/lib/voice-creation/entitlement.ts`. No-op unless `VOICE_CREATION_REQUIRES_PAYMENT === 'true'`; when on, throws `SUBSCRIPTION_REQUIRED` (402, non-retryable) for any status outside `{trial, active}` (`VOICE_CREATION_ALLOWED_STATUSES`).
+- Flag `VOICE_CREATION_REQUIRES_PAYMENT` in `src/lib/feature-flags.ts` (default OFF). New `ErrorCode.SUBSCRIPTION_REQUIRED`.
+- Wired into `assertCanStartVoiceCreation` (`src/lib/guards.ts`), which already runs at the top of `/start` — so no `/start` route-body change.
+- Unit-tested both arms: `tests/unit/voice-creation-entitlement.test.ts` (13 cases — flag-OFF is a no-op for all 6 statuses and never hits the DB; flag-ON allows `trial`/`active`, 402s `none`/`past_due`/`lapsed`/`cancelled`). tsc + lint clean; full suite 326/326.
 
-**Pick up when:** product decides how strongly payment should gate voice creation. Not blocking 7c, 7d, or deploy — vault surfaces already gate on subscription state. This is about ElevenLabs cost exposure, not user-facing flow integrity.
+**To finish (M2 Step 3 owner):** after the card-capture reorder lands and a user holds `trial` before `/start`, set `VOICE_CREATION_REQUIRES_PAYMENT=true` and verify the gated happy path end-to-end (card → trial → `/start` succeeds; a `none`/lapsed user is 402'd). The webhook-driven `created → processing` trigger sites the original 7c spec dropped (l.185 below) are a *separate* M2 wiring concern — this guard only gates the synchronous `/start` call.
+
+*Original entry (for reference):*
+Session 7c's spec called for a "voice processing trigger" on `checkout.session.completed` (Site A) and on the `created → collecting` transition (Site B), so that paid users would land in `voice_profiles.status = 'processing'`. Both sites were **dropped from 7c** because the repo's `'processing'` status semantically means "ElevenLabs is currently running," and flipping to it without invoking ElevenLabs would leave profiles stuck (the `/start` route's 3-minute staleness check would eventually treat them as timed out). Not blocking 7c, 7d, or deploy — vault surfaces already gate on subscription state. This is about ElevenLabs cost exposure, not user-facing flow integrity.
 
 ## Stripe / restore surface (from Session 7c, 2026-04-21)
 
