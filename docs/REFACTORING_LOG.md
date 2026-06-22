@@ -23,6 +23,45 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-06-22 — scheduled (scan-only)
+- Outcome: Scan-only — the app is healthy and nothing was cleanly fixable this
+  run. Every item near the top of the queue is already being handled in an open
+  pull request, or is waiting on a decision/setup only the owner can give. No
+  app code changed.
+- Health checks on `main` (e49b075): typecheck ✅ · lint ✅ · test:unit 184/184 ✅.
+- Marker-debt grep over `src/`: no new untracked debt — the FirstBreath audio
+  TODOs are tracked (FU-41), the exit-destination TODO is FU-25, and every
+  `eslint-disable` is documented/tracked (FU-32 for `useResource`, plus the
+  conventional Next `<img>` / exhaustive-deps sites).
+- Why no fix: walked the priority queue top-down. The first items
+  (FU-5/1/2/4) are already fixed on `main` and struck in open PR #62; the next
+  clean code fixes (FU-43 voice-ready persist check, FU-46 init-upload
+  storage_path check, FU-45 signed-URL telemetry) are all fixed in open PR #61
+  (Step 7 Memory Shelf + reliability). Re-fixing any of them would duplicate an
+  open PR — a banned move. The remainder are blocked: FU-22 (PR #65, + payment
+  decision), FU-54 (PR #58), FU-23/44 (Stripe-hardening branch), FU-25/34/24/16/
+  12/28 (owner decisions), FU-26 (needs a Supabase access-token CI secret — owner
+  setup), FU-59/60 (delete a locked URL path — owner sign-off, never-touch), and
+  FU-40/57/35/41/8/6-server-half/56 (visual/asset work, not browser-verifiable in
+  this environment).
+- Scores: no priority change is warranted that isn't already captured in an open
+  PR (#62 strikes FU-1/2/4/5; #61 resolves FU-42/43/45/46; #63 logs FU-59/60).
+  `FOLLOW_UPS.md` deliberately left untouched here to avoid colliding with those
+  in-flight backlog edits (§5 backlog-coordination).
+- Verified-resolved-in-code (recommend striking when #62/#61 merge, to avoid a
+  third divergent edit of the same file now): FU-7 (Screen10 sr-only
+  `role="status"` announcement present) and FU-9 (Screen10 renders
+  `displayUrl = preview ?? avatarUrl` for re-entry). Flagged by triage 2026-06-13
+  for the fixer to verify+strike.
+- PR hygiene note (§7): there are already 3 open system docs PRs (#54, #62, #63)
+  plus several fix PRs (#61, #58, #65, #59) awaiting the owner's review. The queue
+  is at the max-3 ceiling for docs PRs — draining it (merging the green ones)
+  unblocks the next fix run more than any new branch would.
+- Branch / commit: refactor/scan-2026-06-22 @ <this commit>
+- Discovered: none (the 2026-06-16 and 2026-06-19 triage passes + the 06-19
+  bug-hunt already captured the open findings).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-16 — scheduled (fix)
 - Outcome: Fixed — onboarding's final "save my details" step used to navigate the
   user into the app even when the save silently failed, losing everything they
