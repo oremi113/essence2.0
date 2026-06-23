@@ -52,9 +52,11 @@ model (CLAUDE.md). Split into **two thin components**, with the **seal as the se
   to park or notify *without* a seal. **§RETRY-BY-KNOWLEDGE lives entirely here.**
 - **`Processing`** owns the Frame 4 wait, the silent-retry loop, and
   post-seal-generation-failure. **Every Processing failure is post-seal**: the seal
-  holds, the ember stays ignited, route to notify. (Processing gets its own short
-  rail — `processing-normal`, `post-seal-generation-failure`, `notify-landing` —
-  spec'd next.)
+  holds, the ember stays ignited, route to notify. (Processing's rail is the six
+  states in the inventory below — `processing-normal`, `processing-extended`,
+  `processing-notify-handoff`, `notify-landing`, `post-seal-support`,
+  `reduced-motion`. Note `post-seal-generation-failure` is a *behavior*, not a
+  visible state — it has no failure surface and decomposes across the six.)
 
 **CardCapture is single-entry, forward-only**, with two precise edges:
 - *Internal* back-nav is fine — checkout-error → "back to Beat 2, selection kept".
@@ -170,7 +172,11 @@ entry, forward-only, no re-pay control ever** (payment is confirmed before entry
 > Taking longer than usual. You can keep this open, or we'll email you the moment
 > your Vault is sealed.
 
-### post-seal-generation-failure (Processing — most dangerous failure in the flow)
+### post-seal generation failure (Processing — most dangerous failure in the flow)
+*Behavior, not a single rail state — it surfaces as `processing-extended` (silent
+retry), `processing-notify-handoff` (budget elapsed), and `post-seal-support`
+(unrecoverable tail). See the Processing rail note above.*
+
 The seal already fired, money is taken, "Sealed. Your voice is on its way." has been
 shown — and the ~1-min generation for the Reveal fails.
 - **§SEAL-INTEGRITY:** the seal **holds**, the ember **stays ignited**, the **pour is
