@@ -59,7 +59,11 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned: the committed src/lib/supabase/types.ts is generated with this
+          # exact CLI version. A newer version changes output formatting (e.g. the
+          # __InternalSupabase block) and would report false drift. When bumping,
+          # regenerate locally with the same version: `npm run gen:types`.
+          version: 2.75.0
 
       - name: Start local database
         run: supabase db start
