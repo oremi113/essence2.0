@@ -10,7 +10,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | # | P | One-liner | Agent-fixable now? |
 |---|---|---|---|
 | 22 | P2 | Voice creation payment gating — ElevenLabs cost exposure | ⏳ decision RESOLVED (gate=yes, Step 3 lock); guard pre-built flag-OFF; wiring coupled to M2 Step 3 |
-| 34 | P2 | Two parallel message-creation routes; one is legacy | ✅ RESOLVED 2026-06-16 (M0 — legacy retired) |
+| 34 | P2 | Two parallel message-creation routes; one is legacy | ⚠️ M0 retired the legacy *component*, but the 2026-06-16 triage found app nav still points at `/app/messages/new` → new spine may be unreachable; verify the repoint (see Discovery 2026-06-16) |
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ✅ RESOLVED 2026-06-16 (stripe-hardening — confirmations answered, CTA branch built) |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
@@ -37,6 +37,8 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ RESOLVED 2026-06-16 (stripe-hardening — write now checked + throws) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — path write throws; dead ternary removed) |
 | 59 | P3 | Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` unreachable; POST still spends ElevenLabs with no Step 6 cost cap *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
+| 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ add error checks |
+| 67 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ comment fix |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
@@ -634,3 +636,31 @@ This pass focused on the stable surfaces neither recent pass covered: the cost-c
 **Why it matters:** low risk today (the copies are byte-identical and both covered by unit tests), but two definitions of the session/platform/device envelope can drift — e.g. a future change to device-type detection applied to one family and not the other would silently split the envelope across `step6.*` and `journey.*`.
 **Fix shape:** delete the four private helpers from `step6.ts` and import them from `@/lib/analytics/context`; keep `step6.ts`'s flow_id + schema-version logic local. Pure refactor, no behavior change — both `step6-analytics` and `journey-analytics` suites should stay green.
 **Pick up when:** the next time `step6.ts` is intentionally touched (so the change rides a Step 6 review surface, not a surprise). Agent-fixable.
+
+## Discovery pass (triage 2026-06-16)
+
+Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: typecheck ✅ · lint ✅ · unit tests 181/181 ✅ (all green on `main`). The Step 6 message-creation spine — `feat/step6-a6-screen`, treated as work-in-progress and **excluded** in the 2026-06-13 pass — has since merged to `main` (PRs #49 + #51, 2026-06-15), so this run reviewed it as shipping code. *(FU-57/58 below renumbered to 66/67 on the #54 merge — collided with main's FU-57/59/60.)*
+
+### FU-34 update — trigger FIRED (the new flow may be unreachable from app navigation)
+The Step 6 spine now renders on `/messages/new` (`src/app/messages/new/page.tsx` → `MessagesNewPageClient` → the A2→A7 orchestrator). But `/app/messages/new` still renders the **legacy** `NewMessageView` (`src/app/app/messages/new/page.tsx:27`), and **every app surface still routes to the legacy one** via `ROUTES.appMessagesNew`: `TabNav.tsx:13` (the "New Message" tab), `MemoryShelf.tsx:88` + `:171`, `src/app/app/vault/sealed/actions.tsx:11`, `src/app/app/record/page.tsx:65`, and `VoiceCreationView.tsx:244`. So the freshly-shipped message-creation flow may be **dark** — a real user clicking "New Message" lands on the old screen. **Verify against current `main`** (the table's FU-34 status notes M0 retired the legacy *component*; this is the nav-repoint half). Not agent-fixable: choosing which route is canonical (and whether the legacy `/app/messages/new` tree is deleted) is an owner decision; once chosen, repointing the callers is one route-constant change. Adjacent connection-pass items with triggers met: **#24** (`VoiceCreationView` success destination) and **#25** (`FirstBreathSequence` exit, `FirstBreathSequence.tsx:103`).
+
+### 66. [P3] Step 6 generate pipeline reports success without checking its `pending_generations` status writes
+The synchronous generate pipeline writes its terminal "succeeded" state to `pending_generations` without inspecting the returned `{ error }`, then reports success to the client regardless. Three concrete instances, all on the success path:
+- `src/lib/messages/audio.ts:87-91` — the audio-success write (`audio_status: "succeeded"`, `audio_path`, `audio_duration_ms`); `generateAndStoreAudio` then `return { ok: true }`.
+- `src/app/api/messages/generate/route.ts:301-305` — the text-success write (`generated_text`, `text_status: "succeeded"`); the route later returns `textStatus: "succeeded"`.
+- `src/app/api/messages/regenerate/route.ts:257-261` — the same text-success write on the control-arm re-roll.
+
+This is the same unchecked-Supabase-write pattern catalogued in #42–#46, in a different subsystem (the one excluded as WIP last pass). The failure-path writes in these files (marking `"failed"`) are deliberately best-effort and fine to leave; the **success** writes are the consequential ones.
+
+**Why it matters:** if any of these writes fails (RLS, transient DB error, the monotonic row no longer matching), the in-memory text/audio still flows forward, so the route answers `succeeded` and the client navigates to A6 — but the row was left non-ready. A6's page guard (`src/app/messages/new/g/[generationId]/page.tsx:58`) then bounces the user back to `/messages/new` with no error shown, *after* a paid ElevenLabs render that wasn't persisted. The deferred candidate writes (`generate/route.ts:144-153`, `regenerate/route.ts:162-170`) are unchecked the same way.
+**Fix shape:** destructure `{ error }` on each success-path update; on error, log and return 500 (leave the row recoverable) rather than 200-ing a state that didn't persist. Mirror the existing checked writes in the same files. Agent-fixable; the ElevenLabs-spend angle makes it worth the owner knowing about.
+**Pick up when:** next time the Step 6 generate pipeline is touched, or paired with the #42–#46 unchecked-write batch — one class of fix.
+
+### 67. [P4] Stale Step 6 doc-comments now contradict the shipped code
+Two header/JSDoc comments in shipping Step 6 files describe a world the Chunk 8–10 work has since changed, so they now mislead a maintainer:
+- `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx:16-20` — claims *"C3 (Vault Limit) isn't built, so a vault-limit save and discard both land on Home."* C3 shipped (Chunk 8, #38 resolved) and the code routes a vault-limit save **to C3** (`:229`); only discard lands on Home.
+- `src/lib/messages/speech-duration.ts:4-9` — claims *"Nothing in the pipeline measures real audio duration yet… no duration column (FOLLOW_UPS #37)."* #37 is resolved: `audio_duration_ms` exists, `mp3-duration.ts` derives the real duration, `audio.ts:89` writes it. The wpm estimate is now only a pre-load fallback.
+
+**Why it matters:** comments asserting a screen "isn't built" or a column "doesn't exist" when both now ship send the next maintainer down a wrong path. Pure documentation, no functional risk.
+**Fix shape:** update both comments to match current behavior. Trivial; fold into any Step 6 touch.
+**Pick up when:** any Step 6 file pass, or the next docs/comment sweep.
