@@ -29,7 +29,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ✅ RESOLVED 2026-06-16 (M0 — history reconciled, db push clean) |
 | 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ✅ FULLY RESOLVED (Chunk 10 — C1 + repoint) |
 | 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ✅ VERIFIED 2026-06-14 (both arms, real audio) |
-| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ resolved in code, in open PR #58 (durable server-side flag; pending owner merge) |
+| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ✅ RESOLVED 2026-06-16 (durable profiles column; migration applied + verified on remote) |
 | 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ✅ RESOLVED 2026-06-14 (waitFor) |
 | 56 | P4 | A4 example placeholder is birthday-flavoured but copy is category-agnostic | ⏳ per-category examples (+ question/subtitle) |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
@@ -403,7 +403,18 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **Resolved (Chunk 8, 2026-06-14):** `vault_limit_reached` on save now routes to C3 Vault Limit at `/messages/limit?from=save_race` (push, not exitFlow, so flow_id survives for correlation); C3's mount fires `step6.vault_limit_blocked` with `surfaced_from` and clears the flow. The A2-entry cap gate (`/messages/new` → `/messages/limit?from=a2_entry`) is also live. See `docs/session-8/Step6_C3_Screen_Chunk8.md`.
 **Resolved (Chunk 10, 2026-06-14):** C1 Three Shaped shipped as the one-time `?ceremony=three-shaped` overlay on the 3rd save; the A7 `third` "See what's coming" now routes to C2 (`/messages/waitlist?from=c1`) — on a revisit it skips straight to the waitlist (the ceremony is the one-time auto-overlay, not a revisit CTA). `subscription_lapsed` correctly routes to `/app/vault/restore`. **All A6 exit paths now land on their real screens — entry closed.**
 
-### 54. [P4 · blocked on migration unblock] C1 "once per lifetime" is a per-device localStorage latch
+### 54. C1 "once per lifetime" durable flag — ✅ RESOLVED 2026-06-16
+**Resolution:** the per-device `localStorage` latch is replaced by a durable, cross-device, server-side flag, now that #30 has unblocked the migration pipeline. Exactly the fix shape below:
+- **Migration** `20260616120000_profiles_three_shaped_ceremony_seen_at.sql` — additive, nullable `profiles.three_shaped_ceremony_seen_at timestamptz` (NULL = not yet seen). `timestamptz` over a boolean so the moment is timestamped for later funnel/retention use; a dedicated column over `profiles.ui_flags` because this is a lifetime milestone, not a UI hint latch. **Applied to production 2026-06-16** (owner-approved `db push`); `db push --dry-run` now reports "Remote database is up to date" and a fresh `gen types --linked` confirms the column matches the committed `types.ts`.
+- **Page** `src/app/messages/saved/[messageId]/page.tsx` reads the column server-side inside the C1 branch and shows the ceremony only when it's NULL; an already-seen user (any device, or a stale `?ceremony` deep-link) falls through to the normal A7 third-variant confirmation — so the server never sends C1 HTML to a seen user, eliminating the old flash-then-`router.replace` path entirely.
+- **Stamp** a page-owned `"use server"` action stamps `seen_at = now()` with a `.is(... null)` guard (DB-level idempotent — preserves the first-show timestamp). `ThreeShapedPageClient` calls it once on mount (ref-guarded against StrictMode double-invoke); fire-and-forget, the failure mode is the same harmless replay as before.
+- **localStorage removed** (`SEEN_KEY` / the `router.replace` fallback are gone) — the durable flag fully supersedes it, no same-device fast-path kept.
+- Generated `src/lib/supabase/types.ts` updated to include the new column (Row/Insert/Update). `tsc` ✅ · eslint ✅ · 181/181 unit ✅.
+**Pick up when:** nothing outstanding — code merged + migration applied. Optional: a live first-show→stamp→revisit-skips-C1 walk against a seeded 3/3-cap user (now possible since the column exists).
+
+---
+*Original entry (for reference):*
+
 **File:** `src/app/messages/saved/[messageId]/ThreeShapedPageClient.tsx` (`SEEN_KEY`).
 **What:** The contract says the C1 Three Shaped ceremony fires "once per user lifetime." With no profile flag and `db push` blocked (#30), V1 uses a `localStorage` latch — per-device, not per-lifetime. A cleared store or a second device can replay the ceremony.
 **Why it matters:** low (replaying a warm, no-cost moment is harmless), but it's a spec divergence: "per lifetime" isn't actually guaranteed.
