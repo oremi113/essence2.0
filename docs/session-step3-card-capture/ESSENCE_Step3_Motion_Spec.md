@@ -23,15 +23,16 @@
 
 **Stillness is the budget for the pour.** Processing is deliberately under-animated (one ambient layer, vault and ember dead-still). The quiet is what makes the Reveal's pour land. Do not spend motion on the vessel during the wait.
 
-**Curve discipline.** The vault uses `var(--ease-essence)` and `var(--ease-page)`. `var(--ease-breath)` is Stone-only and never touches the vault or the shimmer.
+**Curve discipline.** The vault uses `var(--ease-seal-iris)` (iris close) and `var(--ease-page)` (ember catch / Processing exit). `var(--ease-breath)` is Stone-only and never touches the vault or the shimmer. **Do not retune `--ease-essence` for the close** — it is the universal state-transition curve (~60 references across `globals.css`); a hero-moment tweak there shifts every transition app-wide. The close gets its own token instead (see §2).
 
 ---
 
 ## §2 Tokens
 
 **Curves**
-- `var(--ease-essence)` — iris close. Signature curve, confident settle, mechanical certainty of commit.
-- `var(--ease-page)` — ember catch and the Processing exit ease-down. Soft, warm, no snap. *(See DESIGN OPEN 1 on whether the ember wants a bespoke curve.)*
+- `var(--ease-seal-iris)` — iris close. The signature hero curve: confident settle, mechanical certainty of commit, a treasured case closing rather than a machine locking. **Placeholder token** — value is owned by the vault design-architect thread (built elsewhere) and lands at Pass 1 start; until then it falls back to the `--ease-essence` value. Promoted out of `--ease-essence` so the hero close can carry a slower-decel-tail settle without touching the universal curve. *(See DESIGN OPEN 1' below.)*
+- `var(--ease-seal-ember)` — ember catch **and** the shimmer onset (the two warm-arrival moments). Bespoke soft-in bloom, `cubic-bezier(0.2, 0, 0.5, 1)`: monotonic, no snap, no overshoot. **Promoted off `--ease-page`** (DESIGN OPEN 1, now resolved — see below). New token; lands in `@theme` (see NOTE FOR CODE ARCHITECT).
+- `var(--ease-page)` — the **Processing exit ease-down only** (Pass 3). Canonical value `cubic-bezier(0.22, 1, 0.36, 1)` is a snappy fast-out, not a gentle decel — **re-judge the exit against the real curve in Pass 3** (same lesson that moved the ember off it). No longer carries the ember.
 - Shimmer loop is a slow sine, not an ease. It is ambient, not a transition.
 
 **Durations** (use existing ramp; total seal weight is ceremonial)
@@ -52,7 +53,7 @@ Fires only on confirmed payment (3b). Single continuous sequence into Processing
 
 ```
 t=0–800ms      IRIS CLOSE
-               var(--ease-essence). Spokes/iris draw shut. Mechanical certainty.
+               var(--ease-seal-iris). Spokes/iris draw shut. Mechanical certainty.
                Ground still. shimmer 0. emberState: cool.
 
 t≈975ms        EMBER CATCH  (iris-complete + 175ms)
@@ -158,7 +159,9 @@ Playwright across both rails (CardCapture and Processing), at 390×844, 4× CPU 
 
 ## DESIGN OPEN
 
-1. **Ember catch curve.** Proposed `var(--ease-page)` to avoid token drift. If the catch wants more bespoke warmth (a softer, slower bloom than `--ease-page` gives), this becomes a new `--ease-seal-ember` token. Flagging rather than inventing one silently. Recommendation: try `--ease-page` first, only add a token if the bloom reads too mechanical.
+1. **Ember catch curve. — RESOLVED (Pass 2).** Originally proposed `var(--ease-page)` to avoid token drift. On inspection, canonical `--ease-page` is `cubic-bezier(0.22, 1, 0.36, 1)` — a snappy fast-out (it reaches full almost immediately; *not* the gentle decel first assumed, and not an overshoot — peak y is exactly 1.0). A fast-out reads as a hard "on" against the rig, which §EMBER-TIMING forbids. So the trip-wire fired on curve evidence: promoted to a bespoke **`--ease-seal-ember` = `cubic-bezier(0.2, 0, 0.5, 1)`** (soft-in, monotonic, no overshoot). The shimmer onset shares the same warm-arrival curve. Nothing in Pass 2 references `--ease-page`, so the page-curve drift cannot reach the warm moments.
+
+   **1'. Iris close curve (same pattern, one layer up).** The close was on the shared `--ease-essence` — the universal state-transition curve (~60 refs in `globals.css`), so retuning it in place is out of bounds. Promoted to its own `--ease-seal-iris` token instead. The *value* is owned by the vault design-architect thread (rig built elsewhere); on the build side it ships as a **placeholder = the `--ease-essence` value** until that thread lands the tuned curve. Expected direction: a slower-decel tail for a more confident settle ("treasured case closing with certainty," §3). When the real value lands, surface it as an explicit fork, not a silent swap.
 2. **Seal total duration.** Proposed ~1.68s to dead-still (800 iris + 175 offset + 400 ember + 300 settle). This is the taste dial on the hero moment. Slower reads more reverent, faster reads more certain. Recommendation: hold at ~1.68s, tune by feel in Pass 2.
 
 ---
@@ -166,6 +169,8 @@ Playwright across both rails (CardCapture and Processing), at 390×844, 4× CPU 
 ## NOTE FOR CODE ARCHITECT
 
 - `--shimmer-intensity` must be added to the canonical `@theme` block in `src/app/globals.css` first (not `design-tokens.md` — that doc only mirrors the running CSS; Build Handoff §0.4). Do not introduce it per-screen.
+- `--ease-seal-iris` is a **new placeholder token** for the iris close. Add it to the `@theme` block at Pass 1 start with the `--ease-essence` value as its placeholder (`cubic-bezier(0.4, 0.0, 0.2, 1)`), referenced as `var(--ease-seal-iris)` in the screen. The real curve comes from the vault design thread and replaces only this token's value — never `--ease-essence` itself. Do not inline a raw bezier in the screen.
+- `--ease-seal-ember` is a **new real token** (not a placeholder): `cubic-bezier(0.2, 0, 0.5, 1)`, the ember catch + shimmer onset curve (DESIGN OPEN 1 resolved). **It must land in the `@theme` block before Pass 2 references it** — if the screen uses `var(--ease-seal-ember)` while the token is absent from `@theme`, the transition silently falls back to the default `ease` keyword (a different curve). This is the same drift trap as `--ease-breath`; do not repeat it. Mirror it into `design-tokens.md` only *after* it is in `globals.css`, never before.
 - Shimmer is a ground-layer element, never a property of the vault object. Keep them separate in the DOM so the object stays still while the ground moves.
 - The seal is one timeline, not four independent transitions. Sequence it as a single choreography so the 175ms offset and the settle stay locked relative to each other.
 - The neutral contract frame (§7) is a real, nameable state the Reveal depends on. Build it as an explicit boundary, not an implicit end-of-animation position.

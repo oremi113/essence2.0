@@ -187,11 +187,15 @@ Prefer the semantic roles below. Raw scale is retained for edge cases.
 
 ## Easing
 
+> Mirrors `src/app/globals.css @theme` (the running CSS is canonical; this table only
+> reflects it, never the reverse — the Step-7 drift trap). If they disagree, globals wins.
+
 | Token             | Value                          | Use                                           |
 | ----------------- | ------------------------------ | --------------------------------------------- |
-| `--ease-essence`  | `cubic-bezier(0.4, 0.0, 0.2, 1)` | Universal transitions                       |
-| `--ease-breath`   | `cubic-bezier(0.4, 0.0, 0.2, 1)` | BreathStone, record-button                  |
+| `--ease-essence`  | `cubic-bezier(0.4, 0.0, 0.2, 1)` | Universal state-transition curve            |
+| `--ease-breath`   | `cubic-bezier(0.37, 0, 0.63, 1)` | Symmetric pendulum — BreathStone / record-button rest. **Stone-only; never the vault or shimmer.** |
 | `--ease-press`    | `cubic-bezier(0.2, 0.0, 0.0, 1)` | Button press / tactile feedback             |
+| `--ease-page`     | `cubic-bezier(0.22, 1, 0.36, 1)` | Cinematic screen entrance — every page + staggered child |
 
 ## Duration
 

@@ -162,7 +162,7 @@ Apply alongside the 10 resolved edits already queued in `ESSENCE_Copy_Guide_Upda
 
 Full timing in `ESSENCE_Step3_Motion_Spec.md`. Summary for orientation:
 
-- Seal is one continuous timeline: iris close (~800ms, `var(--ease-essence)`), ember catch (~400ms, +175ms offset, `var(--ease-page)`), settle (~300ms to dead-still), then a ~2.5s dwell on the "Sealed" line before the copy crossfades to "Preparing your voice." Shimmer ignites faint at the settle, under the held copy.
+- Seal is one continuous timeline: iris close (~800ms, `var(--ease-seal-iris)` — placeholder token, value owned by the vault design thread; see Motion Spec §2), ember catch (~400ms, +175ms offset, `var(--ease-page)`), settle (~300ms to dead-still), then a ~2.5s dwell on the "Sealed" line before the copy crossfades to "Preparing your voice." Shimmer ignites faint at the settle, under the held copy.
 - Shimmer is one global primitive (`--shimmer-intensity`, ground layer), off through every decision and pre-seal state, active only from the seal settle through Processing. Concrete peak-opacity values are in the spec.
 - Processing owns a self-contained exit to a neutral calm and stops. The Reveal owns the pour from that neutral frame, cold-start safe.
 
