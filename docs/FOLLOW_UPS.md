@@ -18,7 +18,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED 2026-06-11 (35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
 | 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ RESOLVED 2026-06-11 (35d7372 — adjust-state-during-render, no disable) |
 | 2 | P3 | Failed upload leaves stale internal state between retries | ✅ RESOLVED 2026-06-11 (35d7372 — `resetPipeline()` in catch) |
-| 26 | P3 | Generated DB types: CI drift-check job landed, blocked on owner setup | ⚠️ needs owner setup — the `types-drift` CI job ships with #61 but needs a Supabase access token as a GitHub Actions secret to run green (not agent-provisionable) |
+| 26 | P3 | Generated DB types + CI drift-check | ✅ RESOLVED — `types-drift` job is self-contained (local Postgres from migrations, no token). The red was real drift: the remote carried `healthcheck()` + two `training_clip_status` enum values never captured as a migration. Fixed by `20260619170000_capture_orphaned_remote_objects` + CLI pin to 2.75.0 |
 | 16 | P3 | B2/B3 motion surfaces shipped with no analytics events | ⚠️ needs event-naming input |
 | 6 | P3 | Non-square photos: client-side `object-fit` done; **server-side thumbnail remains** | ⏳ narrowed — needs Storage transform/render step |
 | 7 | P3 | Photo success is silent for screen-reader users | ✅ RESOLVED (B1 rework 88ff6e4 — `sr-only role="status"` announce) |
