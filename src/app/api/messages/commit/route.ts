@@ -113,7 +113,7 @@ export const POST = defineRoute(
     // --- Success: promote candidate -> committed, bump the render count -----
     const nextRenderCount = gen.audio_render_count + 1;
     const audioDurationMs = mp3DurationMsFromByteLength(tts.audioBuffer.length);
-    await supabase
+    const { error: commitError } = await supabase
       .from("pending_generations")
       .update({
         generated_text: gen.candidate_text,
@@ -128,6 +128,27 @@ export const POST = defineRoute(
       })
       .eq("generation_id", generationId)
       .eq("user_id", user.id);
+
+    if (commitError) {
+      // The audio rendered and uploaded, but the promotion write failed. Don't
+      // 200 with committed:true — the row keeps stale text and audio_render_count
+      // is NOT bumped, so the cost-cap (line ~66) would grant a free extra paid
+      // render and the saved text/audio would diverge (FOLLOW_UPS #62). Surface
+      // it as retryable; the upload is idempotent on the deterministic path.
+      logEvent({
+        event: "step6_commit_failed",
+        requestId,
+        userId: user.id,
+        outcome: "error",
+        errorCode: ErrorCode.STORAGE_FAILED,
+        durationMs: durationSince(startMs),
+        meta: { generationId, stage: "promote_write" },
+      });
+      return NextResponse.json(
+        { generationId, committed: false, error: "Could not save this take. Please try again.", code: ErrorCode.STORAGE_FAILED, retryable: true },
+        { status: 502 },
+      );
+    }
 
     logEvent({
       event: "step6_commit_complete",
