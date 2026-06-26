@@ -167,7 +167,7 @@ export const THREE_SHAPED_CSS = `
 .three-shaped .btn {
   width: 100%; min-height: 52px;
   padding: var(--space-md) var(--space-xl);
-  background: var(--color-mineral); color: #fff;
+  background: var(--color-mineral-dark); color: #fff;
   font-family: var(--font-body); font-weight: 600;
   font-size: var(--text-body-lg);
   border: 0; border-radius: var(--radius-lg);
@@ -177,7 +177,7 @@ export const THREE_SHAPED_CSS = `
   transition: background var(--duration-micro) var(--ease-essence),
               transform var(--duration-small) var(--ease-press);
 }
-.three-shaped .btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.three-shaped .btn:not(:disabled):hover { background: var(--color-mineral-darker); }
 .three-shaped .btn:not(:disabled):active { transform: scale(0.98); }
 .three-shaped .btn:focus-visible {
   outline: none;

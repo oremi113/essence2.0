@@ -35,6 +35,10 @@ export function OnboardingPageClient({
     city: string,
     stateCode: string
   ) {
+    // If the save fails, onComplete rejects — we deliberately let that bubble
+    // (the push below is skipped) so OnboardingScreen catches it and shows the
+    // retry-in-place error instead of navigating away on a silent failure
+    // (FOLLOW_UPS #42). Navigation only happens on a confirmed save.
     await onComplete(firstName, lastName, dateOfBirth, city, stateCode);
     router.push(ROUTES.record);
   }

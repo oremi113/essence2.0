@@ -162,7 +162,7 @@ export const VAULT_LIMIT_CSS = `
 .vault-limit .btn {
   width: 100%; min-height: 52px;
   padding: var(--space-md) var(--space-xl);
-  background: var(--color-mineral); color: #fff;
+  background: var(--color-mineral-dark); color: #fff;
   font-family: var(--font-body); font-weight: 600;
   font-size: var(--text-body-lg);
   border: 0; border-radius: var(--radius-lg);
@@ -172,7 +172,7 @@ export const VAULT_LIMIT_CSS = `
   transition: background var(--duration-micro) var(--ease-essence),
               transform var(--duration-small) var(--ease-press);
 }
-.vault-limit .btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.vault-limit .btn:not(:disabled):hover { background: var(--color-mineral-darker); }
 .vault-limit .btn:not(:disabled):active { transform: scale(0.98); }
 .vault-limit .btn:focus-visible {
   outline: none;
