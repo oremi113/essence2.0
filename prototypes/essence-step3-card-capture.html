@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ESSENCE · Step 3 · Card Capture + Processing · Pass 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ======================================================================
+  ESSENCE · STEP 3 · CARD CAPTURE + PROCESSING
+  Design memo for the production code architect.
+  Built on the canonical token block, phone frame, and dev-rail scaffold.
+  Companion specs: ESSENCE_Step3_Card_Capture_Build_Handoff.md
+                   ESSENCE_Step3_Motion_Spec.md
+  ======================================================================
+
+  WHAT THESE PASSES ARE (read once — sets the whole frame)
+  These three passes harden the PROTOTYPE, which is the design source of truth
+  (CLAUDE.md). They do NOT ship production code. After Pass 3 the code architect
+  in terminal mirrors this file into production (two thin screens, a shared Vault
+  primitive, page.tsx data-shuttles, /dev pages, and the confirm-hold state
+  machine) — tracked separately in docs/session-step3-card-capture/build-doc.md.
+  So the passes layer MOTION FIDELITY; they deliberately do not model async
+  control flow (the poll-with-backoff machine renders here as static rail rows).
+  The NOTE FOR CODE ARCHITECT block below names the production units the passes
+  do not themselves produce — those are the handoff, not a later pass.
+
+  PASS STATUS
+  PASS 1 (this file): static structure. Both components, all 18 rail states
+    (12 CardCapture + 6 Processing — see STATE COUNT below) rendered statically
+    from mock data, driven by a single data-state attribute per component
+    (mirrors prop-driven rendering). Tokens wired to the canonical :root block.
+    Every rail state reachable from the dev rail (the /dev/{name} equivalent).
+    NO choreography: no iris animation, no ember bloom, no shimmer loop, no copy
+    crossfade. Static composition fidelity only (every state reads right frozen).
+    Pass 1 also lands the STRUCTURAL HALF of both invariants (see GUARDRAILS):
+    where a seal/ignited ember may exist, and which retry control exists per state.
+  PASS 2 (next): the seal hero timeline (iris close, ember catch +175ms, settle,
+    the ~2.5s dwell, copy crossfade) AND the SVG→canvas vault swap — the Pass 1
+    vault is a deliberately throwaway CSS/SVG approximation, so do not over-polish
+    it here. Plus the TEMPORAL HALF of SEAL-INTEGRITY (the hard "seal fires only at
+    the confirmed event, never on submit" assertion) and the RM settled frame.
+    Gate: the canvas seal MUST ship an explicit static-render path for reduced
+    motion (pin to the settled frame — canvas is harder to freeze mid-frame than
+    SVG/CSS). Build the shared Vault as ONE object from the start (see SEAM).
+  PASS 3 (after): the --shimmer-intensity primitive and its full activation map
+    (loop + onset), Processing stillness and exit ease-down to neutral, RM shimmer
+    rest, the neutral handoff CONTRACT frame (sealed + ember-ignited + shimmer-at-
+    rest = the exact frame the relocated Reveal opens on — pin it as a contract,
+    not a redraw), and Playwright. GATED SUB-TASK: notify-landing cold-start
+    re-fetch verification depends on the transactional notify infra existing
+    (a build prerequisite — see NOTE FOR CODE ARCHITECT). Until that infra lands
+    the notify states stay static shells and Pass 3 is NOT "done" on that axis —
+    split the cold-start verification out and gate it behind the infra; don't
+    declare it green while stubbing the one thing it exists to verify.
+
+  STATE COUNT (this prototype is canonical; build-doc.md is stale on this)
+  18 states = 12 CardCapture + 6 Processing. The 6 Processing states
+  (processing-normal, processing-extended, processing-notify-handoff,
+  notify-landing, post-seal-support, reduced-motion) SUPERSEDE build-doc.md's
+  older 3-state list, which still names a single post-seal-generation-failure.
+  That one state was correctly decomposed here into the three honest sub-states
+  its own copy blocks implied: longer-wait (extended), bounded-hold→notify
+  (notify-handoff), and the SLA tail (support). Reconcile build-doc.md to these
+  six before the prototype hardens — stale state docs were the Step 7 finding.
+
+  SEAM (the component boundary is the seal)
+  Two thin components. CardCapture owns Beat 1, Beat 2, confirm-hold, timeout,
+  checkout-error, the not-now park, and the seal as its hero exit. Processing
+  owns the post-seal wait, the silent retry, generation-failure degradation,
+  and the exit to the neutral handoff frame. In this prototype they are two
+  separate .phone roots (#cardcapture, #processing). The dev rail picks which
+  is on screen, exactly as the seal splits them in production.
+    ONE Vault, not two. The sealed vault is inlined in both #cardcapture
+  (.cc-sealed) and #processing here only because static HTML has no component
+  to share. The Vault is a SINGLE signature object (props: phase, emberState)
+  that recurs across CardCapture's sealed region, Processing, and later the
+  relocated Reveal + restore (handoff §5). Pass 2's canvas swap must build it
+  ONCE and feed it props — never fork it per screen, or three canvas vaults
+  diverge. Treat the duplication in this file as a prototype artifact, not a
+  pattern to mirror.
+
+  PROP SHAPE (each rail state is one row of mock data, see handoff section 4)
+  pricing   { plan, annualPrice, monthlyPrice, monthlyEquivalent, trialDays }
+  sample    { status, clipUrl, label }
+  vault     { phase: establish|confirm-hold|sealed, emberPresent, emberState }
+  checkout  { status, errorKind? }
+  generation{ status, elapsedMs, budgetMs }
+  notify    { armed, channel }
+  park      { active, recordingId }
+  a11y      { reducedMotion }
+  proof     null  (zero-height slot, present so layout does not shift later)
+
+  STRUCTURAL GUARDRAILS ENFORCED IN PASS 1 (not deferred to motion)
+  - SEAL-INTEGRITY (structural half): the sealed vault and the ignited ember
+    exist ONLY inside the sealed region (.cc-sealed) and Processing. No
+    pre-seal state (establish or confirm-hold) renders a sealed frame or a
+    lit ember. The motion-side enforcement (seal fires only at confirmed)
+    lands in Pass 2.
+  - RETRY-BY-KNOWLEDGE (structural half): the "Try again" re-pay control
+    exists ONLY in checkout-error (a known no-charge decline). confirm-timeout
+    renders "Check again" (re-poll, never re-charge) and never a re-pay
+    button. The two states look like siblings on the rail; the difference is
+    which control exists, and that is decided here in the static structure.
+
+  OUT OF SCOPE (Pass 1): all motion, audio playback, the real canvas vault
+  (this is a faithful CSS/SVG approximation; the canvas seal lands in Pass 2),
+  notify infra deep-link behavior (the notify states render as static shells;
+  real cold-start re-fetch is verified in Pass 3 once the infra exists),
+  the consented elder sample (renders against /mock/generic-elder.mp3).
+
+  NOTE FOR CODE ARCHITECT (the prod units the passes do not produce — the handoff)
+  Read this before mirroring the prototype into production. None of these are
+  later prototype passes; they are the build that follows Pass 3.
+  1. SHARED VAULT PRIMITIVE. Build the Vault as one prop-driven component
+     (phase: establish|confirm-hold|sealed; emberState: cool|ignited). It is
+     reused by CardCapture's sealed region, Processing, and (separate brief) the
+     relocated Reveal + restore. Do not reproduce this file's inline duplication.
+  2. CONFIRM-HOLD STATE MACHINE. confirm-pending → confirm-timeout is real async
+     (poll-with-backoff, ~90s–2min client ceiling, then notify handoff; server
+     reconciles to Stripe session expiry ~24h). It belongs in a reducer/hook,
+     NOT in the screen — the prototype models it as static rail rows only.
+  3. TOKENS TO CANONIZE in globals.css @theme before hardening (not just this
+     file's :root): --shimmer-intensity (new primitive invented here),
+     --color-vault-bronze, --color-vault-ember (cool→ignited). Per-screen tokens
+     are drift by definition.
+  4. NOTIFY INFRA IS A BUILD PREREQUISITE, not parallel-and-optional. Three
+     resolved routes hand into it (park, confirm-timeout, post-seal failure), so
+     it sequences AHEAD of the Frame-4 wait build. Transactional/deliverability-
+     grade email, cold-start-safe deep-links, a real staffable SLA number. Add a
+     docs/FOLLOW_UPS.md entry and treat it as gating Pass 3's cold-start check.
+  5. RECONCILE build-doc.md's Processing state inventory (3 → the canonical 6,
+     see STATE COUNT above) so the two source docs stop disagreeing.
+  ======================================================================
+-->
+
+<style>
+:root {
+  /* Background ramp (design-tokens.md, canonical) */
+  --color-bg-neutral: #FBF8F4;
+  --color-bg-warm-1: #F9F4ED;
+  --color-bg-warm-2: #F6F0E5;
+  --color-bg-warm-phase: #F2EDE4;
+  --color-bg-gold: #F2E8D6;
+  --color-bg-rich: #EDE3D0;
+
+  /* Surfaces */
+  --color-surface-card: #F6F0E5;
+  --color-surface-warm: #EDE3D0;
+  --color-surface-honey: #F2E8D6;
+
+  /* Accent */
+  --color-mineral: #7A8088;
+  --color-mineral-dark: #656B73;
+
+  /* Text */
+  --color-text-primary: #1C1A18;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #ADA9A5;
+
+  /* Status */
+  --color-status-error: #9C3528;
+  --color-status-warning: #8A5A1E;
+  --color-status-success: #4A7A68;
+
+  /* Borders + shadows */
+  --color-border: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-mineral: 0 4px 12px rgba(122, 128, 136, 0.3);
+  --shadow-focus-ring: 0 0 0 4px rgba(122, 128, 136, 0.18);
+
+  /* Type */
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --text-title: 28px;
+  --text-body-lg: 18px;
+  --text-body: 16px;
+  --text-ui: 15px;
+  --text-small: 14px;
+  --text-caption: 12px;
+  --line-height-title: 1.4;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  /* Easing + duration (present for Pass 2/3; unused in static Pass 1) */
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-page: cubic-bezier(0.33, 0.0, 0.2, 1);
+  --ease-breath: cubic-bezier(0.4, 0.0, 0.2, 1); /* Stone-only, never vault/shimmer */
+  --duration-micro: 200ms;
+  --duration-small: 400ms;
+  --duration-medium: 800ms;
+  --duration-large: 1200ms;
+
+  /* NEW TOKEN: shimmer ground primitive (handoff/motion spec).
+     Added to the canonical block now at 0 so it exists from Pass 1 and
+     no per-screen drift creeps in. The sine loop + onset are Pass 3.
+     Pass 1 renders it as a static ground opacity per state. */
+  --shimmer-intensity: 0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background: #1C1A18;
+  background-image: radial-gradient(ellipse at center, #2a2622 0%, #1C1A18 72%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 12px 64px; gap: 20px;
+}
+button { font-family: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ====================================================================
+   DEV RAIL - prototype-only state switcher (the /dev/{name} equivalent)
+   ==================================================================== */
+.dev-rail { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 4px; max-width: 760px; }
+.dev-rail__title { font-family: var(--font-body); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.42); }
+.dev-rail__note { font-size: 11px; color: rgba(255,255,255,0.34); max-width: 560px; text-align: center; line-height: 1.6; }
+.dev-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 760px; }
+.dev-group__label { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.34); margin-right: 4px; }
+.dev-group button {
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.62);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+  padding: 6px 11px; font-family: var(--font-body); font-size: 11px;
+  letter-spacing: 0.02em; cursor: pointer; transition: all 160ms ease;
+}
+.dev-group button:hover { background: rgba(255,255,255,0.13); color: #fff; }
+.dev-group button.is-current { background: var(--color-mineral); color: #fff; border-color: var(--color-mineral); }
+.dev-group button.is-rm { font-style: italic; }
+
+/* ====================================================================
+   PHONE FRAME
+   ==================================================================== */
+.prototype-wrapper {
+  width: 390px; height: 812px;
+  border-radius: 48px; overflow: hidden;
+  box-shadow: 0 0 0 10px #1A1715, 0 0 0 12px var(--color-mineral), 0 50px 100px rgba(0,0,0,0.45);
+  position: relative; flex-shrink: 0;
+  background: var(--color-bg-warm-phase);
+}
+@media (max-width: 440px) { .prototype-wrapper { transform: scale(0.88); transform-origin: top center; } }
+
+.phone {
+  width: 100%; height: 100%;
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  font-family: var(--font-body); color: var(--color-text-primary);
+  background: var(--color-bg-warm-phase);
+}
+.phone[hidden] { display: none !important; }
+
+.phone__status {
+  position: absolute; inset: 0 0 auto 0; height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px 0; font-weight: 600; font-size: var(--text-small);
+  color: var(--color-text-primary); z-index: 10; pointer-events: none;
+}
+.phone__status-icons { display: flex; gap: 6px; align-items: center; }
+.phone__island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 30px; border-radius: 999px; background: #0B0B0B; z-index: 11;
+}
+.phone__home-indicator {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  width: 134px; height: 5px; border-radius: 3px; background: rgba(28,26,24,0.32); z-index: 10;
+}
+.phone__screen { position: absolute; inset: 44px 0 0 0; display: flex; flex-direction: column; z-index: 3; }
+
+.variant-label {
+  position: absolute; top: 13px; left: 16px;
+  font-family: var(--font-body); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(28,26,24,0.42); z-index: 12; pointer-events: none;
+}
+
+/* ====================================================================
+   GROUND SHIMMER - ground layer only, distinct from the vault object.
+   Pass 1: static opacity per state (no loop). Honey ground, never on text.
+   ==================================================================== */
+.ground-shimmer {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: var(--shimmer-intensity);
+  background: radial-gradient(ellipse 80% 60% at 50% 44%,
+    rgba(214, 162, 92, 0.5) 0%, rgba(214, 162, 92, 0.18) 46%, transparent 76%);
+}
+.atmosphere-vignette {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 120% 92% at 50% 50%,
+    transparent 52%, rgba(60, 45, 25, 0.05) 86%, rgba(60, 45, 25, 0.1) 100%);
+}
+
+/* ====================================================================
+   SCREEN LAYOUT
+   ==================================================================== */
+.backbar { position: relative; z-index: 1; padding: var(--space-md) var(--space-xl); display: flex; align-items: center; justify-content: space-between; min-height: 50px; flex-shrink: 0; }
+.backbar__btn { background: transparent; border: 0; padding: var(--space-sm); margin: calc(-1 * var(--space-sm)); color: var(--color-text-secondary); cursor: pointer; display: flex; min-height: 44px; align-items: center; border-radius: var(--radius-md); }
+.backbar__btn:hover { color: var(--color-text-primary); }
+.backbar__pips { display: flex; gap: 6px; }
+.backbar__pip { width: 6px; height: 6px; border-radius: var(--radius-sm); background: var(--color-surface-warm); }
+.backbar__pip.is-done { background: var(--color-bg-gold); }
+.backbar__pip.is-current { width: 20px; background: var(--color-bg-gold); }
+.backbar__spacer { width: 22px; }
+
+.body { position: relative; z-index: 1; flex: 1; padding: var(--space-xs) var(--space-xl) var(--space-3xl); display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* shared region scaffolding */
+.region { display: none; flex: 1; flex-direction: column; }
+.eyebrow { font-family: var(--font-body); font-size: var(--text-caption); font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-mineral); margin-bottom: var(--space-sm); }
+.headline { font-family: var(--font-display); font-size: var(--text-title); line-height: var(--line-height-title); font-weight: 600; color: var(--color-text-primary); }
+.subhead { font-family: var(--font-body); font-size: var(--text-body); color: var(--color-text-secondary); margin-top: var(--space-sm); }
+.turn { font-family: var(--font-display); font-style: italic; font-size: var(--text-body-lg); line-height: 1.5; color: var(--color-text-primary); }
+
+/* sample player */
+.sample { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-lg); background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-2xl); }
+.sample__row { display: flex; align-items: center; gap: var(--space-md); }
+.sample__play { width: 44px; height: 44px; flex-shrink: 0; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg-neutral); color: var(--color-mineral-dark); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.sample__label { font-size: var(--text-small); color: var(--color-text-secondary); line-height: 1.5; }
+.sample__aftercopy { font-size: var(--text-small); color: var(--color-text-secondary); display: none; }
+
+/* vault */
+.vault-stage { display: flex; justify-content: center; padding: var(--space-md) 0; }
+.vault { width: 196px; height: 196px; }
+
+/* value + price */
+.value { font-family: var(--font-body); font-size: var(--text-body); color: var(--color-text-primary); line-height: 1.6; }
+.plan-toggle { display: flex; gap: var(--space-sm); }
+.plan { flex: 1; text-align: left; padding: var(--space-md) var(--space-lg); border-radius: var(--radius-xl); border: 1px solid var(--color-border); background: var(--color-bg-neutral); cursor: pointer; }
+.plan__name { font-size: var(--text-small); font-weight: 600; color: var(--color-text-primary); }
+.plan__price { font-size: var(--text-caption); color: var(--color-text-secondary); margin-top: 2px; }
+.plan.is-active { border-color: var(--color-mineral); box-shadow: var(--shadow-focus-ring); background: var(--color-surface-card); }
+.price-line { font-family: var(--font-body); font-size: var(--text-body); color: var(--color-text-secondary); }
+.price-line strong { color: var(--color-text-primary); font-weight: 600; }
+
+/* CTA + microcopy + opt-out */
+.cta { width: 100%; min-height: 52px; border: 0; border-radius: var(--radius-lg); background: var(--color-mineral-dark); color: #fff; font-size: var(--text-ui); font-weight: 600; cursor: pointer; box-shadow: var(--shadow-mineral); display: flex; align-items: center; justify-content: center; gap: var(--space-sm); }
+.cta:hover { background: #585e66; }
+.cta__spinner { width: 16px; height: 16px; border-radius: var(--radius-full); border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; display: none; }
+.risk { font-size: var(--text-small); color: var(--color-text-secondary); text-align: center; }
+.optout { background: transparent; border: 0; color: var(--color-text-secondary); font-size: var(--text-small); cursor: pointer; align-self: center; padding: var(--space-sm); min-height: 44px; }
+.optout:hover { color: var(--color-text-primary); }
+.proof-slot { height: 0; overflow: hidden; } /* zero-height, present so layout holds when populated later */
+
+/* decline banner (checkout-error only) */
+.notice { display: none; padding: var(--space-lg); border-radius: var(--radius-xl); background: var(--color-surface-card); border: 1px solid var(--color-border); border-left: 3px solid var(--color-status-error); }
+.notice__title { font-family: var(--font-body); font-size: var(--text-body); font-weight: 600; color: var(--color-text-primary); }
+.notice__safe { font-size: var(--text-small); color: var(--color-text-secondary); margin-top: var(--space-xs); }
+
+/* hold / sealed / park ceremonial centering */
+.ceremony { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--space-lg); padding-bottom: var(--space-4xl); }
+.ceremony__copy { font-family: var(--font-display); font-size: var(--text-title); line-height: var(--line-height-title); color: var(--color-text-primary); max-width: 280px; }
+.ceremony__sub { font-family: var(--font-body); font-size: var(--text-body); color: var(--color-text-secondary); max-width: 280px; }
+.ceremony__sub.warn { color: var(--color-status-warning); }
+.link-quiet { background: transparent; border: 0; color: var(--color-mineral-dark); font-size: var(--text-small); font-weight: 600; cursor: pointer; min-height: 44px; padding: var(--space-sm) var(--space-lg); }
+.link-quiet:hover { color: var(--color-text-primary); }
+
+.stack { display: flex; flex-direction: column; }
+.gap-lg > * + * { margin-top: var(--space-lg); }
+.gap-xl > * + * { margin-top: var(--space-xl); }
+.gap-2xl > * + * { margin-top: var(--space-2xl); }
+
+/* ====================================================================
+   STATE MAP - which region + deltas each rail state renders.
+   Each state is fully determined by [data-state] on the component root.
+   ==================================================================== */
+
+/* default region visibility: paywall on, others off */
+#cardcapture .cc-paywall { display: flex; }
+#cardcapture[data-state="loss-frame-isolated"] .cc-beat2 { display: none; }
+
+/* sample after-copy only when played */
+#cardcapture[data-state="sample-played"] .sample__aftercopy { display: block; }
+
+/* price/plan: monthly-selected swaps the active plan + price line */
+#cardcapture .price-monthly { display: none; }
+#cardcapture[data-state="monthly-selected"] .price-annual { display: none; }
+#cardcapture[data-state="monthly-selected"] .price-monthly { display: inline; }
+#cardcapture[data-state="monthly-selected"] .plan-annual { border-color: var(--color-border); box-shadow: none; background: var(--color-bg-neutral); }
+#cardcapture[data-state="monthly-selected"] .plan-monthly { border-color: var(--color-mineral); box-shadow: var(--shadow-focus-ring); background: var(--color-surface-card); }
+
+/* checkout-submitting: CTA busy + locked, spinner shown */
+#cardcapture[data-state="checkout-submitting"] .cta { background: var(--color-mineral); pointer-events: none; opacity: 0.9; }
+#cardcapture[data-state="checkout-submitting"] .cta__spinner { display: inline-block; }
+#cardcapture[data-state="checkout-submitting"] .cta__label { opacity: 0.85; }
+
+/* checkout-error: decline banner shown, Try again label on CTA */
+#cardcapture .cta__label--retry { display: none; }
+#cardcapture[data-state="checkout-error"] .notice { display: block; }
+#cardcapture[data-state="checkout-error"] .cta__label--keep { display: none; }
+#cardcapture[data-state="checkout-error"] .cta__label--retry { display: inline; }
+
+/* region switching for non-paywall states */
+#cardcapture[data-state="confirm-pending"] .cc-paywall,
+#cardcapture[data-state="confirm-timeout"] .cc-paywall,
+#cardcapture[data-state="post-commit-confirmation"] .cc-paywall,
+#cardcapture[data-state="not-now-parked"] .cc-paywall,
+#cardcapture[data-state="reduced-motion"] .cc-paywall { display: none; }
+
+#cardcapture[data-state="confirm-pending"] .cc-hold,
+#cardcapture[data-state="confirm-timeout"] .cc-hold { display: flex; }
+
+#cardcapture[data-state="post-commit-confirmation"] .cc-sealed,
+#cardcapture[data-state="reduced-motion"] .cc-sealed { display: flex; }
+
+#cardcapture[data-state="not-now-parked"] .cc-park { display: flex; }
+
+/* hold deltas: timeout adds the extended line + check-again, keeps NO re-pay */
+#cardcapture .cc-hold__timeout { display: none; }
+#cardcapture[data-state="confirm-timeout"] .cc-hold__pending { display: none; }
+#cardcapture[data-state="confirm-timeout"] .cc-hold__timeout { display: flex; flex-direction: column; align-items: center; gap: var(--space-lg); }
+
+/* sealed shows ground shimmer faint (the seal has ignited it at settle).
+   reduced-motion renders the same settled frame, static. */
+#cardcapture[data-state="post-commit-confirmation"],
+#cardcapture[data-state="reduced-motion"] { --shimmer-intensity: 0.05; }
+
+/* ====================================================================
+   PROCESSING - always sealed + ignited; copy + shimmer vary by state.
+   ==================================================================== */
+#processing .pr-copy { display: none; }
+#processing[data-state="processing-normal"] .pr-normal,
+#processing[data-state="notify-landing"] .pr-normal { display: block; }
+#processing[data-state="processing-extended"] .pr-extended { display: block; }
+#processing[data-state="processing-notify-handoff"] .pr-handoff { display: block; }
+#processing[data-state="post-seal-support"] .pr-support { display: block; }
+#processing[data-state="reduced-motion"] .pr-normal { display: block; }
+
+/* notify offer (keep open or notify) only where a handoff is offered */
+#processing .pr-notify-offer { display: none; }
+#processing[data-state="processing-notify-handoff"] .pr-notify-offer,
+#processing[data-state="post-seal-support"] .pr-notify-offer { display: flex; }
+
+/* notify-landing badge (cold start, context restored) */
+#processing .pr-landing-badge { display: none; }
+#processing[data-state="notify-landing"] .pr-landing-badge { display: inline-flex; }
+
+/* shimmer intensity per state (static peak, no loop in Pass 1) */
+#processing[data-state="processing-normal"] { --shimmer-intensity: 0.05; }  /* faint */
+#processing[data-state="notify-landing"] { --shimmer-intensity: 0.12; }     /* active */
+#processing[data-state="processing-extended"] { --shimmer-intensity: 0.12; }/* active */
+#processing[data-state="processing-notify-handoff"] { --shimmer-intensity: 0.12; } /* active */
+#processing[data-state="post-seal-support"] { --shimmer-intensity: 0.05; }  /* faint, low calm */
+#processing[data-state="reduced-motion"] { --shimmer-intensity: 0.03; }     /* neutral rest */
+
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-caption); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-mineral-dark); background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-pill); padding: 5px 12px; }
+</style>
+</head>
+<body>
+
+<!-- ================= DEV RAIL ================= -->
+<div class="dev-rail">
+  <div class="dev-rail__title">Step 3 · Pass 1 · static structure</div>
+  <div class="dev-group">
+    <span class="dev-group__label">CardCapture</span>
+    <button data-c="cardcapture" data-s="sample-skipped" class="is-current">sample-skipped</button>
+    <button data-c="cardcapture" data-s="sample-played">sample-played</button>
+    <button data-c="cardcapture" data-s="loss-frame-isolated">loss-frame</button>
+    <button data-c="cardcapture" data-s="default-annual">default-annual</button>
+    <button data-c="cardcapture" data-s="monthly-selected">monthly-selected</button>
+    <button data-c="cardcapture" data-s="checkout-submitting">submitting</button>
+    <button data-c="cardcapture" data-s="confirm-pending">confirm-pending</button>
+    <button data-c="cardcapture" data-s="confirm-timeout">confirm-timeout</button>
+    <button data-c="cardcapture" data-s="checkout-error">checkout-error</button>
+    <button data-c="cardcapture" data-s="post-commit-confirmation">post-commit (seal)</button>
+    <button data-c="cardcapture" data-s="not-now-parked">not-now-parked</button>
+    <button data-c="cardcapture" data-s="reduced-motion" class="is-rm">reduced-motion</button>
+  </div>
+  <div class="dev-group">
+    <span class="dev-group__label">Processing</span>
+    <button data-c="processing" data-s="processing-normal">normal</button>
+    <button data-c="processing" data-s="processing-extended">extended</button>
+    <button data-c="processing" data-s="processing-notify-handoff">notify-handoff</button>
+    <button data-c="processing" data-s="notify-landing">notify-landing</button>
+    <button data-c="processing" data-s="post-seal-support">post-seal-support</button>
+    <button data-c="processing" data-s="reduced-motion" class="is-rm">reduced-motion</button>
+  </div>
+  <div class="dev-rail__note">The seam is the seal. CardCapture and Processing are two components; the rail picks which is on screen. Pass 1 is static (no iris, no ember bloom, no shimmer loop). The vault here is a CSS/SVG approximation; the canvas seal lands in Pass 2.</div>
+</div>
+
+<!-- shared SVG defs for the vault (one set, referenced by both components) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="caseMetal" cx="42%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#9aa0a8"/>
+      <stop offset="52%" stop-color="#7A8088"/>
+      <stop offset="100%" stop-color="#565b62"/>
+    </radialGradient>
+    <radialGradient id="caseMetalWarm" cx="42%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#a39c90"/>
+      <stop offset="52%" stop-color="#857c70"/>
+      <stop offset="100%" stop-color="#5f574c"/>
+    </radialGradient>
+    <radialGradient id="interior" cx="50%" cy="46%" r="60%">
+      <stop offset="0%" stop-color="#cfc7ba"/>
+      <stop offset="70%" stop-color="#b6ad9f"/>
+      <stop offset="100%" stop-color="#928876"/>
+    </radialGradient>
+    <radialGradient id="emberCool" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#aab0b6"/>
+      <stop offset="100%" stop-color="#7c828a"/>
+    </radialGradient>
+    <radialGradient id="emberIgnited" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbe6c0"/>
+      <stop offset="38%" stop-color="#eecb84"/>
+      <stop offset="70%" stop-color="#d9a85a"/>
+      <stop offset="100%" stop-color="rgba(217,168,90,0)"/>
+    </radialGradient>
+  </defs>
+</svg>
+
+<!-- ================= CARDCAPTURE ================= -->
+<div class="prototype-wrapper">
+  <div class="phone" id="cardcapture" data-state="sample-skipped">
+    <div class="phone__island"></div>
+    <div class="phone__status">
+      <span>9:41</span>
+      <span class="phone__status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#1C1A18"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#1C1A18"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#1C1A18"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#1C1A18"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11"><rect x="0.5" y="0.5" width="18" height="10" rx="3" fill="none" stroke="#1C1A18" opacity="0.5"/><rect x="2" y="2" width="14" height="7" rx="1.5" fill="#1C1A18"/><rect x="19.5" y="3.5" width="1.5" height="4" rx="0.75" fill="#1C1A18" opacity="0.5"/></svg>
+      </span>
+    </div>
+    <div class="variant-label" data-role="vlabel">CardCapture · sample-skipped</div>
+    <div class="phone__home-indicator"></div>
+
+    <div class="phone__screen">
+      <div class="ground-shimmer"></div>
+      <div class="atmosphere-vignette"></div>
+
+      <div class="backbar">
+        <button class="backbar__btn" aria-label="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="backbar__pips">
+          <span class="backbar__pip is-done"></span>
+          <span class="backbar__pip is-done"></span>
+          <span class="backbar__pip is-current"></span>
+          <span class="backbar__pip"></span>
+          <span class="backbar__pip"></span>
+        </div>
+        <span class="backbar__spacer"></span>
+      </div>
+
+      <div class="body">
+
+        <!-- REGION: PAYWALL (Beat 1 + Beat 2) -->
+        <div class="region cc-paywall stack gap-xl">
+
+          <!-- decline banner: checkout-error only -->
+          <div class="notice">
+            <div class="notice__title">Your card didn't go through this time.</div>
+            <div class="notice__safe">Your messages are safe either way.</div>
+          </div>
+
+          <!-- Beat 1: recognition -->
+          <div class="stack gap-sm cc-recognition">
+            <div class="eyebrow">Your voice</div>
+            <h1 class="headline">That's your voice.</h1>
+            <p class="subhead">Twenty-five prompts, in your own words. The hard part's done.</p>
+          </div>
+
+          <!-- Beat 1: sample (example, labeled) -->
+          <div class="sample">
+            <div class="sample__row">
+              <button class="sample__play" aria-label="Play example">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+              <span class="sample__label">Hear what a preserved voice sounds like. An example, from another family.</span>
+            </div>
+            <span class="sample__aftercopy">That warmth and presence is what gets preserved. Yours, next.</span>
+          </div>
+
+          <!-- the vault (establish, ember cool) -->
+          <div class="vault-stage">
+            <svg class="vault" viewBox="0 0 196 196" data-phase="establish">
+              <circle cx="98" cy="98" r="92" fill="url(#caseMetal)"/>
+              <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>
+              <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.18)" stroke-width="2"/>
+              <circle cx="98" cy="98" r="50" fill="url(#interior)"/>
+              <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.22)" stroke-width="1.5"/>
+              <!-- retracted blade hints around the rim -->
+              <g stroke="rgba(28,26,24,0.14)" stroke-width="2" stroke-linecap="round">
+                <line x1="98" y1="50" x2="98" y2="60"/>
+                <line x1="139" y1="74" x2="131" y2="80"/>
+                <line x1="139" y1="122" x2="131" y2="116"/>
+                <line x1="98" y1="146" x2="98" y2="136"/>
+                <line x1="57" y1="122" x2="65" y2="116"/>
+                <line x1="57" y1="74" x2="65" y2="80"/>
+              </g>
+              <!-- cool ember socket -->
+              <circle cx="98" cy="98" r="11" fill="url(#emberCool)"/>
+              <circle cx="98" cy="98" r="11" fill="none" stroke="rgba(28,26,24,0.25)" stroke-width="1.5"/>
+            </svg>
+          </div>
+
+          <!-- the turn (loss frame, Elevated) -->
+          <p class="turn cc-turn">Right now, it's only a recording. A beginning, not something kept.</p>
+
+          <!-- Beat 2: commit -->
+          <div class="cc-beat2 stack gap-lg">
+            <p class="value">Sealing it keeps your voice safe and ready, so the people you love can hear you whenever they need to.</p>
+
+            <div class="plan-toggle">
+              <button class="plan plan-annual is-active">
+                <div class="plan__name">Annual</div>
+                <div class="plan__price">$119 yearly · about $10 a month</div>
+              </button>
+              <button class="plan plan-monthly">
+                <div class="plan__name">Monthly</div>
+                <div class="plan__price">$12.99 monthly</div>
+              </button>
+            </div>
+
+            <p class="price-line">
+              <span class="price-annual">About <strong>$10 a month</strong> to keep your voice safe, billed yearly.</span>
+              <span class="price-monthly"><strong>$12.99 a month</strong> to keep your voice safe.</span>
+            </p>
+
+            <div class="proof-slot" aria-hidden="true"></div>
+
+            <button class="cta">
+              <span class="cta__spinner"></span>
+              <span class="cta__label cta__label--keep">Keep my voice</span>
+              <span class="cta__label cta__label--retry">Try again</span>
+            </button>
+            <p class="risk">7 days free. Nothing today. Cancel anytime.</p>
+            <button class="optout">Not now</button>
+          </div>
+        </div>
+
+        <!-- REGION: CONFIRM-HOLD (pending + timeout) -->
+        <div class="region cc-hold">
+          <div class="ceremony">
+            <svg class="vault" viewBox="0 0 196 196" data-phase="confirm-hold">
+              <circle cx="98" cy="98" r="92" fill="url(#caseMetal)"/>
+              <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>
+              <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.18)" stroke-width="2"/>
+              <circle cx="98" cy="98" r="50" fill="url(#interior)"/>
+              <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.22)" stroke-width="1.5"/>
+              <circle cx="98" cy="98" r="11" fill="url(#emberCool)"/>
+              <circle cx="98" cy="98" r="11" fill="none" stroke="rgba(28,26,24,0.25)" stroke-width="1.5"/>
+            </svg>
+
+            <!-- pending copy (both pending and the steady timeout line) -->
+            <div class="cc-hold__pending stack" style="align-items:center;gap:var(--space-md)">
+              <p class="ceremony__copy">Still confirming your payment.</p>
+              <p class="ceremony__sub">There's no need to pay again. We'll seal your Vault the moment it comes through.</p>
+            </div>
+
+            <!-- timeout: extended line + Check again (NO re-pay control, ever) -->
+            <div class="cc-hold__timeout">
+              <p class="ceremony__copy">Still confirming your payment.</p>
+              <p class="ceremony__sub">There's no need to pay again. We'll seal your Vault the moment it comes through.</p>
+              <p class="ceremony__sub">Taking longer than usual. You can keep this open, or we'll email you the moment your voice is sealed.</p>
+              <button class="link-quiet">Check again</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- REGION: SEALED (post-commit + reduced-motion settled frame) -->
+        <div class="region cc-sealed">
+          <div class="ceremony">
+            <svg class="vault" viewBox="0 0 196 196" data-phase="sealed">
+              <!-- ignited ember halo behind the sealed iris (static, no pulse, no brightness()) -->
+              <circle cx="98" cy="98" r="40" fill="url(#emberIgnited)"/>
+              <circle cx="98" cy="98" r="92" fill="url(#caseMetalWarm)"/>
+              <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+              <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="2"/>
+              <!-- closed iris: filled aperture + soft seams to center -->
+              <circle cx="98" cy="98" r="50" fill="url(#caseMetalWarm)"/>
+              <g stroke="rgba(28,26,24,0.22)" stroke-width="1.5" stroke-linecap="round">
+                <line x1="98" y1="48" x2="98" y2="98"/>
+                <line x1="141" y1="73" x2="98" y2="98"/>
+                <line x1="141" y1="123" x2="98" y2="98"/>
+                <line x1="98" y1="148" x2="98" y2="98"/>
+                <line x1="55" y1="123" x2="98" y2="98"/>
+                <line x1="55" y1="73" x2="98" y2="98"/>
+              </g>
+              <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="1.5"/>
+              <!-- center boss with lit ember core -->
+              <circle cx="98" cy="98" r="13" fill="url(#caseMetalWarm)"/>
+              <circle cx="98" cy="98" r="13" fill="none" stroke="rgba(28,26,24,0.3)" stroke-width="1.5"/>
+              <circle cx="98" cy="98" r="6" fill="#f3d9a4"/>
+            </svg>
+            <p class="ceremony__copy">Sealed. Your voice is on its way.</p>
+          </div>
+        </div>
+
+        <!-- REGION: PARK (not-now) -->
+        <div class="region cc-park">
+          <div class="ceremony">
+            <svg class="vault" viewBox="0 0 196 196" data-phase="establish">
+              <circle cx="98" cy="98" r="92" fill="url(#caseMetal)"/>
+              <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>
+              <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.18)" stroke-width="2"/>
+              <circle cx="98" cy="98" r="50" fill="url(#interior)"/>
+              <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.22)" stroke-width="1.5"/>
+              <circle cx="98" cy="98" r="11" fill="url(#emberCool)"/>
+              <circle cx="98" cy="98" r="11" fill="none" stroke="rgba(28,26,24,0.25)" stroke-width="1.5"/>
+            </svg>
+            <p class="ceremony__copy">Your voice is safe.</p>
+            <p class="ceremony__sub">It's kept just as you recorded it. When you're ready to seal it, your place is here, and we'll email you a gentle reminder.</p>
+            <button class="link-quiet">Keep my voice</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PROCESSING ================= -->
+<div class="prototype-wrapper" id="processing-wrapper" hidden>
+  <div class="phone" id="processing" data-state="processing-normal">
+    <div class="phone__island"></div>
+    <div class="phone__status">
+      <span>9:41</span>
+      <span class="phone__status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#1C1A18"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#1C1A18"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#1C1A18"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#1C1A18"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11"><rect x="0.5" y="0.5" width="18" height="10" rx="3" fill="none" stroke="#1C1A18" opacity="0.5"/><rect x="2" y="2" width="14" height="7" rx="1.5" fill="#1C1A18"/><rect x="19.5" y="3.5" width="1.5" height="4" rx="0.75" fill="#1C1A18" opacity="0.5"/></svg>
+      </span>
+    </div>
+    <div class="variant-label" data-role="vlabel">Processing · processing-normal</div>
+    <div class="phone__home-indicator"></div>
+
+    <div class="phone__screen">
+      <div class="ground-shimmer"></div>
+      <div class="atmosphere-vignette"></div>
+
+      <div class="body">
+        <div class="ceremony">
+          <!-- sealed vault, ignited ember, dead-still (no motion in Pass 1) -->
+          <svg class="vault" viewBox="0 0 196 196" data-phase="sealed">
+            <circle cx="98" cy="98" r="40" fill="url(#emberIgnited)"/>
+            <circle cx="98" cy="98" r="92" fill="url(#caseMetalWarm)"/>
+            <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+            <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="2"/>
+            <circle cx="98" cy="98" r="50" fill="url(#caseMetalWarm)"/>
+            <g stroke="rgba(28,26,24,0.22)" stroke-width="1.5" stroke-linecap="round">
+              <line x1="98" y1="48" x2="98" y2="98"/>
+              <line x1="141" y1="73" x2="98" y2="98"/>
+              <line x1="141" y1="123" x2="98" y2="98"/>
+              <line x1="98" y1="148" x2="98" y2="98"/>
+              <line x1="55" y1="123" x2="98" y2="98"/>
+              <line x1="55" y1="73" x2="98" y2="98"/>
+            </g>
+            <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="1.5"/>
+            <circle cx="98" cy="98" r="13" fill="url(#caseMetalWarm)"/>
+            <circle cx="98" cy="98" r="13" fill="none" stroke="rgba(28,26,24,0.3)" stroke-width="1.5"/>
+            <circle cx="98" cy="98" r="6" fill="#f3d9a4"/>
+          </svg>
+
+          <!-- cold-start badge: notify-landing only -->
+          <span class="badge pr-landing-badge">Picking up where you left off</span>
+
+          <!-- copy per state -->
+          <div class="pr-copy pr-normal">
+            <p class="ceremony__copy">Preparing your voice.</p>
+          </div>
+          <div class="pr-copy pr-extended">
+            <p class="ceremony__copy">Preparing your voice.</p>
+            <p class="ceremony__sub" style="margin-top:var(--space-md)">Taking a little longer than usual. It's safe and on its way.</p>
+          </div>
+          <div class="pr-copy pr-handoff">
+            <p class="ceremony__copy">Your Vault is sealed and your voice is safe.</p>
+            <p class="ceremony__sub" style="margin-top:var(--space-md)">It's taking a little longer to prepare than usual. We'll have it ready soon.</p>
+          </div>
+          <div class="pr-copy pr-support">
+            <p class="ceremony__copy">Your Vault is sealed and your voice is safe.</p>
+            <p class="ceremony__sub" style="margin-top:var(--space-md)">We're making sure it gets created, and we'll reach out within a day.</p>
+          </div>
+
+          <!-- keep-open-or-notify offer (handoff + support) -->
+          <div class="pr-notify-offer stack" style="flex-direction:column;align-items:center;gap:var(--space-sm)">
+            <p class="ceremony__sub">You can keep this open, or we'll let you know the moment your voice is ready to hear.</p>
+            <button class="link-quiet">Email me when it's ready</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Dev-rail state switching only. No screen choreography (that is Pass 2/3).
+   Each state is fully determined by [data-state]; this just picks the
+   component on screen, sets its state attribute, and updates the labels. */
+(function () {
+  var ccWrap = document.querySelector('.prototype-wrapper'); // first wrapper = cardcapture
+  var prWrap = document.getElementById('processing-wrapper');
+  var cc = document.getElementById('cardcapture');
+  var pr = document.getElementById('processing');
+  var buttons = document.querySelectorAll('.dev-group button');
+
+  function setState(component, state) {
+    var isCard = component === 'cardcapture';
+    ccWrap.hidden = !isCard;
+    prWrap.hidden = isCard;
+    var root = isCard ? cc : pr;
+    root.setAttribute('data-state', state);
+    var label = root.querySelector('[data-role="vlabel"]');
+    if (label) label.textContent = (isCard ? 'CardCapture · ' : 'Processing · ') + state;
+    buttons.forEach(function (b) {
+      b.classList.toggle('is-current', b.getAttribute('data-c') === component && b.getAttribute('data-s') === state);
+    });
+    // keep the body scrolled to top when switching states
+    var body = root.querySelector('.body');
+    if (body) body.scrollTop = 0;
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      setState(b.getAttribute('data-c'), b.getAttribute('data-s'));
+    });
+  });
+
+  // initial state
+  setState('cardcapture', 'sample-skipped');
+})();
+</script>
+</body>
+</html>

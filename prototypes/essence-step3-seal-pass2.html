@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ESSENCE · Step 3 · Seal Hero · Pass 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ======================================================================
+  ESSENCE · STEP 3 · SEAL HERO · PASS 2
+  Design memo for the production code architect.
+  Companion specs: ESSENCE_Step3_Motion_Spec.md (timeline, source of truth)
+                   ESSENCE_Step3_Card_Capture_Build_Handoff.md (rail states)
+                   ESSENCE_Step3_Pass2_Bridge.md (decisions carried in)
+  Builds on the Pass 1 static structure (essence-step3-card-capture-processing-pass1.html).
+  ======================================================================
+
+  WHAT THIS PASS IS
+  The seal hero timeline only: iris close, ember catch at +175ms, settle to
+  dead-still, the ~2.5s dwell, the copy crossfade into Processing. Plus the
+  reduced-motion settled-frame variant, and the hard assertion that the seal
+  renders only at confirmed payment. No shimmer loop, no Processing exit, no
+  neutral handoff frame (all Pass 3).
+
+  ======================================================================
+  NOTE FOR CODE ARCHITECT  (the design-to-engineering contract)
+  ======================================================================
+
+  THE VAULT IS EXTERNAL. The animating vault (SVG iris rig) is owned by the
+  vault design thread and is NOT built here. Everything in this file outside
+  the vault is the SHELL: the trigger gate, the copy layer, the ground
+  shimmer onset, the seam handoff, and the reduced-motion path. The vault
+  below is a STUB standing in behind a fixed interface so the shell can be
+  choreographed and verified. The real rig drops in behind the same contract
+  with no shell change.
+
+  THE VAULT INTERFACE (what the shell drives, what it listens for):
+    - input  : phase = 'establish' | 'sealed'        (set by the shell)
+    - input  : play the seal (establish -> sealed on the locked timeline)
+    - output : a 'seal settled' signal at t = SETTLE_END (~1675ms)
+  The shell owns nothing inside the close/catch/settle. It sets phase, asks
+  the vault to play, and waits for 'settled'. On 'settled' it starts the
+  dwell, the shimmer onset, and (after the dwell) the copy crossfade. In
+  production, expose this as a prop + an onSealed callback / event. Do not
+  re-implement the iris or ember timing in the shell.
+
+  STUB-ONLY ARTIFACT: #vault-sealed-cool exists ONLY in this file. It is the
+  sealed case with an UNLIT pilot, used so the stub can show the ember
+  sequence (close, THEN catch) without editing the shared warm #vault-sealed
+  unit. The real rig handles cool->ignited internally. Delete #vault-sealed-cool
+  when the rig lands. The shared seam unit is #vault-sealed and only that.
+
+  THE SEAM (most important, do not break): the seal crosses the CardCapture ->
+  Processing component boundary. CardCapture's settled frame must be
+  pixel-identical to Processing's mount frame. Both consume the SAME shared
+  unit (#vault-sealed). At the boundary ONLY the copy crossfades; the vault
+  does not move. Here the seam is made structural: the vault <use> node stays
+  mounted and untouched across the handoff; only the copy and the side label
+  change. In production, CardCapture unmounts at its settled frame and
+  Processing mounts the same shared vault component at the identical frame.
+  SHARED ARTWORK IS NOT ENOUGH: sharing #vault-sealed matches the artwork but
+  not the geometry (container size, padding, flex centering). Extract ONE
+  shared SealedVault component carrying the artwork AND its layout container,
+  consumed by both screens, so the mount frame cannot drift by a pixel. The
+  .ceremony / .seal-vault geometry is duplicated-by-identical-markup here; in
+  production that is two files unless you extract.
+
+  THE SHELL TIMELINE IS THREE VALUES: onSealed -> dwell(2500) -> crossfade.
+  Nothing else. The vault-internal numbers (800 iris, 175 offset, 400 ember,
+  300 settle) live ENTIRELY behind the rig's onSealed signal and never appear
+  in the shell. In this prototype they sit in a clearly separated RIG_STUB
+  group precisely so a port cannot lift them into the shell. The micro-settle
+  is rig-internal too: the production shell must NOT transform the vault (the
+  .seal-vault-stack scale here is stub-only, delete it with the rig).
+
+  LOCKED TIMELINE (single choreography, one orchestrator, see SEAL constants):
+    iris close   0 - 800ms      var(--ease-seal-iris)
+    ember catch  975 - 1375ms   var(--ease-seal-ember)  (iris-complete + 175ms)
+    settle       1375 - 1675ms  ~300ms micro-settle to dead-still
+    shimmer onset 1675ms+        0 -> faint (0.05) over ~1000ms, ground only
+    dwell        2500ms          "Sealed" line holds after the settle
+    copy crossfade ~4175ms       "Sealed..." -> "Preparing your voice."
+
+  TOKENS / DECISIONS CARRIED IN:
+    - --ease-seal-iris : PLACEHOLDER = the --ease-essence value
+      (cubic-bezier(0.4,0.0,0.2,1)) per Build Handoff. The tuned curve is
+      owned by the vault thread; design target direction is a slower-decel
+      tail, e.g. cubic-bezier(0.33,0.0,0.15,1). When the real value lands it
+      replaces THIS token only, never --ease-essence (that curve has ~60 refs
+      app-wide). No silent swap.
+    - ember catch curve : var(--ease-seal-ember) = cubic-bezier(0.2,0,0.5,1).
+      PROMOTED off var(--ease-page). Canonical --ease-page is (0.22,1,0.36,1),
+      a snappy fast-out (not the gentle decel this file first assumed, and not
+      an overshoot either: peak y is exactly 1.0). A warm pilot-light catch
+      wants a soft-in bloom, not a snap, so the DESIGN OPEN 1 trip-wire fires
+      now on curve evidence. The shimmer onset shares this same warm-arrival
+      curve. Nothing in Pass 2 references --ease-page, so the page-curve drift
+      cannot reach the warm moments. (Processing's exit ease-down, Pass 3, still
+      points at --ease-page in the spec; re-judge it against canonical there,
+      same lesson.)
+    - seal total ~1.68s held; dwell 2.5s locked. Only lever if it reads
+      rushed against the rig: add up to ~100ms to the iris close, nothing else.
+    - --shimmer-intensity : ground layer only, never on the vault object.
+      Ignites to faint (0.05) at the settle and stops. The faint->active
+      climb and the sine loop are Pass 3.
+
+  GUARDRAILS (locked):
+    - SEAL-INTEGRITY (motion half): the seal fires ONLY at confirmed payment.
+      No sealed frame and no shimmer onset in any pre-seal state. The pre-seal
+      panel below asserts this (establish, cool ember, shimmer 0).
+    - EMBER-TIMING: ember cool through the close, ignites at the catch, static
+      thereafter. No pulse, no brightness() loop.
+    - Warm surface: this runs on the oat/warm phase background, so NO
+      mix-blend-mode: screen. Ember and shimmer use plain opacity here.
+    - No brightness() anywhere. --ease-breath is Stone-only, never the vault
+      or the shimmer. No new packages. No em dashes in copy strings.
+
+  PRODUCTION NOTES (not prototype blockers):
+    - A11y: the three copy lines all live in the DOM. Only the active line is
+      exposed to AT (aria-hidden toggled per phase here); the seal line is an
+      aria-live="polite" region so the state change announces once. Keep that.
+    - Reduced motion: ONE source of truth in production, the useReducedMotion
+      hook (Motion Spec section 6). The harness deliberately has both an OS
+      media query and a manual toggle for testing; they can disagree. Do not
+      ship two sources.
+    - --color-glow-warm-rgb (214,162,92) is PROVISIONAL (palette thread,
+      FOLLOW_UPS #65). Fine to preview; do not harden into @theme as canonical
+      before the palette thread ratifies it.
+
+  VERIFICATION (Pass 2 bar): seal holds 60fps under 4x CPU throttle at
+  390x844; seal never fires in any pre-seal state; ember stays cool through
+  the close; dwell holds ~2.5s and the crossfade lands after it; RM renders
+  the settled frame with zero animation. Playwright across the seal states
+  before final delivery.
+-->
+
+<style>
+:root{
+  /* ---- canonical tokens (mirror of globals.css @theme; Pass 1 block) ---- */
+  --color-bg-warm-phase:#F2EDE4;
+  --color-bg-gold:#F2E8D6;
+  --color-bg-neutral:#F6F0E5;
+  --color-surface-card:#F6F0E5;
+  --color-mineral:#7A8088;
+  --color-mineral-dark:#656B73;
+  --color-text-primary:#1C1A18;
+  --color-text-secondary:#6B6B6B;
+
+  --font-display:'Spectral', Georgia, serif;
+  --font-body:'Inter', system-ui, sans-serif;
+  --text-title:28px;
+  --text-body:16px;
+  --text-small:14px;
+  --text-caption:12px;
+  --line-height-title:1.4;
+
+  --space-sm:8px; --space-md:12px; --space-lg:16px; --space-xl:24px;
+  --space-2xl:32px; --space-3xl:40px; --space-4xl:48px;
+
+  /* Easing. This block mirrors the RUNNING globals.css @theme (canonical), not
+     the stale design-tokens.md doc. Pass 2's warm moments (ember catch, shimmer
+     onset) run on --ease-seal-ember, NOT --ease-page, so they do not depend on
+     the page curve at all. --ease-page and --ease-breath are mirrored at their
+     canonical values for honesty; neither drives anything in this file. */
+  --ease-essence:cubic-bezier(0.4, 0.0, 0.2, 1);     /* universal transitions (guard-only here) */
+  --ease-seal-iris:cubic-bezier(0.4, 0.0, 0.2, 1);   /* iris-close PLACEHOLDER (= ease-essence); target ~ (0.33,0,0.15,1), owned by the vault thread */
+  --ease-seal-ember:cubic-bezier(0.2, 0.0, 0.5, 1);  /* warm arrival: ember catch + shimmer onset. Soft-in, monotonic, no snap, no overshoot. */
+  --ease-page:cubic-bezier(0.22, 1, 0.36, 1);        /* CANONICAL (snappy fast-out, NOT an overshoot). Mirrored only; unused in Pass 2. */
+  --ease-breath:cubic-bezier(0.37, 0, 0.63, 1);      /* CANONICAL. Stone-only, never the vault or shimmer. Unused here. */
+
+  /* Shimmer ground primitive. Pass 2 ignites to faint at the settle, no loop. */
+  --shimmer-intensity:0;
+  --color-glow-warm-rgb:214, 162, 92;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:#15140F;
+  color:var(--color-text-primary);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  padding:28px 12px 64px; gap:18px;
+}
+button{font-family:inherit;}
+
+/* ---- harness ---- */
+.harness{display:flex; flex-direction:column; align-items:center; gap:10px; max-width:760px;}
+.harness__title{font-family:var(--font-body); font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.46);}
+.harness__note{font-size:11px; color:rgba(255,255,255,0.34); max-width:560px; text-align:center; line-height:1.6;}
+.dev-group{display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center;}
+.dev-group__label{font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.34); margin-right:4px;}
+.dev-group button{
+  background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.66);
+  border:1px solid rgba(255,255,255,0.12); border-radius:14px;
+  padding:6px 12px; font-size:11px; letter-spacing:0.02em; cursor:pointer; transition:all 160ms ease;
+}
+.dev-group button:hover{background:rgba(255,255,255,0.14); color:#fff;}
+.dev-group button.is-current{background:var(--color-mineral); color:#fff; border-color:var(--color-mineral);}
+.dev-group button.is-primary{background:rgba(122,128,136,0.28); color:#fff; border-color:rgba(122,128,136,0.5);}
+.dev-group button:disabled{opacity:0.34; cursor:not-allowed;}
+
+/* readout */
+.readout{
+  display:flex; gap:18px; flex-wrap:wrap; justify-content:center; align-items:center;
+  font-size:11px; color:rgba(255,255,255,0.5); letter-spacing:0.04em;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px; padding:8px 16px; min-height:34px; max-width:620px;
+}
+.readout b{color:rgba(255,255,255,0.82); font-weight:600;}
+.readout .ok{color:#8fb9a6;}
+.readout .warn{color:#caa15a;}
+
+/* ---- phone frame ---- */
+.prototype-wrapper{
+  width:390px; height:812px; border-radius:48px; overflow:hidden;
+  box-shadow:0 0 0 10px #1A1715, 0 0 0 12px var(--color-mineral), 0 50px 100px rgba(0,0,0,0.45);
+  position:relative; flex-shrink:0; background:var(--color-bg-warm-phase);
+}
+@media (max-width:440px){.prototype-wrapper{transform:scale(0.88); transform-origin:top center;}}
+.phone{
+  width:100%; height:100%; position:relative; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--color-bg-warm-phase); color:var(--color-text-primary);
+}
+.phone__status{
+  position:absolute; inset:0 0 auto 0; height:44px; display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px 0; font-weight:600; font-size:var(--text-small); z-index:10; pointer-events:none;
+}
+.phone__status-icons{display:flex; gap:6px; align-items:center;}
+.phone__island{position:absolute; top:11px; left:50%; transform:translateX(-50%); width:120px; height:30px; border-radius:999px; background:#0B0B0B; z-index:11;}
+.phone__home-indicator{position:absolute; left:50%; bottom:8px; transform:translateX(-50%); width:134px; height:5px; border-radius:3px; background:rgba(28,26,24,0.32); z-index:10;}
+.variant-label{position:absolute; top:13px; left:16px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:rgba(28,26,24,0.42); z-index:12; pointer-events:none;}
+
+.phone__screen{position:absolute; inset:44px 0 0 0; display:flex; flex-direction:column; z-index:3;}
+
+/* ground shimmer (ground layer only, never on the vault). Pass 2: static
+   per-state opacity with a soft onset. Plain opacity on the warm surface,
+   no mix-blend. Loop is Pass 3. */
+.ground-shimmer{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  opacity:var(--shimmer-intensity);
+  transition:opacity 1000ms var(--ease-seal-ember);
+  will-change:opacity;
+  background:radial-gradient(ellipse 80% 60% at 50% 44%,
+    rgba(var(--color-glow-warm-rgb),0.5) 0%, rgba(var(--color-glow-warm-rgb),0.18) 46%, transparent 76%);
+}
+.atmosphere-vignette{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:radial-gradient(ellipse 120% 92% at 50% 50%, transparent 52%, rgba(60,45,25,0.05) 86%, rgba(60,45,25,0.1) 100%);
+}
+
+/* ceremonial stage (identical layout on both seam sides so the vault sits at
+   the same pixel and literally does not move across the handoff) */
+.body{position:relative; z-index:1; flex:1; padding:4px var(--space-xl) var(--space-3xl); display:flex; flex-direction:column; overflow:hidden;}
+.ceremony{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:var(--space-lg); padding-bottom:var(--space-4xl);}
+.ceremony__copy{font-family:var(--font-display); font-size:var(--text-title); line-height:var(--line-height-title); color:var(--color-text-primary); max-width:280px;}
+.ceremony__sub{font-family:var(--font-body); font-size:var(--text-body); color:var(--color-text-secondary); max-width:280px;}
+
+/* ---- vault stack (the stub; real rig replaces this) ---- */
+.seal-vault{position:relative; width:196px; height:196px;}
+/* STUB-ONLY micro-settle. The settle is RIG-INTERNAL (the vessel settling to
+   dead-still); the production shell must NOT transform the vault. This scale
+   stands in for the rig's internal settle so the stub reads right. Delete it
+   with the rig, exactly like #vault-sealed-cool. */
+.seal-vault-stack{position:absolute; inset:0; transform:scale(1); transition:transform 300ms var(--ease-seal-ember); will-change:transform;}
+.seal-vault .vault{position:absolute; inset:0; width:196px; height:196px;}
+.v-establish{opacity:1;   transition:opacity 800ms var(--ease-seal-iris);}
+.v-sealed-cool{opacity:0; transition:opacity 800ms var(--ease-seal-iris);}
+.v-sealed{opacity:0;      transition:opacity 400ms var(--ease-seal-ember);}
+
+/* copy layers: crossfade only, the seam */
+.copy-deck{position:relative; min-height:84px; width:100%; display:flex; justify-content:center;}
+.copy-line{position:absolute; top:0; left:50%; transform:translateX(-50%); width:100%; opacity:0; transition:opacity 400ms var(--ease-seal-ember); will-change:opacity;}
+.preseal-cap{opacity:0; transition:opacity 200ms var(--ease-seal-ember);}
+
+/* ====================================================================
+   PHASE STATE MACHINE  (the single orchestrator drives [data-phase])
+   idle -> closing -> catching -> settling -> sealed -> handoff
+   ==================================================================== */
+
+/* IDLE / pre-roll: establish only, cool, shimmer 0, no copy */
+.stage[data-phase="idle"] .v-establish{opacity:1;}
+
+/* CLOSING: case closes cool (establish -> sealed-cool). Ember stays cool. */
+.stage[data-phase="closing"] .v-establish{opacity:0;}
+.stage[data-phase="closing"] .v-sealed-cool{opacity:1;}
+
+/* CATCHING: ember ignites (sealed-cool -> #vault-sealed) on ease-page. */
+.stage[data-phase="catching"] .v-establish,
+.stage[data-phase="settling"] .v-establish,
+.stage[data-phase="sealed"]   .v-establish,
+.stage[data-phase="handoff"]  .v-establish{opacity:0;}
+.stage[data-phase="catching"] .v-sealed-cool{opacity:0; transition:opacity 400ms var(--ease-seal-ember);}
+.stage[data-phase="settling"] .v-sealed-cool,
+.stage[data-phase="sealed"]   .v-sealed-cool,
+.stage[data-phase="handoff"]  .v-sealed-cool{opacity:0;}
+.stage[data-phase="catching"] .v-sealed,
+.stage[data-phase="settling"] .v-sealed,
+.stage[data-phase="sealed"]   .v-sealed,
+.stage[data-phase="handoff"]  .v-sealed{opacity:1;}
+
+/* micro-settle: tiny overshoot on the catch, rests at 1.0 on the settle */
+.stage[data-phase="catching"] .seal-vault-stack{transform:scale(1.012);}
+.stage[data-phase="settling"] .seal-vault-stack,
+.stage[data-phase="sealed"]   .seal-vault-stack,
+.stage[data-phase="handoff"]  .seal-vault-stack{transform:scale(1);}
+
+/* seal line fades in WITH the settle, holds through the dwell */
+.stage[data-phase="settling"] .seal-copy,
+.stage[data-phase="sealed"]   .seal-copy{opacity:1;}
+/* shimmer ignites to faint at the settle (ground only), and only here */
+.stage[data-phase="sealed"]   .ground-shimmer,
+.stage[data-phase="handoff"]  .ground-shimmer{--shimmer-intensity:0.05;}
+
+/* HANDOFF (the seam): copy crossfades, vault unchanged. shimmer stays faint. */
+.stage[data-phase="handoff"] .seal-copy{opacity:0;}
+.stage[data-phase="handoff"] .proc-copy{opacity:1;}
+
+/* ---- pre-seal integrity panel: establish, cool ember, shimmer 0, no seal ---- */
+.stage[data-preseal] .v-establish{opacity:1;}
+.stage[data-preseal] .v-sealed-cool,
+.stage[data-preseal] .v-sealed{opacity:0;}
+.stage[data-preseal] .seal-copy,
+.stage[data-preseal] .proc-copy{opacity:0;}
+.stage[data-preseal] .preseal-cap{opacity:1;}
+.stage[data-preseal] .ground-shimmer{--shimmer-intensity:0;}
+
+/* ---- reduced motion: render the settled frame directly, zero animation ----
+   Honors OS setting (media query) and the in-page RM toggle ([data-rm]). */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important; animation-delay:0ms !important; transition-duration:0.01ms !important;}
+}
+.stage[data-rm] .v-establish,
+.stage[data-rm] .v-sealed-cool,
+.stage[data-rm] .v-sealed,
+.stage[data-rm] .seal-vault-stack,
+.stage[data-rm] .ground-shimmer,
+.stage[data-rm] .copy-line{transition:none !important;}
+</style>
+</head>
+<body>
+
+<div class="harness">
+  <div class="harness__title">ESSENCE · Step 3 · Seal Hero · Pass 2</div>
+  <div class="harness__note">The seal is the CardCapture to Processing seam. The vault here is a stub behind the real vault interface (it plays the timeline and signals "settled"); the shell owns the trigger gate, copy, shimmer onset, and the seam. Trigger fires only the confirmed path. Pre-seal states never seal.</div>
+
+  <div class="dev-group">
+    <span class="dev-group__label">Seal</span>
+    <button id="btn-trigger" class="is-primary">Trigger seal (confirmed)</button>
+    <button id="btn-replay">Replay</button>
+  </div>
+
+  <div class="dev-group">
+    <span class="dev-group__label">Reduced motion</span>
+    <button id="btn-rm">Off</button>
+    <span class="dev-group__label" style="margin-left:14px;">Pre-seal (integrity)</span>
+    <button class="preseal-btn" data-cap="Confirming your place.">confirm-hold</button>
+    <button class="preseal-btn" data-cap="Taking a little longer.">confirm-timeout</button>
+    <button class="preseal-btn" data-cap="Your card was declined.">checkout-error</button>
+  </div>
+
+  <div class="readout">
+    <span>phase <b id="ro-phase">idle</b></span>
+    <span>t <b id="ro-t">0ms</b></span>
+    <span>ember <b id="ro-ember">cool</b></span>
+    <span>shimmer <b id="ro-shimmer">0</b></span>
+    <span>seam <b id="ro-seam">CardCapture</b></span>
+    <span id="ro-guard" class="ok">seal gated to confirmed</span>
+  </div>
+</div>
+
+<!-- shared SVG defs (byte-identical to Pass 1 so the seam unit matches).
+     #vault-sealed is the shared seam unit. #vault-sealed-cool is STUB-ONLY. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="caseMetal" cx="42%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#9aa0a8"/><stop offset="52%" stop-color="#7A8088"/><stop offset="100%" stop-color="#565b62"/>
+    </radialGradient>
+    <radialGradient id="caseMetalWarm" cx="42%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#a39c90"/><stop offset="52%" stop-color="#857c70"/><stop offset="100%" stop-color="#5f574c"/>
+    </radialGradient>
+    <radialGradient id="interior" cx="50%" cy="46%" r="60%">
+      <stop offset="0%" stop-color="#cfc7ba"/><stop offset="70%" stop-color="#b6ad9f"/><stop offset="100%" stop-color="#928876"/>
+    </radialGradient>
+    <radialGradient id="emberCool" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#aab0b6"/><stop offset="100%" stop-color="#7c828a"/>
+    </radialGradient>
+    <radialGradient id="emberIgnited" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbe6c0"/><stop offset="38%" stop-color="#eecb84"/><stop offset="70%" stop-color="#d9a85a"/><stop offset="100%" stop-color="rgba(217,168,90,0)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- establish: cool mineral case, short ticks, cool pilot (r=11) -->
+  <symbol id="vault-establish" viewBox="0 0 196 196">
+    <circle cx="98" cy="98" r="92" fill="url(#caseMetal)"/>
+    <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.18)" stroke-width="2"/>
+    <circle cx="98" cy="98" r="50" fill="url(#interior)"/>
+    <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.22)" stroke-width="1.5"/>
+    <g stroke="rgba(28,26,24,0.14)" stroke-width="2" stroke-linecap="round">
+      <line x1="98" y1="50" x2="98" y2="60"/><line x1="139" y1="74" x2="131" y2="80"/><line x1="139" y1="122" x2="131" y2="116"/>
+      <line x1="98" y1="146" x2="98" y2="136"/><line x1="57" y1="122" x2="65" y2="116"/><line x1="57" y1="74" x2="65" y2="80"/>
+    </g>
+    <circle cx="98" cy="98" r="11" fill="url(#emberCool)"/>
+    <circle cx="98" cy="98" r="11" fill="none" stroke="rgba(28,26,24,0.25)" stroke-width="1.5"/>
+  </symbol>
+
+  <!-- STUB-ONLY: sealed case + spokes drawn shut, but the pilot is UNLIT
+       (cool r=11). Used only to show the close before the catch. Delete when
+       the real rig lands. NOT the seam unit. -->
+  <symbol id="vault-sealed-cool" viewBox="0 0 196 196">
+    <circle cx="98" cy="98" r="92" fill="url(#caseMetalWarm)"/>
+    <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="2"/>
+    <circle cx="98" cy="98" r="50" fill="url(#caseMetalWarm)"/>
+    <g stroke="rgba(28,26,24,0.22)" stroke-width="1.5" stroke-linecap="round">
+      <line x1="98" y1="48" x2="98" y2="98"/><line x1="141" y1="73" x2="98" y2="98"/><line x1="141" y1="123" x2="98" y2="98"/>
+      <line x1="98" y1="148" x2="98" y2="98"/><line x1="55" y1="123" x2="98" y2="98"/><line x1="55" y1="73" x2="98" y2="98"/>
+    </g>
+    <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="13" fill="url(#caseMetalWarm)"/>
+    <circle cx="98" cy="98" r="13" fill="none" stroke="rgba(28,26,24,0.3)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="11" fill="url(#emberCool)"/>
+    <circle cx="98" cy="98" r="11" fill="none" stroke="rgba(28,26,24,0.25)" stroke-width="1.5"/>
+  </symbol>
+
+  <!-- SHARED SEAM UNIT: sealed case + ignited pilot. CardCapture settled
+       frame and Processing mount frame both render THIS. -->
+  <symbol id="vault-sealed" viewBox="0 0 196 196">
+    <circle cx="98" cy="98" r="40" fill="url(#emberIgnited)"/>
+    <circle cx="98" cy="98" r="92" fill="url(#caseMetalWarm)"/>
+    <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="2"/>
+    <circle cx="98" cy="98" r="50" fill="url(#caseMetalWarm)"/>
+    <g stroke="rgba(28,26,24,0.22)" stroke-width="1.5" stroke-linecap="round">
+      <line x1="98" y1="48" x2="98" y2="98"/><line x1="141" y1="73" x2="98" y2="98"/><line x1="141" y1="123" x2="98" y2="98"/>
+      <line x1="98" y1="148" x2="98" y2="98"/><line x1="55" y1="123" x2="98" y2="98"/><line x1="55" y1="73" x2="98" y2="98"/>
+    </g>
+    <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="13" fill="url(#caseMetalWarm)"/>
+    <circle cx="98" cy="98" r="13" fill="none" stroke="rgba(28,26,24,0.3)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="6" fill="#f3d9a4"/>
+  </symbol>
+</svg>
+
+<!-- ================= SEAL STAGE ================= -->
+<div class="prototype-wrapper">
+  <div class="phone stage" id="stage" data-phase="idle">
+    <div class="phone__island"></div>
+    <div class="phone__status">
+      <span>9:41</span>
+      <span class="phone__status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#1C1A18"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#1C1A18"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#1C1A18"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#1C1A18"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11"><rect x="0.5" y="0.5" width="18" height="10" rx="3" fill="none" stroke="#1C1A18" opacity="0.5"/><rect x="2" y="2" width="14" height="7" rx="1.5" fill="#1C1A18"/><rect x="19.5" y="3.5" width="1.5" height="4" rx="0.75" fill="#1C1A18" opacity="0.5"/></svg>
+      </span>
+    </div>
+    <div class="variant-label" id="vlabel">CardCapture · seal</div>
+    <div class="phone__home-indicator"></div>
+
+    <div class="phone__screen">
+      <div class="ground-shimmer"></div>
+      <div class="atmosphere-vignette"></div>
+
+      <div class="body">
+        <div class="ceremony">
+
+          <!-- the vault (stub behind the real vault interface) -->
+          <div class="seal-vault">
+            <div class="seal-vault-stack">
+              <svg class="vault v-establish"   viewBox="0 0 196 196"><use href="#vault-establish"/></svg>
+              <svg class="vault v-sealed-cool" viewBox="0 0 196 196"><use href="#vault-sealed-cool"/></svg>
+              <svg class="vault v-sealed"      viewBox="0 0 196 196"><use href="#vault-sealed"/></svg>
+            </div>
+          </div>
+
+          <!-- copy deck: crossfade only across the seam -->
+          <div class="copy-deck">
+            <div class="copy-line seal-copy" aria-live="polite" aria-hidden="true"><p class="ceremony__copy">Sealed. Your voice is on its way.</p></div>
+            <div class="copy-line proc-copy" aria-hidden="true"><p class="ceremony__copy">Preparing your voice.</p></div>
+            <div class="copy-line preseal-cap" aria-hidden="true"><p class="ceremony__sub" id="preseal-text">Confirming your place.</p></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* =================================================================
+     TWO TIMING GROUPS, kept separate ON PURPOSE.
+
+     RIG_STUB: the vault-internal choreography (close, catch, settle). In
+     production these live ENTIRELY behind the real rig and surface only as
+     one onSealed signal. They are here because this stub stands in for the
+     rig. A production port must NOT lift these into the shell.
+
+     SHELL: the only timeline the production shell owns. Three moves:
+     onSealed -> dwell -> crossfade. One value (DWELL). Nothing vault-internal.
+     ================================================================= */
+  var RIG_STUB = {
+    IRIS: 800,        // iris close
+    OFFSET: 175,      // ember catch offset, measured from iris-COMPLETE
+    EMBER: 400,       // ember catch duration
+    SETTLE: 300       // micro-settle to dead-still (RIG-INTERNAL)
+  };
+  RIG_STUB.EMBER_START = RIG_STUB.IRIS + RIG_STUB.OFFSET;          // 975 (iris-complete + 175)
+  RIG_STUB.EMBER_END   = RIG_STUB.EMBER_START + RIG_STUB.EMBER;    // 1375
+  RIG_STUB.SETTLE_END  = RIG_STUB.EMBER_END + RIG_STUB.SETTLE;     // 1675 -> the onSealed moment
+
+  var SHELL = { DWELL: 2500 };  // "Sealed" line holds after onSealed, then crossfade
+
+  var stage   = document.getElementById('stage');
+  var vlabel  = document.getElementById('vlabel');
+  var btnGo   = document.getElementById('btn-trigger');
+  var btnReplay = document.getElementById('btn-replay');
+  var btnRm   = document.getElementById('btn-rm');
+  var preBtns = document.querySelectorAll('.preseal-btn');
+  var preText = document.getElementById('preseal-text');
+
+  var sealCopy = document.querySelector('.seal-copy');
+  var procCopy = document.querySelector('.proc-copy');
+  var preCap   = document.querySelector('.preseal-cap');
+
+  var roPhase = document.getElementById('ro-phase');
+  var roT     = document.getElementById('ro-t');
+  var roEmber = document.getElementById('ro-ember');
+  var roShim  = document.getElementById('ro-shimmer');
+  var roSeam  = document.getElementById('ro-seam');
+  var roGuard = document.getElementById('ro-guard');
+
+  var timers = [];
+  var rafId = null;
+  var rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function clearTimers(){ timers.forEach(clearTimeout); timers = []; if(rafId){cancelAnimationFrame(rafId); rafId=null;} }
+  function at(ms, fn){ timers.push(setTimeout(fn, ms)); }
+
+  /* expose only the active copy line to assistive tech */
+  function setActiveCopy(which){
+    sealCopy.setAttribute('aria-hidden', which==='seal' ? 'false' : 'true');
+    procCopy.setAttribute('aria-hidden', which==='proc' ? 'false' : 'true');
+    preCap.setAttribute('aria-hidden',  which==='pre'  ? 'false' : 'true');
+  }
+  function setReadout(phase, ember, shimmer, seam){
+    roPhase.textContent = phase;
+    roEmber.textContent = ember; roEmber.style.color = (ember==='ignited') ? '#caa15a' : 'rgba(255,255,255,0.82)';
+    roShim.textContent = shimmer;
+    roSeam.textContent = seam;
+    vlabel.textContent = seam + ' · seal';
+  }
+  function tick(start, total){
+    rafId = requestAnimationFrame(function(){
+      var t = Math.min(Math.round(performance.now() - start), total);
+      roT.textContent = t + 'ms';
+      if(t < total) tick(start, total);
+    });
+  }
+
+  function applyRmButton(){ btnRm.textContent = rm ? 'On' : 'Off'; btnRm.classList.toggle('is-current', rm); }
+
+  function reset(){
+    clearTimers();
+    stage.removeAttribute('data-preseal');
+    stage.removeAttribute('data-rm');
+    stage.setAttribute('data-phase','idle');
+    setActiveCopy('none');
+    setReadout('idle','cool','0','CardCapture');
+    roT.textContent = '0ms';
+    roGuard.textContent = 'seal gated to confirmed'; roGuard.className = 'ok';
+    btnGo.disabled = false;
+  }
+
+  /* ---- SHELL: the entire production-side timeline. Triggered by onSealed,
+     whether the seal animated (rig) or rendered static (reduced motion). ---- */
+  function shellOnSealed(){
+    stage.setAttribute('data-phase','sealed');   // settled unit + shimmer faint onset + seal line held
+    setActiveCopy('seal');
+    setReadout(rm ? 'sealed (RM)' : 'sealed (dwell)','ignited', rm ? '0.05' : '0 -> 0.05','CardCapture');
+    at(SHELL.DWELL, function(){                   // dwell, then the seam crossfade into Processing
+      stage.setAttribute('data-phase','handoff');
+      setActiveCopy('proc');
+      setReadout(rm ? 'handoff (RM)' : 'handoff (seam)','ignited','0.05','Processing');
+    });
+  }
+
+  /* ---- STUB: stands in for the real vault rig. Plays close/catch/settle on
+     RIG_STUB offsets, then emits the one signal the shell cares about. ---- */
+  function rigStubPlay(){
+    var start = performance.now();
+    stage.setAttribute('data-phase','closing');
+    setActiveCopy('none');
+    setReadout('closing','cool','0','CardCapture');
+    tick(start, RIG_STUB.SETTLE_END + SHELL.DWELL);
+    at(RIG_STUB.EMBER_START, function(){ stage.setAttribute('data-phase','catching'); setReadout('catching','ignited','0','CardCapture'); }); // ember catch
+    at(RIG_STUB.EMBER_END,   function(){ stage.setAttribute('data-phase','settling'); setReadout('settling','ignited','0','CardCapture'); }); // settle
+    at(RIG_STUB.SETTLE_END,  function(){ shellOnSealed(); });                                                                                 // onSealed -> shell
+  }
+
+  /* ---- confirmed seal trigger ---- */
+  function playSeal(){
+    clearTimers();
+    stage.removeAttribute('data-preseal');
+    btnGo.disabled = true;
+    if(rm){
+      // reduced motion: no rig animation. Render the settled frame directly,
+      // then run the SAME shell (onSealed -> dwell -> crossfade), instant.
+      stage.setAttribute('data-rm','');
+      roT.textContent = '0ms';
+      shellOnSealed();
+      return;
+    }
+    stage.removeAttribute('data-rm');
+    rigStubPlay();
+  }
+
+  /* ---- pre-seal integrity: establish, cool ember, shimmer 0, NEVER seals ---- */
+  function showPreseal(caption){
+    clearTimers();
+    stage.removeAttribute('data-rm');
+    stage.setAttribute('data-phase','idle');
+    preText.textContent = caption;
+    stage.setAttribute('data-preseal','');
+    setActiveCopy('pre');
+    setReadout('pre-seal','cool','0','CardCapture');
+    roT.textContent = '0ms';
+    roGuard.textContent = 'no seal: unsealed, cool ember, shimmer 0'; roGuard.className = 'ok';
+    btnGo.disabled = false;
+  }
+
+  btnGo.addEventListener('click', playSeal);
+  btnReplay.addEventListener('click', function(){ reset(); requestAnimationFrame(playSeal); });
+  btnRm.addEventListener('click', function(){ rm = !rm; applyRmButton(); reset(); });
+  preBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      preBtns.forEach(function(x){x.classList.remove('is-current');});
+      b.classList.add('is-current');
+      showPreseal(b.getAttribute('data-cap'));
+    });
+  });
+
+  applyRmButton();
+  reset();
+})();
+</script>
+</body>
+</html>

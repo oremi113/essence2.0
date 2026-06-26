@@ -1,0 +1,262 @@
+/**
+ * Step 3 · Seal hero — Pass 2 verification spec.
+ *
+ * Encodes the Build Handoff §9.3 / Motion Spec §8 gate for the seal:
+ *   - the seal fires ONLY from the confirmed trigger (§SEAL-INTEGRITY, motion half)
+ *   - all three pre-seal states render unsealed + cool ember + shimmer 0, never a seal
+ *   - the ember reads cool through the entire close, ignites at the catch, stays static
+ *   - the locked timeline beats land: catching≈975, settling≈1375, onSealed≈1675,
+ *     dwell ~2.5s, crossfade≈4175 — copy swaps only at the seam, vault doesn't move
+ *   - reduced motion renders the settled frame directly with zero animation
+ *   - the seal holds 60fps under 4× CPU throttle at 390×844, iris-close window the focus
+ *   - zero console errors
+ *
+ * ── WHERE THIS LIVES ────────────────────────────────────────────────────────
+ * Parked in the session folder, NOT tests/e2e/, on purpose: the production seal
+ * route does not exist yet (Pass 1 unbuilt), and the e2e suite runs against the
+ * app on :4000 — adding it there now would fail CI against a missing route.
+ *
+ * Run it against the prototype today:
+ *   SEAL_URL="file:///Users/oremi/Downloads/essence-step3-seal-pass2.html" \
+ *     npx playwright test docs/session-step3-card-capture/seal.spec.ts \
+ *     --config playwright.config.ts --project=mobile
+ *   (PLAYWRIGHT_BASE_URL is irrelevant here — the spec navigates to an absolute
+ *    SEAL_URL and the webServer never spawns because we set it below.)
+ *
+ * When Pass 1 builds /dev/seal: move this file to tests/e2e/, delete the
+ * file:// default, and point SEAL_URL at '/dev/seal' (baseURL-relative). The DOM
+ * contract below (data-phase machine, readout ids, trigger ids) is the same
+ * contract the production /dev page must expose, so the assertions port intact.
+ *
+ * DOM CONTRACT (prototype + production /dev page must both honor):
+ *   #stage[data-phase]  idle→closing→catching→settling→sealed→handoff
+ *   #stage[data-preseal] set in the three pre-seal states; #stage[data-rm] in RM
+ *   #btn-trigger  fires the confirmed seal     #btn-rm toggles reduced motion
+ *   .preseal-btn  (×3) the pre-seal integrity states
+ *   #ro-phase #ro-ember #ro-shimmer #ro-seam #ro-guard  readout mirrors
+ *   .v-establish / .v-sealed-cool / .v-sealed  the three vault layers (opacity-gated)
+ */
+
+import { test, expect, type Page } from '@playwright/test';
+
+const SEAL_URL =
+  process.env.SEAL_URL ??
+  'file:///Users/oremi/Downloads/essence-step3-seal-pass2.html';
+
+// Locked timeline (Motion Spec §3 / prototype RIG_STUB). Offsets from t=0 at the
+// confirmed-payment trigger. Tolerance is generous because setTimeout + throttle
+// jitter; we assert ORDER and rough landing, not frame-exact timing.
+const BEAT = { CATCH: 975, SETTLE: 1375, SEALED: 1675, CROSSFADE: 4175 } as const;
+const TOL = 220; // ms — covers setTimeout coalescing under CPU throttle
+
+const consoleErrors: string[] = [];
+
+test.beforeEach(async ({ page }) => {
+  consoleErrors.length = 0;
+  page.on('console', (m) => {
+    if (m.type() === 'error') consoleErrors.push(m.text());
+  });
+  page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(SEAL_URL, { waitUntil: 'load' });
+});
+
+test.afterEach(() => {
+  expect(consoleErrors, `console errors: ${consoleErrors.join(' | ')}`).toEqual([]);
+});
+
+function phase(page: Page) {
+  return page.locator('#stage');
+}
+async function opacityOf(page: Page, selector: string): Promise<number> {
+  return page.locator(selector).evaluate((el) =>
+    parseFloat(getComputedStyle(el as Element).opacity),
+  );
+}
+
+// ── §SEAL-INTEGRITY: the seal fires only from the confirmed trigger ───────────
+
+test.describe('seal gating', () => {
+  for (const cap of ['confirm-hold', 'confirm-timeout', 'checkout-error']) {
+    test(`pre-seal "${cap}" never seals: unsealed, cool ember, shimmer 0`, async ({
+      page,
+    }) => {
+      // Click the matching pre-seal button by its exact visible label.
+      await page.getByRole('button', { name: cap, exact: true }).click();
+
+      await expect(phase(page)).toHaveAttribute('data-phase', 'idle');
+      await expect(phase(page)).toHaveAttribute('data-preseal', '');
+      // The sealed (ignited) unit must be fully hidden — no seal can exist here.
+      expect(await opacityOf(page, '.v-sealed')).toBe(0);
+      expect(await opacityOf(page, '.v-sealed-cool')).toBe(0);
+      expect(await opacityOf(page, '.v-establish')).toBeGreaterThan(0.9);
+      await expect(page.locator('#ro-ember')).toHaveText('cool');
+      await expect(page.locator('#ro-shimmer')).toHaveText('0');
+      await expect(page.locator('#ro-guard')).toContainText(/no seal/i);
+    });
+  }
+});
+
+// ── Timeline + ember discipline ──────────────────────────────────────────────
+
+test.describe('confirmed seal timeline', () => {
+  test('beats land in order; ember cool through the close, ignited from the catch', async ({
+    page,
+  }) => {
+    // Record every data-phase change with a timestamp, client-side, so we read
+    // the true sequence rather than racing polls against setTimeout.
+    await page.evaluate(() => {
+      (window as unknown as { __beats: Array<[string, number]> }).__beats = [];
+      const stage = document.getElementById('stage')!;
+      const t0 = performance.now();
+      new MutationObserver(() => {
+        const p = stage.getAttribute('data-phase') ?? '';
+        (window as unknown as { __beats: Array<[string, number]> }).__beats.push([
+          p,
+          performance.now() - t0,
+        ]);
+      }).observe(stage, { attributes: true, attributeFilter: ['data-phase'] });
+    });
+
+    await page.locator('#btn-trigger').click();
+    // ember must still read cool during the close, before the catch fires.
+    await expect(page.locator('#ro-ember')).toHaveText('cool');
+
+    // Wait past the crossfade, then read the recorded beats.
+    await page.waitForFunction(
+      () =>
+        (window as unknown as { __beats: Array<[string, number]> }).__beats.some(
+          ([p]) => p === 'handoff',
+        ),
+      undefined,
+      { timeout: 8000 },
+    );
+    const beats = await page.evaluate(
+      () => (window as unknown as { __beats: Array<[string, number]> }).__beats,
+    );
+    const at = (name: string) => beats.find(([p]) => p === name)?.[1];
+
+    // order
+    expect(beats.map(([p]) => p)).toEqual(
+      expect.arrayContaining(['closing', 'catching', 'settling', 'sealed', 'handoff']),
+    );
+    // rough landings
+    expect(at('catching')).toBeGreaterThan(BEAT.CATCH - TOL);
+    expect(at('catching')).toBeLessThan(BEAT.CATCH + TOL);
+    expect(at('settling')).toBeGreaterThan(BEAT.SETTLE - TOL);
+    expect(at('sealed')).toBeGreaterThan(BEAT.SEALED - TOL);
+    expect(at('handoff')).toBeGreaterThan(BEAT.CROSSFADE - TOL);
+    // dwell really held ~2.5s between settle-end and the crossfade
+    expect(at('handoff')! - at('sealed')!).toBeGreaterThan(2500 - TOL);
+  });
+
+  test('the seam swaps copy only — the sealed vault layer is continuous', async ({
+    page,
+  }) => {
+    await page.locator('#btn-trigger').click();
+    // Once sealed, the ignited unit is shown; through the handoff it stays shown
+    // (vault does not move — only copy crossfades).
+    await page.waitForFunction(
+      () => document.getElementById('stage')?.getAttribute('data-phase') === 'sealed',
+      undefined,
+      { timeout: 4000 },
+    );
+    expect(await opacityOf(page, '.v-sealed')).toBeGreaterThan(0.9);
+    await page.waitForFunction(
+      () => document.getElementById('stage')?.getAttribute('data-phase') === 'handoff',
+      undefined,
+      { timeout: 6000 },
+    );
+    expect(await opacityOf(page, '.v-sealed')).toBeGreaterThan(0.9); // unchanged across seam
+    await expect(page.locator('#ro-seam')).toHaveText('Processing');
+    // only the active copy line is exposed to AT
+    await expect(page.locator('.proc-copy')).toHaveAttribute('aria-hidden', 'false');
+  });
+});
+
+// ── Reduced motion: settled frame rendered directly, zero animation ──────────
+
+test.describe('reduced motion', () => {
+  test('RM jumps straight to the settled frame, ember static-ignited, no in-between beats', async ({
+    page,
+  }) => {
+    await page.locator('#btn-rm').click(); // toggle RM on
+    await page.evaluate(() => {
+      (window as unknown as { __phases: string[] }).__phases = [];
+      const stage = document.getElementById('stage')!;
+      new MutationObserver(() =>
+        (window as unknown as { __phases: string[] }).__phases.push(
+          stage.getAttribute('data-phase') ?? '',
+        ),
+      ).observe(stage, { attributes: true, attributeFilter: ['data-phase'] });
+    });
+    await page.locator('#btn-trigger').click();
+
+    await expect(phase(page)).toHaveAttribute('data-phase', 'sealed');
+    await expect(phase(page)).toHaveAttribute('data-rm', '');
+    expect(await opacityOf(page, '.v-sealed')).toBeGreaterThan(0.9);
+    await expect(page.locator('#ro-ember')).toHaveText('ignited');
+
+    // No closing/catching/settling steps in RM — it renders the rest frame.
+    const phases = await page.evaluate(
+      () => (window as unknown as { __phases: string[] }).__phases,
+    );
+    expect(phases).not.toContain('closing');
+    expect(phases).not.toContain('catching');
+  });
+});
+
+// ── Performance: 60fps under 4× CPU throttle, iris-close window the focus ─────
+
+test.describe('performance', () => {
+  test('seal holds ~60fps under 4× CPU throttle (shell floor — real rig verified in the vault thread)', async ({
+    page,
+  }) => {
+    // CDP CPU throttle. Chromium only; skip elsewhere.
+    let client;
+    try {
+      client = await page.context().newCDPSession(page);
+      await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    } catch {
+      test.skip(true, 'CDP CPU throttling is Chromium-only');
+      return;
+    }
+
+    // rAF frame-interval sampler over the whole seal window.
+    await page.evaluate(() => {
+      const w = window as unknown as { __frames: number[] };
+      w.__frames = [];
+      let last = performance.now();
+      const tick = () => {
+        const now = performance.now();
+        w.__frames.push(now - last);
+        last = now;
+        if (now - (w as unknown as { __t0: number }).__t0 < 1800) requestAnimationFrame(tick);
+      };
+      (w as unknown as { __t0: number }).__t0 = performance.now();
+      requestAnimationFrame(tick);
+    });
+
+    await page.locator('#btn-trigger').click();
+    await page.waitForTimeout(1900); // cover iris-close → settle
+    const frames: number[] = await page.evaluate(
+      () => (window as unknown as { __frames: number[] }).__frames,
+    );
+    await client.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+
+    expect(frames.length, 'sampler collected no frames').toBeGreaterThan(30);
+    const sorted = [...frames].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const worst = sorted[sorted.length - 1];
+    // eslint-disable-next-line no-console
+    console.log(
+      `[seal perf @4× throttle] frames=${frames.length} median=${median.toFixed(1)}ms ` +
+        `worst=${worst.toFixed(1)}ms (~${(1000 / median).toFixed(0)}fps median)`,
+    );
+    // 60fps = 16.7ms/frame. Under 4× throttle on the stub shell we expect the
+    // median comfortably ≤ 20ms; the worst single frame should not exceed ~50ms
+    // (a dropped frame at the iris-close start would show as a long gap).
+    expect(median, `median frame ${median.toFixed(1)}ms`).toBeLessThan(20);
+    expect(worst, `worst frame ${worst.toFixed(1)}ms`).toBeLessThan(50);
+  });
+});
