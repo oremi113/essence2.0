@@ -3,47 +3,38 @@
 /**
  * Client wrapper for C1 (Three Shaped) — the one-time ceremony on the A7 route.
  *
- * Owns navigation + the once-per-device latch. The contract calls for
- * "once per user lifetime"; with no profile flag and the migration lock in
- * place (FOLLOW_UPS #30), V1 uses a localStorage latch — per-device, not truly
- * per-lifetime (a cleared store or a second device can replay the moment;
- * harmless). FOLLOW_UPS #54 tracks the durable profile-flag upgrade.
+ * Owns navigation + stamps the durable once-per-lifetime flag. The "once per
+ * user lifetime" contract is now enforced server-side (FOLLOW_UPS #54): the A7
+ * page only renders this wrapper when profiles.three_shaped_ceremony_seen_at is
+ * NULL, so an already-seen user (any device) never reaches C1 — no flash,
+ * no client-side replace. On mount we call the page-owned `onSeen` server
+ * action once to stamp the flag; the DB write is idempotent (preserves the
+ * first-show timestamp), and stamping is fire-and-forget — if it fails the only
+ * cost is replaying a warm, no-cost ceremony, same as the prior latch.
  *
- * On mount: if the latch is already set (a revisit with a stale ?ceremony
- * param), replace to the bare saved route so the normal A7 confirmation renders
- * instead of replaying the ceremony. Otherwise set the latch and let C1 show.
- * C1 renders unconditionally (SSR + hydration safe — reading localStorage in
- * render/initializer would mismatch). Tradeoff: on the already-seen revisit C1
- * paints briefly (SSR'd HTML + the start of the slow entrance) before the soft
- * nav lands on A7 — not a single frame. Accepted because that revisit (a stale
- * deep-link with ?ceremony) is rare; the COMMON first-time path never flashes
- * (latch unset → no replace → C1 plays straight through).
+ * This replaces the V1 per-device localStorage latch ("step6.three_shaped_seen"),
+ * which couldn't guarantee per-lifetime (a cleared store or a second device
+ * replayed the moment).
  *
  * No telemetry: the event catalog has no ceremony event (C1 is silent, like
  * A7); the `from=c1` attribution surfaces when the user joins C2.
  */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ThreeShapedScreen } from "@/components/screens/messages/ThreeShapedScreen";
-import { ROUTES, messageSavedRoute } from "@/lib/routes";
+import { ROUTES } from "@/lib/routes";
 
-const SEEN_KEY = "step6.three_shaped_seen";
-
-export function ThreeShapedPageClient({ messageId }: { messageId: string }) {
+export function ThreeShapedPageClient({ onSeen }: { onSeen: () => Promise<void> }) {
   const router = useRouter();
+  const stamped = useRef(false);
 
   useEffect(() => {
-    let alreadySeen = false;
-    try {
-      alreadySeen = window.localStorage.getItem(SEEN_KEY) === "1";
-      if (!alreadySeen) window.localStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      // localStorage unavailable (private mode/quota) — fail open: show the
-      // ceremony. Better to replay than to swallow a once-in-a-lifetime moment.
-    }
-    // Already seen → don't replay; fall back to the normal A7 confirmation.
-    if (alreadySeen) router.replace(messageSavedRoute(messageId));
-  }, [messageId, router]);
+    // Guard against React 18 StrictMode's double-invoked effect (dev) and any
+    // re-render — the durable stamp should be attempted exactly once per mount.
+    if (stamped.current) return;
+    stamped.current = true;
+    void onSeen();
+  }, [onSeen]);
 
   return (
     <ThreeShapedScreen

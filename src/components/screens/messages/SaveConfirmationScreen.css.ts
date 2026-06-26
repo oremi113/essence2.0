@@ -178,7 +178,7 @@ export const SAVE_CONFIRMATION_CSS = `
 .save-confirm .btn {
   width: 100%; min-height: 52px;
   padding: var(--space-md) var(--space-xl);
-  background: var(--color-mineral); color: #fff;
+  background: var(--color-mineral-dark); color: #fff;
   font-family: var(--font-body); font-weight: 600;
   font-size: var(--text-body-lg);
   border: 0; border-radius: var(--radius-lg);
@@ -190,7 +190,7 @@ export const SAVE_CONFIRMATION_CSS = `
   transition: background var(--duration-micro) var(--ease-essence),
               transform var(--duration-small) var(--ease-press);
 }
-.save-confirm .btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.save-confirm .btn:not(:disabled):hover { background: var(--color-mineral-darker); }
 .save-confirm .btn:not(:disabled):active { transform: scale(0.98); }
 .save-confirm .btn:focus-visible {
   outline: none;

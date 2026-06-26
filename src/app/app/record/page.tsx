@@ -62,7 +62,7 @@ export default async function RecordPage({
         <nav style={{ marginBottom: 16, fontSize: 14 }}>
           <a href={ROUTES.shelf}>Memory Shelf</a>
           <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>
-          <a href={ROUTES.appMessagesNew}>New Message</a>
+          <a href={ROUTES.messagesNew}>New Message</a>
           {voiceProfile && (
             <>
               <span style={{ margin: "0 8px", color: "#ccc" }}>|</span>

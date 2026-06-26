@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<!--
+  NOTE FOR CODE ARCHITECT
+  =======================
+  ESSENCE · Step 8 · Home B  (the completed-user hub)
+  Self-contained prototype. Design source of truth: production HomeBScreen
+  mirrors this file's copy, timing, motion, layout.
+
+  PASS 2 of 2 (this file) COMPLETE. Live: stone breathe (5s) + glow swing
+  (7s, 0.20-0.45) + ember pulse (6s) + concentric ripple (6.5s), all on
+  --ease-breath, four independent tempos so the anchor never phase-locks;
+  first-arrival --ease-page stagger + rich->cream ground settle (1.5s);
+  CTA shimmer sweep (free-tier only, twice on arrival then rests permanently);
+  per-visit page-arrival stagger (heavy on visit #1, light on steady).
+  prefers-reduced-motion pins every animation to a mid-frame resting state
+  (never trough). Verified at 4x CPU throttle: 60fps held, 0 long frames,
+  0 console errors.
+
+  POLISH PASS (design-lens, audience 45-70):
+   - CTA resting fill = --color-mineral-dark #656B73 (white text clears AA at
+     5.38:1; was #7A8088 at 3.98:1). Hover = --color-mineral-darker #565C63.
+   - Lapsed pill LEADS with "Your messages are safe" (primary), demotes
+     "Voice Vault · Paused" to sub in --color-text-secondary-strong #5A5A5A.
+   - Status pill text raised to --text-body (16px floor); pill label normalized
+     to "Voice Vault" across all states. first-arrival copy: "kept" not
+     "preserved" (kept-family lexicon).
+   - Message rows are role=button, tabindex=0, aria-label'd, Enter/Space
+     activate. Focus-visible added to rows, retry, archive + waitlist links.
+   - Waitlist + archive links given 44px tap area (waitlist is the only forward
+     action in 3/3 full). Loading skeleton now animates (1.6s sweep).
+
+  COPY PASS (voice guide, audience 45-70, clarity over cleverness):
+   - Trial pill drops the day countdown ("5 days left" was a banned urgency
+     pattern). Now "Voice Vault · Trial". Renewal date belongs in settings,
+     stated as a fact, never "N days left".
+   - Lapsed CTA "Restore your vault" -> "Bring it back" (house verb is the
+     bring-back family; also clears the two-Vault-on-one-screen rule).
+   - Error leads with reassurance: title "Your messages are safe", body
+     "This didn't load just now. Try again in a moment." Retired the
+     near-banned "something stopped it from loading" and the internal word
+     "home" in user copy.
+   - Home preview rows drop the duration (read as a clock time after a date);
+     length lives on the shelf next to playback.
+   - Archive link "Open the archive" -> "Open your Memory Shelf" (matches the
+     destination's own title; "archive" was the orphan term).
+   - Waitlist "Join the waitlist for what comes next" -> "Hear about what comes
+     next" (quieter, points at the user; undefined-future default).
+
+  Locked decisions carried in:
+   - Mode: task-oriented steady state + one ceremonial anchor (the stone) +
+     one-time ceremonial first-arrival. Ceremony is scarce by design.
+   - Lapsed GATES creation: CTA becomes "Bring it back" -> /app/vault/restore.
+     One restore affordance only (the CTA), pill states status factually.
+   - Min 1 saved message on Home B (you only land here after saving #1). No 0-state.
+   - First arrival is INLINE (no blocking overlay). Visit #1 differs from steady by
+     a triad: warm ground (--color-bg-rich -> --color-bg-neutral), heavier
+     --ease-page stagger, and the one-time first-arrival line.
+   - Stone is the CSS approximation of the canvas 'infused' state.
+
+  Two corrected tokens (globals.css wins over design-tokens.md):
+   --ease-breath: cubic-bezier(0.37,0,0.63,1)  (STONE ONLY, never universal)
+   --shadow-mineral: 0 4px 14px rgba(110,80,40,0.20)  (warm-keyed, create CTA only)
+
+  Canonical routes (don't invent): home /home, shelf /app/shelf,
+  messagesNew /messages/new, messagesLimit /messages/limit,
+  vaultRestore /app/vault/restore. Settings affordance dead-links until Step 9 (M3).
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>ESSENCE · Home B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* ---- A.1 the two corrected tokens ---- */
+    --ease-breath: cubic-bezier(0.37, 0, 0.63, 1);          /* STONE ONLY */
+    --shadow-mineral: 0 4px 14px rgba(110, 80, 40, 0.20);   /* create CTA only */
+
+    /* ---- A.2 motion ---- */
+    --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);         /* universal */
+    --ease-page: cubic-bezier(0.22, 1, 0.36, 1);            /* page arrival */
+    --ease-press: cubic-bezier(0.2, 0.0, 0.0, 1);           /* tactile */
+    --duration-page: 700ms;
+    --duration-micro: 200ms;
+    --duration-small: 400ms;
+    --duration-medium: 800ms;
+    --duration-large: 1200ms;
+    --duration-breath: 3000ms;
+    --duration-stone: 5000ms;     /* stone body tempo (anchor of the breathing set) */
+
+    /* ---- A.3 color ---- */
+    --color-bg-neutral: #FBF8F4;
+    --color-bg-warm-2: #F6F0E5;
+    --color-bg-gold: #F2E8D6;
+    --color-bg-rich: #EDE3D0;
+    --color-surface-card: #F6F0E5;
+    --color-surface-warm: #EDE3D0;
+    --color-surface-honey: #F2E8D6;
+    --color-mineral: #7A8088;
+    --color-mineral-dark: #656B73;
+    --color-mineral-darker: #565C63;   /* CTA hover (resting CTA now uses -dark for AA) */
+    --color-text-primary: #1C1A18;
+    --color-text-secondary: #6B6B6B;
+    --color-text-secondary-strong: #5A5A5A;   /* small reassurance copy on warm surfaces, clears AA */
+    --color-text-tertiary: #ADA9A5;   /* large text only, never small */
+
+    /* ---- A.4 shadows / type / radius ---- */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+
+    --font-display: 'Spectral', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --text-title: 28px;
+    --text-body-lg: 18px;
+    --text-body: 16px;
+    --text-ui: 15px;
+    --text-small: 14px;     /* floor */
+    --text-caption: 12px;
+
+    --radius-lg: 10px;
+    --radius-2xl: 16px;
+    --radius-pill: 20px;
+    --radius-full: 9999px;
+
+    /* ---- A.5 spacing scale (canonical, stops per-file drift) ---- */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 32px;
+    --space-3xl: 40px;
+
+    /* derived: lapsed pill warmth (muted warm, never red) */
+    --color-lapsed-surface: #EBE3D6;
+    --color-lapsed-border: #DCD0BC;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #2A2622;
+    font-family: var(--font-body);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- stage + device frame ---------- */
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+
+  .device {
+    position: relative;
+    width: 390px;
+    height: 844px;
+    background: #0A0A0A;
+    border-radius: 56px;
+    padding: 12px;
+    box-shadow: 0 0 0 2px #1C1A18, 0 30px 80px rgba(0,0,0,0.55);
+    flex-shrink: 0;
+  }
+
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--color-bg-neutral);
+    border-radius: 44px;
+    overflow: hidden;
+    transition: background 1500ms var(--ease-page);
+  }
+  .screen[data-ground="rich"] { background: var(--color-bg-rich); }
+
+  /* dynamic island */
+  .island {
+    position: absolute;
+    top: 11px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    background: #0A0A0A;
+    border-radius: var(--radius-full);
+    z-index: 60;
+  }
+
+  /* status bar */
+  .status-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    z-index: 55;
+    pointer-events: none;
+  }
+  .status-bar .glyphs { display: flex; gap: 6px; align-items: center; }
+  .status-bar svg { display: block; }
+
+  /* home indicator */
+  .home-indicator {
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    background: rgba(28,26,24,0.30);
+    border-radius: var(--radius-full);
+    z-index: 60;
+  }
+
+  /* ---------- scroll surface ---------- */
+  .surface {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 54px 24px 40px;
+  }
+
+  /* ---------- top bar (settings, quiet) ---------- */
+  .topbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    height: 44px;
+    margin-bottom: 8px;
+  }
+  .settings-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-full);
+    transition: color var(--duration-micro) var(--ease-essence);
+    margin-right: -10px;
+  }
+  .settings-btn:hover { color: var(--color-text-primary); }
+  .settings-btn:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+
+  /* ---------- stone ---------- */
+  .stone-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 24px;
+  }
+  .stone-wrap {
+    position: relative;
+    width: 200px; height: 200px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* ground shadow */
+  .stone-wrap::after {
+    content: "";
+    position: absolute;
+    bottom: -6px; left: 50%;
+    transform: translateX(-50%);
+    width: 150px; height: 26px;
+    background: radial-gradient(ellipse at center,
+      rgba(60,40,15,0.16) 0%, rgba(60,40,15,0.06) 45%, transparent 72%);
+    filter: blur(3px);
+    z-index: 0;
+  }
+  /* amber glow halo (infused: 0.20-0.45) */
+  .stone-glow {
+    position: absolute;
+    width: 280px; height: 280px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle at 50% 50%,
+      rgba(214, 158, 78, 0.45) 0%,
+      rgba(214, 158, 78, 0.22) 38%,
+      rgba(214, 158, 78, 0.06) 60%,
+      transparent 75%);
+    z-index: 1;
+    opacity: 0.62;
+    animation: glow-breathe 7000ms var(--ease-breath) infinite;
+  }
+  /* the body: locked 8-stop ceramic gradient, top-left light source */
+  .stone {
+    position: relative;
+    width: 184px; height: 184px;
+    border-radius: var(--radius-full);
+    z-index: 3;
+    background:
+      radial-gradient(circle at 32% 30%,
+        #F8F0DC 0%,
+        #F1E7CF 16%,
+        #E5D6BA 33%,
+        #D2C2A2 50%,
+        #B7A98C 66%,
+        #9A8F79 82%,
+        #7D827E 100%);
+    box-shadow:
+      inset 8px 8px 26px rgba(255,250,235,0.55),
+      inset -10px -12px 30px rgba(70,62,52,0.30);
+    animation: stone-breathe var(--duration-stone) var(--ease-breath) infinite;
+    will-change: transform;
+  }
+  /* infused amber tint overlay */
+  .stone::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle at 50% 56%,
+      rgba(220, 150, 70, 0.28) 0%,
+      rgba(220, 150, 70, 0.10) 45%,
+      transparent 70%);
+    mix-blend-mode: soft-light;
+  }
+  /* ember core (Pass 2 pulses) */
+  .stone::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 56%;
+    transform: translate(-50%, -50%);
+    width: 64px; height: 64px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle,
+      rgba(255, 196, 120, 0.45) 0%,
+      rgba(255, 196, 120, 0.12) 55%,
+      transparent 78%);
+    animation: ember-pulse 6000ms var(--ease-breath) infinite;
+  }
+  /* concentric ripple ring (Pass 2 expands on 6s) */
+  .stone-ripple {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(214, 158, 78, 0.30);
+    z-index: 2;
+    opacity: 0;
+    animation: ripple-out 6500ms var(--ease-breath) infinite;
+  }
+
+  /* ---------- status pill ---------- */
+  .status-pill {
+    margin: 28px auto 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    max-width: 320px;
+    padding: 10px 18px;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-honey);
+    font-size: var(--text-body);
+    line-height: 1.45;
+    color: var(--color-text-primary);
+    text-align: center;
+    border: 1px solid transparent;
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px; border-radius: var(--radius-full);
+    background: var(--color-mineral);
+    flex-shrink: 0;
+  }
+  .status-pill.is-trial { background: var(--color-surface-honey); }
+  .status-pill.is-protected { background: var(--color-surface-warm); }
+  .status-pill.is-protected .dot { background: var(--color-mineral); }
+  .status-pill.is-lapsed {
+    background: var(--color-lapsed-surface);
+    border-color: var(--color-lapsed-border);
+    flex-direction: column;
+    gap: 2px;
+  }
+  .status-pill.is-lapsed .pill-main { color: var(--color-text-primary); font-weight: 500; }
+  .status-pill.is-lapsed .pill-sub { color: var(--color-text-secondary-strong); font-size: var(--text-small); }
+
+  .status-wrap { text-align: center; }
+
+  /* ---------- first-arrival line (visit #1 only) ---------- */
+  .first-line {
+    margin: 22px auto 0;
+    max-width: 300px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: var(--text-body-lg);
+    line-height: 1.5;
+    text-align: center;
+    color: var(--color-text-primary);
+  }
+
+  /* ---------- primary CTA ---------- */
+  .cta-wrap { margin-top: 32px; }
+  .cta {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 56px;
+    border: none;
+    border-radius: var(--radius-lg);
+    background: var(--color-mineral-dark);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: var(--text-body-lg);
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-mineral);
+    transition: background var(--duration-micro) var(--ease-press),
+                transform var(--duration-micro) var(--ease-press);
+  }
+  .cta:hover { background: var(--color-mineral-darker); }
+  .cta:active { transform: translateY(1px); }
+  .cta:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 3px; }
+  /* shimmer hook (soft sweep, free-tier CTA only) */
+  .cta.has-shimmer::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -45%;
+    width: 40%; height: 100%;
+    background: linear-gradient(100deg,
+      transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+    animation: cta-shimmer 4500ms var(--ease-essence) 2;
+  }
+
+  /* ---------- archive preview ---------- */
+  .archive { margin-top: 40px; }
+  .archive-head {
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: 14px;
+  }
+  .archive-rows { display: flex; flex-direction: column; gap: 10px; }
+
+  .msg-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: var(--color-surface-card);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: box-shadow var(--duration-micro) var(--ease-essence),
+                transform var(--duration-micro) var(--ease-essence);
+    min-height: 44px;
+  }
+  .msg-row:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .msg-row:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+  .msg-avatar {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--color-surface-warm);
+    color: var(--color-mineral-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--text-small);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-recipient {
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .msg-meta {
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .msg-chevron { color: var(--color-text-tertiary); font-size: 20px; flex-shrink: 0; }
+
+  /* 3/3 quiet-complete */
+  .archive-complete { display: none; margin-top: 18px; text-align: center; }
+  .archive-complete .complete-line {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-body-lg);
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  .waitlist-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: var(--space-xs);
+    padding: 0 var(--space-sm);
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+  .waitlist-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .waitlist-link:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; border-radius: var(--radius-lg); }
+
+  /* tertiary archive link */
+  .archive-link-wrap { margin-top: 22px; text-align: center; }
+  .archive-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 var(--space-sm);
+    font-size: var(--text-ui);
+    font-weight: 500;
+    color: var(--color-mineral-dark);
+    text-decoration: none;
+  }
+  .archive-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .archive-link:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; border-radius: var(--radius-lg); }
+
+  /* ---------- system overlays (loading / error) ---------- */
+  .system {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: var(--color-bg-neutral);
+    z-index: 40;
+    padding: 54px 24px 40px;
+  }
+  .screen[data-system="loading"] .system.system--loading { display: block; }
+  .screen[data-system="error"] .system.system--error { display: flex; }
+  .screen[data-system] .surface { visibility: hidden; }
+
+  /* loading skeleton */
+  .system--loading { padding-top: 110px; }
+  .sk { background: linear-gradient(90deg,
+      rgba(28,26,24,0.05) 0%, rgba(28,26,24,0.09) 50%, rgba(28,26,24,0.05) 100%);
+      background-size: 220% 100%;
+      border-radius: var(--radius-2xl);
+      animation: sk-shimmer 1600ms ease-in-out infinite; }
+  .sk-stone { width: 184px; height: 184px; border-radius: var(--radius-full); margin: 0 auto; }
+  .sk-pill { width: 220px; height: 38px; border-radius: var(--radius-pill); margin: 30px auto 0; }
+  .sk-cta { width: 100%; height: 56px; border-radius: var(--radius-lg); margin-top: 34px; }
+  .sk-rows { margin-top: 42px; display: flex; flex-direction: column; gap: 10px; }
+  .sk-row { width: 100%; height: 68px; border-radius: var(--radius-2xl); }
+
+  /* error */
+  .system--error {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .system--error .err-title {
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 12px;
+  }
+  .system--error .err-body {
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+    max-width: 260px;
+    line-height: 1.5;
+    margin-bottom: 28px;
+  }
+  .retry-btn {
+    height: 48px;
+    padding: 0 28px;
+    border: 1px solid var(--color-mineral);
+    background: none;
+    border-radius: var(--radius-lg);
+    color: var(--color-mineral-dark);
+    font-family: var(--font-body);
+    font-size: var(--text-ui);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-micro) var(--ease-essence);
+  }
+  .retry-btn:hover { background: var(--color-surface-warm); }
+  .retry-btn:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+
+  /* ---------- motion: keyframes ---------- */
+  @keyframes stone-breathe {
+    0%, 100% { transform: scale(1.0); }
+    50%      { transform: scale(1.025); }
+  }
+  @keyframes glow-breathe {
+    0%, 100% { opacity: 0.44; }   /* ~0.20 effective */
+    50%      { opacity: 1.0; }    /* ~0.45 effective */
+  }
+  @keyframes ember-pulse {
+    0%, 100% { opacity: 0.6;  transform: translate(-50%, -50%) scale(0.95); }
+    50%      { opacity: 1.0;  transform: translate(-50%, -50%) scale(1.08); }
+  }
+  @keyframes ripple-out {
+    0%   { transform: scale(0.92); opacity: 0.5; }
+    70%  { opacity: 0.10; }
+    100% { transform: scale(1.16); opacity: 0; }
+  }
+  @keyframes cta-shimmer {
+    0%   { left: -45%; }
+    55%  { left: 130%; }
+    100% { left: 130%; }   /* hold = rest gap between sweeps */
+  }
+  @keyframes arrive {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes sk-shimmer {
+    0%   { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+  }
+
+  /* ---------- arrival stagger ---------- */
+  .surface .arr { opacity: 1; }              /* default resting (no flash) */
+  .surface.play .arr {
+    animation: arrive var(--ad, 620ms) var(--ease-page) both;
+  }
+  .surface.play .arr1 { animation-delay: 80ms; }
+  .surface.play .arr2 { animation-delay: 150ms; }
+  .surface.play .arr3 { animation-delay: 220ms; }
+  .surface.play .arr4 { animation-delay: 300ms; }
+  /* first-arrival: heavier, slower, more spacing */
+  .surface.play.heavy { --ad: 760ms; }
+  .surface.play.heavy .arr  { animation-delay: 120ms; }   /* stone settles in */
+  .surface.play.heavy .arr1 { animation-delay: 360ms; }
+  .surface.play.heavy .arr2 { animation-delay: 520ms; }
+  .surface.play.heavy .arr3 { animation-delay: 700ms; }
+  .surface.play.heavy .arr4 { animation-delay: 880ms; }
+
+  /* ---------- reduced motion: pin to mid-frame, never trough ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    .screen { transition: none; }
+    .stone { animation: none; transform: scale(1.012); }
+    .stone-glow { animation: none; opacity: 0.78; }
+    .stone::after { animation: none; opacity: 0.82; transform: translate(-50%,-50%) scale(1.02); }
+    .stone-ripple { animation: none; opacity: 0.16; transform: scale(1.04); }
+    .cta.has-shimmer::after { animation: none; left: 130%; }
+    .sk { animation: none; }
+    .surface.play .arr { animation: none !important; opacity: 1; transform: none; }
+  }
+
+  /* ---------- dev rail ---------- */
+  .dev-rail {
+    position: fixed;
+    top: 24px; left: 24px;
+    width: 220px;
+    background: #16140F;
+    border: 1px solid #2E2A22;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'SF Mono', Monaco, monospace;
+    z-index: 100;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+  .dev-rail h4 {
+    color: #C9A86A;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .dev-rail .sub { color: #6E6A60; font-size: 10px; margin-bottom: 12px; line-height: 1.4; }
+  .dev-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: #BDB6A6;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+  }
+  .dev-btn:hover { background: #211E18; color: #EDE6D6; }
+  .dev-btn.active { background: #C9A86A; color: #16140F; font-weight: 600; }
+  .dev-num { opacity: 0.6; margin-right: 6px; }
+
+  /* ---------- responsive scaling ---------- */
+  @media (max-height: 920px) {
+    .device { transform: scale(0.86); }
+    .stage { padding: 12px; }
+  }
+  @media (max-height: 800px) { .device { transform: scale(0.74); } }
+  @media (max-width: 460px) {
+    .dev-rail { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; display: flex; flex-wrap: wrap; gap: 4px; }
+    .dev-rail h4, .dev-rail .sub { width: 100%; }
+    .dev-btn { width: auto; margin-bottom: 0; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- DEV RAIL -->
+  <div class="dev-rail">
+    <h4>Home B · dev rail</h4>
+    <div class="sub">Pass 2 · live choreography</div>
+    <button class="dev-btn active" data-state="trial-first"><span class="dev-num">1</span>Trial · first arrival</button>
+    <button class="dev-btn" data-state="trial-steady"><span class="dev-num">2</span>Trial · steady</button>
+    <button class="dev-btn" data-state="protected-steady"><span class="dev-num">3</span>Protected · steady</button>
+    <button class="dev-btn" data-state="protected-full"><span class="dev-num">4</span>Protected · full 3/3</button>
+    <button class="dev-btn" data-state="lapsed"><span class="dev-num">5</span>Lapsed</button>
+    <button class="dev-btn" data-state="loading"><span class="dev-num">6</span>Loading</button>
+    <button class="dev-btn" data-state="error"><span class="dev-num">7</span>Error</button>
+  </div>
+
+  <!-- DEVICE -->
+  <div class="stage">
+    <div class="device">
+      <div class="screen" id="screen" data-ground="rich">
+
+        <div class="island"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="glyphs">
+            <!-- signal -->
+            <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="0.6" fill="#1C1A18"/><rect x="5" y="5" width="3" height="7" rx="0.6" fill="#1C1A18"/><rect x="10" y="2.5" width="3" height="9.5" rx="0.6" fill="#1C1A18"/><rect x="15" y="0" width="3" height="12" rx="0.6" fill="#1C1A18"/></svg>
+            <!-- wifi -->
+            <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.2 L8 11.2 a1.4 1.4 0 0 1 0 -2.8 a1.4 1.4 0 0 1 0 2.8 Z" fill="#1C1A18"/><path d="M3.6 6.2 a6.2 6.2 0 0 1 8.8 0" stroke="#1C1A18" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M1.4 3.6 a9.4 9.4 0 0 1 13.2 0" stroke="#1C1A18" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+            <!-- battery -->
+            <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.6" y="0.6" width="21" height="11.8" rx="3" stroke="#1C1A18" stroke-width="1" fill="none" opacity="0.5"/><rect x="2.2" y="2.2" width="16" height="8.6" rx="1.6" fill="#1C1A18"/><rect x="23" y="4" width="2" height="5" rx="1" fill="#1C1A18" opacity="0.5"/></svg>
+          </span>
+        </div>
+
+        <!-- SCROLL SURFACE -->
+        <div class="surface">
+
+          <div class="topbar">
+            <button class="settings-btn" id="settingsBtn" aria-label="Settings">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M12 2.5v2.6M12 18.9v2.6M21.5 12h-2.6M5.1 12H2.5M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8M18.7 18.7l-1.8-1.8M7.1 7.1 5.3 5.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="stone-section arr">
+            <div class="stone-wrap">
+              <div class="stone-glow"></div>
+              <div class="stone-ripple"></div>
+              <div class="stone"></div>
+            </div>
+          </div>
+
+          <div class="status-wrap arr arr1">
+            <div class="status-pill is-trial" id="statusPill">
+              <span class="dot"></span>
+              <span class="pill-text">Voice Vault · Trial</span>
+            </div>
+          </div>
+
+          <div class="first-line arr arr2" id="firstLine">Your voice is kept. This is home now.</div>
+
+          <div class="cta-wrap arr arr3" id="ctaWrap">
+            <button class="cta has-shimmer" id="primaryCta">Create a message</button>
+          </div>
+
+          <div class="archive arr arr4">
+            <div class="archive-head">Your messages</div>
+            <div class="archive-rows" id="archiveRows"><!-- rendered by JS --></div>
+
+            <div class="archive-complete" id="archiveComplete">
+              <div class="complete-line">Three, kept. Everything you set out to make is here.</div>
+              <a href="/messages/limit" class="waitlist-link">Hear about what comes next</a>
+            </div>
+
+            <div class="archive-link-wrap" id="archiveLinkWrap">
+              <a href="/app/shelf" class="archive-link">Open your Memory Shelf</a>
+            </div>
+          </div>
+
+        </div><!-- /surface -->
+
+        <!-- SYSTEM: LOADING -->
+        <div class="system system--loading">
+          <div class="sk sk-stone"></div>
+          <div class="sk sk-pill"></div>
+          <div class="sk sk-cta"></div>
+          <div class="sk-rows">
+            <div class="sk sk-row"></div>
+            <div class="sk sk-row"></div>
+          </div>
+        </div>
+
+        <!-- SYSTEM: ERROR -->
+        <div class="system system--error">
+          <div class="err-title">Your messages are safe</div>
+          <div class="err-body">This didn't load just now. Try again in a moment.</div>
+          <button class="retry-btn" id="retryBtn">Try again</button>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div><!-- /screen -->
+    </div><!-- /device -->
+  </div><!-- /stage -->
+
+<script>
+  // ----- preview data (keepsake language, mirrors Step 7 shelf rows) -----
+  var MESSAGES = [
+    { recipient: 'Sarah', initials: 'S',  meta: 'A Message for the Future · Today' },
+    { recipient: 'Mom',   initials: 'M',  meta: 'Birthday · 3 days ago' },
+    { recipient: 'Dad',   initials: 'D',  meta: 'Just Checking In · Last week' }
+  ];
+
+  // ----- state config -----
+  var STATES = {
+    'trial-first': {
+      ground: 'neutral', groundFromRich: true, firstLine: true,
+      pillClass: 'is-trial',
+      pillHTML: '<span class="dot"></span><span class="pill-text">Voice Vault · Trial</span>',
+      cta: { show: true, label: 'Create a message', href: '/messages/new', shimmer: true },
+      count: 1, full: false, system: null
+    },
+    'trial-steady': {
+      ground: 'neutral', firstLine: false,
+      pillClass: 'is-trial',
+      pillHTML: '<span class="dot"></span><span class="pill-text">Voice Vault · Trial</span>',
+      cta: { show: true, label: 'Create a message', href: '/messages/new', shimmer: true },
+      count: 2, full: false, system: null
+    },
+    'protected-steady': {
+      ground: 'neutral', firstLine: false,
+      pillClass: 'is-protected',
+      pillHTML: '<span class="dot"></span><span class="pill-text">Voice Vault · Protected</span>',
+      cta: { show: true, label: 'Create a message', href: '/messages/new', shimmer: false },
+      count: 2, full: false, system: null
+    },
+    'protected-full': {
+      ground: 'neutral', firstLine: false,
+      pillClass: 'is-protected',
+      pillHTML: '<span class="dot"></span><span class="pill-text">Voice Vault · Protected</span>',
+      cta: { show: false },
+      count: 3, full: true, system: null
+    },
+    'lapsed': {
+      ground: 'neutral', firstLine: false,
+      pillClass: 'is-lapsed',
+      pillHTML: '<span class="pill-main">Your messages are safe</span><span class="pill-sub">Voice Vault · Paused</span>',
+      cta: { show: true, label: 'Bring it back', href: '/app/vault/restore', shimmer: false },
+      count: 2, full: false, system: null
+    },
+    'loading': { system: 'loading', ground: 'neutral' },
+    'error':   { system: 'error', ground: 'neutral' }
+  };
+
+  var screen = document.getElementById('screen');
+  var surface = document.querySelector('.surface');
+  var statusPill = document.getElementById('statusPill');
+  var firstLine = document.getElementById('firstLine');
+  var ctaWrap = document.getElementById('ctaWrap');
+  var primaryCta = document.getElementById('primaryCta');
+  var archiveRows = document.getElementById('archiveRows');
+  var archiveComplete = document.getElementById('archiveComplete');
+  var archiveLinkWrap = document.getElementById('archiveLinkWrap');
+
+  function renderRows(count) {
+    archiveRows.innerHTML = '';
+    for (var i = 0; i < count; i++) {
+      var m = MESSAGES[i];
+      var row = document.createElement('div');
+      row.className = 'msg-row';
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('aria-label', 'Message for ' + m.recipient + ', ' + m.meta);
+      row.innerHTML =
+        '<div class="msg-avatar" aria-hidden="true">' + m.initials + '</div>' +
+        '<div class="msg-body">' +
+          '<div class="msg-recipient">' + m.recipient + '</div>' +
+          '<div class="msg-meta">' + m.meta + '</div>' +
+        '</div>' +
+        '<div class="msg-chevron" aria-hidden="true">\u203A</div>';
+      (function (recipient) {
+        function open() { console.log('[Home B] open message ->', recipient); }
+        row.addEventListener('click', open);
+        row.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+        });
+      })(m.recipient);
+      archiveRows.appendChild(row);
+    }
+  }
+
+  function playArrival(heavy, fromRich) {
+    // ground: first-arrival opens on rich, eases to neutral
+    if (fromRich) {
+      screen.style.transition = 'none';
+      screen.setAttribute('data-ground', 'rich');
+      void screen.offsetWidth;            // commit the rich frame
+      screen.style.transition = '';       // restore CSS transition
+      requestAnimationFrame(function () {
+        screen.setAttribute('data-ground', 'neutral');
+      });
+    }
+    // staggered children
+    surface.classList.remove('play', 'heavy');
+    void surface.offsetWidth;             // restart the animation
+    surface.classList.add('play');
+    if (heavy) surface.classList.add('heavy');
+  }
+
+  function applyState(key) {
+    var s = STATES[key];
+    if (!s) return;
+
+    // system states
+    if (s.system) {
+      surface.classList.remove('play', 'heavy');
+      screen.setAttribute('data-system', s.system);
+      screen.setAttribute('data-ground', s.ground);
+      return;
+    }
+    screen.removeAttribute('data-system');
+    screen.setAttribute('data-ground', s.ground);
+
+    // status pill
+    statusPill.className = 'status-pill ' + s.pillClass;
+    statusPill.innerHTML = s.pillHTML;
+
+    // first-arrival line
+    firstLine.style.display = s.firstLine ? 'block' : 'none';
+
+    // CTA (gated -> restore on lapsed; absent on full)
+    if (s.cta && s.cta.show) {
+      ctaWrap.style.display = 'block';
+      primaryCta.textContent = s.cta.label;
+      primaryCta.className = 'cta' + (s.cta.shimmer ? ' has-shimmer' : '');
+      primaryCta.setAttribute('data-href', s.cta.href);
+    } else {
+      ctaWrap.style.display = 'none';
+    }
+
+    // archive rows + 3/3 complete
+    renderRows(s.count);
+    if (s.full) {
+      archiveComplete.style.display = 'block';
+      archiveLinkWrap.style.display = 'block';
+    } else {
+      archiveComplete.style.display = 'none';
+      archiveLinkWrap.style.display = 'block';
+    }
+
+    // page arrival: every visit gets the stagger; first-arrival is heavier + rides rich->cream
+    playArrival(s.firstLine === true, s.groundFromRich === true);
+  }
+
+  // dev rail wiring
+  var devBtns = document.querySelectorAll('.dev-btn');
+  devBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      devBtns.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      applyState(btn.getAttribute('data-state'));
+    });
+  });
+
+  // dead-link affordances (prototype): log instead of navigate
+  primaryCta.addEventListener('click', function () {
+    console.log('[Home B] primary CTA ->', primaryCta.getAttribute('data-href'));
+  });
+  document.getElementById('settingsBtn').addEventListener('click', function () {
+    console.log('[Home B] settings -> Step 9 (dead-link until M3)');
+  });
+  document.getElementById('retryBtn').addEventListener('click', function () {
+    console.log('[Home B] retry -> refetch home data');
+  });
+
+  // boot
+  applyState('trial-first');
+</script>
+</body>
+</html>

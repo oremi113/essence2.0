@@ -8,6 +8,7 @@ import type {
   OnUploadAvatar,
 } from '@/components/screens/OnboardingScreen.types';
 import { ROUTES } from '@/lib/routes';
+import { trackJourney, JOURNEY_EVENTS } from '@/lib/analytics/journey';
 
 /**
  * Thin client wrapper. Holds the router (navigates to /app/record after
@@ -35,7 +36,16 @@ export function OnboardingPageClient({
     city: string,
     stateCode: string
   ) {
+    // If the save fails, onComplete rejects — we deliberately let that bubble
+    // (the push below is skipped) so OnboardingScreen catches it and shows the
+    // retry-in-place error instead of navigating away on a silent failure
+    // (FOLLOW_UPS #42). Navigation only happens on a confirmed save.
     await onComplete(firstName, lastName, dateOfBirth, city, stateCode);
+    // Funnel entry: the user is fully signed up and into the app. Fires after
+    // the server action resolves; see FOLLOW_UPS #42 — until that action
+    // throws on a failed write, a silently-failed save still resolves here, so
+    // this event can over-count. Documented in the analytics note.
+    trackJourney(JOURNEY_EVENTS.onboardingCompleted);
     router.push(ROUTES.record);
   }
 

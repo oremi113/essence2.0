@@ -26,11 +26,10 @@ export const ROUTES = {
   voiceCreate: "/app/voice/create",
   shelf: "/app/shelf",
 
-  // Two parallel message-creation routes exist today; both are live. Which is
-  // canonical is a stitch-time decision — see FOLLOW_UPS #34. Until then each
-  // caller keeps the route it already used.
+  // Canonical message-creation route (the Step 6 spine). The legacy
+  // `/app/messages/new` was retired in M0 (FOLLOW_UPS #34) — it now permanently
+  // redirects here, and all callers point at this one.
   messagesNew: "/messages/new",
-  appMessagesNew: "/app/messages/new",
   /** C3 Vault Limit Reached — the capped steady-state (3/3 saved). Routed
    *  from the A2-entry UX gate and the /save race-case 403. */
   messagesLimit: "/messages/limit",

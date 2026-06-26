@@ -10,7 +10,7 @@ export type TabKey = "record" | "new-message" | "shelf";
 
 const TABS: { key: TabKey; href: string; label: string }[] = [
   { key: "record", href: ROUTES.record, label: "Record" },
-  { key: "new-message", href: ROUTES.appMessagesNew, label: "New Message" },
+  { key: "new-message", href: ROUTES.messagesNew, label: "New Message" },
   { key: "shelf", href: ROUTES.shelf, label: "Memory Shelf" },
 ];
 

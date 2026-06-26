@@ -75,6 +75,11 @@ export function OnboardingScreen({
 
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // User-facing message when the final save fails. The completion action now
+  // throws loudly on a write error or lost session (FOLLOW_UPS #42) instead of
+  // navigating away on a silent failure; this surfaces that to the user so they
+  // can retry in place rather than watch the button re-enable with no feedback.
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   // Short-lived override for the persistent stone. Screens (today: 10)
   // can push `'ready'` to acknowledge an in-screen action and release
@@ -112,6 +117,7 @@ export function OnboardingScreen({
   // ─── Completion ────────────────────────────────────────────
   const handleComplete = useCallback(async () => {
     if (isSubmitting) return;
+    setSubmitError(null);
     setIsSubmitting(true);
     try {
       await onComplete(
@@ -125,6 +131,17 @@ export function OnboardingScreen({
       // Caller navigates. If it doesn't, we stay on screen 12.
     } catch (err) {
       console.error('[OnboardingScreen] onComplete failed:', err);
+      // The draft is never cleared on failure and the form state persists, so
+      // every answer is intact for an in-place retry. Session loss needs a
+      // re-sign-in (a retry would just fail again); everything else is a
+      // transient save error the user can retry by tapping Begin again.
+      const message = err instanceof Error ? err.message : '';
+      const isSessionLoss = /sign in|session expired/i.test(message);
+      setSubmitError(
+        isSessionLoss
+          ? 'Your session timed out. Please refresh and sign in again — your answers are saved on this device.'
+          : 'Something kept us from saving just now. Your answers are safe — tap Begin to try again.'
+      );
       setIsSubmitting(false);
     }
   }, [isSubmitting, onComplete, form]);
@@ -188,6 +205,7 @@ export function OnboardingScreen({
           <Screen12Ready
             onBegin={handleComplete}
             isSubmitting={isSubmitting}
+            error={submitError}
           />
         )}
       </div>
