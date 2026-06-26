@@ -21,6 +21,7 @@
  */
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 import { messageSavedRoute, signInWithNext } from "@/lib/routes";
 import { STEP6_LIMITS } from "@/lib/messages/cost-controls";
 import { SaveConfirmationPageClient } from "./SaveConfirmationPageClient";
@@ -87,11 +88,17 @@ export default async function MessageSavedPage({
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase
-      .from("profiles")
-      .update({ three_shaped_ceremony_seen_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .is("three_shaped_ceremony_seen_at", null);
+    // Best-effort latch: the `.is(... null)` guard is DB-level idempotent (it
+    // preserves the first-show timestamp), and a failed stamp degrades to the
+    // same harmless replay the localStorage latch had — never block the render.
+    await bestEffortWrite(
+      supabase
+        .from("profiles")
+        .update({ three_shaped_ceremony_seen_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .is("three_shaped_ceremony_seen_at", null),
+      { op: "three_shaped_ceremony_stamp", userId: user.id },
+    );
   }
 
   // C1 Three Shaped — the one-time ceremony after the 3rd save. Triggered by

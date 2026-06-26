@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 
 /**
  * Atomically transition a voice profile to `failed` with the given
@@ -20,15 +21,22 @@ export async function markVoiceProfileFailed(
   message: string,
   fromStatus: string = "processing"
 ): Promise<void> {
-  await supabase
-    .from("voice_profiles")
-    .update({
-      status: "failed",
-      last_error_code: code,
-      last_error_message: message,
-      last_error_at: new Date().toISOString(),
-    })
-    .eq("id", voiceProfileId)
-    .eq("user_id", userId)
-    .eq("status", fromStatus);
+  // Best-effort: the monotonic `.eq("status", fromStatus)` guard means this
+  // legitimately matches zero rows when a concurrent finalize/retry already
+  // moved the profile — that's not an error to surface. And it runs on error
+  // paths, where a failed flip must not mask the failure being handled.
+  await bestEffortWrite(
+    supabase
+      .from("voice_profiles")
+      .update({
+        status: "failed",
+        last_error_code: code,
+        last_error_message: message,
+        last_error_at: new Date().toISOString(),
+      })
+      .eq("id", voiceProfileId)
+      .eq("user_id", userId)
+      .eq("status", fromStatus),
+    { op: "voice_profile_mark_failed", userId, meta: { voiceProfileId, code, fromStatus } },
+  );
 }
