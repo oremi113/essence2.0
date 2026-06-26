@@ -190,3 +190,141 @@ Android at 1×.
 - **Stone API:** `prototypes/breath-stone-api.md`.
 - **Cap constant (the 3):** `src/lib/messages/cost-controls.ts`
   (`STEP6_MAX_SAVED_MESSAGES`).
+
+---
+
+# Appendix A · Design-token & consistency audit (revised prototype)
+
+**Audited:** `essence-step7-memory-shelf.html` (the revised prototype) against
+`docs/design-tokens.md` / `src/app/globals.css` `@theme` (canonical) and the
+Step 6 prototypes (`prototypes/message creation/*`).
+**Date:** 2026-06-16 · **Result:** findings only — no files changed.
+
+## A.0 TL;DR — why it reads as "disjointed"
+
+Color and copy are on-brand, so the eye can't locate the problem there. The
+disjoint is in **motion and surface treatment**:
+
+1. The signature **BreathStone breathes on the wrong easing curve** — the app's
+   hero object animates unlike it does everywhere else.
+2. **Cards enter slower and on a different rhythm** than the rest of the app
+   (800ms vs 400ms, wrong curve, tighter stagger), and the screen skips the
+   app's signature page-arrival entirely.
+3. **CTAs are missing the warm shadow** the app deliberately puts under its cool
+   mineral buttons — so buttons sit flatter and cooler than in Step 6.
+4. **Cards are gradient + glow** where every other card in the app is flat.
+
+Individually subtle; together they read as "a different hand drew this."
+
+## A.1 Motion — the primary offender
+
+**A.1a — `--ease-breath` is the wrong value and used for everything.**
+- Prototype (line 137): `--ease-breath: cubic-bezier(0.4,0,0.2,1)` — identical
+  to its own `--ease-essence` (line 136). That duplication is the tell.
+- Canonical: `--ease-breath: cubic-bezier(0.37,0,0.63,1)` — a symmetric
+  pendulum, reserved **only** for the BreathStone rhythm. The universal
+  transition curve is `--ease-essence` (`0.4,0,0.2,1`).
+- Effect: the stone's `stone-breathe`/`stone-pulse` (lines 751, 758) ride the
+  wrong curve, so the hero object doesn't breathe like it does elsewhere; every
+  other transition is mislabelled `--ease-breath` and will silently break if the
+  token is ever corrected.
+- **Fix:** set `--ease-breath: cubic-bezier(0.37,0,0.63,1)`, apply it *only* to
+  the stone, switch all other transitions to `--ease-essence`.
+
+**A.1b — Card entrance doesn't match the app's reveal.**
+- Prototype: `card-settle-in` = `--duration-medium` (800ms) on `--ease-breath`,
+  stagger 0/100/200ms (lines 281, 286–288).
+- Step 6: stage reveals are **400ms** (`--duration-small`) on `--ease-essence`,
+  staggered **200–300ms** apart — same `translateY(8px)` shape, quicker and more
+  separated.
+- **Fix:** card settle-in → `--duration-small`, `--ease-essence`, ~200ms stagger.
+
+**A.1c — Missing the app's signature page-arrival.**
+- Canonical defines `--ease-page: cubic-bezier(0.22,1,0.36,1)` @
+  `--duration-page: 700ms` for "every page + staggered child." The prototype
+  omits both and never does a page-level entrance.
+- **Fix:** add the two tokens; consider a page-enter on the container.
+
+## A.2 Color & shadow
+
+**A.2a — CTAs missing the warm shadow (real disjoint, easy fix).**
+- The app keys its primary-button shadow *warm*:
+  `--shadow-mineral: 0 4px 14px rgba(110,80,40,0.20)` (re-keyed 2026-06-12) —
+  warmth under the cool mineral button so it sits on cream. Step 6 uses it on all
+  primary buttons.
+- Prototype defines `--shadow-mineral` with the **old cool value**
+  `rgba(122,128,136,0.3)` (line 102) **and never uses it.** `.btn-primary` has no
+  shadow (239–253); `.btn-play` hover uses neutral `rgba(0,0,0,0.12)` (381).
+- **Fix:** correct `--shadow-mineral` to the warm value; apply to
+  `.btn-primary` / `.btn-play` / `.btn-modal-primary`.
+
+**A.2b — The cool mineral accent is CORRECT.** `--color-mineral #7A8088` is the
+real house CTA color (confirmed in canonical + Step 6). No change — flagged
+because it's the obvious suspect and is *not* the problem.
+
+**A.2c — Warm-ramp values drifted, but so did Step 6's.** Prototype's
+`--color-bg-warm-2 #F6F0E5`, `--color-bg-gold #F2E8D6`, `--color-bg-rich #EDE3D0`
+(lines 78–80) **match the Step 6 prototypes**, but all differ from canonical
+(`#F2E8D2` / `#E8D8B3` / `#D9C28E`). For consistency *with recent prototypes* the
+shelf is fine — this is a **fleet-vs-`@theme` reconciliation** item, not a shelf
+defect. Barely visible (only the loading skeleton uses `bg-rich`).
+
+## A.3 Typography & labels
+
+**A.3a — Off-scale type sizes** (Step 6 stays on the scale: 14/15/16/18/20/28):
+`empty-title` 24px (212), `shelf-complete-title` 22px (453), `empty-body` 17px
+(221), `unavailable-message` 13px (397), `btn-retry` 13px (412). The two **13px**
+values are below the `--text-small` (14px) floor and too small for the 45–70
+audience. **Fix:** snap to scale tokens; raise 13px → 14px minimum.
+
+**A.3b — Eyebrows off-spec.** House eyebrow: Inter, **12px**, weight **600**,
+uppercase, letter-spacing **0.12–0.16em**.
+- `.modal-recipient` (605): 14px, weight 400, tracking 0.04em — too big, too
+  light, under-tracked.
+- `.transcript-label` (710): weight **700** (Step 6 caps at 600; the file loads
+  Inter 700 at line 9, which Step 6 doesn't), tracking 0.08em.
+- **Fix:** both → 12px / 600 / 0.12–0.16em; drop the 700 weight.
+
+## A.4 Iconography
+
+The app uses **SVG icons**. The prototype uses unicode glyphs, internally
+inconsistent: card play is outline `▷` (`\25B7`, 380) while modal play is filled
+`▶` (`&#9658;`, 911), plus `⏸`/`↻`/`○`. **Fix:** unify to one play glyph (ideally
+the app's SVG set); at minimum make card and modal match.
+
+## A.5 Surfaces
+
+Step 6 cards are **flat `--color-surface-card`** + hairline border +
+`--shadow-sm`. Shelf cards add a top-to-bottom gradient (`surface-card → #F1EBE0`,
+257), an inner honey glow, and no border — a self-invented surface language.
+**Fix:** flatten to match, or keep the gradient as an intentional "keepsake"
+treatment and document it as a deliberate exception.
+
+## A.6 Copy — on-brand, two tiny notes ✅
+
+Sentence case, plain language, zero scarcity, italic Spectral for tenderness —
+all correct; "Three, kept." echoes C1/C3. Minor: card meta says "**Kept** Apr 23,
+2026" while A7 uses "**Kept on** …" (add "on"); A7's kept-date is italic Spectral
+vs the shelf's sans Inter (optional alignment).
+
+## A.7 Done right (keep)
+
+Canonical token *names* throughout; correct mineral, text, status, spacing,
+radius, `--shadow-sm/md/lg`, `--ease-press`, base durations; reduced-motion pins
+to mid-frame (matches Step 6); 44px touch targets; locked BreathStone gradient;
+the 3/3 "Three, kept." restraint.
+
+## A.8 Prioritized fix list
+
+- **P1 (the disjoint):** fix `--ease-breath` value + scope to the stone, move
+  other transitions to `--ease-essence` (A.1a); retime card entrance to
+  400ms/essence/200ms-stagger and add `--ease-page`/`--duration-page` (A.1b/c);
+  correct `--shadow-mineral` to warm and apply to CTAs (A.2a).
+- **P2 (polish):** snap off-scale type sizes, raise 13px→14px (A.3a); fix eyebrow
+  size/weight/tracking, drop 700 (A.3b); unify play glyph (A.4).
+- **P3 (decide & document):** flat vs gradient cards (A.5); "Kept on" + optional
+  italic date (A.6); fleet-wide warm-ramp vs `@theme` reconciliation (A.2c).
+
+> Line numbers reference `essence-step7-memory-shelf.html` as delivered
+> 2026-06-16. Canonical values are from `docs/design-tokens.md` /
+> `src/app/globals.css` `@theme`.

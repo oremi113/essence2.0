@@ -298,6 +298,7 @@ export type Database = {
           state: string | null
           stripe_customer_id: string | null
           suspended_reason: string | null
+          three_shaped_ceremony_seen_at: string | null
           timezone: string | null
           ui_flags: Json
           updated_at: string
@@ -319,6 +320,7 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           suspended_reason?: string | null
+          three_shaped_ceremony_seen_at?: string | null
           timezone?: string | null
           ui_flags?: Json
           updated_at?: string
@@ -340,6 +342,7 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           suspended_reason?: string | null
+          three_shaped_ceremony_seen_at?: string | null
           timezone?: string | null
           ui_flags?: Json
           updated_at?: string

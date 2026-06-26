@@ -31,7 +31,9 @@ export function SaveConfirmationPageClient({
   const router = useRouter();
 
   const handleViewShelf = useCallback(() => {
-    router.push(ROUTES.shelf);
+    // `?saved=1` lets the shelf give the newest card its fresh settle (and the
+    // first-ever-save ceremony) on arrival from A7.
+    router.push(`${ROUTES.shelf}?saved=1`);
   }, [router]);
 
   const handleCreateAnother = useCallback(() => {

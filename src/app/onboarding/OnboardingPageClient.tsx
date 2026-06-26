@@ -36,6 +36,10 @@ export function OnboardingPageClient({
     city: string,
     stateCode: string
   ) {
+    // If the save fails, onComplete rejects — we deliberately let that bubble
+    // (the push below is skipped) so OnboardingScreen catches it and shows the
+    // retry-in-place error instead of navigating away on a silent failure
+    // (FOLLOW_UPS #42). Navigation only happens on a confirmed save.
     await onComplete(firstName, lastName, dateOfBirth, city, stateCode);
     // Funnel entry: the user is fully signed up and into the app. Fires after
     // the server action resolves; see FOLLOW_UPS #42 — until that action

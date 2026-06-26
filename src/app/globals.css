@@ -34,11 +34,13 @@
 
   /* ─── PRIMARY ACCENT ──────────────────────────────── */
   --color-mineral:        #7A8088;  /* primary buttons, active states, recording */
-  --color-mineral-dark:   #656B73;  /* hover on primary buttons */
+  --color-mineral-dark:   #656B73;  /* AA-safe primary fill / hover — white clears 5.38:1 (vs 3.98:1 on --color-mineral) */
+  --color-mineral-darker: #565C63;  /* pressed/hover on a --color-mineral-dark fill (Home B create CTA) */
 
   /* ─── TEXT ────────────────────────────────────────── */
   --color-text-primary:   #1C1A18;  /* headlines, body — 17.8:1 contrast on bg-primary */
   --color-text-secondary: #6B6B6B;  /* supporting text — 5.8:1 contrast */
+  --color-text-secondary-strong: #5A5A5A;  /* supporting text on warm surfaces — clears AA where -secondary dips below 4.5:1 */
   --color-text-tertiary:  #ADA9A5;  /* disabled, subtle — large text only */
 
   /* ─── STATUS ──────────────────────────────────────── */
@@ -363,7 +365,7 @@
     justify-content: center;
     min-height: 52px;
     padding: 16px 24px;
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-primary);
     font-family: var(--font-body);
     font-size: 17px;
@@ -379,7 +381,7 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-mineral-dark);
+    background-color: var(--color-mineral-darker);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
@@ -1132,7 +1134,8 @@
 
     .onboarding-photo-confirmation,
     .onboarding-photo__replace,
-    .onboarding-photo-error {
+    .onboarding-photo-error,
+    .onboarding-ready-error {
       animation: none !important;
       opacity: 1 !important;
     }
@@ -1543,6 +1546,21 @@
 
   @keyframes onb-photo-error-fade-in {
     to { opacity: 1; }
+  }
+
+  /* Surfaces a failed final save on Screen 12 (lost session, DB write error).
+     Same warm register as the photo error; sits above the Begin button so the
+     user can retry in place — their answers are never discarded on failure. */
+  .onboarding-ready-error {
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-status-error);
+    margin: 0 auto var(--space-sm);
+    max-width: 320px;
+    line-height: 1.5;
+    opacity: 0;
+    animation: onb-photo-error-fade-in 200ms var(--ease-essence) forwards;
   }
 
   /* Round photo on the review card — sits above the data rows so the
@@ -3116,7 +3134,7 @@
   }
 
   .vault-cta {
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-neutral);
     font-family: var(--font-body);
     font-size: var(--text-ui);
@@ -3130,7 +3148,7 @@
     transition: background-color var(--duration-micro) var(--ease-essence);
     box-shadow: var(--shadow-mineral);
   }
-  .vault-cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-cta:hover { background-color: var(--color-mineral-darker); }
   .vault-cta:active { transform: translateY(1px); }
 
   .vault-card__reassurance {
@@ -3325,7 +3343,7 @@
 
   .vault-past-due-banner__cta {
     align-self: flex-start;
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-neutral);
     font-family: var(--font-body);
     font-size: var(--text-ui);
@@ -3337,7 +3355,7 @@
     cursor: pointer;
     transition: background-color var(--duration-micro) var(--ease-essence);
   }
-  .vault-past-due-banner__cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-past-due-banner__cta:hover { background-color: var(--color-mineral-darker); }
   .vault-past-due-banner__cta:active { transform: translateY(1px); }
 
   @media (min-width: 768px) {
@@ -3398,7 +3416,7 @@
   }
 
   .vault-restore-screen__cta {
-    background-color: var(--color-mineral);
+    background-color: var(--color-mineral-dark);
     color: var(--color-bg-neutral);
     font-family: var(--font-body);
     font-size: var(--text-ui);
@@ -3412,10 +3430,645 @@
     transition: background-color var(--duration-micro) var(--ease-essence);
     box-shadow: var(--shadow-mineral);
   }
-  .vault-restore-screen__cta:hover { background-color: var(--color-mineral-dark); }
+  .vault-restore-screen__cta:hover { background-color: var(--color-mineral-darker); }
   .vault-restore-screen__cta:active { transform: translateY(1px); }
   .vault-restore-screen__cta:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STEP 7 — MEMORY SHELF
+   Ported from prototypes/essence-step7-memory-shelf.html onto the live @theme
+   tokens (no re-hardcoded ramp hex — see Appendix A.2c deferral). The three
+   effect values @theme does not define are scoped to `.shelf` below and flagged
+   "prototype-local." The BreathStone breathing lives in the canvas engine
+   (honors reducedMotion); CSS here covers layout/entrance/glow only.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  @keyframes shelf-card-settle {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shelf-unplayed-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(232, 220, 200, 0.5), var(--shadow-sm); }
+    50%      { box-shadow: 0 0 32px rgba(232, 220, 200, 0.7), var(--shadow-sm); }
+  }
+  @keyframes shelf-fresh-land {
+    0%   { box-shadow: 0 0 28px rgba(232, 220, 200, 0.7), var(--shadow-sm); }
+    100% { box-shadow: 0 0 24px var(--shelf-glow-keepsake), var(--shadow-sm); }
+  }
+  @keyframes shelf-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  @keyframes shelf-complete-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shelf-overlay-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes shelf-modal-rise {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shelf-stone-entrance {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes shelf-excerpt-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shelf-controls-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes shelf-transcript-slide {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer components {
+  /* Phone-width column. Prototype-local effect tokens scoped here. */
+  .shelf {
+    /* prototype-local: effect values @theme does not define */
+    --shelf-divider: #D9D6D2;                         /* heavier section rule; --color-border too faint */
+    --shelf-glow-keepsake: rgba(232, 220, 200, 0.6);  /* unplayed/keepsake honey glow (bg-gold family) */
+    --shelf-font-mono: 'SF Mono', 'Roboto Mono', Menlo, monospace; /* timers only */
+
+    max-width: 430px;
+    margin: 0 auto;
+    padding: var(--space-4xl) var(--space-lg) 120px;
+    position: relative;
+    animation: page-enter var(--duration-page) var(--ease-page);
+  }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  .shelf-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 56px;
+    text-align: center;
+  }
+  .shelf-title {
+    font-family: var(--font-display);
+    font-size: var(--text-h1);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    letter-spacing: -0.015em;
+    margin: 0 0 var(--space-sm);
+  }
+  .shelf-tagline {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+    letter-spacing: 0.015em;
+    max-width: 320px;
+    margin: 0;
+  }
+
+  /* ── Empty state ────────────────────────────────────────── */
+  .shelf-empty { text-align: center; padding: var(--space-4xl) var(--space-lg); }
+  .shelf-empty__stone {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto var(--space-2xl);
+  }
+  .shelf-empty__title {
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-lg);
+    letter-spacing: -0.01em;
+  }
+  .shelf-empty__body {
+    font-size: var(--text-body-lg);
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+    max-width: 360px;
+    margin: 0 auto var(--space-xl);
+  }
+  .shelf-empty__promise {
+    font-size: var(--text-ui);
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    max-width: 340px;
+    margin: 0 auto var(--space-2xl);
+    font-family: var(--font-display);
+    font-style: italic;
+  }
+
+  /* ── Primary CTA (warm mineral lift) ────────────────────── */
+  .shelf-btn-primary {
+    background: var(--color-mineral-dark);
+    color: #fff;
+    border: none;
+    padding: var(--space-lg) var(--space-2xl);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-mineral);
+    transition: background var(--duration-micro) var(--ease-essence),
+                transform var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-btn-primary:hover { background: var(--color-mineral-darker); transform: translateY(-1px); }
+  .shelf-btn-primary:active { transform: translateY(0); transition: transform 100ms var(--ease-press); }
+
+  /* ── Message cards ──────────────────────────────────────── */
+  .shelf-cards { margin: 0; }
+  .shelf-card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    margin-bottom: var(--space-xl);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    animation: shelf-card-settle var(--duration-small) var(--ease-essence) both;
+    animation-delay: calc(var(--card-index, 0) * 200ms);
+    transition: transform var(--duration-micro) var(--ease-essence),
+                box-shadow var(--duration-micro) var(--ease-essence),
+                background var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-card:hover {
+    transform: translateY(-2px);
+    background: var(--color-surface-honey);
+    box-shadow: var(--shadow-md);
+  }
+  /* Honey glow reserved for unheard / just-landed cards (glow MEANS "unplayed") */
+  .shelf-card--unplayed {
+    box-shadow: 0 0 24px var(--shelf-glow-keepsake), var(--shadow-sm);
+    animation: shelf-card-settle var(--duration-small) var(--ease-essence) both,
+               shelf-unplayed-pulse var(--duration-breath) var(--ease-essence) infinite;
+  }
+  .shelf-card--fresh {
+    animation: shelf-card-settle var(--duration-small) var(--ease-essence) both,
+               shelf-fresh-land var(--duration-breath) var(--ease-essence) forwards;
+  }
+  .shelf-card--unavailable {
+    background: var(--color-bg-warm-phase);
+    cursor: default;
+  }
+  .shelf-card--unavailable:hover { transform: none; box-shadow: var(--shadow-sm); }
+
+  .shelf-card__recipient {
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-xs);
+  }
+  .shelf-card__occasion {
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+    letter-spacing: 0.01em;
+    margin-bottom: var(--space-md);
+  }
+  .shelf-card__excerpt {
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    line-height: 1.8;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-md);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: pre-line;
+  }
+  .shelf-card__meta {
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-lg);
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+  }
+  .shelf-card__footer {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+  }
+
+  .shelf-btn-play {
+    background: var(--color-mineral-dark);
+    border: none;
+    color: #fff;
+    font-size: var(--text-small);
+    cursor: pointer;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    box-shadow: var(--shadow-mineral);
+    transition: background var(--duration-micro) var(--ease-essence),
+                transform var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-btn-play::before { content: '\25B7'; font-size: 16px; margin-right: -2px; }
+  .shelf-btn-play:hover { background: var(--color-mineral-darker); transform: translateY(-1px); }
+  .shelf-btn-play:active { transform: translateY(0); transition: transform 100ms var(--ease-press); }
+
+  .shelf-card__unavailable-label {
+    color: var(--color-text-secondary);
+    font-size: var(--text-body);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+  .shelf-card__unavailable-note {
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: var(--radius-md);
+  }
+  .shelf-btn-retry {
+    display: block;
+    background: var(--color-mineral-dark);
+    color: #fff;
+    border: none;
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-size: var(--text-small);
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: var(--space-sm);
+    transition: background var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-btn-retry:hover { background: var(--color-mineral-darker); }
+
+  /* ── "Create another" (1–2 messages, calm) ──────────────── */
+  .shelf-add { text-align: center; padding: var(--space-md) 0 var(--space-2xl); }
+  .shelf-btn-add {
+    background: transparent;
+    border: 1.5px solid var(--color-mineral);
+    color: var(--color-mineral);
+    padding: 14px 28px;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: var(--text-ui);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-btn-add:hover { background: rgba(122, 128, 136, 0.08); }
+
+  /* ── 3/3 complete (quiet, not a wall) ───────────────────── */
+  .shelf-complete {
+    text-align: center;
+    padding: var(--space-4xl) var(--space-lg) var(--space-2xl);
+    opacity: 0;
+    animation: shelf-complete-fade var(--duration-large) 200ms var(--ease-essence) forwards;
+  }
+  .shelf-complete__rule {
+    width: 40px;
+    height: 1px;
+    background: var(--shelf-divider);
+    margin: 0 auto var(--space-xl);
+  }
+  .shelf-complete__title {
+    font-family: var(--font-display);
+    font-size: var(--text-h3);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    letter-spacing: -0.01em;
+    margin: 0 0 var(--space-md);
+  }
+  .shelf-complete__body {
+    font-size: var(--text-ui);
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    max-width: 300px;
+    margin: 0 auto var(--space-xl);
+  }
+  .shelf-complete__link {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    padding: var(--space-sm);
+    transition: color var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-complete__link::after { content: ' \2192'; }
+  .shelf-complete__link:hover { color: var(--color-text-primary); text-decoration: underline; }
+
+  /* ── Loading skeleton ───────────────────────────────────── */
+  .shelf-skeleton {
+    background: var(--color-surface-card);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    margin-bottom: var(--space-xl);
+    box-shadow: var(--shadow-sm);
+  }
+  .shelf-skeleton__line {
+    height: 14px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, var(--color-bg-rich) 0%, var(--color-bg-warm-phase) 50%, var(--color-bg-rich) 100%);
+    background-size: 200% 100%;
+    animation: shelf-shimmer 1800ms var(--ease-essence) infinite;
+    margin-bottom: var(--space-md);
+  }
+  .shelf-skeleton__line--short { width: 35%; }
+  .shelf-skeleton__line--med   { width: 70%; height: 18px; }
+  .shelf-skeleton__line--full  { width: 100%; height: 18px; }
+  .shelf-skeleton__line--meta  { width: 45%; height: 12px; margin-top: var(--space-lg); margin-bottom: 0; }
+
+  /* ── List load error (production-only) ──────────────────── */
+  .shelf-list-error { text-align: center; padding: var(--space-2xl) var(--space-lg); }
+  .shelf-list-error__body {
+    font-size: var(--text-body);
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    max-width: 320px;
+    margin: 0 auto var(--space-xl);
+  }
+
+  /* ── Playback overlay (ceremonial) ──────────────────────── */
+  .shelf-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 26, 24, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    padding: var(--space-xl);
+    backdrop-filter: blur(4px);
+    animation: shelf-overlay-fade var(--duration-medium) var(--ease-essence);
+  }
+  .shelf-modal {
+    background: var(--color-bg-neutral);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-4xl) var(--space-2xl);
+    max-width: 480px;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    text-align: center;
+    animation: shelf-modal-rise var(--duration-medium) var(--ease-essence);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .shelf-modal__close {
+    position: absolute;
+    top: var(--space-lg);
+    right: var(--space-lg);
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--duration-micro) var(--ease-essence), color var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-modal__close:hover { background: rgba(0, 0, 0, 0.05); color: var(--color-text-primary); }
+  .shelf-modal__stone {
+    width: 140px;
+    height: 140px;
+    margin: 0 auto var(--space-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: shelf-stone-entrance var(--duration-small) var(--ease-essence);
+  }
+  .shelf-modal__recipient {
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-md);
+    opacity: 0;
+    animation: shelf-excerpt-fade var(--duration-medium) 200ms var(--ease-essence) forwards;
+  }
+  .shelf-modal__excerpt {
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    line-height: 1.7;
+    color: var(--color-text-primary);
+    margin: 0 auto var(--space-2xl);
+    max-width: 400px;
+    white-space: pre-line;
+    opacity: 0;
+    animation: shelf-excerpt-fade var(--duration-medium) 300ms var(--ease-essence) forwards;
+  }
+  .shelf-modal__controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    align-items: center;
+    opacity: 0;
+    animation: shelf-controls-fade var(--duration-small) 500ms var(--ease-essence) forwards;
+  }
+  .shelf-btn-modal-primary {
+    background: var(--color-mineral-dark);
+    color: #fff;
+    border: none;
+    padding: var(--space-lg) var(--space-4xl);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 200px;
+    box-shadow: var(--shadow-mineral);
+    transition: background var(--duration-micro) var(--ease-essence), transform var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-btn-modal-primary:hover:not(:disabled) { background: var(--color-mineral-darker); transform: scale(1.02); }
+  .shelf-btn-modal-primary:active:not(:disabled) { transform: scale(1); transition: transform 100ms var(--ease-press); }
+  .shelf-btn-modal-primary:disabled { opacity: 0.55; cursor: progress; }
+  .shelf-btn-modal-secondary {
+    background: transparent;
+    border: 2px solid var(--color-mineral);
+    color: var(--color-mineral);
+    padding: 14px var(--space-2xl);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-btn-modal-secondary:hover { background: rgba(122, 128, 136, 0.1); }
+  .shelf-replay-row { display: flex; gap: var(--space-md); justify-content: center; }
+  .shelf-timer {
+    font-family: var(--shelf-font-mono);
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-sm);
+  }
+  .shelf-btn-transcript {
+    background: transparent;
+    border: none;
+    color: var(--color-mineral);
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    font-weight: 600;
+    cursor: pointer;
+    padding: var(--space-sm);
+    transition: color var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-btn-transcript:hover { color: var(--color-mineral-dark); text-decoration: underline; }
+
+  /* ── Transcript sheet ───────────────────────────────────── */
+  .shelf-transcript {
+    position: fixed;
+    inset: 0;
+    background: var(--color-bg-neutral);
+    z-index: 9500;
+    display: flex;
+    flex-direction: column;
+    animation: shelf-transcript-slide var(--duration-small) var(--ease-essence);
+  }
+  .shelf-transcript__header {
+    padding: var(--space-xl) var(--space-lg);
+    border-bottom: 1px solid var(--shelf-divider);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .shelf-transcript__label {
+    font-size: var(--text-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-secondary);
+  }
+  .shelf-transcript__content { flex: 1; overflow-y: auto; padding: var(--space-3xl) var(--space-2xl) var(--space-4xl); text-align: center; }
+  .shelf-transcript__meta { font-size: var(--text-small); font-weight: 500; color: var(--color-text-secondary); margin-bottom: var(--space-xl); }
+  .shelf-transcript__body {
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    line-height: 1.7;
+    color: var(--color-text-primary);
+    max-width: 560px;
+    margin: 0 auto;
+    text-align: left;
+    white-space: pre-wrap;
+  }
+
+  /* ── First-message ceremony (first-ever save from A7) ───── */
+  .shelf-first-ceremony {
+    position: fixed;
+    inset: 0;
+    z-index: 9800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(28, 26, 24, 0.35);
+    backdrop-filter: blur(3px);
+    padding: var(--space-xl);
+    animation: shelf-overlay-fade var(--duration-medium) var(--ease-essence);
+  }
+  .shelf-first-ceremony__card {
+    background: rgba(251, 248, 244, 0.98);
+    padding: var(--space-2xl) var(--space-3xl);
+    border-radius: var(--radius-xl);
+    max-width: 360px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: shelf-modal-rise var(--duration-medium) var(--ease-essence);
+  }
+  .shelf-first-ceremony__title {
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    line-height: 1.6;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-sm);
+  }
+  .shelf-first-ceremony__sub {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+  }
+
+  /* ── Dev rail (/dev/shelf only) ─────────────────────────── */
+  .shelf-dev-rail {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-text-primary);
+    color: var(--color-bg-neutral);
+    padding: var(--space-md) var(--space-lg);
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    z-index: 10000;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .shelf-dev-rail__label { font-size: 11px; font-weight: 600; margin-right: auto; opacity: 0.7; letter-spacing: 0.04em; }
+  .shelf-dev-rail button {
+    background: var(--color-mineral);
+    color: #fff;
+    border: none;
+    padding: 6px 11px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-height: 0;
+    transition: background var(--duration-micro) var(--ease-essence);
+  }
+  .shelf-dev-rail button:hover { background: var(--color-mineral-dark); }
+  .shelf-dev-rail button.is-active { background: var(--color-bg-neutral); color: var(--color-text-primary); }
+
+  /* ── Responsive (390 baseline) ──────────────────────────── */
+  @media (max-width: 430px) {
+    .shelf { padding: var(--space-2xl) var(--space-lg) 120px; }
+    .shelf-title { font-size: 32px; }
+    .shelf-tagline { font-size: var(--text-ui); }
+    .shelf-card__excerpt,
+    .shelf-modal__excerpt,
+    .shelf-transcript__body { font-size: var(--text-body); }
+  }
+
+  /* ── Reduced motion: freeze breathing/pulses to static, keep atmosphere ── */
+  @media (prefers-reduced-motion: reduce) {
+    .shelf { animation: none; }
+    .shelf-card,
+    .shelf-card--unplayed,
+    .shelf-card--fresh { animation: none; opacity: 1; }
+    .shelf-card--unplayed { box-shadow: 0 0 24px var(--shelf-glow-keepsake), var(--shadow-sm); }
+    .shelf-complete { opacity: 1; transform: none; animation: none; }
+    .shelf-modal__recipient,
+    .shelf-modal__excerpt,
+    .shelf-modal__controls { opacity: 1; animation: none; }
   }
 }

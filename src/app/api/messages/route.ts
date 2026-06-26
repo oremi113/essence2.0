@@ -17,6 +17,7 @@ import { recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { messageCreateSchema } from "@/lib/api/schemas";
 import { sanitizeErrorMessage } from "@/lib/api/sanitize";
+import { serializeShelfMessage, type ShelfMessageRow } from "./serializeShelfMessage";
 
 export const maxDuration = 120; // 2 min — TTS + upload
 
@@ -25,19 +26,6 @@ const LIST_LIMIT = 50;
 // ---------------------------------------------------------------------------
 // GET — List messages (Memory Shelf)
 // ---------------------------------------------------------------------------
-
-/**
- * Supabase relation joins return either an object or an array depending on
- * the FK shape, and TS can't always infer them. This helper handles both
- * shapes so the GET handler doesn't need an `as unknown as` cast.
- */
-function extractRecipientName(rel: unknown): string | null {
-  if (!rel || typeof rel !== "object") return null;
-  const obj = Array.isArray(rel) ? rel[0] : rel;
-  if (!obj || typeof obj !== "object") return null;
-  const name = (obj as Record<string, unknown>).name;
-  return typeof name === "string" ? name : null;
-}
 
 export const GET = defineRoute(
   { auth: true },
@@ -51,7 +39,7 @@ export const GET = defineRoute(
     const { data: messages, error } = await supabase
       .from("messages")
       .select(
-        "id, status, title, body_text, created_at, recipient_id, recipients(name)"
+        "id, status, title, body_text, category, audio_duration_ms, played_count, created_at, recipient_id, recipients(name)"
       )
       .eq("user_id", user.id)
       .eq("status", "saved")
@@ -66,18 +54,9 @@ export const GET = defineRoute(
       );
     }
 
-    const items = (messages ?? []).map((m) => ({
-      id: m.id,
-      status: m.status,
-      title: m.title,
-      bodyExcerpt: m.body_text
-        ? m.body_text.length > 80
-          ? m.body_text.slice(0, 80) + "…"
-          : m.body_text
-        : null,
-      recipientName: extractRecipientName(m.recipients),
-      createdAt: m.created_at,
-    }));
+    const items = ((messages ?? []) as ShelfMessageRow[]).map(
+      serializeShelfMessage
+    );
 
     return NextResponse.json({ messages: items });
   }

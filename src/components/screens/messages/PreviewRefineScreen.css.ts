@@ -322,14 +322,14 @@ export const PREVIEW_REFINE_CSS = `
 .preview-refine .btn {
   width: 100%; min-height: 52px;
   padding: var(--space-md) var(--space-xl);
-  background: var(--color-mineral); color: #fff;
+  background: var(--color-mineral-dark); color: #fff;
   font-family: var(--font-body); font-weight: 600; font-size: var(--text-body-lg);
   border: 0; border-radius: var(--radius-lg);
   box-shadow: var(--shadow-mineral); cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
   transition: background var(--duration-micro) var(--ease-essence), transform var(--duration-small) var(--ease-press);
 }
-.preview-refine .btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.preview-refine .btn:not(:disabled):hover { background: var(--color-mineral-darker); }
 .preview-refine .btn:not(:disabled):active { transform: scale(0.98); }
 .preview-refine .btn:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
 .preview-refine .btn:disabled {
