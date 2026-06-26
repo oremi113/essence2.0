@@ -17,6 +17,7 @@ import { recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { messageCreateSchema } from "@/lib/api/schemas";
 import { sanitizeErrorMessage } from "@/lib/api/sanitize";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 import { serializeShelfMessage, type ShelfMessageRow } from "./serializeShelfMessage";
 
 export const maxDuration = 120; // 2 min — TTS + upload
@@ -184,17 +185,23 @@ export const POST = defineRoute(
         meta: { ttsStatus: ttsResult.status },
       });
 
-      // Monotonic transition: only update if still in "generating"
-      await supabase
-        .from("messages")
-        .update({
-          status: "failed",
-          last_error_code: ttsResult.code ?? String(ttsResult.status),
-          last_error_message: sanitizeErrorMessage(ttsResult.message, 500),
-        })
-        .eq("id", messageId)
-        .eq("user_id", user.id)
-        .eq("status", "generating"); // monotonic guard
+      // Monotonic transition: only update if still in "generating".
+      // Best-effort: error path; the .eq("status","generating") guard may
+      // legitimately match zero rows on a race, and a lost flip must not mask
+      // the TTS failure already being returned.
+      await bestEffortWrite(
+        supabase
+          .from("messages")
+          .update({
+            status: "failed",
+            last_error_code: ttsResult.code ?? String(ttsResult.status),
+            last_error_message: sanitizeErrorMessage(ttsResult.message, 500),
+          })
+          .eq("id", messageId)
+          .eq("user_id", user.id)
+          .eq("status", "generating"),
+        { op: "messages_mark_failed_generating", requestId, userId: user.id, messageId },
+      );
 
       await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
       return NextResponse.json(
@@ -254,17 +261,22 @@ export const POST = defineRoute(
         durationMs: durationSince(startMs),
       });
 
-      // Monotonic: only update if still "saving"
-      await supabase
-        .from("messages")
-        .update({
-          status: "failed",
-          last_error_code: "STORAGE_UPLOAD_FAILED",
-          last_error_message: sanitizeErrorMessage(uploadError.message, 500),
-        })
-        .eq("id", messageId)
-        .eq("user_id", user.id)
-        .eq("status", "saving"); // monotonic guard
+      // Monotonic: only update if still "saving". Best-effort error path —
+      // the status guard may match zero rows on a race, and a lost flip must
+      // not mask the upload failure already being returned.
+      await bestEffortWrite(
+        supabase
+          .from("messages")
+          .update({
+            status: "failed",
+            last_error_code: "STORAGE_UPLOAD_FAILED",
+            last_error_message: sanitizeErrorMessage(uploadError.message, 500),
+          })
+          .eq("id", messageId)
+          .eq("user_id", user.id)
+          .eq("status", "saving"),
+        { op: "messages_mark_failed_saving", requestId, userId: user.id, messageId },
+      );
 
       await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
       return NextResponse.json(

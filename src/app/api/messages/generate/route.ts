@@ -25,6 +25,7 @@ import { messageGenerateSchema } from "@/lib/api/schemas";
 import { normalizeRelationship, getCategoryVoiceSettings, type MessageCategory } from "@/lib/messageTemplates";
 import { selectVariantByIndex, getTemplateById, generateMessageText } from "@/lib/messages/generation";
 import { generateAndStoreAudio } from "@/lib/messages/audio";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 import { isActivePending, pendingNotFoundResponse } from "@/lib/messages/route-helpers";
 import {
   STEP6_LIMITS,
@@ -141,7 +142,7 @@ export const POST = defineRoute(
             { status: 502 },
           );
         }
-        await supabase
+        const { error: reshapeError } = await supabase
           .from("pending_generations")
           .update({
             note: note || null,
@@ -151,6 +152,17 @@ export const POST = defineRoute(
           })
           .eq("generation_id", fromGenerationId)
           .eq("user_id", user.id);
+
+        if (reshapeError) {
+          // The reshape text rendered but persisting the candidate failed —
+          // don't return candidate:true for a row that never stored it
+          // (FOLLOW_UPS #61). Mirror the reshape text-failure branch above.
+          logError({ event: "step6_reshape_candidate_write_failed", requestId, userId: user.id, error: reshapeError, meta: { generationId: fromGenerationId, editNoteDepth } });
+          return NextResponse.json(
+            { generationId: fromGenerationId, candidate: false, error: "Could not shape your message. Please try again.", code: ErrorCode.INTERNAL_ERROR, retryable: true },
+            { status: 502 },
+          );
+        }
         logEvent({
           event: "step6_reshape_candidate",
           requestId,
@@ -273,11 +285,15 @@ export const POST = defineRoute(
     });
 
     if (!textResult.ok) {
-      await supabase
-        .from("pending_generations")
-        .update({ text_status: "failed" })
-        .eq("generation_id", generationId)
-        .eq("user_id", user.id);
+      // Best-effort: text already failed; this flip just records it.
+      await bestEffortWrite(
+        supabase
+          .from("pending_generations")
+          .update({ text_status: "failed" })
+          .eq("generation_id", generationId)
+          .eq("user_id", user.id),
+        { op: "step6_text_status_failed_mark", requestId, userId: user.id, meta: { generationId } },
+      );
       logEvent({
         event: "step6_text_failed",
         requestId,
@@ -298,11 +314,32 @@ export const POST = defineRoute(
       );
     }
 
-    await supabase
+    const { error: textMarkError } = await supabase
       .from("pending_generations")
       .update({ generated_text: textResult.text, text_status: "succeeded" })
       .eq("generation_id", generationId)
       .eq("user_id", user.id);
+
+    if (textMarkError) {
+      // The text rendered, but persisting it failed. Abort BEFORE the paid
+      // ElevenLabs render — proceeding would spend vendor money to attach audio
+      // to a row whose generated_text never landed, then /save would read empty
+      // text (FOLLOW_UPS #61). Surface the same failed/retryable shape the
+      // text-failure branch above uses; audio never ran, so audioStatus stays
+      // "pending".
+      logError({ event: "step6_text_mark_failed", requestId, userId: user.id, error: textMarkError, meta: { generationId } });
+      return NextResponse.json(
+        {
+          generationId,
+          textStatus: "failed",
+          audioStatus: "pending",
+          error: "Could not shape your message. Please try again.",
+          code: ErrorCode.INTERNAL_ERROR,
+          retryable: true,
+        },
+        { status: 502 },
+      );
+    }
 
     // --- Audio generation (ElevenLabs) -------------------------------------
     const audioOutcome = await generateAndStoreAudio({
@@ -333,12 +370,17 @@ export const POST = defineRoute(
 
     // --- Success: supersede the prior lineage member (edit-note only, Q3) ---
     if (priorGenerationId) {
-      await supabase
-        .from("pending_generations")
-        .update({ superseded_at: new Date().toISOString() })
-        .eq("generation_id", priorGenerationId)
-        .eq("user_id", user.id)
-        .is("saved_message_id", null);
+      // Best-effort bookkeeping: a failed supersede leaves the prior row active
+      // (minor lineage redundancy), never blocks the succeeded new generation.
+      await bestEffortWrite(
+        supabase
+          .from("pending_generations")
+          .update({ superseded_at: new Date().toISOString() })
+          .eq("generation_id", priorGenerationId)
+          .eq("user_id", user.id)
+          .is("saved_message_id", null),
+        { op: "step6_supersede_prior", requestId, userId: user.id, meta: { priorGenerationId } },
+      );
     }
 
     logEvent({

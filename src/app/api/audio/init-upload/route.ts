@@ -15,6 +15,7 @@ import { assertCanUploadClip } from "@/lib/guards";
 import { recordUsageEvent } from "@/lib/rate-limit";
 import { TOTAL_PROMPT_COUNT } from "@/lib/voice-training/script";
 import { promoteTrainingClipPath } from "@/lib/voice-training/promoteTrainingClipPath";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { audioInitUploadSchema } from "@/lib/api/schemas";
 
@@ -72,14 +73,19 @@ export const POST = defineRoute(
 
     const service = createSupabaseServiceClient();
 
-    // Clear any stale "uploading" row
-    await supabaseAuth
-      .from("training_clips")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("voice_profile_id", voiceProfileId)
-      .eq("prompt_index", promptIndex)
-      .eq("status", "uploading");
+    // Clear any stale "uploading" row. Best-effort cleanup: commonly matches
+    // zero rows (no stale row to clear), and the insert below proceeds
+    // regardless — a failed clear must not block a fresh upload.
+    await bestEffortWrite(
+      supabaseAuth
+        .from("training_clips")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("voice_profile_id", voiceProfileId)
+        .eq("prompt_index", promptIndex)
+        .eq("status", "uploading"),
+      { op: "init_upload_clear_stale", requestId, userId: user.id, meta: { voiceProfileId, promptIndex } },
+    );
 
     // Insert row
     const { data: row, error: insertError } = await supabaseAuth

@@ -12,6 +12,7 @@
  */
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 import { ROUTES, messageGenerationRoute, messageSavedRoute, signInWithNext } from "@/lib/routes";
 import { STEP6_LIMITS, isDeferredAudioEnabled } from "@/lib/messages/cost-controls";
 import { estimateSpeechDurationSec } from "@/lib/messages/speech-duration";
@@ -112,10 +113,15 @@ export default async function MessageGenerationPage({
         ? (profile.ui_flags as Record<string, unknown>)
         : {};
     if (flags[flag] === true) return;
-    await supabase
-      .from("profiles")
-      .update({ ui_flags: { ...flags, [flag]: true } })
-      .eq("user_id", user.id);
+    // Best-effort UI latch: a lost write just re-shows a one-time hint (mild
+    // repetition, no data loss) — never block the A6 render on it.
+    await bestEffortWrite(
+      supabase
+        .from("profiles")
+        .update({ ui_flags: { ...flags, [flag]: true } })
+        .eq("user_id", user.id),
+      { op: "a6_ui_flag_latch", userId: user.id, meta: { flag } },
+    );
   }
 
   return (

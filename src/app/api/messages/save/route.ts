@@ -18,6 +18,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 import { ErrorCode } from "@/lib/errors";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 import { logEvent, logError } from "@/lib/logger";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { messageGenerationRefSchema } from "@/lib/api/schemas";
@@ -70,11 +71,16 @@ export const POST = defineRoute(
       .maybeSingle();
     if (existingMessage) {
       // A prior save inserted the row but didn't finish marking pending — heal it.
-      await supabase
-        .from("pending_generations")
-        .update({ saved_message_id: existingMessage.id })
-        .eq("generation_id", generationId)
-        .eq("user_id", user.id);
+      // Best-effort: if this heal fails too, the next /save re-runs this exact
+      // lookup-and-heal path; the message is already safely inserted either way.
+      await bestEffortWrite(
+        supabase
+          .from("pending_generations")
+          .update({ saved_message_id: existingMessage.id })
+          .eq("generation_id", generationId)
+          .eq("user_id", user.id),
+        { op: "step6_save_heal_pending", requestId, userId: user.id, meta: { generationId, messageId: existingMessage.id } },
+      );
       return NextResponse.json({ messageId: existingMessage.id, status: existingMessage.status, idempotent: true });
     }
 
@@ -179,11 +185,16 @@ export const POST = defineRoute(
     }
 
     // Mark pending as promoted, then best-effort delete the pending object.
-    await supabase
-      .from("pending_generations")
-      .update({ saved_message_id: messageId })
-      .eq("generation_id", generationId)
-      .eq("user_id", user.id);
+    // Best-effort: a lost mark self-heals on the next /save via the
+    // source_generation_id lookup above; the message is already inserted.
+    await bestEffortWrite(
+      supabase
+        .from("pending_generations")
+        .update({ saved_message_id: messageId })
+        .eq("generation_id", generationId)
+        .eq("user_id", user.id),
+      { op: "step6_save_mark_promoted", requestId, userId: user.id, messageId, meta: { generationId } },
+    );
     await service.storage.from(AUDIO_BUCKET).remove([gen.audio_path]).catch(() => {});
 
     logEvent({
