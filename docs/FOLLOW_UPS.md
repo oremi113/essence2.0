@@ -618,3 +618,13 @@ This pass focused on the stable surfaces neither recent pass covered: the cost-c
 **Why it matters:** pure dead code — no functional or money risk. The one mild trap: it persists *only* the completion timestamp, so if anyone rediscovered it and used it, they'd mark a user "onboarded" without saving their details — the exact silent-data-loss shape FU-42 just closed, reachable through a different door.
 **Fix shape:** confirm no external caller, then delete the route. URL removal → owner OK first (never-touch list). Trivial.
 **Pick up when:** the next onboarding pass, or any API dead-route sweep — pairs naturally with FU-59.
+
+## Analytics funnel (from feat/analytics-funnel, 2026-06-16)
+
+### 65. [P4] Analytics context helpers are duplicated between `step6.ts` and `context.ts`
+*(Renumbered from FU-57 on the #59 merge — collided with main's FU-57.)*
+`src/lib/analytics/context.ts` (new) and `src/lib/analytics/step6.ts` each carry their own copies of the same client-context helpers — `getOrCreateSessionId`, `getPlatform`, `getDeviceType`, `generateId` (plus the env/version reads). `context.ts` was added so the new `journey.*` family attaches the same global-prop envelope as `step6.*` without editing `step6.ts`, which was off-limits during parallel M1 work (it's the already-instrumented Step 6 surface).
+
+**Why it matters:** low risk today (the copies are byte-identical and both covered by unit tests), but two definitions of the session/platform/device envelope can drift — e.g. a future change to device-type detection applied to one family and not the other would silently split the envelope across `step6.*` and `journey.*`.
+**Fix shape:** delete the four private helpers from `step6.ts` and import them from `@/lib/analytics/context`; keep `step6.ts`'s flow_id + schema-version logic local. Pure refactor, no behavior change — both `step6-analytics` and `journey-analytics` suites should stay green.
+**Pick up when:** the next time `step6.ts` is intentionally touched (so the change rides a Step 6 review surface, not a surprise). Agent-fixable.

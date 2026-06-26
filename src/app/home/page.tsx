@@ -7,6 +7,8 @@ import { SignOutButton } from "./sign-out-button";
 import { HomeBPageClient } from "./HomeBPageClient";
 import type { HomeBVaultState } from "@/components/screens/home/HomeBScreen.types";
 import { ROUTES, signInWithNext } from "@/lib/routes";
+import { JourneyBeacon } from "@/components/analytics/JourneyBeacon";
+import { JOURNEY_EVENTS } from "@/lib/analytics/journey";
 
 type SubscriptionStatusValue = Awaited<
   ReturnType<typeof getSubscriptionStatus>
@@ -81,13 +83,23 @@ export default async function HomePage({
   const { welcome } = await searchParams;
 
   return (
-    <HomeBPageClient
-      vaultState={deriveVaultState(subscription.status)}
-      // First arrival into Home B — set by the first-message → home handoff
-      // (`?welcome=1`). The visit-#1 ceremonial beat; every other visit is the
-      // calm steady state.
-      firstArrival={welcome === "1"}
-      maxSaved={STEP6_LIMITS.maxSavedMessages}
-    />
+    <>
+      {/*
+        Return/retention signal: an authenticated, onboarded app entry into the
+        completed-user hub. New users are redirected to onboarding above, so
+        reaching here is a real returning session. Retention = distinct users
+        firing app_opened on a day after their signup day (see the analytics
+        note). Non-visual — sits alongside the Home B hub.
+      */}
+      <JourneyBeacon event={JOURNEY_EVENTS.appOpened} />
+      <HomeBPageClient
+        vaultState={deriveVaultState(subscription.status)}
+        // First arrival into Home B — set by the first-message → home handoff
+        // (`?welcome=1`). The visit-#1 ceremonial beat; every other visit is the
+        // calm steady state.
+        firstArrival={welcome === "1"}
+        maxSaved={STEP6_LIMITS.maxSavedMessages}
+      />
+    </>
   );
 }

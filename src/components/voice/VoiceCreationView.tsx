@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { TIMING } from "@/lib/config/timing";
 import { ROUTES } from "@/lib/routes";
+import { trackJourney, JOURNEY_EVENTS } from "@/lib/analytics/journey";
 
 const POLL_INTERVAL_MS = TIMING.VOICE_PROFILE_POLL_INTERVAL_MS;
 const POLL_TIMEOUT_MS = TIMING.VOICE_PROFILE_TAKING_LONGER_MS;
@@ -27,6 +28,19 @@ export function VoiceCreationView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryAvailable, setRetryAvailable] = useState(false);
   const [startDone, setStartDone] = useState(false);
+  const readyFired = useRef(false);
+
+  // Funnel: the preserved voice is usable. Fires once regardless of which path
+  // reached success (already-ready on load, /start returned ready, or poll saw
+  // ready). Per FOLLOW_UPS #43 the success state isn't DB-write-verified, so
+  // this reflects what the client observed; documented in the analytics note.
+  useEffect(() => {
+    if (viewState !== "success" || readyFired.current) return;
+    readyFired.current = true;
+    trackJourney(JOURNEY_EVENTS.voiceProfileReady, {
+      voice_profile_id: voiceProfileId,
+    });
+  }, [viewState, voiceProfileId]);
 
   const pollStatus = useCallback(async () => {
     if (!voiceProfileId) return null;

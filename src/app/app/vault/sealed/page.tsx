@@ -17,6 +17,11 @@ export default async function VaultSealedPage({
 
   const params = await searchParams;
 
+  // Only a real Stripe return (session_id present) is a conversion worth a
+  // subscription_started funnel event. On mock/direct nav we render the seal
+  // but fire nothing.
+  let subscriptionStatus: string | undefined;
+
   if (params.session_id) {
     // Real Stripe return: the browser usually beats the webhook back to our
     // server, so poll the subscriptions table for up to 3s waiting for the
@@ -24,9 +29,13 @@ export default async function VaultSealedPage({
     // animation from being blocked by webhook lag — 7c adds reconciliation
     // for the edge case where the webhook never fires.
     const maxAttempts = 6;
+    subscriptionStatus = 'pending'; // webhook hasn't landed yet
     for (let i = 0; i < maxAttempts; i++) {
       const sub = await getSubscriptionStatus(user.id);
-      if (sub.status === 'trial' || sub.status === 'active') break;
+      if (sub.status === 'trial' || sub.status === 'active') {
+        subscriptionStatus = sub.status;
+        break;
+      }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
   } else if (params.mock === 'true') {
@@ -39,5 +48,5 @@ export default async function VaultSealedPage({
     }
   }
 
-  return <SealedActions />;
+  return <SealedActions subscriptionStatus={subscriptionStatus} />;
 }

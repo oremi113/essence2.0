@@ -21,7 +21,7 @@ import { NextResponse } from "next/server";
 import { defineRoute } from "@/lib/api/defineRoute";
 
 /** Prefixes that the client is allowed to write through this route. */
-const ACTION_PREFIXES = ["breath_stone_", "step6."] as const;
+const ACTION_PREFIXES = ["breath_stone_", "step6.", "journey."] as const;
 
 function isAllowedAction(action: unknown): action is string {
   return (
