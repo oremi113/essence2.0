@@ -4,7 +4,7 @@ Tech-debt and deferred items surfaced during other work. Revisit when touching t
 
 ## Priority queue (seed scan 2026-06-12 — see docs/REFACTORING_SYSTEM.md)
 
-Health at scan time: typecheck ✅ · lint ✅ · unit tests 176/176 ✅.
+Health at scan time: typecheck ✅ · lint ✅ · unit tests 184/184 ✅ (2026-06-17 scan).
 Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 | # | P | One-liner | Agent-fixable now? |
@@ -12,13 +12,13 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 22 | P2 | Voice creation has zero payment gating — ElevenLabs cost exposure | ❌ decision (gate or not, before launch) |
 | 34 | P2 | Two parallel message-creation routes; one is legacy | ✅ RESOLVED 2026-06-16 (M0 — legacy retired) |
 | 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
-| 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⚠️ fix is spec'd; needs 2 product confirmations first |
+| 23 | P2 | Lapsed subscribers dead-end on the restore screen | ⏳ in progress on feat/stripe-hardening (overlaps active work) |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
 | 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost | ✅ RESOLVED 2026-06-16 (refactor/fu-42 — throws on failed save) |
-| 5 | P3 | Cancelling an upload reads as a failure internally | ✅ **next up** |
-| 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ |
-| 2 | P3 | Failed upload leaves stale internal state between retries | ✅ |
-| 26 | P3 | Generated DB types: only the CI drift-check remains | ✅ |
+| 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED 2026-06-11 (35d7372 — distinct `cancelled` state, tested) |
+| 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ RESOLVED 2026-06-11 (35d7372 — adjust-state-during-render, no disable) |
+| 2 | P3 | Failed upload leaves stale internal state between retries | ✅ RESOLVED 2026-06-11 (35d7372 — `resetPipeline()` in catch) |
+| 26 | P3 | Generated DB types: only the CI drift-check remains | ⚠️ needs owner setup — CI drift-check requires a Supabase access token as a GitHub Actions secret (not agent-provisionable) |
 | 16 | P3 | B2/B3 motion surfaces shipped with no analytics events | ⚠️ needs event-naming input |
 | 6 | P3 | Non-square photos will render wrong in the circle | ✅ when photo upload goes fully live |
 | 7 | P3 | Photo success is silent for screen-reader users | ✅ (batch with a11y pass) |
@@ -29,32 +29,38 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 30 | P3 | Migration bookkeeping blocks `db push` (schema itself is fine) | ✅ RESOLVED 2026-06-16 (M0 — history reconciled, db push clean) |
 | 38 | P3 | A6 exit paths land short (checklist tied to unbuilt screens) | ✅ FULLY RESOLVED (Chunk 10 — C1 + repoint) |
 | 53 | P2 | Real ElevenLabs voice render unverified — generate + commit happy path (pre-merge gate) | ✅ VERIFIED 2026-06-14 (both arms, real audio) |
-| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ deferred behind #30 (revisited 2026-06-14 — latch is proportionate) |
+| 54 | P4 | C1 ceremony "once per lifetime" is a localStorage latch (per-device, not per-lifetime) | ⏳ resolved in code, in open PR #58 (durable server-side flag; pending owner merge) |
 | 55 | P3 | `useResource` keyed-refetch test is flaky under full-suite load (passes isolated) | ✅ RESOLVED 2026-06-14 (waitFor) |
 | 56 | P4 | A4 example placeholder is birthday-flavoured but copy is category-agnostic | ⏳ per-category examples (+ question/subtitle) |
 | 52 | P4 | C3 "See what's coming" → Home interim until C2 Waitlist lands | ✅ resolved (Chunk 9 — → C2) |
-| 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ add error check |
-| 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ owner-paired (Stripe) |
-| 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ add error check |
+| 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ⏳ resolved in code, in open PR #61 (pending owner merge) |
+| 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ⏳ owner-paired (Stripe); overlaps active feat/stripe-hardening |
+| 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ⏳ resolved in code, in open PR #61 (pending owner merge) |
 | 59 | P3 | Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` unreachable; POST still spends ElevenLabs with no Step 6 cost cap *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
-| 4 | P4 | Dead fallback import in audio/commit route | ✅ |
+| 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
-| 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ reorder record/update |
+| 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ⏳ resolved in code, in open PR #61 (pending owner merge) |
 | 57 | P4 | Onboarding completion failure resets silently — no visible "couldn't save, try again" message *(new 2026-06-16)* | ⚠️ UI copy + needs browser verify |
 | 60 | P4 | Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action; stamp-only partial duplicate *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
-**Next-up fixable queue:** #5 → #1 → #2 → #26 (CI check) → #4.
+**Next-up fixable queue:** *(empty of clean agent-fixable code work as of 2026-06-17.)* The previous queue (#5 → #1 → #2 → #4) all shipped on `main` in commit `35d7372` (2026-06-11) but was never struck here — reconciled this run. #26 (the remaining CI drift-check) is **blocked on owner setup**: it needs a Supabase access token added as a GitHub Actions secret before the check can run green. #43/#45/#46 are resolved in code and waiting in open PR #61. The remaining open items are blocked on owner decisions (#22, #25, #16, #28, #12), overlap active feature branches (#23, #24, #44), or are UI/visual work that needs in-browser verification (#7, #8, #9, #56, #57) — see each entry.
 
 ## RecordingUpload / useUploadPipeline (from PR #33, 2026-04-19)
 
-### 1. [P3] Prompt auto-advance uses ref-during-render
+### 1. [P3] Prompt auto-advance uses ref-during-render — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution:** the ref-during-render auto-advance was replaced with the React-recommended adjust-state-during-render pattern — `RecordingUpload.tsx` now derives the prompt change from a `seenPromptIndex` state (`if (promptIndex !== seenPromptIndex) setSeenPromptIndex(...)`) instead of reading/writing a ref in the render body. The targeted `eslint-disable` comments are gone (zero disables remain in the file). Verified in code on `main`; strike recorded during the 2026-06-17 scan reconciliation (the fix landed in the 2026-06-11 safe-batch but the entry was never struck). Original entry below.
+
+---
 `src/components/audio/RecordingUpload.tsx` — the prompt auto-advance block reads/writes a ref during render. It was previously masked by the component's size; after extracting `useUploadPipeline`, the shrunken component now trips `react-hooks/refs`. Worked around with targeted `eslint-disable-next-line` comments.
 
 **Fix:** restructure the auto-advance into a `useEffect` that keys off `promptIndex` and reset-equivalent state.
 
-### 2. [P3] Upload failure leaves hook status stuck at `'failed'`
+### 2. [P3] Upload failure leaves hook status stuck at `'failed'` — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution:** `RecordingUpload.tsx`'s `stopAndUpload` catch path now calls `resetPipeline()` after surfacing its own error, so the hook's internal `status` returns to `'idle'` between attempts and no future consumer (retry UI, analytics, progress bar) can observe stale `'failed'`/`'cancelled'` state. Comment in the catch block documents the intent. Verified in code on `main`; strike recorded during the 2026-06-17 scan reconciliation. Original entry below.
+
+---
 `src/components/audio/RecordingUpload.tsx` — on upload error the component surfaces its own error state but never calls `uploadPipeline.reset()`. The hook's internal `status` stays `'failed'` until a new `upload()` call is initiated.
 
 **Why it's harmless today:** nothing outside `onStageChange` reads hook status.
@@ -63,14 +69,20 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 ## audio/commit route (from PR #31, 2026-04-19)
 
-### 4. [P4] `AUDIO_BUCKET` import is only a fallback
+### 4. [P4] `AUDIO_BUCKET` import is only a fallback — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution:** the fallback and the `AUDIO_BUCKET` import were dropped from `audio/commit/route.ts`; it now reads `const bucket = row.storage_bucket` directly, with a comment noting `storage_bucket` is `NOT NULL` (default `'audio'`) and always set on insert. Verified in code on `main`; strike recorded during the 2026-06-17 scan reconciliation. Original entry below.
+
+---
 `src/app/api/audio/commit/route.ts:7` — imports `AUDIO_BUCKET` but uses it only as a fallback (`row.storage_bucket || AUDIO_BUCKET`). The `storage_bucket` column is set on insert in `audio/init-upload` and is non-null in practice, so the fallback is dead weight.
 
 **Fix:** drop the fallback and the import, or confirm the column can legitimately be null and document why.
 
 ## useUploadPipeline cancel (from PR #38, 2026-04-19)
 
-### 5. [P3 — next up] `cancel()` lands the hook in `'failed'`, not a cancelled/idle state
+### 5. [P3] `cancel()` lands the hook in `'failed'`, not a cancelled/idle state — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution (root-cause fix, not a band-aid):** `useUploadPipeline.ts` now adds a distinct `'cancelled'` terminal status and an `isAbortError(err)` helper. The catch block checks `isAbortError` first: a `cancel()`-triggered `AbortError` clears the error message and transitions to `'cancelled'` (re-thrown so awaiting callers can still branch), while real failures keep landing in `'failed'`. So a deliberate user cancel no longer masquerades as a failure for any consumer that keys off `status`. The PR #38 test was updated rather than weakened — `tests/unit/useUploadPipeline.test.tsx` now asserts `status === 'cancelled'` (not `'failed'`) for cancel-mid-init and cancel-mid-PUT. Verified in code on `main` and by the green unit suite; strike recorded during the 2026-06-17 scan reconciliation (the fix landed 2026-06-11 but was the stale "next up" item that was never struck here). Original entry below.
+
+---
 `src/lib/upload/useUploadPipeline.ts` — the hook's `try/catch` wraps the whole pipeline, so when `cancel()` triggers an `AbortError`, it hits the catch block like any other error and sets `status: 'failed'`. Consumers calling `cancel()` will observe a failed state with an abort-error message.
 
 **Why it matters:** most cancel-aware hook APIs distinguish abort-caused rejections (typically → `'idle'` or `'cancelled'`) from real failures. Dashboards or retry UIs that key off `status: 'failed'` will falsely fire on user-initiated cancels.

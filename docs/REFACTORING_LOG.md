@@ -52,6 +52,43 @@ Entry template (the agent appends one per run):
   / voice-profiles / Step 6 routes — no entry warranted.
 - Branch / commit: `triage/2026-06-19` @ <this commit>
 - Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+
+## 2026-06-17 — scheduled (scan + backlog reconciliation)
+- Outcome: Scan-only — no code fix was needed; the top of the fixable queue was
+  already done and the rest is blocked. Corrected a stale backlog so it no longer
+  points the owner at work that already shipped.
+- Item: FU-5 [P3] (the designated "next up") — and the three queue items behind
+  it (FU-1, FU-2, FU-4). All four turned out to be **already resolved on `main`**
+  in commit `35d7372` (2026-06-11 "safe FOLLOW_UPS batch"), with test coverage,
+  but were never struck here — so the priority table still advertised them as the
+  next fixable work. This run verified each in code and recorded the strikes.
+- Root cause (of the stale backlog): symptom — `FOLLOW_UPS.md` listed FU-5/1/2/4
+  as the "next-up fixable queue" a week after they shipped. Cause — the 2026-06-11
+  batch fixed the code but didn't update the backlog's resolution strikes or the
+  ranked table. Why this change addresses it — the four entries are now struck
+  with the resolving commit, and the table reflects real status (resolved /
+  in-open-PR / blocked-on-owner-setup / overlaps-active-work) so the next run
+  starts from an accurate queue. No app code was touched.
+  - Verified resolved in code on `main`: FU-5 — `useUploadPipeline.ts` has a
+    distinct `'cancelled'` status + `isAbortError` guard, and the unit test asserts
+    cancel → `'cancelled'` (not `'failed'`); FU-1 — `RecordingUpload.tsx` uses the
+    adjust-state-during-render pattern, zero `eslint-disable`; FU-2 — its catch
+    path calls `resetPipeline()`; FU-4 — `audio/commit/route.ts` dropped the
+    `AUDIO_BUCKET` fallback + import.
+- Why nothing else was fixable this run: FU-26 (the only remaining code item near
+  the top — a CI drift-check for generated DB types) needs a Supabase access token
+  added as a GitHub Actions secret, which only the owner can provision (§4 "ask
+  first"); shipping the check without it would turn CI red. Everything else open is
+  blocked on owner decisions (FU-22/25/16/28/12), overlaps active feature branches
+  (FU-23/24/44 on stripe/analytics streams), is resolved-in-code awaiting an open
+  PR merge (FU-43/45/46 → PR #61, FU-54 → PR #58), or is UI/visual work needing
+  in-browser verification this environment can't do (FU-7/8/9/56/57).
+- Branch / commit: refactor/fu-5-reconcile-resolved-batch @ <stamped on commit>
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (184/184). Docs-only change; no
+  behavior change, no browser verification needed.
+- Discovered: none new. Reconciliation only — corrected the status of FU-1/2/4/5
+  (resolved on main) and re-scored FU-23/26/43/44/45/46/54 in the table to match
+  in-flight PRs and active branches.
 - Merged: <stamped later when the owner merges>
 
 ## 2026-06-16 — scheduled (fix)
