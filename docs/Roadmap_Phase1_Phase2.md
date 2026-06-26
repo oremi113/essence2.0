@@ -15,12 +15,17 @@ the assumptions are stated so you can adjust.
   (Capacitor), so web work is the foundation, not throwaway. Defer until the
   numbers justify Apple's tax (review + 30% + IAP rebuild).
 
-## Where we are (the audit, 2026-06-16)
-Built **and** redesigned: Steps 1, 2, 4, 6. Built but **not redesigned**: Step 7.
+## Where we are (the audit, updated 2026-06-17)
+Built **and** redesigned: Steps 1, 2, 4, 6, **7** (Step 7 redesigned + built +
+live-verified + test-hardened, 2026-06-17 — see M1 below).
 Stub / missing / unclear: Step 3 (checkout stub), Step 5 (folded into First
-Breath), Step 8 (Home B stub), Step 9 (Settings — missing), Step 10 (Error
-Recovery — missing). Pricing is current in `MASTER_SPEC.md` §V1.1
-(Vault $12.99/mo · $119/yr · 7-day trial · 3 lifetime messages).
+Breath — confirmed done), Step 8 (Home B stub), Step 9 (Settings — missing),
+Step 10 (global boundaries done; per-flow states pending — M3). Pricing is
+current in `MASTER_SPEC.md` §V1.1 (Vault $12.99/mo · $119/yr · 7-day trial ·
+3 lifetime messages).
+
+**Next move:** M2 is the active milestone but is **design-gated** — the Step 8
+Home B prototype must land before build can start. M0 + M1 are complete.
 
 ## Estimating notes (read before trusting the numbers)
 - **"Coding hours"** = focused engineering by one experienced dev. AI-assisted
@@ -95,13 +100,12 @@ parallel so it never idles.
 **Critical path:** Design(7 → 8 → 3 → 9) → their builds. Everything else
 parallelizes around it.
 
-### M0 — Foundations & de-risk *(start now; all parallel; no design needed)*
-> **Progress (2026-06-16):** ✅ #34 done · ✅ Step 5 resolved · ✅ Step 10 global
-> boundaries done · ⏳ #30 awaits an owner Dashboard session.
-- ⏳ **#30 migration-history cleanup** (Eng + **owner**: apply via Supabase
-  Dashboard). Unblocks future schema changes; removes a launch risk. **The
-  remaining M0 item** — needs an owner-paired session (it's remote-DB
-  bookkeeping, "needs care, not a one-liner"; can't be done headless).
+### M0 — Foundations & de-risk *(✅ COMPLETE 2026-06-17)*
+> **Progress:** ✅ #34 done · ✅ Step 5 resolved · ✅ Step 10 global
+> boundaries done · ✅ #30 reconciled (2026-06-16). **M0 fully complete.**
+- ✅ **#30 migration-history cleanup** — RESOLVED 2026-06-16 (see FOLLOW_UPS #30).
+  Colliding short-stub versions renamed to unique 14-digit versions and the
+  ledger reconciled; `supabase db push --dry-run` now reports "up to date."
 - ✅ **#34 legacy-route consolidation** — `/messages/new` is canonical; the
   legacy `/app/messages/new` now permanently redirects there, all callers
   repointed, the orphaned `NewMessageView` deleted. Verified live.
@@ -112,14 +116,19 @@ parallelizes around it.
   `not-found.tsx`, `loading.tsx`, on-brand via a shared `SystemScreen`. (Per-flow
   error states remain M3.)
 - **Design:** architect works the queue, starting with **Step 7** (handoff sent).
-- *Exit:* clean migration pipeline (←#30 remaining), one canonical creation
-  route ✅, Step 5 scope known ✅, app-wide error/loading scaffolding ✅, Step 7
-  design in hand.
+- *Exit:* clean migration pipeline ✅, one canonical creation route ✅, Step 5
+  scope known ✅, app-wide error/loading scaffolding ✅, Step 7 design in hand ✅.
 
-### M1 — The keepsake loop *(the emotional core)*
-- **Step 7 Memory Shelf** — build from design; widen `GET /api/messages` to
-  surface category / duration / play-history.
-- *Exit:* save a message → revisit/replay it on a redesigned shelf. Core loop whole.
+### M1 — The keepsake loop *(✅ COMPLETE 2026-06-17)*
+- ✅ **Step 7 Memory Shelf** — built from design (relocated to
+  `components/screens/shelf/`, skin mirrors the prototype on `@theme`),
+  `/dev/shelf` added. `GET /api/messages` widened (category / duration /
+  play-history / full body). Live-verified at 390×844 / 4× CPU on a real
+  account; the verify found + fixed a defect (`played_count` was never written,
+  so the unplayed glow never retired — the play route now records it). Hardened
+  with smoke tests across data transform / format helpers / play route / screen
+  states (288 unit tests).
+- *Exit:* ✅ save a message → revisit/replay it on a redesigned shelf. Core loop whole.
 
 ### M2 — The hub + the subscribe moment
 - **Step 8 Home B** — build from design; the hub linking create / shelf / settings.
@@ -147,7 +156,8 @@ parallelizes around it.
 - *Exit:* **launch** — a live, paying mobile web app.
 
 ### Owner / decision touchpoints
-- **M0:** apply the #30 migration bundle; decide Step 5's fate after the investigation.
+- ~~**M0:** apply the #30 migration bundle; decide Step 5's fate.~~ ✅ done.
+- **M2 (next, design-gated):** approve the **Step 8 Home B** prototype to unblock build.
 - **Each design-heavy screen:** approve the prototype + a copy pass (clarity-first
   for boomers/Gen X, like the A4 pass).
 - **M4:** provide privacy/terms content; sign off the launch bar.

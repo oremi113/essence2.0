@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getSubscriptionStatus } from '@/lib/subscription/get-status';
+import { resolveRestorePlan } from '@/lib/subscription/restore-mode';
 import { RestoreActions } from './actions';
 import { ROUTES, signInWithNext } from '@/lib/routes';
 
@@ -46,5 +47,10 @@ export default async function VaultRestorePage() {
 
   const hasRecordings = (count ?? 1) > 0;
 
-  return <RestoreActions hasRecordings={hasRecordings} />;
+  // past_due keeps its subscription (update card via Portal); lapsed/cancelled
+  // is terminal and must restart on a NEW subscription, preserving the prior
+  // plan. getSubscriptionStatus already returns the newest row's billing_period.
+  const { mode, plan } = resolveRestorePlan(sub.status, sub.billingPeriod);
+
+  return <RestoreActions hasRecordings={hasRecordings} mode={mode} plan={plan} />;
 }

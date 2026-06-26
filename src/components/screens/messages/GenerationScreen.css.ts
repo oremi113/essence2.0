@@ -235,7 +235,7 @@ export const GENERATION_CSS = `
 .gen__btn {
   width: 100%; min-height: 52px;
   padding: var(--space-md) var(--space-xl);
-  background: var(--color-mineral); color: #fff;
+  background: var(--color-mineral-dark); color: #fff;
   font-family: var(--font-body); font-weight: 600;
   font-size: var(--text-body-lg);
   border: 0; border-radius: var(--radius-lg);
@@ -244,7 +244,7 @@ export const GENERATION_CSS = `
   transition: background var(--duration-micro) var(--ease-essence),
               transform var(--duration-small) var(--ease-press);
 }
-.gen__btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.gen__btn:not(:disabled):hover { background: var(--color-mineral-darker); }
 .gen__btn:not(:disabled):active { transform: scale(0.98); }
 .gen__btn:focus-visible {
   /* Literal ring, not var(--shadow-focus-ring): that token lives only in

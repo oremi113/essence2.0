@@ -58,16 +58,30 @@ export default function LapseDevPage() {
       </section>
 
       <section>
-        <h2 style={labelStyle}>Restore screen — has recordings (default)</h2>
+        <h2 style={labelStyle}>Restore — past_due · has recordings (update card)</h2>
         <div style={frameStyle}>
-          <VaultRestoreScreen hasRecordings={true} onRestore={noop} />
+          <VaultRestoreScreen hasRecordings={true} mode="update_card" onRestore={noop} />
         </div>
       </section>
 
       <section>
-        <h2 style={labelStyle}>Restore screen — no recordings</h2>
+        <h2 style={labelStyle}>Restore — past_due · no recordings (update card)</h2>
         <div style={frameStyle}>
-          <VaultRestoreScreen hasRecordings={false} onRestore={noop} />
+          <VaultRestoreScreen hasRecordings={false} mode="update_card" onRestore={noop} />
+        </div>
+      </section>
+
+      <section>
+        <h2 style={labelStyle}>Restore — lapsed/cancelled · has recordings (restart)</h2>
+        <div style={frameStyle}>
+          <VaultRestoreScreen hasRecordings={true} mode="restart" onRestore={noop} />
+        </div>
+      </section>
+
+      <section>
+        <h2 style={labelStyle}>Restore — lapsed/cancelled · no recordings (restart)</h2>
+        <div style={frameStyle}>
+          <VaultRestoreScreen hasRecordings={false} mode="restart" onRestore={noop} />
         </div>
       </section>
     </div>

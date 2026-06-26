@@ -39,3 +39,35 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  types-drift:
+    # Regenerates src/lib/supabase/types.ts from the committed migrations and
+    # fails if it differs from the checked-in file — catches enum/schema drift
+    # that tsc can't see (FOLLOW_UPS #26). Self-contained: builds a throwaway
+    # local Postgres from supabase/migrations, no secrets or remote access.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local database
+        run: supabase db start
+
+      - name: Apply migrations
+        run: supabase migration up --local
+
+      - name: Check generated types are in sync
+        env:
+          TYPES_SOURCE: local
+        run: npm run check:types

@@ -82,10 +82,25 @@ export async function createCheckoutSession(
     });
     customerId = customer.id;
 
-    await supabase
+    // Persist the new customer id BEFORE checkout. If this write silently
+    // failed the id would stay null in profiles, and the next checkout would
+    // create a *second* Stripe customer — splintering the user's billing
+    // history. Match the lookup's loud-failure pattern: abort rather than leak
+    // a duplicate-customer path. (FOLLOW_UPS #44)
+    const { error: persistError } = await supabase
       .from('profiles')
       .update({ stripe_customer_id: customerId })
       .eq('user_id', user.id);
+
+    if (persistError) {
+      console.error(
+        '[createCheckoutSession] failed to persist stripe_customer_id',
+        persistError,
+      );
+      throw Object.assign(new Error('Failed to persist Stripe customer'), {
+        code: 'profile_lookup_failed' satisfies CreateCheckoutSessionErrorCode,
+      });
+    }
   }
 
   const priceId =

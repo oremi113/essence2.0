@@ -23,18 +23,9 @@ export const GET = defineRoute<true, { id: string }>(
     const limit = await checkSignedUrlLimit(service, user.id);
     assertAllowed(limit);
 
-    // --- Record usage event ---
-    await recordUsageEvent(service, {
-      userId: user.id,
-      action: "signed_url_playback",
-      requestId,
-      outcome: "success",
-      meta: { messageId: id },
-    });
-
     const { data: message, error } = await supabase
       .from("messages")
-      .select("id, user_id, status, storage_bucket, storage_path")
+      .select("id, user_id, status, storage_bucket, storage_path, played_count")
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -57,6 +48,41 @@ export const GET = defineRoute<true, { id: string }>(
       message.storage_path,
       { event: "play_sign_failed", requestId, userId: user.id, meta: { messageId: id } },
     );
+
+    // Record the play: drives the Memory Shelf's `played` flag (played_count > 0)
+    // so the "unheard" glow retires. Issuing the playback URL is the play signal.
+    // Best-effort — a counter-write failure must not break playback, and the
+    // read-modify-write is fine here (the glow only needs played_count > 0; a
+    // rapid-double-play undercount by one is harmless).
+    const { error: playedError } = await supabase
+      .from("messages")
+      .update({
+        played_count: (message.played_count ?? 0) + 1,
+        last_played_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (playedError) {
+      logEvent({
+        event: "play_count_update_failed",
+        requestId,
+        userId: user.id,
+        messageId: id,
+        outcome: "error",
+        meta: { message: playedError.message },
+      });
+    }
+
+    // Record usage only once a URL is actually issued — a failed lookup/sign
+    // must not log "success" or consume the signed-URL budget (FOLLOW_UPS #45).
+    await recordUsageEvent(service, {
+      userId: user.id,
+      action: "signed_url_playback",
+      requestId,
+      outcome: "success",
+      meta: { messageId: id },
+    });
 
     logEvent({
       event: "play_signed_url",

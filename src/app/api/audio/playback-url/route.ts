@@ -34,15 +34,6 @@ export const POST = defineRoute(
       return NextResponse.json({ error: "id required" }, { status: 400 });
     }
 
-    // --- Record usage event ---
-    await recordUsageEvent(service, {
-      userId: user.id,
-      action: "signed_url_playback",
-      requestId,
-      outcome: "success",
-      meta: { clipId: id },
-    });
-
     const { data: row, error: fetchError } = await supabaseAuth
       .from("training_clips")
       .select("id, user_id, status, storage_bucket, storage_path")
@@ -71,6 +62,16 @@ export const POST = defineRoute(
       logError({ event: "playback_url_sign_failed", requestId, userId: user.id, error: signError });
       return NextResponse.json({ error: "Failed to create playback URL" }, { status: 500 });
     }
+
+    // Record usage only once a URL is actually issued — a failed lookup/sign
+    // must not log "success" or consume the signed-URL budget (FOLLOW_UPS #45).
+    await recordUsageEvent(service, {
+      userId: user.id,
+      action: "signed_url_playback",
+      requestId,
+      outcome: "success",
+      meta: { clipId: id },
+    });
 
     logEvent({
       event: "playback_url_success",

@@ -234,7 +234,7 @@ export const CATEGORY_SELECTOR_CSS = `
 .category-selector .btn {
   width: 100%; min-height: var(--size-control-md, 52px);
   padding: var(--space-md) var(--space-xl);
-  background: var(--color-mineral); color: #fff;
+  background: var(--color-mineral-dark); color: #fff;
   font-family: var(--font-body); font-weight: 600;
   font-size: var(--text-body-lg);
   border: 0; border-radius: var(--radius-lg);
@@ -243,7 +243,7 @@ export const CATEGORY_SELECTOR_CSS = `
   transition: background var(--duration-micro) var(--ease-essence),
               transform var(--duration-small) var(--ease-press);
 }
-.category-selector .btn:not(:disabled):hover { background: var(--color-mineral-dark); }
+.category-selector .btn:not(:disabled):hover { background: var(--color-mineral-darker); }
 .category-selector .btn:not(:disabled):active { transform: scale(var(--scale-press, 0.98)); }
 .category-selector .btn:disabled {
   background: var(--color-surface-warm);
