@@ -12,6 +12,7 @@ import {
   checkClipUploadLimit,
   assertAllowed,
 } from "@/lib/rate-limit";
+import { assertCanCreateVoice } from "@/lib/voice-creation/entitlement";
 
 // ---------------------------------------------------------------------------
 // Plan gate stub — single place to wire billing later
@@ -98,8 +99,10 @@ export async function assertCanGenerateMessage(
 
 /**
  * Pre-conditions for voice creation:
- * 1. Daily voice creation cap not exceeded
- * 2. Plan allows (stub)
+ * 1. Plan allows (stub)
+ * 2. Subscription entitles paid voice creation (FOLLOW_UPS #22 — flag-gated,
+ *    default OFF until M2 Step 3's card-capture reorder lands)
+ * 3. Daily voice creation cap not exceeded
  *
  * Note: clip count and status checks remain in the start route since they
  * have complex retry/backoff logic that doesn't fit a simple guard.
@@ -109,6 +112,8 @@ export async function assertCanStartVoiceCreation(
   userId: string
 ): Promise<void> {
   await assertPlanAllows(userId, "voice_create");
+
+  await assertCanCreateVoice(userId);
 
   const limit = await checkVoiceCreationLimit(serviceClient, userId);
   assertAllowed(limit);
