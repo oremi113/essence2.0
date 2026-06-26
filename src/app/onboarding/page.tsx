@@ -11,7 +11,7 @@ import {
 } from '@/lib/profile';
 import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen.types';
 import { OnboardingPageClient } from './OnboardingPageClient';
-import { persistOnboardingCompletion } from '@/lib/onboarding/persistOnboardingCompletion';
+import { persistOnboardingCompletion } from '@/lib/onboarding/completeOnboarding';
 import { ROUTES, signInWithNext } from '@/lib/routes';
 
 /**
@@ -107,10 +107,11 @@ export default async function OnboardingPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    // Expired/lost session: throw rather than silently return — a silent return
-    // resolves the action as "saved" and the wizard would navigate away,
-    // discarding everything the user typed (FOLLOW_UPS #42).
-    if (!user) throw new Error('Your session expired. Please sign in again.');
+    // Throw rather than silently return: a no-op here would resolve as success
+    // and navigate the user into the app having lost everything they typed.
+    if (!user) {
+      throw new Error('Your session expired. Please sign in again to finish.');
+    }
 
     const cleanedFirst = smartCase(firstName);
     const cleanedLast = smartCase(lastName);
@@ -122,9 +123,8 @@ export default async function OnboardingPage() {
 
     const displayName = [cleanedFirst, cleanedLast].filter(Boolean).join(' ');
 
-    // Throws on a write error so the screen keeps the user on the wizard with
-    // their draft intact instead of navigating into the app on a silent save
-    // failure (FOLLOW_UPS #42).
+    // Throws on a failed write so the wizard keeps the user on the final
+    // screen with their draft intact instead of navigating away (FOLLOW_UPS #42).
     await persistOnboardingCompletion(supabase, user.id, {
       first_name: cleanedFirst,
       last_name: cleanedLast,

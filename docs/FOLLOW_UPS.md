@@ -4,7 +4,7 @@ Tech-debt and deferred items surfaced during other work. Revisit when touching t
 
 ## Priority queue (seed scan 2026-06-12 — see docs/REFACTORING_SYSTEM.md)
 
-Health at scan time: typecheck ✅ · lint ✅ · unit tests 176/176 ✅.
+Health at scan time: typecheck ✅ · lint ✅ · unit tests 184/184 ✅ (2026-06-17 scan).
 Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 | # | P | One-liner | Agent-fixable now? |
@@ -15,10 +15,10 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ✅ RESOLVED 2026-06-16 (stripe-hardening — confirmations answered, CTA branch built) |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
 | 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (error check + throw shipped; retry-in-place error UI now landed — the deferred sibling) |
-| 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED (commit 35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
-| 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ |
-| 2 | P3 | Failed upload leaves stale internal state between retries | ✅ RESOLVED (commit 35d7372 — catch path calls `resetPipeline()`; unit-tested) |
-| 26 | P3 | Generated DB types + CI drift-check | ✅ RESOLVED 2026-06-19 (CI `types-drift` job regenerates from migrations, fails on diff) |
+| 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED 2026-06-11 (35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
+| 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ RESOLVED 2026-06-11 (35d7372 — adjust-state-during-render, no disable) |
+| 2 | P3 | Failed upload leaves stale internal state between retries | ✅ RESOLVED 2026-06-11 (35d7372 — `resetPipeline()` in catch) |
+| 26 | P3 | Generated DB types: CI drift-check job landed, blocked on owner setup | ⚠️ needs owner setup — the `types-drift` CI job ships with #61 but needs a Supabase access token as a GitHub Actions secret to run green (not agent-provisionable) |
 | 16 | P3 | B2/B3 motion surfaces shipped with no analytics events | ⚠️ needs event-naming input |
 | 6 | P3 | Non-square photos: client-side `object-fit` done; **server-side thumbnail remains** | ⏳ narrowed — needs Storage transform/render step |
 | 7 | P3 | Photo success is silent for screen-reader users | ✅ RESOLVED (B1 rework 88ff6e4 — `sr-only role="status"` announce) |
@@ -36,24 +36,31 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 43 | P3 | Voice-creation success doesn't verify its DB write → "ready" reported while profile stays "processing" *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — `persistVoiceReady` throws on error) |
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ RESOLVED 2026-06-16 (stripe-hardening — write now checked + throws) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — path write throws; dead ternary removed) |
-| 4 | P4 | Dead fallback import in audio/commit route | ✅ |
+| 59 | P3 | Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` unreachable; POST still spends ElevenLabs with no Step 6 cost cap *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
+| 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
 | 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ RESOLVED 2026-06-18 (5fef4ea — record moved below the sign) |
+| 57 | P4 | Onboarding completion failure resets silently — no visible "couldn't save, try again" message *(new 2026-06-16)* | ⚠️ code landed (a595256 — retry-in-place error UI on Screen 12, the #42 sibling); visual verify pending |
+| 60 | P4 | Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action; stamp-only partial duplicate *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
-**Next-up fixable queue:** ~~#5~~ → ~~#1~~ → ~~#2~~ (all resolved in commit 35d7372) → ~~#26~~ (CI drift-check, resolved 2026-06-19) → ~~#4~~ → ~~#43~~ → ~~#46~~ (both resolved a92e915, 2026-06-17). **No agent-fixable items remain in this queue** — every entry left in the table is a decision (❌), a scoped-trigger deferral (⏳), or already resolved.
+**Next-up fixable queue:** *(empty of clean agent-fixable code work.)* The unchecked-write batch (#43/#45/#46) and #42's error-UI sibling (#57) land resolved with #61; #44 and the lapse dead-end (#23) land resolved with the stripe-hardening work folded into #61. #26 (CI drift-check) is **blocked on owner setup** — its `types-drift` job ships with #61 but needs a Supabase access token added as a GitHub Actions secret before it can run green. The remaining open items are decisions (#22, #25, #16, #28, #12), UI/visual work needing in-browser verification (#7, #8, #9, #56, #57), or owner-confirm deletions (#59, #60).
 
 ## RecordingUpload / useUploadPipeline (from PR #33, 2026-04-19)
 
-### 1. [P3] Prompt auto-advance uses ref-during-render
+### 1. [P3] Prompt auto-advance uses ref-during-render — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution:** the ref-during-render auto-advance was replaced with the React-recommended adjust-state-during-render pattern — `RecordingUpload.tsx` now derives the prompt change from a `seenPromptIndex` state (`if (promptIndex !== seenPromptIndex) setSeenPromptIndex(...)`) instead of reading/writing a ref in the render body. The targeted `eslint-disable` comments are gone (zero disables remain in the file). Verified in code on `main`; strike recorded during the 2026-06-17 scan reconciliation (the fix landed in the 2026-06-11 safe-batch but the entry was never struck). Original entry below.
+
+---
 `src/components/audio/RecordingUpload.tsx` — the prompt auto-advance block reads/writes a ref during render. It was previously masked by the component's size; after extracting `useUploadPipeline`, the shrunken component now trips `react-hooks/refs`. Worked around with targeted `eslint-disable-next-line` comments.
 
 **Fix:** restructure the auto-advance into a `useEffect` that keys off `promptIndex` and reset-equivalent state.
 
-### 2. [P3] ✅ RESOLVED (commit 35d7372) — Upload failure leaves hook status stuck at `'failed'`
-**Resolution:** `RecordingUpload.tsx`'s `stopAndUpload` catch path now calls `resetPipeline()` after setting its own error state (`RecordingUpload.tsx:238`), so the hook's terminal `'failed'`/`'cancelled'` status no longer lingers between attempts for a future status consumer. Original entry below.
+### 2. [P3] Upload failure leaves hook status stuck at `'failed'` — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution:** `RecordingUpload.tsx`'s `stopAndUpload` catch path now calls `resetPipeline()` after surfacing its own error, so the hook's internal `status` returns to `'idle'` between attempts and no future consumer (retry UI, analytics, progress bar) can observe stale `'failed'`/`'cancelled'` state. Comment in the catch block documents the intent. Verified in code on `main`; strike recorded during the 2026-06-17 scan reconciliation. Original entry below.
 
+---
 `src/components/audio/RecordingUpload.tsx` — on upload error the component surfaces its own error state but never calls `uploadPipeline.reset()`. The hook's internal `status` stays `'failed'` until a new `upload()` call is initiated.
 
 **Why it's harmless today:** nothing outside `onStageChange` reads hook status.
@@ -62,16 +69,20 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 
 ## audio/commit route (from PR #31, 2026-04-19)
 
-### 4. [P4] `AUDIO_BUCKET` import is only a fallback
+### 4. [P4] `AUDIO_BUCKET` import is only a fallback — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution:** the fallback and the `AUDIO_BUCKET` import were dropped from `audio/commit/route.ts`; it now reads `const bucket = row.storage_bucket` directly, with a comment noting `storage_bucket` is `NOT NULL` (default `'audio'`) and always set on insert. Verified in code on `main`; strike recorded during the 2026-06-17 scan reconciliation. Original entry below.
+
+---
 `src/app/api/audio/commit/route.ts:7` — imports `AUDIO_BUCKET` but uses it only as a fallback (`row.storage_bucket || AUDIO_BUCKET`). The `storage_bucket` column is set on insert in `audio/init-upload` and is non-null in practice, so the fallback is dead weight.
 
 **Fix:** drop the fallback and the import, or confirm the column can legitimately be null and document why.
 
 ## useUploadPipeline cancel (from PR #38, 2026-04-19)
 
-### 5. [P3] ✅ RESOLVED (commit 35d7372) — `cancel()` lands the hook in `'failed'`, not a cancelled/idle state
-**Resolution:** `useUploadPipeline.ts` now has a dedicated `'cancelled'` terminal status and an `isAbortError()` check in the catch block — a `cancel()`-triggered `AbortError` lands in `'cancelled'` (no error message, `onStageChange?.('cancelled')`) while real failures still land in `'failed'`. The rejection is still re-thrown so awaiting callers can branch. Covered by `tests/unit/useUploadPipeline.test.tsx` (cancel-mid-init/mid-PUT lands `cancelled`; `onStageChange` fires `cancelled` not `failed`). Original entry below.
+### 5. [P3] `cancel()` lands the hook in `'failed'`, not a cancelled/idle state — ✅ RESOLVED 2026-06-11 (commit 35d7372)
+**Resolution (root-cause fix, not a band-aid):** `useUploadPipeline.ts` now adds a distinct `'cancelled'` terminal status and an `isAbortError(err)` helper. The catch block checks `isAbortError` first: a `cancel()`-triggered `AbortError` clears the error message and transitions to `'cancelled'` (re-thrown so awaiting callers can still branch), while real failures keep landing in `'failed'`. So a deliberate user cancel no longer masquerades as a failure for any consumer that keys off `status`. The PR #38 test was updated rather than weakened — `tests/unit/useUploadPipeline.test.tsx` now asserts `status === 'cancelled'` (not `'failed'`) for cancel-mid-init and cancel-mid-PUT. Verified in code on `main` and by the green unit suite; strike recorded during the 2026-06-17 scan reconciliation (the fix landed 2026-06-11 but was the stale "next up" item that was never struck here). Original entry below.
 
+---
 `src/lib/upload/useUploadPipeline.ts` — the hook's `try/catch` wraps the whole pipeline, so when `cancel()` triggers an `AbortError`, it hits the catch block like any other error and sets `status: 'failed'`. Consumers calling `cancel()` will observe a failed state with an abort-error message.
 
 **Why it matters:** most cancel-aware hook APIs distinguish abort-caused rejections (typically → `'idle'` or `'cancelled'`) from real failures. Dashboards or retry UIs that key off `status: 'failed'` will falsely fire on user-initiated cancels.
@@ -485,8 +496,11 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 
 ### 42. [P2] ✅ RESOLVED (2026-06-17) — Onboarding completion swallows a failed save — the user's profile is silently discarded
 **Resolution (two halves):**
-1. *Loud failure (shipped earlier):* `completeOnboarding` throws on a lost session (`page.tsx:113`) and delegates the write to `persistOnboardingCompletion`, which throws on a write error. `OnboardingPageClient.handleComplete` lets that rejection bubble (navigation is skipped on failure — only a confirmed save reaches `router.push`).
-2. *Retry-in-place error UI (the deferred sibling, 2026-06-17):* `OnboardingScreen.handleComplete`'s catch now maps the error to user-facing copy in `submitError` state instead of only `console.error`-ing. Two variants — transient ("Something kept us from saving just now. Your answers are safe — tap Begin to try again.") vs. session loss ("Your session timed out. Please refresh and sign in again — your answers are saved on this device."). `Screen12Ready` renders it as a `role="alert"` above the still-enabled Begin button (`.onboarding-ready-error`, warm register mirroring the photo-error style + reduced-motion rule). The draft is never cleared on failure, so every answer survives the retry. `/dev/onboarding` gained a "simulate save failure" toggle (transient/session) to exercise both copy variants without a real DB/session error; both verified in-browser. Unit-tested in `tests/unit/onboarding-screen12.test.tsx`. Original entry below.
+1. *Loud failure (shipped earlier, 2026-06-16):* the final `profiles` UPDATE runs through `persistOnboardingCompletion` (`src/lib/onboarding/completeOnboarding.ts`), which captures `{ error }` and **throws** on failure (mirroring the sibling `uploadAvatar` action); the expired-session branch throws instead of silently returning (`page.tsx:113`). `OnboardingPageClient.handleComplete` lets that rejection bubble (navigation is skipped on failure — only a confirmed save reaches `router.push`). Unit-tested in `tests/unit/complete-onboarding.test.ts`.
+2. *Retry-in-place error UI (the deferred sibling, 2026-06-17):* `OnboardingScreen.handleComplete`'s catch now maps the error to user-facing copy in `submitError` state instead of only `console.error`-ing. Two variants — transient ("Something kept us from saving just now. Your answers are safe — tap Begin to try again.") vs. session loss ("Your session timed out. Please refresh and sign in again — your answers are saved on this device."). `Screen12Ready` renders it as a `role="alert"` above the still-enabled Begin button (`.onboarding-ready-error`, warm register mirroring the photo-error style + reduced-motion rule). The draft is never cleared on failure, so every answer survives the retry. `/dev/onboarding` gained a "simulate save failure" toggle (transient/session) to exercise both copy variants without a real DB/session error; both verified in-browser. Unit-tested in `tests/unit/onboarding-screen12.test.tsx`. (This second half closes the former FU-57 onboarding-error follow-up — see below.) Original entry below.
+
+---
+*Original entry (for reference):*
 
 `src/app/onboarding/page.tsx:121-133` — the `completeOnboarding` server action runs the final `profiles` UPDATE (first/last name, DOB, city, state, `onboarding_completed_at`) but never inspects the returned `error`. The `uploadAvatar` action directly below it (`page.tsx:179-186`) *does* check and throw, so this is an asymmetry, not a house pattern. `OnboardingPageClient.handleComplete` (`OnboardingPageClient.tsx:38-39`) awaits the action then unconditionally `router.push(ROUTES.record)`. A second swallow sits at `page.tsx:109` (`if (!user) return;` — a silent no-op on an expired session).
 
@@ -554,20 +568,53 @@ All three were verified against current code and reconciled in the 2026-06-19 st
 
 The completed-user hub shipped (`src/components/screens/home/HomeBScreen.tsx`,
 `/home` branch, `/dev/home-b`, unit tests). Three connection-pass gaps were
-deliberately left, each safe to defer:
+deliberately left, each safe to defer. (Renumbered to 61–64 on the #61 merge:
+these were authored as FU-57/58/59/60 in parallel with main's FU-57/59/60 — a
+numbering collision — so the Home B set is renumbered here to keep both intact.)
 
-### 57. [P3] First-arrival into Home B is param-driven but the upstream handoff isn't wired, and it isn't durable
+### 61. [P3] First-arrival into Home B is param-driven but the upstream handoff isn't wired, and it isn't durable
 `src/app/home/page.tsx` reads `?welcome=1` → `firstArrival`, driving the visit-#1 beat (rich→cream ground settle, heavier stagger, the one-time "This is home now." line). **Nothing currently routes to `/home?welcome=1`** — the §6.4 arc lands the user on Home B "right after creating their first message," so the message-save → home handoff (Step 6 A7 / first-breath exit) should append `?welcome=1` on the *first* landing. Also, the beat is **not durable**: a refresh with the param still in the URL re-shows it. A once-per-lifetime guard (a `profiles` flag, e.g. alongside `three_shaped_ceremony_seen_at`, or stripping the param after first paint) would make it true to "visit #1."
 **Why it matters:** until wired, the §6.4 "new chapter" moment never fires in production (only the calm steady state shows). Low risk — purely additive.
 **Fix shape:** (1) set `?welcome=1` at the first-message→home handoff; (2) optional durable latch so it's once-per-lifetime, not once-per-param.
 **Pick up when:** the Step 6/Step 8 connection pass (after the message-creation flow lands its forward routing), or when First Breath's exit destination (FU-25) is decided.
 
-### 58. [P4] Home B settings affordance dead-links until Step 9
+### 62. [P4] Home B settings affordance dead-links until Step 9
 `HomeBPageClient`'s `onSettings` is an intentional no-op — the gear renders (the affordance lives on Home B per the handoff) but Step 9 (Settings & Trust, M3) isn't built, so there's no route yet. Wire `onSettings` to the settings route when Step 9 lands. **Pick up when:** Step 9 / M3.
 
-### 60. [P3 · a11y] ✅ RESOLVED (2026-06-17, owner-approved) — Shared primary buttons failed WCAG AA (white text on `--color-mineral`)
+### 63. [P3 · a11y] ✅ RESOLVED (2026-06-17, owner-approved) — Shared primary buttons failed WCAG AA (white text on `--color-mineral`)
 Surfaced during the Home B consistency audit. Both the app-standard `.btn-primary` and every bespoke primary `.btn` put near-white text on `--color-mineral` (#7A8088) ≈ **3.98:1 — below the WCAG AA 4.5:1 floor**.
 **Resolution:** repointed every text-bearing primary-CTA *fill* from `--color-mineral` → `--color-mineral-dark` (#656B73, white ≈5.38:1), and their hovers → `--color-mineral-darker` (#565C63, added to `@theme` this session). **16 buttons** across the app: globals `.btn-primary`, `.vault-cta`, `.vault-past-due-banner__cta`, `.vault-restore-screen__cta`, `.shelf-btn-primary`/`-play`/`-retry`/`-modal-primary`; and the message-flow `.btn`s in CategorySelector / Generation / SaveConfirmation / ThreeShaped / PersonalNote / PreviewRefine / VaultLimit / Waitlist. **Deliberately left on `--color-mineral`** (decorative / non-text / graphical objects that meet the 3:1 non-text threshold, not the 4.5:1 text rule): progress-bar fills, step/journey number badges, the record checklist icon, status/pulse dots, the audio scrubber thumb + fill, the player play-icon toggle, and the waitlist feature checkmark; plus the dev-only shelf rail. Visual-verified the darker fill + warm shadow on shelf, save-confirmation, onboarding (shared `.btn-primary`), and the message flow — reads warm, not muddy. `HomeBScreen`'s bespoke create CTA already used `--color-mineral-dark`, so it's now consistent with the rest; it keeps its bespoke class for the shimmer + hero treatment.
 
-### 59. [P3 · needs event-naming input] Home B has no analytics instrumentation
+### 64. [P3 · needs event-naming input] Home B has no analytics instrumentation
 The screen emits no events (home-B viewed, create tapped, restore tapped, waitlist tapped, preview-row → shelf). The prototype/handoff didn't specify an event contract (cf. FU-16 for the same gap on B2/B3 surfaces). **Why flag now:** telemetry decisions are cheap during design. **Pick up when:** whoever owns the analytics contract next touches `docs/analytics/` — capture Home B's events there, then instrument.
+
+## Onboarding completion error surface (from FU-42 fix, 2026-06-16)
+
+### 57. [P4] ✅ RESOLVED (2026-06-17, a595256) — Onboarding completion failure resets the wizard silently — no visible message
+Closed by FU-42's second half (the retry-in-place error UI on Screen 12 that lands with #61): `OnboardingScreen.handleComplete`'s catch now maps the error to user-facing copy in a `role="alert"` region above the still-enabled Begin button, with the draft preserved. Original entry below for reference.
+
+`src/components/screens/OnboardingScreen.tsx:113-130` — FU-42 made `completeOnboarding` throw on a failed save (good: input is no longer lost, the draft is kept and `router.push` is skipped). But the screen's `handleComplete` catch only `console.error`s and resets `isSubmitting`. So on failure the user sees the "begin" button simply re-enable with no explanation — they don't know the save failed or that tapping again will retry.
+
+**Why it matters:** the data-loss bug is fixed, but the recovery moment is mute. A user whose save fails (rare: RLS/transient DB/constraint) gets a silent button reset, not a "Something went wrong saving — tap to try again." Small, low-frequency, and purely UI copy + a visible error region.
+**Fix shape:** add an error state to `OnboardingScreen` (set it in the catch), render a short retry message on Screen 12, and clear it on the next attempt. This is the "eventual error-UI copy" the FU-42 entry deferred. Visual change → needs in-browser verification (Playwright), so it's out of scope for a non-visual refactor run.
+**Pick up when:** an onboarding polish / a11y pass, or the next time Screen 12 is touched.
+
+## Discovery pass (triage 2026-06-19)
+
+Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time on `main`: typecheck ✅ · lint ✅ · unit tests 184/184 ✅. This was a very in-flight week: **7 open PRs** — #61 (Step 7 Memory Shelf, also resolves the FU-42/43/45/46 unchecked-write batch in code), #58 (durable C1 ceremony flag → FU-54), the Stripe-hardening branch (→ FU-23/44), #59 (analytics funnel, touches `VoiceCreationView`/`/home`/onboarding), #62 + the prior triage #54. All files those branches touch were treated as work-in-progress and **excluded**. The prior triage PR #54 (`triage/2026-06-16`, still open) already logged the Step 6 generate-pipeline unchecked-write finding and the stale-Step-6-doc-comment finding — those are **not re-logged here** (dedup). New numbers start at **59** to avoid colliding with #54's pending #58.
+
+This pass focused on the stable surfaces neither recent pass covered: the cost-control / rate-limit layer (reviewed — fail-open is documented and deliberate, caps are sound, no entry warranted), the vault pricing struct (`VAULT_PRICING.stripePriceId = 'PLACEHOLDER_*'` is display-struct cruft only — checkout uses env price IDs, not these — so harmless, not logged), and the full `src/app/api/` route map for orphaned endpoints. The two findings below are dead/orphaned **legacy API endpoints** left mounted after newer code superseded them — the API-layer remnants of cleanups that only finished at the page/server-action layer.
+
+### 59. [P3] Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` are mounted but unreachable
+**Files:** `src/app/api/messages/route.ts:90` (the `POST` handler), `src/app/api/messages/[id]/route.ts:9` (the `GET` status-poll).
+**What:** M0 (commit `48079d8`, PR #55, 2026-06-16) deleted `src/components/messages/NewMessageView.tsx` — whose sole API call was `fetch("/api/messages", { POST })` — to resolve FU-34. That closed the legacy message-creation flow at the **page/component** layer but left its **API** layer mounted. `POST /api/messages` is the *older* async create-then-poll model (insert a `messages` row as `generating` → render ElevenLabs → `saving` → upload → `saved`), and `GET /api/messages/:id` is the status-poll its client used while waiting. Both are entirely superseded by the synchronous Step 6 spine (`/api/messages/generate` → `pending_generations` → `/commit` → `/save`). Confirmed no remaining caller in `src/` (the live `GET /api/messages` *list* used by the Memory Shelf is a different handler in the same file and stays) and no test exercises them (`tests/smoke/messages.spec.ts` covers only the Step 6 routes). PR #61 reworks the `GET` *list* serializer in this file but does **not** touch the dead `POST`, so this is stable debt, not work-in-progress.
+**Why it matters:** dead code on a money-adjacent path. The orphaned `POST` still calls `generateSpeech` (real ElevenLabs spend) and — unlike the Step 6 routes — has **no `STEP6_LIMITS` cost cap and no per-category voice settings** (it would re-introduce FU-27's flattening), only the 20/day `assertCanGenerateMessage` guard. It's unreachable from the UI today (no user impact), but a mounted, authenticated, vendor-spending endpoint that nothing reaches is a landmine: anyone who later wires "new message" to it silently bypasses the Step 6 cost controls. It's also plain maintenance drag — two divergent message-creation pipelines to keep in your head.
+**Fix shape:** confirm no *external* consumer (a future mobile client, monitoring, a deep link) hits `POST /api/messages` or `GET /api/messages/:id`, then delete both handlers — keeping the live `GET /api/messages` list. Because removing a route removes a locked URL path (never-touch list), this needs an explicit owner OK before deletion; it is otherwise mechanical.
+**Pick up when:** a Step 6 / message-API consolidation pass, or the next time `src/app/api/messages/` is touched. Direct continuation of FU-34's lineage (page layer already retired).
+
+### 60. [P4] Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action
+**File:** `src/app/api/onboarding/complete/route.ts:5`.
+**What:** this route stamps `profiles.onboarding_completed_at` and nothing else. Onboarding completion now runs entirely through the `completeOnboarding` server action / `persistOnboardingCompletion` helper (the FU-42 path), which writes the full profile (name / DOB / city / state) **and** the completion stamp. No client fetches `/api/onboarding/complete` (the only onboarding-completion reference in `src/` is the server-action import in `src/app/onboarding/page.tsx`), and no test references it. It's a stale, stamp-only partial duplicate of the live path.
+**Why it matters:** pure dead code — no functional or money risk. The one mild trap: it persists *only* the completion timestamp, so if anyone rediscovered it and used it, they'd mark a user "onboarded" without saving their details — the exact silent-data-loss shape FU-42 just closed, reachable through a different door.
+**Fix shape:** confirm no external caller, then delete the route. URL removal → owner OK first (never-touch list). Trivial.
+**Pick up when:** the next onboarding pass, or any API dead-route sweep — pairs naturally with FU-59.
