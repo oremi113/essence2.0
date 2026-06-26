@@ -8,9 +8,12 @@ import { StepShell, StoneSlot } from './chrome';
 export function Screen12Ready({
   onBegin,
   isSubmitting,
+  error,
 }: {
   onBegin: () => void;
   isSubmitting: boolean;
+  /** Surfaced when the final save fails so the user can retry in place. */
+  error?: string | null;
 }) {
   return (
     <StepShell>
@@ -34,6 +37,12 @@ export function Screen12Ready({
       >
         What you record today will be kept for whenever it&rsquo;s needed.
       </p>
+
+      {error && (
+        <p className="onboarding-ready-error" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="onboarding-ctas">
         <PrimaryButton onClick={onBegin} isLoading={isSubmitting}>

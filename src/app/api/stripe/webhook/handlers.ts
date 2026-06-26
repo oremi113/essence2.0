@@ -51,17 +51,29 @@ export async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
   const status: 'lapsed' | 'cancelled' = reason === 'payment_failed' ? 'lapsed' : 'cancelled';
 
   const supabase = createSupabaseServiceClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('subscriptions')
     .update({
       status,
       cancelled_at: new Date().toISOString(),
     })
-    .eq('stripe_subscription_id', sub.id);
+    .eq('stripe_subscription_id', sub.id)
+    .select('id');
 
   if (error) {
     console.error('[stripe-webhook] Failed to mark deleted', error);
     throw error;
+  }
+
+  if (!updated || updated.length === 0) {
+    // Out-of-order delivery: the delete arrived before the create/update that
+    // would have inserted the row (or the id was never recorded). Surface it —
+    // a silent no-op here would lose a lapse/cancellation. We can't synthesize
+    // the row (NOT NULL price columns we don't have on a delete event), so warn.
+    console.warn(
+      `[stripe-webhook] subscription.deleted matched no row for ${sub.id} (out-of-order delete or unknown id, reason=${reason ?? 'unknown'})`,
+    );
+    return;
   }
 
   console.log(
@@ -86,17 +98,30 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const attemptCount = invoice.attempt_count ?? 0;
 
   const supabase = createSupabaseServiceClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('subscriptions')
     .update({
       status: 'past_due',
       last_failed_attempt_count: attemptCount,
     })
-    .eq('stripe_subscription_id', subscriptionId);
+    .eq('stripe_subscription_id', subscriptionId)
+    // Terminal-safe: never drag a lapsed/cancelled subscription back to
+    // past_due if a stale invoice.payment_failed arrives after the delete.
+    // The delete event is the terminal authority; this update only applies
+    // while the subscription is still in a recoverable state.
+    .in('status', ['trial', 'active', 'past_due'])
+    .select('id');
 
   if (error) {
     console.error('[stripe-webhook] Failed to mark past_due', error);
     throw error;
+  }
+
+  if (!updated || updated.length === 0) {
+    console.warn(
+      `[stripe-webhook] invoice.payment_failed matched no recoverable row for ${subscriptionId} (already terminal, or id never recorded)`,
+    );
+    return;
   }
 
   console.log(
@@ -104,34 +129,61 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
   );
 }
 
+type DerivedStatus = 'trial' | 'active' | 'past_due' | 'lapsed' | 'cancelled';
+
+// 'lapsed' and 'cancelled' are written only by handleSubscriptionDeleted, which
+// is the terminal authority for a Stripe subscription id. Once a row reaches
+// either, no created/updated event for the SAME id should move it (Stripe never
+// reactivates a deleted subscription — a restore creates a brand-new id).
+const TERMINAL_STATUSES: ReadonlySet<DerivedStatus> = new Set(['lapsed', 'cancelled']);
+
+function deriveStatus(stripeStatus: Stripe.Subscription.Status): DerivedStatus {
+  switch (stripeStatus) {
+    case 'trialing':
+      return 'trial';
+    case 'active':
+      return 'active';
+    case 'past_due':
+    case 'unpaid':
+      return 'past_due';
+    case 'canceled':
+      return 'cancelled';
+    case 'incomplete':
+    case 'incomplete_expired':
+      return 'lapsed';
+    default:
+      return 'lapsed';
+  }
+}
+
 async function upsertSubscription(
   sub: Stripe.Subscription,
   userId: string,
   billingPeriod: BillingPlan,
 ) {
-  let status: 'trial' | 'active' | 'past_due' | 'lapsed' | 'cancelled';
+  const supabase = createSupabaseServiceClient();
 
-  switch (sub.status) {
-    case 'trialing':
-      status = 'trial';
-      break;
-    case 'active':
-      status = 'active';
-      break;
-    case 'past_due':
-    case 'unpaid':
-      status = 'past_due';
-      break;
-    case 'canceled':
-      status = 'cancelled';
-      break;
-    case 'incomplete':
-    case 'incomplete_expired':
-      status = 'lapsed';
-      break;
-    default:
-      status = 'lapsed';
+  // Out-of-order / duplicate-delivery guard. Stripe does not guarantee event
+  // ordering. If this id is already terminal, a late or replayed created/updated
+  // event would resurrect a dead subscription — skip the write.
+  const { data: existing, error: readError } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('stripe_subscription_id', sub.id)
+    .maybeSingle();
+
+  if (readError) {
+    // Fail-open: a read failure must not drop a legitimate state write. Log and
+    // proceed to the upsert (which is itself idempotent on stripe_subscription_id).
+    console.error('[stripe-webhook] existing-status read failed', readError);
+  } else if (existing && TERMINAL_STATUSES.has(existing.status as DerivedStatus)) {
+    console.log(
+      `[stripe-webhook] ignoring ${sub.status} event for already-terminal subscription ${sub.id} (status=${existing.status})`,
+    );
+    return;
   }
+
+  const status = deriveStatus(sub.status);
 
   const priceItem = sub.items.data[0];
   const priceId = priceItem?.price.id ?? '';
@@ -143,7 +195,7 @@ async function upsertSubscription(
   const periodStart = priceItem?.current_period_start ?? null;
   const periodEnd = priceItem?.current_period_end ?? null;
 
-  const row = {
+  const baseRow = {
     user_id: userId,
     stripe_subscription_id: sub.id,
     stripe_customer_id: customerId,
@@ -158,7 +210,14 @@ async function upsertSubscription(
     cancel_at_period_end: sub.cancel_at_period_end,
   };
 
-  const supabase = createSupabaseServiceClient();
+  // Reset the dunning counter once the subscription resolves to a healthy
+  // state (recovery from past_due, or a fresh trial). Omitted otherwise so a
+  // prior invoice.payment_failed count survives a past_due upsert and keeps
+  // driving the correct /app/record banner variant.
+  const row =
+    status === 'active' || status === 'trial'
+      ? { ...baseRow, last_failed_attempt_count: 0 }
+      : baseRow;
 
   // Defense in depth: ensure the FK target exists before the subscriptions
   // upsert. createCheckoutSession validates profile existence at the gate,
