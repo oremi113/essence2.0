@@ -39,6 +39,8 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 59 | P3 | Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` unreachable; POST still spends ElevenLabs with no Step 6 cost cap *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
 | 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ add error checks |
 | 67 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ comment fix |
+| 68 | P3 | Step 3 vault + shimmer palette not canonical — bronze/ember ramp + on-oat shimmer intensities owned by the design-architect thread *(Step 3 docs call this #65)* | ⏳ design-owned; values staged in `token-prep.md`, land in `@theme` at Pass 1 |
+| 69 | P2 | Notify (transactional email) infra is a Step 3 build prerequisite — park / confirm-timeout / post-seal-failure all hand into it *(Step 3 docs call this #66)* | ⏳ prerequisite; sequences ahead of the Frame 4 build |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
