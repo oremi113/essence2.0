@@ -68,21 +68,17 @@ here too, or transitions silently fall back to default `ease`.
   deck's `--shimmer-alpha` + radius tokens are superseded — do not paste them.**
 - `--color-glow-warm-rgb` = `214, 162, 92`, comma form, consumed `rgba(var(--…), <a>)`.
 - Neutral-exit shimmer pinned `0.025`; exit curve `--ease-seal-exit` = `cubic-bezier(0.4,0,0.2,1)`, ~1200ms.
+- **The ~2.5s "Sealed" dwell is kept** (owner call, 2026-06-28). Motion-spec §3 now carries it
+  (settle → shimmer onset under the held copy → ~2.5s dwell → copy crossfade at ~4200ms), and
+  RM keeps the dwell beat as copy-pacing. Matches the build handoff; no longer a conflict.
 
 **Open — resolve at pineapple, before they bite a pass:**
-1. ⚠️ **The 2.5s "Sealed" dwell — DOC CONFLICT.** The build handoff (§9 step 3, NOTE FOR
-   TERMINAL) still describes a ~2.5s dwell on the "Sealed" line before the copy crossfade.
-   The current motion-spec §3 timeline has **no dwell** — it crossfades at shimmer onset
-   (~1675ms). These contradict. The motion spec is the motion authority, but the dwell was a
-   deliberate "give the emotional peak a breath" idea worth a conscious call. **Decide before
-   Pass 2.** If keeping the dwell, fold it into motion-spec §3; if dropping it, strike the
-   dwell language from the build handoff. Do not let a thread build Pass 2 against both.
-2. `--ease-seal-iris` real value — still owed by the vault design thread; ships on the
+1. `--ease-seal-iris` real value — still owed by the vault design thread; ships on the
    `--ease-essence` placeholder (`cubic-bezier(0.4,0,0.2,1)`). One-token swap when it lands.
-3. `--ease-seal-exit` tail — tune toward `(0.4,0,0.15,1)` on oat (Pass 3).
-4. §6 copy reconciliation — reconcile the §6 lines into the copy guide *before* Pass 1 so
+2. `--ease-seal-exit` tail — tune toward `(0.4,0,0.15,1)` on oat (Pass 3).
+3. §6 copy reconciliation — reconcile the §6 lines into the copy guide *before* Pass 1 so
    rendered strings are canonical (handoff §9.1).
-5. §8 notify infra — its own layer-1/2 work item ahead of the Frame 4 portion of Pass 1.
+4. §8 notify infra — its own layer-1/2 work item ahead of the Frame 4 portion of Pass 1.
    Build notify-dependent states as static mock shells in Pass 1; their cold-start
    verification is a Pass 3 check that waits on the infra. Log the FOLLOW_UPS entries §8 names.
 

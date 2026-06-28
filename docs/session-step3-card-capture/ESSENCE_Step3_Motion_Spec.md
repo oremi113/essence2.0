@@ -9,7 +9,8 @@
 > `0.025`** (Pass 3 locks 1 & 2). Shimmer stays a single opacity-driven `--shimmer-intensity`
 > primitive — the palette deck's constant-alpha + radius proposal was **not** adopted. The
 > authoritative source is `essence-step3-processing-pass3.html`; for the full drop-in `@theme`
-> block see `palette-token-reconciliation.md`.
+> block see `palette-token-reconciliation.md`. **The ~2.5s "Sealed" dwell is kept** (owner call,
+> 2026-06-28) — §3 now carries it, matching the build handoff.
 
 ---
 
@@ -48,6 +49,7 @@
 - Ember catch: ~400ms, offset 175ms after iris completes.
 - Settle: ~300ms.
 - Shimmer onset: ~1000ms (0 to faint).
+- Hero-line dwell: ~2500ms hold on the "Sealed" line after the settle, before the copy crossfade (see §3).
 - Shimmer ramp (faint to active): across the normal wait, ~`--duration-ceremonial` scale, slow.
 
 **New token**
@@ -69,18 +71,29 @@ t≈975ms        EMBER CATCH  (iris-complete + 175ms)
                Reliquary warmth, earned by the close. emberState: cool → ignited.
 
 t≈1375–1675ms  SETTLE
-               ~300ms micro-settle to dead-still. Ember holds lit. Lingering image.
+               ~300ms micro-settle to dead-still. Ember holds lit. The lingering image.
+               "Sealed. Your voice is on its way." is full and held here.
 
-t≈1675ms+      SHIMMER ONSET  (Processing begins)
-               --shimmer-intensity 0 → faint over ~1000ms.
-               Copy crossfades "Sealed. Your voice is on its way." → "Preparing your voice."
+t≈1675ms+      SHIMMER ONSET  (ground only)
+               --shimmer-intensity 0 → faint over ~1000ms. The ground rises
+               under the held copy. Does not touch the vault or the text.
+
+DWELL ~2500ms  The "Sealed" line holds ~2.5s after the settle. The commit
+               payoff gets a breath. The wait-copy does not step on the peak.
+
+t≈4200ms+      COPY CROSSFADE  (Processing register begins)
+               "Sealed. Your voice is on its way." → "Preparing your voice."
+               Shimmer continues faint → active, paced to the wait (§4),
+               not a fixed duration.
 ```
 
 **Why sequenced, not simultaneous.** The close visibly causes the catch (commit, then ember earned). Simultaneous blurs that into one flash and reads as machine, not reliquary. The 175ms offset is tight enough that certainty of commit is not lost to hesitation.
 
 **Why the ember is last.** Close, then catch, then dead-still. The lit ember holding is the image carried into the wait, the pilot-light of their voice, now lit.
 
-**Ground during the seal.** Still. Shimmer stays at 0 through the entire hero motion so it never competes with it. The shimmer is the signal that the wait/work has begun, so it ignites only after the settle.
+**Why the dwell.** The "Sealed" line is the emotional peak of the whole flow and this audience needs a beat to absorb it. Letting the wait-copy crossfade in under two seconds steps on the payoff. The shimmer can rise during the dwell (it is ground-layer and silent), but the words hold. *(Owner call, 2026-06-28: dwell kept — resolving the §3-vs-build-handoff conflict in favour of the held beat.)*
+
+**Ground during the seal.** Still. Shimmer stays at 0 through the entire hero motion so it never competes with it. The shimmer is the signal that the wait/work has begun, so it ignites only after the settle (it may rise during the dwell, since it is ground-layer and silent).
 
 ---
 
@@ -127,7 +140,7 @@ Single source of truth: the `useReducedMotion` hook. Pin to peak/mid resting val
 
 | Motion | Reduced-motion behavior |
 |---|---|
-| Seal | No iris animation, no ember bloom. Render the sealed resting frame directly: iris closed, ember lit (static), at peak/mid. Copy swaps instantly to "Sealed. Your voice is on its way." (no crossfade). |
+| Seal | No iris animation, no ember bloom. Render the sealed resting frame directly: iris closed, ember lit (static), at peak/mid. Copy shows "Sealed. Your voice is on its way." instantly (no crossfade), then the same ~2.5s dwell timing holds before the Processing copy swaps in (the dwell is copy-pacing, not motion, so RM keeps the beat). |
 | Shimmer | Static faint rest frame. No loop, no onset animation. |
 | Processing | Already still. Shimmer at static rest. |
 | Processing exit | No animated ease-down. The neutral contract frame is rendered directly. |
