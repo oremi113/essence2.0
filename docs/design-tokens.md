@@ -209,6 +209,32 @@ Prefer the semantic roles below. Raw scale is retained for edge cases.
 
 ---
 
+## Step 3 — Vault, seal, shimmer
+
+Reconciled drop-in from the Bronze Vault palette deck (FU #65) ↔ Motion Spec ↔
+Pass 3 processing prototype. Source of truth is `@theme` in `globals.css`; this
+table mirrors it. Per-state shimmer **values** (faint 0.05, active 0.12, neutral
+0.025, RM 0.05) live in the screen, not as tokens — only `--shimmer-intensity`
+is a token, landing at `0` in Pass 1 and driven by the loop in Pass 3.
+
+| Token                    | Value                          | Use                                                        |
+| ------------------------ | ------------------------------ | ---------------------------------------------------------- |
+| `--color-vault-bronze`   | `#888278`                      | Cool/dormant base · greige (name historical; == cool-1)    |
+| `--color-vault-ember`    | `#f3d9a4`                      | Ignited ember core                                         |
+| `--color-glow-warm-rgb`  | `214, 162, 92`                 | Shimmer ground · comma form · `rgba(var(--…), <a>)`         |
+| `--vault-case-cool-0/1/2`| `#a39c8e` / `#888278` / `#635d54` | caseMetal · cool vessel case (unsealed), linear         |
+| `--vault-case-warm-0/1/2`| `#b6ab97` / `#8c8174` / `#5f574c` | caseMetalWarm · ignited/sealed case, linear             |
+| `--vault-interior-0/1/2` | `#d2c9b9` / `#bdb29d` / `#968b75` | Open vault interior (cool), radial                      |
+| `--vault-ember-cool-0/1` | `#b8b3a8` / `#847d70`          | Dormant ember socket, radial                               |
+| `--vault-ember-halo-0..3`| `#fbe6c0` / `#eecb84` / `#d9a85a` / `rgb(217 168 90 / 0)` | Caught ember halo, radial to 0     |
+| `--vault-lit-core`       | `#f3d9a4`                      | Solid lit center of sealed boss (= `--color-vault-ember`)  |
+| `--shimmer-intensity`    | `0`                            | Single opacity-driven shimmer ground primitive (Pass 1 = 0)|
+| `--ease-seal-iris`       | `cubic-bezier(0.4,0,0.2,1)`    | Iris close · **placeholder** = `--ease-essence` (vault thread tunes) |
+| `--ease-seal-ember`      | `cubic-bezier(0.2,0,0.5,1)`    | Ember catch + shimmer onset (Pass 2)                       |
+| `--ease-seal-exit`       | `cubic-bezier(0.4,0,0.2,1)`    | Processing exit ease-down (Pass 3); tail tunes to (0.4,0,0.15,1) on oat |
+
+---
+
 ## Global base rules (`@layer base`)
 
 - Minimum touch target `44px` on all buttons, anchors, `[role="button"]` —

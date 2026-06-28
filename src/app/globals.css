@@ -111,6 +111,59 @@
   --duration-breath:     3000ms;
   --duration-page:       700ms;  /* signature screen-entrance length the flow is composed on */
   --duration-ceremonial: 2000ms; /* shimmer pulse, celebration swells — ritual one-shots */
+
+  /* ─── STEP 3 · VAULT + SEAL + SHIMMER ─────────────────
+     Reconciled drop-in from
+     docs/session-step3-card-capture/palette-token-reconciliation.md
+     (Bronze Vault palette deck, FU #65, ↔ Motion Spec ↔ Pass 3 prototype).
+     Lands in Pass 1 so screens reference tokens, never per-screen hex.
+     Mirror lives in docs/design-tokens.md (this @theme is canonical). */
+
+  /* Anchor tokens */
+  --color-vault-bronze:  #888278;     /* cool/dormant base · Greige (name historical; value is greige, == --vault-case-cool-1) */
+  --color-vault-ember:   #f3d9a4;     /* ignited ember core */
+  --color-glow-warm-rgb: 214, 162, 92;/* shimmer ground · COMMA form · rgba(var(--color-glow-warm-rgb), <a>) */
+
+  /* caseMetal · cool vessel case (Greige, unsealed) — linear ↓ */
+  --vault-case-cool-0:   #a39c8e;     /*   0% */
+  --vault-case-cool-1:   #888278;     /*  52% */
+  --vault-case-cool-2:   #635d54;     /* 100% */
+
+  /* caseMetalWarm · ignited/sealed case (Reliquary) — linear ↓ */
+  --vault-case-warm-0:   #b6ab97;     /*   0% */
+  --vault-case-warm-1:   #8c8174;     /*  52% */
+  --vault-case-warm-2:   #5f574c;     /* 100% */
+
+  /* interior · open vault interior (cool) — radial ◎ */
+  --vault-interior-0:    #d2c9b9;     /*   0% center */
+  --vault-interior-1:    #bdb29d;     /*  70% */
+  --vault-interior-2:    #968b75;     /* 100% edge */
+
+  /* emberCool · dormant ember socket — radial ◎ */
+  --vault-ember-cool-0:  #b8b3a8;     /*   0% */
+  --vault-ember-cool-1:  #847d70;     /* 100% */
+
+  /* emberIgnited · caught ember halo — radial ◎ fades to 0 */
+  --vault-ember-halo-0:  #fbe6c0;     /*   0% */
+  --vault-ember-halo-1:  #eecb84;     /*  38% */
+  --vault-ember-halo-2:  #d9a85a;     /*  70% */
+  --vault-ember-halo-3:  rgb(217 168 90 / 0);  /* 100% transparent */
+
+  /* lit core · solid lit center of sealed boss */
+  --vault-lit-core:      #f3d9a4;     /* = --color-vault-ember */
+
+  /* shimmer ground · single primitive, OPACITY-driven, plain opacity on oat,
+     NO screen blend. Fixed gradient geometry; rest/active/exit = intensity ×
+     breath, NOT radius (Pass 3 carry-forward contract). Per-state bases live in
+     the screen: faint 0.05 · active 0.12 · neutral 0.025 · RM 0.05 · breath sine
+     7000ms dip 0.25 · exit 1200ms. Lands at 0 in Pass 1; the loop is Pass 3. */
+  --shimmer-intensity:   0;
+
+  /* seal curves (land BEFORE the screen references them, or transitions
+     silently fall back to default `ease` — the --ease-breath drift trap) */
+  --ease-seal-iris:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* placeholder = --ease-essence; vault thread tunes later (one-token swap) */
+  --ease-seal-ember: cubic-bezier(0.2, 0.0, 0.5, 1);  /* ember catch + shimmer onset (Pass 2) */
+  --ease-seal-exit:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* Processing exit ease-down (Pass 3); tune tail toward (0.4,0,0.15,1) on oat */
 }
 
 @layer base {
@@ -4071,4 +4124,158 @@
     .shelf-modal__excerpt,
     .shelf-modal__controls { opacity: 1; animation: none; }
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STEP 3 — CARD CAPTURE + PROCESSING (Pass 1 · static structure)
+   Ported from prototypes/essence-step3-card-capture.html onto the live @theme
+   tokens (vault ramp / ember / glow-warm-rgb / shimmer-intensity / seal curves
+   all live in @theme above — no re-hardcoded ramp hex). Effect values @theme
+   does not define (stroke alphas, vignette, focus ring) are scoped to `.step3`
+   below and flagged "prototype-local," same discipline as `.shelf`.
+   Pass 1 is STATIC: --shimmer-intensity is set per state as a fixed ground
+   opacity, no loop; the iris/ember/shimmer choreography lands in Pass 2/3.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer components {
+  .step3 {
+    /* prototype-local: effect values @theme does not define */
+    --step3-rim-light:   rgba(255, 255, 255, 0.16);  /* cool case outer rim highlight */
+    --step3-rim-light-w: rgba(255, 255, 255, 0.18);  /* warm/sealed case rim highlight */
+    --step3-line:        rgba(28, 26, 24, 0.18);     /* inner ring rule */
+    --step3-line-soft:   rgba(28, 26, 24, 0.2);      /* sealed ring rule */
+    --step3-interior:    rgba(28, 26, 24, 0.22);     /* interior + iris seams */
+    --step3-blade:       rgba(28, 26, 24, 0.14);     /* retracted blade hints (unsealed) */
+    --step3-ember-edge:  rgba(28, 26, 24, 0.25);     /* cool ember socket stroke */
+    --step3-boss-edge:   rgba(28, 26, 24, 0.3);      /* sealed center boss stroke */
+    --step3-vignette-1:  rgba(60, 45, 25, 0.05);     /* atmosphere vignette inner */
+    --step3-vignette-2:  rgba(60, 45, 25, 0.1);      /* atmosphere vignette edge */
+    --step3-focus-ring:  0 0 0 4px rgba(122, 128, 136, 0.18);  /* plan-active selection ring */
+
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    min-height: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--font-body);
+    color: var(--color-text-primary);
+    background: var(--color-bg-warm-phase);
+  }
+
+  /* ── Ground layers (behind content) ───────────────────────── */
+  .step3__ground-shimmer {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    opacity: var(--shimmer-intensity);
+    background: radial-gradient(ellipse 80% 60% at 50% 44%,
+      rgba(var(--color-glow-warm-rgb), 0.5) 0%,
+      rgba(var(--color-glow-warm-rgb), 0.18) 46%,
+      transparent 76%);
+  }
+  .step3__vignette {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 120% 92% at 50% 50%,
+      transparent 52%, var(--step3-vignette-1) 86%, var(--step3-vignette-2) 100%);
+  }
+
+  /* ── Top bar (back + progress pips) ───────────────────────── */
+  .step3-backbar {
+    position: relative; z-index: 1;
+    padding: var(--space-md) var(--space-xl);
+    display: flex; align-items: center; justify-content: space-between;
+    min-height: 50px; flex-shrink: 0;
+  }
+  .step3-backbar__btn {
+    background: transparent; border: 0; padding: var(--space-sm);
+    margin: calc(-1 * var(--space-sm)); color: var(--color-text-secondary);
+    cursor: pointer; display: flex; min-height: 44px; align-items: center;
+    border-radius: var(--radius-md);
+  }
+  .step3-backbar__btn:hover { color: var(--color-text-primary); }
+  .step3-backbar__pips { display: flex; gap: 6px; }
+  .step3-backbar__pip { width: 6px; height: 6px; border-radius: var(--radius-sm); background: var(--color-surface-warm); }
+  .step3-backbar__pip.is-done { background: var(--color-bg-gold); }
+  .step3-backbar__pip.is-current { width: 20px; background: var(--color-bg-gold); }
+  .step3-backbar__spacer { width: 22px; }
+
+  /* ── Body + region scaffolding ────────────────────────────── */
+  .step3-body {
+    position: relative; z-index: 1; flex: 1;
+    padding: var(--space-xs) var(--space-xl) var(--space-3xl);
+    display: flex; flex-direction: column;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .step3-region { display: flex; flex: 1; flex-direction: column; }
+
+  .step3-eyebrow { font-size: var(--text-caption); font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-mineral); margin-bottom: var(--space-sm); }
+  .step3-headline { font-family: var(--font-display); font-size: var(--text-title); line-height: var(--line-height-title); font-weight: 600; color: var(--color-text-primary); }
+  .step3-subhead { font-size: var(--text-body); color: var(--color-text-secondary); margin-top: var(--space-sm); }
+  .step3-turn { font-family: var(--font-display); font-style: italic; font-size: var(--text-body-lg); line-height: 1.5; color: var(--color-text-primary); }
+
+  /* ── Sample player ────────────────────────────────────────── */
+  .step3-sample { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-lg); background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-2xl); }
+  .step3-sample__row { display: flex; align-items: center; gap: var(--space-md); }
+  .step3-sample__play { width: 44px; height: 44px; flex-shrink: 0; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg-neutral); color: var(--color-mineral-dark); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .step3-sample__label { font-size: var(--text-small); color: var(--color-text-secondary); line-height: 1.5; }
+  .step3-sample__aftercopy { font-size: var(--text-small); color: var(--color-text-secondary); }
+
+  /* ── Vault object (one shared SVG primitive) ──────────────── */
+  .step3-vault-stage { display: flex; justify-content: center; padding: var(--space-md) 0; }
+  .step3-vault { width: 196px; height: 196px; }
+  /* fills come from gradients (token stops, set inline in the component);
+     strokes are prototype-local effect alphas applied here, not in the JSX. */
+  .step3-vault__rim       { stroke: var(--step3-rim-light); }
+  .step3-vault__rim--warm { stroke: var(--step3-rim-light-w); }
+  .step3-vault__ring      { stroke: var(--step3-line); }
+  .step3-vault__ring--soft{ stroke: var(--step3-line-soft); }
+  .step3-vault__interior-edge { stroke: var(--step3-interior); }
+  .step3-vault__blade     { stroke: var(--step3-blade); }
+  .step3-vault__ember-edge{ stroke: var(--step3-ember-edge); }
+  .step3-vault__seam      { stroke: var(--step3-interior); }
+  .step3-vault__boss-edge { stroke: var(--step3-boss-edge); }
+
+  /* ── Value + price ────────────────────────────────────────── */
+  .step3-value { font-size: var(--text-body); color: var(--color-text-primary); line-height: 1.6; }
+  .step3-plan-toggle { display: flex; gap: var(--space-sm); }
+  .step3-plan { flex: 1; text-align: left; padding: var(--space-md) var(--space-lg); border-radius: var(--radius-xl); border: 1px solid var(--color-border); background: var(--color-bg-neutral); cursor: pointer; }
+  .step3-plan__name { font-size: var(--text-small); font-weight: 600; color: var(--color-text-primary); }
+  .step3-plan__price { font-size: var(--text-caption); color: var(--color-text-secondary); margin-top: 2px; }
+  .step3-plan.is-active { border-color: var(--color-mineral); box-shadow: var(--step3-focus-ring); background: var(--color-surface-card); }
+  .step3-price-line { font-size: var(--text-body); color: var(--color-text-secondary); }
+  .step3-price-line strong { color: var(--color-text-primary); font-weight: 600; }
+
+  /* ── CTA + microcopy + opt-out ────────────────────────────── */
+  .step3-cta { width: 100%; min-height: 52px; border: 0; border-radius: var(--radius-lg); background: var(--color-mineral-dark); color: #fff; font-size: var(--text-ui); font-weight: 600; cursor: pointer; box-shadow: var(--shadow-mineral); display: flex; align-items: center; justify-content: center; gap: var(--space-sm); }
+  .step3-cta:hover { background: var(--color-mineral-darker); }
+  .step3-cta.is-busy { background: var(--color-mineral); pointer-events: none; opacity: 0.9; }
+  .step3-cta__spinner { width: 16px; height: 16px; border-radius: var(--radius-full); border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; }
+  .step3-cta__label.is-dim { opacity: 0.85; }
+  .step3-risk { font-size: var(--text-small); color: var(--color-text-secondary); text-align: center; }
+  .step3-optout { background: transparent; border: 0; color: var(--color-text-secondary); font-size: var(--text-small); cursor: pointer; align-self: center; padding: var(--space-sm); min-height: 44px; }
+  .step3-optout:hover { color: var(--color-text-primary); }
+  .step3-proof-slot { height: 0; overflow: hidden; }  /* zero-height, present so layout holds when populated later */
+
+  /* ── Decline banner (checkout-error only) ─────────────────── */
+  .step3-notice { padding: var(--space-lg); border-radius: var(--radius-xl); background: var(--color-surface-card); border: 1px solid var(--color-border); border-left: 3px solid var(--color-status-error); }
+  .step3-notice__title { font-size: var(--text-body); font-weight: 600; color: var(--color-text-primary); }
+  .step3-notice__safe { font-size: var(--text-small); color: var(--color-text-secondary); margin-top: var(--space-xs); }
+
+  /* ── Ceremonial centering (hold / sealed / park / processing) ─ */
+  .step3-ceremony { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--space-lg); padding-bottom: var(--space-4xl); }
+  .step3-ceremony__copy { font-family: var(--font-display); font-size: var(--text-title); line-height: var(--line-height-title); color: var(--color-text-primary); max-width: 280px; }
+  .step3-ceremony__sub { font-size: var(--text-body); color: var(--color-text-secondary); max-width: 280px; }
+  .step3-link-quiet { background: transparent; border: 0; color: var(--color-mineral-dark); font-size: var(--text-small); font-weight: 600; cursor: pointer; min-height: 44px; padding: var(--space-sm) var(--space-lg); }
+  .step3-link-quiet:hover { color: var(--color-text-primary); }
+
+  /* cold-start badge (Processing · notify-landing) */
+  .step3-badge { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-caption); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-mineral-dark); background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-pill); padding: 5px 12px; }
+
+  /* ── Layout helpers ───────────────────────────────────────── */
+  .step3-stack { display: flex; flex-direction: column; }
+  .step3-stack--center { align-items: center; }
+  .step3-gap-sm > * + * { margin-top: var(--space-sm); }
+  .step3-gap-md > * + * { margin-top: var(--space-md); }
+  .step3-gap-lg > * + * { margin-top: var(--space-lg); }
+  .step3-gap-xl > * + * { margin-top: var(--space-xl); }
 }
