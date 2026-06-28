@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import type { BillingPlan, Step3Props } from './types';
 import { Step3Frame, Step3Backbar } from './Step3Frame';
 import { VaultObject } from './VaultObject';
+import { SealStage } from './SealStage';
+import { useSealTimeline } from './useSealTimeline';
 
 export interface CardCaptureProps extends Step3Props {
   // Sandbox tuning aid only (handoff §4 `loss-frame-isolated`): isolates the
@@ -54,18 +57,49 @@ function cardCaptureView(p: Step3Props): CardCaptureView {
 // forward-only. Pure and props-driven — no Supabase, no fetch, tokens only.
 export function CardCapture(props: CardCaptureProps) {
   const view = cardCaptureView(props);
-  const shimmer = view.kind === 'sealed' ? 0.05 : 0;
+
+  // The seal is CardCapture's hero exit. It owns the whole ceremonial surface
+  // (its ground shimmer is driven by the phase machine, not a static prop), and
+  // a committed seal has no "back" — so it renders the SealStage directly, not
+  // inside the paywall chrome.
+  if (view.kind === 'sealed') {
+    return <CardCaptureSeal reducedMotion={props.a11y.reducedMotion} />;
+  }
 
   return (
-    <Step3Frame shimmer={shimmer}>
+    <Step3Frame shimmer={0}>
       <Step3Backbar onBack={props.onBack} />
       <div className="step3-body">
         {view.kind === 'paywall' && <PaywallRegion {...props} view={view} />}
         {view.kind === 'hold' && <HoldRegion timedOut={view.timedOut} onCheckAgain={props.onCheckAgain} />}
-        {view.kind === 'sealed' && <SealedRegion />}
         {view.kind === 'park' && <ParkRegion recordingId={props.park.recordingId} onResume={props.onResume} />}
       </div>
     </Step3Frame>
+  );
+}
+
+// post-commit-confirmation (3b) + the reduced-motion settled frame. Plays the
+// seal hero once on entry; reduced motion renders the settled frame directly.
+// Reachable only when checkout is 'confirmed' (enforced in cardCaptureView) —
+// the motion-side half of §SEAL-INTEGRITY.
+function CardCaptureSeal({ reducedMotion }: { reducedMotion: boolean }) {
+  const seal = useSealTimeline(reducedMotion);
+  // Play exactly once on entry. reducedMotion is fixed for this mounted seal
+  // (a sealed screen never un-seals), so a mount-only effect is correct.
+  const { play } = seal;
+  useEffect(() => {
+    play();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- play once on mount
+  }, []);
+
+  return (
+    <SealStage
+      phase={seal.phase}
+      preseal={seal.preseal}
+      rm={seal.rm}
+      presealCaption={seal.presealCaption}
+      activeCopy={seal.activeCopy}
+    />
   );
 }
 
@@ -214,20 +248,6 @@ function HoldRegion({ timedOut, onCheckAgain }: { timedOut: boolean; onCheckAgai
             </>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// post-commit-confirmation (3b) and the reduced-motion settled frame. The seal
-// has fired: sealed vault, ignited ember, shimmer faint. Reachable only when
-// checkout is 'confirmed' (enforced in cardCaptureView).
-function SealedRegion() {
-  return (
-    <div className="step3-region">
-      <div className="step3-ceremony">
-        <VaultObject phase="sealed" emberState="ignited" />
-        <p className="step3-ceremony__copy">Sealed. Your voice is on its way.</p>
       </div>
     </div>
   );

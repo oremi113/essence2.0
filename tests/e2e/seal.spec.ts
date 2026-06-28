@@ -11,24 +11,12 @@
  *   - the seal holds 60fps under 4× CPU throttle at 390×844, iris-close window the focus
  *   - zero console errors
  *
- * ── WHERE THIS LIVES ────────────────────────────────────────────────────────
- * Parked in the session folder, NOT tests/e2e/, on purpose: the production seal
- * route does not exist yet (Pass 1 unbuilt), and the e2e suite runs against the
- * app on :4000 — adding it there now would fail CI against a missing route.
+ * Runs against the production seal sandbox at /dev/seal (baseURL-relative, so it
+ * uses the shared webServer on :4000 — ENABLE_DEV_ROUTES=true in .env.local).
+ * Ported from docs/session-step3-card-capture/seal.spec.ts when Pass 1 landed
+ * the dev routes; the DOM contract below is the same one /dev/seal exposes.
  *
- * Run it against the prototype today:
- *   SEAL_URL="file:///Users/oremi/Downloads/essence-step3-seal-pass2.html" \
- *     npx playwright test docs/session-step3-card-capture/seal.spec.ts \
- *     --config playwright.config.ts --project=mobile
- *   (PLAYWRIGHT_BASE_URL is irrelevant here — the spec navigates to an absolute
- *    SEAL_URL and the webServer never spawns because we set it below.)
- *
- * When Pass 1 builds /dev/seal: move this file to tests/e2e/, delete the
- * file:// default, and point SEAL_URL at '/dev/seal' (baseURL-relative). The DOM
- * contract below (data-phase machine, readout ids, trigger ids) is the same
- * contract the production /dev page must expose, so the assertions port intact.
- *
- * DOM CONTRACT (prototype + production /dev page must both honor):
+ * DOM CONTRACT (/dev/seal honors this):
  *   #stage[data-phase]  idle→closing→catching→settling→sealed→handoff
  *   #stage[data-preseal] set in the three pre-seal states; #stage[data-rm] in RM
  *   #btn-trigger  fires the confirmed seal     #btn-rm toggles reduced motion
@@ -39,11 +27,9 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
-const SEAL_URL =
-  process.env.SEAL_URL ??
-  'file:///Users/oremi/Downloads/essence-step3-seal-pass2.html';
+const SEAL_URL = process.env.SEAL_URL ?? '/dev/seal';
 
-// Locked timeline (Motion Spec §3 / prototype RIG_STUB). Offsets from t=0 at the
+// Locked timeline (Motion Spec §3 / useSealTimeline). Offsets from t=0 at the
 // confirmed-payment trigger. Tolerance is generous because setTimeout + throttle
 // jitter; we assert ORDER and rough landing, not frame-exact timing.
 const BEAT = { CATCH: 975, SETTLE: 1375, SEALED: 1675, CROSSFADE: 4175 } as const;
@@ -209,9 +195,7 @@ test.describe('reduced motion', () => {
 // ── Performance: 60fps under 4× CPU throttle, iris-close window the focus ─────
 
 test.describe('performance', () => {
-  test('seal holds ~60fps under 4× CPU throttle (shell floor — real rig verified in the vault thread)', async ({
-    page,
-  }) => {
+  test('seal holds ~60fps under 4× CPU throttle', async ({ page }) => {
     // CDP CPU throttle. Chromium only; skip elsewhere.
     let client;
     try {
@@ -224,16 +208,16 @@ test.describe('performance', () => {
 
     // rAF frame-interval sampler over the whole seal window.
     await page.evaluate(() => {
-      const w = window as unknown as { __frames: number[] };
+      const w = window as unknown as { __frames: number[]; __t0: number };
       w.__frames = [];
+      w.__t0 = performance.now();
       let last = performance.now();
       const tick = () => {
         const now = performance.now();
         w.__frames.push(now - last);
         last = now;
-        if (now - (w as unknown as { __t0: number }).__t0 < 1800) requestAnimationFrame(tick);
+        if (now - w.__t0 < 1800) requestAnimationFrame(tick);
       };
-      (w as unknown as { __t0: number }).__t0 = performance.now();
       requestAnimationFrame(tick);
     });
 
@@ -248,14 +232,13 @@ test.describe('performance', () => {
     const sorted = [...frames].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
     const worst = sorted[sorted.length - 1];
-    // eslint-disable-next-line no-console
     console.log(
       `[seal perf @4× throttle] frames=${frames.length} median=${median.toFixed(1)}ms ` +
         `worst=${worst.toFixed(1)}ms (~${(1000 / median).toFixed(0)}fps median)`,
     );
-    // 60fps = 16.7ms/frame. Under 4× throttle on the stub shell we expect the
-    // median comfortably ≤ 20ms; the worst single frame should not exceed ~50ms
-    // (a dropped frame at the iris-close start would show as a long gap).
+    // 60fps = 16.7ms/frame. Under 4× throttle the median should sit comfortably
+    // ≤ 20ms; the worst single frame should not exceed ~50ms (a dropped frame at
+    // the iris-close start would show as a long gap).
     expect(median, `median frame ${median.toFixed(1)}ms`).toBeLessThan(20);
     expect(worst, `worst frame ${worst.toFixed(1)}ms`).toBeLessThan(50);
   });

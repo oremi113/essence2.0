@@ -29,7 +29,7 @@ Auto-loaded already: root `CLAUDE.md` (architecture + collaboration rules) and m
 | 3 | `palette-token-reconciliation.md` | **The canonical drop-in `@theme` block.** Paste tokens from HERE, not from the palette deck. |
 | 4 | `token-prep.md` | Token staging rationale (now superseded by #3; kept for history). |
 | 5 | `Pass3_Design_Brief.md` | Ambient-shimmer + neutral-handoff design intent for Pass 3. |
-| 6 | `seal.spec.ts` | The never-fake-a-seal Playwright assertions. |
+| 6 | `tests/e2e/seal.spec.ts` | The never-fake-a-seal Playwright assertions (moved out of this folder into the e2e suite at Pass 2, now pointing at `/dev/seal`). |
 
 **Prototypes — the design source of truth (CLAUDE.md):** mirror their timing/cadence/copy/motion. Do not invent new motion grammar.
 - `prototypes/essence-step3-card-capture.html` — the CardCapture rail.

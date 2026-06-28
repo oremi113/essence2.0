@@ -6,6 +6,10 @@ import type { EmberState, VaultPhase } from './types';
 interface VaultObjectProps {
   phase: VaultPhase;
   emberState: EmberState;
+  // When stacked as an opacity-gated seal layer, the vault is decorative (the
+  // aria-live copy + readouts carry state) — suppress role/label so AT does not
+  // announce three overlapping "Your Vault" images.
+  decorative?: boolean;
 }
 
 // The single signature Vault object (handoff NOTE FOR CODE ARCHITECT #1):
@@ -22,20 +26,25 @@ interface VaultObjectProps {
 // rendered ONLY for phase 'sealed'. 'establish' and 'confirm-hold' render the
 // cool, unsealed vessel with a cool ember socket. There is no code path that
 // lights an ember on a pre-seal phase.
-export function VaultObject({ phase, emberState }: VaultObjectProps) {
+export function VaultObject({ phase, emberState, decorative = false }: VaultObjectProps) {
   // Unique gradient ids per instance so multiple vaults never collide.
   const uid = useId().replace(/[:]/g, '');
   const id = (name: string) => `${name}-${uid}`;
 
   const sealed = phase === 'sealed';
+  // Within a sealed case the pilot can still read cool (the close, before the
+  // catch) — that is the third seal layer. Ignited adds the halo + lit core.
+  const ignited = sealed && emberState === 'ignited';
   const label = sealed ? 'Your Vault, sealed' : 'Your Vault, unsealed';
+  const a11y = decorative
+    ? ({ 'aria-hidden': true } as const)
+    : ({ role: 'img', 'aria-label': label } as const);
 
   return (
     <svg
       className="step3-vault"
       viewBox="0 0 196 196"
-      role="img"
-      aria-label={label}
+      {...a11y}
       data-phase={phase}
       data-ember={emberState}
     >
@@ -69,8 +78,9 @@ export function VaultObject({ phase, emberState }: VaultObjectProps) {
 
       {sealed ? (
         <>
-          {/* ignited ember halo behind the sealed iris (static, no pulse, no brightness()) */}
-          <circle cx="98" cy="98" r="40" fill={`url(#${id('emberIgnited')})`} />
+          {/* ignited ember halo behind the sealed iris (static, no pulse, no brightness()).
+              Present only once the ember has caught — the cool/closing layer omits it. */}
+          {ignited && <circle cx="98" cy="98" r="40" fill={`url(#${id('emberIgnited')})`} />}
           <circle cx="98" cy="98" r="92" fill={`url(#${id('caseWarm')})`} />
           <circle className="step3-vault__rim--warm" cx="98" cy="98" r="92" fill="none" strokeWidth="1.5" />
           <circle className="step3-vault__ring--soft" cx="98" cy="98" r="74" fill="none" strokeWidth="2" />
@@ -85,10 +95,19 @@ export function VaultObject({ phase, emberState }: VaultObjectProps) {
             <line x1="55" y1="73" x2="98" y2="98" />
           </g>
           <circle className="step3-vault__ring--soft" cx="98" cy="98" r="50" fill="none" strokeWidth="1.5" />
-          {/* center boss with lit ember core */}
+          {/* center boss */}
           <circle cx="98" cy="98" r="13" fill={`url(#${id('caseWarm')})`} />
           <circle className="step3-vault__boss-edge" cx="98" cy="98" r="13" fill="none" strokeWidth="1.5" />
-          <circle cx="98" cy="98" r="6" style={{ fill: 'var(--vault-lit-core)' }} />
+          {ignited ? (
+            // lit ember core — the caught pilot light
+            <circle cx="98" cy="98" r="6" style={{ fill: 'var(--vault-lit-core)' }} />
+          ) : (
+            // cool pilot still in its socket: case shut, ember not yet caught
+            <>
+              <circle cx="98" cy="98" r="11" fill={`url(#${id('emberCool')})`} />
+              <circle className="step3-vault__ember-edge" cx="98" cy="98" r="11" fill="none" strokeWidth="1.5" />
+            </>
+          )}
         </>
       ) : (
         <>

@@ -4279,3 +4279,105 @@
   .step3-gap-lg > * + * { margin-top: var(--space-lg); }
   .step3-gap-xl > * + * { margin-top: var(--space-xl); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STEP 3 — SEAL HERO (Pass 2 · the one timeline)
+   Ported from prototypes/essence-step3-seal-pass2.html. The seal is one
+   choreography driven by a single orchestrator (useSealTimeline) that sets
+   [data-phase] on the stage root; CSS gates the three opacity-stacked vault
+   layers (.v-establish → .v-sealed-cool → .v-sealed) and the copy crossfade
+   off that one attribute, so the 175ms ember offset and the settle stay locked
+   relative to each other. Curves are @theme tokens (iris/ember); no literals.
+   Phases: idle → closing → catching → settling → sealed → handoff.
+   §SEAL-INTEGRITY: [data-preseal] holds establish + cool ember + shimmer 0 and
+   can never reach a sealed layer. §EMBER-TIMING: the ember is cool through the
+   close (.v-sealed-cool) and ignites only at the catch (.v-sealed).
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer components {
+  /* Ground shimmer onset: 0 → faint over ~1000ms on the warm-arrival curve.
+     Ground layer only — the vault object never reads shimmer. */
+  .step3-seal .step3__ground-shimmer {
+    transition: opacity 1000ms var(--ease-seal-ember);
+    will-change: opacity;
+  }
+
+  /* Vault layer stack. The micro-settle is a scale on the stack (the vessel
+     settling to dead-still), never a transform the shell re-applies elsewhere. */
+  .step3-seal .seal-vault { position: relative; width: 196px; height: 196px; }
+  .step3-seal .seal-vault-stack {
+    position: absolute; inset: 0; transform: scale(1);
+    transition: transform 300ms var(--ease-seal-ember); will-change: transform;
+  }
+  .step3-seal .seal-vault-stack > div { position: absolute; inset: 0; }
+
+  .step3-seal .v-establish   { opacity: 1; transition: opacity 800ms var(--ease-seal-iris); }
+  .step3-seal .v-sealed-cool { opacity: 0; transition: opacity 800ms var(--ease-seal-iris); }
+  .step3-seal .v-sealed      { opacity: 0; transition: opacity 400ms var(--ease-seal-ember); }
+
+  /* Copy deck: crossfade only, the seam. Fixed height so the swap never shifts. */
+  .step3-seal .copy-deck { position: relative; min-height: 84px; width: 100%; display: flex; justify-content: center; }
+  .step3-seal .copy-line {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 100%;
+    opacity: 0; transition: opacity 400ms var(--ease-seal-ember); will-change: opacity;
+  }
+  .step3-seal .preseal-cap { transition: opacity 200ms var(--ease-seal-ember); }
+
+  /* ── Phase machine ───────────────────────────────────────────── */
+  /* IDLE: establish only, cool, shimmer 0, no copy. */
+  .step3-seal[data-phase="idle"] .v-establish { opacity: 1; }
+
+  /* CLOSING: case closes cool (establish → sealed-cool). Ember stays cool. */
+  .step3-seal[data-phase="closing"] .v-establish { opacity: 0; }
+  .step3-seal[data-phase="closing"] .v-sealed-cool { opacity: 1; }
+
+  /* CATCHING → HANDOFF: establish gone; ember catches (sealed-cool → sealed). */
+  .step3-seal[data-phase="catching"] .v-establish,
+  .step3-seal[data-phase="settling"] .v-establish,
+  .step3-seal[data-phase="sealed"]   .v-establish,
+  .step3-seal[data-phase="handoff"]  .v-establish { opacity: 0; }
+  .step3-seal[data-phase="catching"] .v-sealed-cool { opacity: 0; transition: opacity 400ms var(--ease-seal-ember); }
+  .step3-seal[data-phase="settling"] .v-sealed-cool,
+  .step3-seal[data-phase="sealed"]   .v-sealed-cool,
+  .step3-seal[data-phase="handoff"]  .v-sealed-cool { opacity: 0; }
+  .step3-seal[data-phase="catching"] .v-sealed,
+  .step3-seal[data-phase="settling"] .v-sealed,
+  .step3-seal[data-phase="sealed"]   .v-sealed,
+  .step3-seal[data-phase="handoff"]  .v-sealed { opacity: 1; }
+
+  /* Micro-settle: tiny lift on the catch, rests at 1.0 from the settle on. */
+  .step3-seal[data-phase="catching"] .seal-vault-stack { transform: scale(1.012); }
+  .step3-seal[data-phase="settling"] .seal-vault-stack,
+  .step3-seal[data-phase="sealed"]   .seal-vault-stack,
+  .step3-seal[data-phase="handoff"]  .seal-vault-stack { transform: scale(1); }
+
+  /* Seal line fades in with the settle, holds through the dwell. */
+  .step3-seal[data-phase="settling"] .seal-copy,
+  .step3-seal[data-phase="sealed"]   .seal-copy { opacity: 1; }
+
+  /* Shimmer ignites to faint at the settle (ground only), and only here. */
+  .step3-seal[data-phase="sealed"],
+  .step3-seal[data-phase="handoff"] { --shimmer-intensity: 0.05; }
+
+  /* HANDOFF (the seam): copy crossfades, vault unchanged, shimmer stays faint. */
+  .step3-seal[data-phase="handoff"] .seal-copy { opacity: 0; }
+  .step3-seal[data-phase="handoff"] .proc-copy { opacity: 1; }
+
+  /* ── Pre-seal integrity panel: establish, cool ember, shimmer 0, no seal ── */
+  .step3-seal[data-preseal] .v-establish { opacity: 1; }
+  .step3-seal[data-preseal] .v-sealed-cool,
+  .step3-seal[data-preseal] .v-sealed { opacity: 0; }
+  .step3-seal[data-preseal] .seal-copy,
+  .step3-seal[data-preseal] .proc-copy { opacity: 0; }
+  .step3-seal[data-preseal] .preseal-cap { opacity: 1; }
+  .step3-seal[data-preseal] { --shimmer-intensity: 0; }
+
+  /* ── Reduced motion: settled frame rendered directly, zero animation ──
+     The orchestrator jumps phase straight to 'sealed'; [data-rm] kills the
+     transitions so nothing animates in between. Ember static-ignited. */
+  .step3-seal[data-rm] .v-establish,
+  .step3-seal[data-rm] .v-sealed-cool,
+  .step3-seal[data-rm] .v-sealed,
+  .step3-seal[data-rm] .seal-vault-stack,
+  .step3-seal[data-rm] .step3__ground-shimmer,
+  .step3-seal[data-rm] .copy-line { transition: none !important; }
+}
