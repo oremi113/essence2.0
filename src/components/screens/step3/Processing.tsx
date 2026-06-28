@@ -3,6 +3,7 @@
 import type { ProcessingEntry, Step3Props } from './types';
 import { Step3Frame } from './Step3Frame';
 import { VaultObject } from './VaultObject';
+import { useShimmerLoop, type ShimmerActivation } from './useShimmerLoop';
 
 export interface ProcessingProps extends Step3Props {
   // How the screen was reached (handoff §4 "entry" column). 'notify-deeplink'
@@ -20,46 +21,55 @@ interface ProcessingView {
   copyKey: CopyKey;
   showNotifyOffer: boolean;
   showLandingBadge: boolean;
-  shimmer: number;
+  // Ground-shimmer register (Motion Spec §4). The rAF loop turns this into the
+  // live --shimmer-intensity; reduced motion collapses it to the static rest.
+  activation: ShimmerActivation;
+  // The neutral handoff contract frame (§7) — gen complete, the Reveal builds
+  // from here. A real, nameable boundary, not an end-of-animation accident.
+  isNeutralHandoff: boolean;
 }
 
 // Pure derivation of the wait surface from generation status + elapsed time +
 // entry. Generation failure is invisible to the user by design (handoff §4):
 // the UI degrades by elapsed time, not error state, until the bounded-hold
 // notify handoff. 'failed' is internal bookkeeping that surfaces as the handoff
-// offer; 'unrecoverable' is the SLA support tail. Reduced motion pins shimmer to
-// the neutral rest (the static side is enforced here; the no-loop side is Pass 3).
+// offer; 'unrecoverable' is the SLA support tail; 'ready' is gen-complete and
+// eases the shimmer down to the neutral handoff frame.
 function processingView(p: Step3Props, entry: ProcessingEntry): ProcessingView {
+  if (p.generation.status === 'ready') {
+    return { copyKey: 'normal', showNotifyOffer: false, showLandingBadge: false, activation: 'neutral', isNeutralHandoff: true };
+  }
   if (p.generation.status === 'unrecoverable') {
-    return { copyKey: 'support', showNotifyOffer: true, showLandingBadge: false, shimmer: 0.05 };
+    return { copyKey: 'support', showNotifyOffer: true, showLandingBadge: false, activation: 'faint', isNeutralHandoff: false };
   }
   if (p.generation.status === 'failed') {
-    return { copyKey: 'handoff', showNotifyOffer: true, showLandingBadge: false, shimmer: 0.12 };
+    return { copyKey: 'handoff', showNotifyOffer: true, showLandingBadge: false, activation: 'active', isNeutralHandoff: false };
   }
-  // status === 'processing' (or idle, treated as the happy-path wait)
-  if (p.a11y.reducedMotion) {
-    return { copyKey: 'normal', showNotifyOffer: false, showLandingBadge: false, shimmer: 0.03 };
-  }
+  // status 'processing' / 'idle' — the happy-path wait. Reduced motion is
+  // handled by the shimmer loop (static faint rest), not branched here.
   if (entry === 'notify-deeplink') {
-    return { copyKey: 'normal', showNotifyOffer: false, showLandingBadge: true, shimmer: 0.12 };
+    return { copyKey: 'normal', showNotifyOffer: false, showLandingBadge: true, activation: 'active', isNeutralHandoff: false };
   }
   if (p.generation.elapsedMs >= 60000) {
-    return { copyKey: 'extended', showNotifyOffer: false, showLandingBadge: false, shimmer: 0.12 };
+    return { copyKey: 'extended', showNotifyOffer: false, showLandingBadge: false, activation: 'active', isNeutralHandoff: false };
   }
-  return { copyKey: 'normal', showNotifyOffer: false, showLandingBadge: false, shimmer: 0.05 };
+  return { copyKey: 'normal', showNotifyOffer: false, showLandingBadge: false, activation: 'faint', isNeutralHandoff: false };
 }
 
 // Processing (handoff §SEAM): owns the post-seal wait, the silent retry loop,
 // generation-failure degradation, and the exit to the neutral handoff frame.
-// Every state is post-seal: the vault stays sealed, the ember stays ignited.
-// No re-pay control ever (single entry, forward-only).
+// The vault and ember are dead-still through the entire wait (Motion Spec §5);
+// the ONLY motion is the ground shimmer. No re-pay control ever.
 export function Processing(props: ProcessingProps) {
   const view = processingView(props, props.entry ?? 'seal');
+  // The single ground-shimmer primitive. Writes --shimmer-intensity onto the
+  // ground element each frame (base × breath); the vault never reads it.
+  const groundRef = useShimmerLoop(view.activation, props.a11y.reducedMotion);
 
   return (
-    <Step3Frame shimmer={view.shimmer}>
+    <Step3Frame shimmer={0} groundRef={groundRef} groundId="shimmer">
       <div className="step3-body">
-        <div className="step3-ceremony">
+        <div className="step3-ceremony" data-neutral-handoff={view.isNeutralHandoff ? '' : undefined}>
           <VaultObject phase="sealed" emberState="ignited" />
 
           {view.showLandingBadge && (

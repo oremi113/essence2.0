@@ -1,26 +1,28 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 
 interface Step3FrameProps {
-  // Pass 1 static ground opacity for this state. The token lives in @theme at 0;
-  // the sine loop + onset are Pass 3. Here it is a fixed per-state peak.
+  // Static ground opacity for this state (Pass 1/2 register). The token lives
+  // in @theme at 0. Pass 3's Processing drives the ground via the rAF loop
+  // instead — it passes `groundRef`, and `useShimmerLoop` writes
+  // --shimmer-intensity onto that element each frame, overriding this default.
   shimmer: number;
   children: ReactNode;
+  // Pass 3: hand the ground-shimmer element to the shimmer loop.
+  groundRef?: Ref<HTMLDivElement>;
+  groundId?: string;
 }
 
 // Shared screen frame for both Step 3 screens: the `.step3` surface plus the
 // two ground layers (shimmer + atmosphere vignette) that sit behind content.
-// `--shimmer-intensity` is set as an inline custom property so the ground reads
-// it via `opacity: var(--shimmer-intensity)` — same mechanism Pass 3 will drive,
-// just static here.
-export function Step3Frame({ shimmer, children }: Step3FrameProps) {
+export function Step3Frame({ shimmer, children, groundRef, groundId }: Step3FrameProps) {
   return (
     <div
       className="step3"
       style={{ '--shimmer-intensity': String(shimmer) } as CSSProperties}
     >
-      <div className="step3__ground-shimmer" aria-hidden="true" />
+      <div ref={groundRef} id={groundId} className="step3__ground-shimmer" aria-hidden="true" />
       <div className="step3__vignette" aria-hidden="true" />
       {children}
     </div>

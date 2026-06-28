@@ -43,6 +43,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 69 | P2 | Notify (transactional email) infra is a Step 3 build prerequisite — park / confirm-timeout / post-seal-failure all hand into it *(Step 3 docs call this #66)* | ⏳ prerequisite; sequences ahead of the Frame 4 build |
 | 70 | P2 | Trial-ending reminder before the day-8 charge — ethical + chargeback protection for the 45–70 audience (Step 3 handoff §8) | ⏳ prerequisite; rides the notify infra (#69) |
 | 71 | P3 | Consented older-voice sample is a placeholder — CardCapture sample renders on `/mock/generic-elder.mp3` until the real clip exists (Step 3 handoff §8) | ⏳ asset dependency; swap `clipUrl` when delivered |
+| 72 | P3 | Processing renders discrete wait states; the live timed progression (normal→extended→notify-handoff on the wait clock, and pacing the shimmer climb to the fixed normal-wait window) is the deferred reducer (handoff NOTE-FOR-CODE-ARCHITECT #2). Pass 3 ships the activation map + exit; the clock that walks between them is not built. | ⏳ build with real generation polling; `src/components/screens/step3/useShimmerLoop.ts` CLIMB_DUR is a demo tween until then |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |

@@ -20,7 +20,9 @@ export type CheckoutStatus =
   | 'error'
   | 'confirmed';
 
-export type GenerationStatus = 'idle' | 'processing' | 'failed' | 'unrecoverable';
+// 'ready' = generation complete. It drives Processing's exit ease-down to the
+// neutral handoff contract frame (Motion Spec §5/§7); the Reveal builds from there.
+export type GenerationStatus = 'idle' | 'processing' | 'failed' | 'unrecoverable' | 'ready';
 
 export interface Pricing {
   plan: BillingPlan;

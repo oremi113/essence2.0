@@ -197,9 +197,16 @@ export const PROCESSING_STATES: ProcessingMock[] = [
     entry: 'seal',
   },
   {
+    id: 'neutral-exit',
+    label: 'neutral-exit (handoff)',
+    description: 'Gen complete. Shimmer eases active → neutral (0.025); the Reveal builds from here.',
+    props: { ...processingBase(), generation: { status: 'ready', elapsedMs: 90000, budgetMs: 120000 } },
+    entry: 'seal',
+  },
+  {
     id: 'reduced-motion',
     label: 'reduced-motion',
-    description: 'Processing RM resting frame. Shimmer static rest (no loop).',
+    description: 'Processing RM resting frame. Shimmer static rest 0.05 (no loop).',
     props: { ...processingBase(), a11y: { reducedMotion: true } },
     entry: 'seal',
   },
