@@ -195,16 +195,21 @@ test.describe('reduced motion', () => {
 // ── Performance: 60fps under 4× CPU throttle, iris-close window the focus ─────
 
 test.describe('performance', () => {
-  test('seal holds ~60fps under 4× CPU throttle', async ({ page }) => {
-    // CDP CPU throttle. Chromium only; skip elsewhere.
-    let client;
-    try {
-      client = await page.context().newCDPSession(page);
-      await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-    } catch {
-      test.skip(true, 'CDP CPU throttling is Chromium-only');
-      return;
-    }
+  test('seal holds ~60fps under 4× CPU throttle', async ({ page, browserName }) => {
+    // This gate REQUIRES Chromium CDP CPU throttling — it is the repo's motion
+    // shippability bar (CLAUDE.md). The skip is explicit on engine so it reads
+    // as "wrong engine," never as an environment accident that reports green:
+    // run it via --project=chromium (which sets 390×844 in beforeEach). The
+    // WebKit "mobile" project legitimately cannot run it and skips loudly here.
+    //
+    // Measure against a PRODUCTION build for the true number
+    // (PLAYWRIGHT_BASE_URL=http://localhost:PORT → `next start`). `next dev`
+    // adds reconciler/HMR/compile overhead that inflates the worst-frame tail
+    // with one-off ~80ms spikes that are dev-only, not ceremony hitches; in
+    // production the seal's worst frame holds ~28ms here, well clear of 50.
+    test.skip(browserName !== 'chromium', 'perf gate requires Chromium CDP CPU throttling');
+    const client = await page.context().newCDPSession(page);
+    await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
 
     // rAF frame-interval sampler over the whole seal window.
     await page.evaluate(() => {

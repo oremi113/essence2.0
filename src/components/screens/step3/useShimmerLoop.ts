@@ -59,7 +59,13 @@ function cubicBezier(p1x: number, p1y: number, p2x: number, p2y: number) {
   return (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : calc(solveX(x), p1y, p2y));
 }
 
-const easeExit = cubicBezier(0.4, 0, 0.2, 1); // --ease-seal-exit
+// Control points for --ease-seal-exit, mirrored here for the JS rAF exit. This
+// is the dual home the spec warns about ("one curve, two homes"): if the
+// @theme token changes, this must change too. tests/unit/step3-seal-exit-curve
+// reads the token from globals.css and fails if they drift apart.
+export const EASE_SEAL_EXIT_BEZIER = [0.4, 0, 0.2, 1] as const;
+
+const easeExit = cubicBezier(...EASE_SEAL_EXIT_BEZIER); // --ease-seal-exit
 const easeClimb = cubicBezier(0.4, 0, 0.2, 1); // ceremonial rise
 
 interface Tween {

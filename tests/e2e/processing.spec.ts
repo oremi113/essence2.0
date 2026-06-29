@@ -174,18 +174,16 @@ test.describe('notify-landing', () => {
 // ── Performance: breath loop holds ~60fps under 4× CPU throttle ───────────────
 
 test.describe('performance', () => {
-  test('breath loop holds ~60fps at active intensity under 4× throttle', async ({ page }) => {
+  test('breath loop holds ~60fps at active intensity under 4× throttle', async ({ page, browserName }) => {
+    // Explicit engine gate — the motion shippability bar (CLAUDE.md) runs only
+    // on Chromium CDP and must never report green by skipping on the wrong
+    // engine. Run via --project=chromium.
+    test.skip(browserName !== 'chromium', 'perf gate requires Chromium CDP CPU throttling');
     await selectState(page, 'extended');
     await page.waitForTimeout(2600); // reach the active breath
 
-    let client;
-    try {
-      client = await page.context().newCDPSession(page);
-      await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-    } catch {
-      test.skip(true, 'CDP CPU throttling is Chromium-only');
-      return;
-    }
+    const client = await page.context().newCDPSession(page);
+    await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
 
     await page.evaluate(() => {
       const w = window as unknown as { __frames: number[]; __t0: number };

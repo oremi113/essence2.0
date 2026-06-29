@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { memo, useId } from 'react';
 import type { EmberState, VaultPhase } from './types';
 
 interface VaultObjectProps {
@@ -26,7 +26,11 @@ interface VaultObjectProps {
 // rendered ONLY for phase 'sealed'. 'establish' and 'confirm-hold' render the
 // cool, unsealed vessel with a cool ember socket. There is no code path that
 // lights an ember on a pre-seal phase.
-export function VaultObject({ phase, emberState, decorative = false }: VaultObjectProps) {
+// Memoized: the seal stacks three VaultObjects with constant props. Without
+// memo, every phase flip on the parent re-reconciles all three full SVGs
+// (~15 nodes each, with gradients) — that reconcile, not layer promotion, is
+// the hitch that straddled the 50ms gate at the iris-close onset.
+function VaultObjectImpl({ phase, emberState, decorative = false }: VaultObjectProps) {
   // Unique gradient ids per instance so multiple vaults never collide.
   const uid = useId().replace(/[:]/g, '');
   const id = (name: string) => `${name}-${uid}`;
@@ -135,3 +139,5 @@ export function VaultObject({ phase, emberState, decorative = false }: VaultObje
     </svg>
   );
 }
+
+export const VaultObject = memo(VaultObjectImpl);

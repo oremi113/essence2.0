@@ -4310,9 +4310,13 @@
   }
   .step3-seal .seal-vault-stack > div { position: absolute; inset: 0; }
 
-  .step3-seal .v-establish   { opacity: 1; transition: opacity 800ms var(--ease-seal-iris); }
-  .step3-seal .v-sealed-cool { opacity: 0; transition: opacity 800ms var(--ease-seal-iris); }
-  .step3-seal .v-sealed      { opacity: 0; transition: opacity 400ms var(--ease-seal-ember); }
+  /* will-change promotes the three crossfade layers at mount (idle), so the
+     iris-close onset is NOT paying first-frame layer-promotion cost on the
+     single most important instant of the ceremony (the catch). Without this
+     the worst frame at the phase flip straddles the 50ms gate. */
+  .step3-seal .v-establish   { opacity: 1; transition: opacity 800ms var(--ease-seal-iris); will-change: opacity; }
+  .step3-seal .v-sealed-cool { opacity: 0; transition: opacity 800ms var(--ease-seal-iris); will-change: opacity; }
+  .step3-seal .v-sealed      { opacity: 0; transition: opacity 400ms var(--ease-seal-ember); will-change: opacity; }
 
   /* Copy deck: crossfade only, the seam. Fixed height so the swap never shifts. */
   .step3-seal .copy-deck { position: relative; min-height: 84px; width: 100%; display: flex; justify-content: center; }
