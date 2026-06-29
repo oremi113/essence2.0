@@ -39,7 +39,7 @@ Entry template (the agent appends one per run):
   measurement (`pending_generations.audio_duration_ms`, derived in
   `mp3-duration.ts`), so the documentation matches the code. No behaviour, type,
   or test surface changes — comments only.
-- Branch / commit: refactor/fu-67-stale-step6-comments @ <filled at commit>
+- Branch / commit: refactor/fu-67-stale-step6-comments @ 23d927b
 - Checks: typecheck ✅ · lint ✅ · test:unit ✅ (see run below).
 - Scanned / discovered: re-ran the §3 scan. FU-66 (Step 6 unchecked success
   writes, the top open P3) is already fully fixed on `main` by commit 9e5ce2d
