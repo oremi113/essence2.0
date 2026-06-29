@@ -37,7 +37,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ RESOLVED 2026-06-16 (stripe-hardening — write now checked + throws) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — path write throws; dead ternary removed) |
 | 59 | P3 | Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` unreachable; POST still spends ElevenLabs with no Step 6 cost cap *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
-| 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ add error checks |
+| 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ RESOLVED — all success-path + candidate writes now destructure `{ error }` and return a retryable failure (folded into the #61 batch; verified 2026-06-29) |
 | 67 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ comment fix |
 | 68 | P3 | Step 3 vault + shimmer palette not canonical — bronze/ember ramp + on-oat shimmer intensities owned by the design-architect thread *(Step 3 docs call this #65)* | ⏳ design-owned; values staged in `token-prep.md`, land in `@theme` at Pass 1 |
 | 69 | P2 | Notify (transactional email) infra is a Step 3 build prerequisite — park / confirm-timeout / post-seal-failure all hand into it *(Step 3 docs call this #66)* | ⏳ prerequisite; sequences ahead of the Frame 4 build |
@@ -631,8 +631,10 @@ This pass focused on the stable surfaces neither recent pass covered: the cost-c
 
 ## Analytics funnel (from feat/analytics-funnel, 2026-06-16)
 
-### 65. [P4] Analytics context helpers are duplicated between `step6.ts` and `context.ts`
+### 65. [P4] ✅ RESOLVED (2026-06-29) — Analytics context helpers were duplicated between `step6.ts` and `context.ts`
 *(Renumbered from FU-57 on the #59 merge — collided with main's FU-57.)*
+**Resolution:** `step6.ts` now imports `getOrCreateSessionId`, `getPlatform`, `getDeviceType`, `generateId`, and the env/version reads (`getAppEnv`, `getAppVersion`) from `@/lib/analytics/context` — its four private copies of those helpers and the inline `NEXT_PUBLIC_APP_ENV`/`APP_VERSION` reads in `trackStep6` are gone. The session/platform/device envelope now has a single definition shared across `step6.*` and `journey.*`, closing the drift risk. `step6.ts` keeps only its flow_id + schema-version logic local. Pure refactor, no behavior change — both suites stayed green (`step6-analytics` + `journey-analytics`, 24/24; full unit suite 342/342). Original entry below.
+
 `src/lib/analytics/context.ts` (new) and `src/lib/analytics/step6.ts` each carry their own copies of the same client-context helpers — `getOrCreateSessionId`, `getPlatform`, `getDeviceType`, `generateId` (plus the env/version reads). `context.ts` was added so the new `journey.*` family attaches the same global-prop envelope as `step6.*` without editing `step6.ts`, which was off-limits during parallel M1 work (it's the already-instrumented Step 6 surface).
 
 **Why it matters:** low risk today (the copies are byte-identical and both covered by unit tests), but two definitions of the session/platform/device envelope can drift — e.g. a future change to device-type detection applied to one family and not the other would silently split the envelope across `step6.*` and `journey.*`.
@@ -646,7 +648,14 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 ### FU-34 update — trigger FIRED (the new flow may be unreachable from app navigation)
 The Step 6 spine now renders on `/messages/new` (`src/app/messages/new/page.tsx` → `MessagesNewPageClient` → the A2→A7 orchestrator). But `/app/messages/new` still renders the **legacy** `NewMessageView` (`src/app/app/messages/new/page.tsx:27`), and **every app surface still routes to the legacy one** via `ROUTES.appMessagesNew`: `TabNav.tsx:13` (the "New Message" tab), `MemoryShelf.tsx:88` + `:171`, `src/app/app/vault/sealed/actions.tsx:11`, `src/app/app/record/page.tsx:65`, and `VoiceCreationView.tsx:244`. So the freshly-shipped message-creation flow may be **dark** — a real user clicking "New Message" lands on the old screen. **Verify against current `main`** (the table's FU-34 status notes M0 retired the legacy *component*; this is the nav-repoint half). Not agent-fixable: choosing which route is canonical (and whether the legacy `/app/messages/new` tree is deleted) is an owner decision; once chosen, repointing the callers is one route-constant change. Adjacent connection-pass items with triggers met: **#24** (`VoiceCreationView` success destination) and **#25** (`FirstBreathSequence` exit, `FirstBreathSequence.tsx:103`).
 
-### 66. [P3] Step 6 generate pipeline reports success without checking its `pending_generations` status writes
+### 66. [P3] ✅ RESOLVED (verified 2026-06-29) — Step 6 generate pipeline reported success without checking its `pending_generations` status writes
+**Resolution:** all three success-path writes — plus the two "candidate" writes the entry flagged as unchecked the same way — now destructure `{ error }` and, on failure, log and return a retryable failure shape *before* the client is told it succeeded (so A6 no longer bounces the user after an unpersisted paid render). The fix landed folded into the #61 unchecked-write batch and is referenced by the `FOLLOW_UPS #61` comments at each site:
+- `src/lib/messages/audio.ts:97-119` — the audio-success mark checks `markError` → returns `{ ok: false, code: STORAGE_FAILED }`.
+- `src/app/api/messages/generate/route.ts:317-342` — the text-success mark checks `textMarkError` → 502 before the ElevenLabs render; `:145-165` (the reshape-candidate write) checks `reshapeError`.
+- `src/app/api/messages/regenerate/route.ts:285-310` — the control-arm text-success mark checks `textMarkError` → 502 before the paid re-render.
+
+The failure-path "failed" marks remain deliberately best-effort (via `bestEffortWrite`), as the entry noted they should. Original entry below.
+
 The synchronous generate pipeline writes its terminal "succeeded" state to `pending_generations` without inspecting the returned `{ error }`, then reports success to the client regardless. Three concrete instances, all on the success path:
 - `src/lib/messages/audio.ts:87-91` — the audio-success write (`audio_status: "succeeded"`, `audio_path`, `audio_duration_ms`); `generateAndStoreAudio` then `return { ok: true }`.
 - `src/app/api/messages/generate/route.ts:301-305` — the text-success write (`generated_text`, `text_status: "succeeded"`); the route later returns `textStatus: "succeeded"`.
