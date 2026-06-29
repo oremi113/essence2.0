@@ -37,8 +37,8 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ RESOLVED 2026-06-16 (stripe-hardening — write now checked + throws) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — path write throws; dead ternary removed) |
 | 59 | P3 | Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` unreachable; POST still spends ElevenLabs with no Step 6 cost cap *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
-| 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ add error checks |
-| 67 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ comment fix |
+| 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ RESOLVED on main by #70 (9e5ce2d) — all 3 success writes now checked; entry-strike still pending |
+| 67 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ RESOLVED 2026-06-29 (refactor/fu-67-stale-step6-comments) |
 | 68 | P3 | Step 3 vault + shimmer palette not canonical — bronze/ember ramp + on-oat shimmer intensities owned by the design-architect thread *(Step 3 docs call this #65)* | ⏳ design-owned; values staged in `token-prep.md`, land in `@theme` at Pass 1 |
 | 69 | P2 | Notify (transactional email) infra is a Step 3 build prerequisite — park / confirm-timeout / post-seal-failure all hand into it *(Step 3 docs call this #66)* | ⏳ prerequisite; sequences ahead of the Frame 4 build |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
@@ -658,7 +658,13 @@ This is the same unchecked-Supabase-write pattern catalogued in #42–#46, in a 
 **Fix shape:** destructure `{ error }` on each success-path update; on error, log and return 500 (leave the row recoverable) rather than 200-ing a state that didn't persist. Mirror the existing checked writes in the same files. Agent-fixable; the ElevenLabs-spend angle makes it worth the owner knowing about.
 **Pick up when:** next time the Step 6 generate pipeline is touched, or paired with the #42–#46 unchecked-write batch — one class of fix.
 
-### 67. [P4] Stale Step 6 doc-comments now contradict the shipped code
+### 67. [P4] ✅ RESOLVED 2026-06-29 (refactor/fu-67-stale-step6-comments) — Stale Step 6 doc-comments now contradict the shipped code
+**Resolution:** both comments now describe the shipped behavior, so they no longer send a maintainer down a wrong path.
+- `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx` header — the "C3 (Vault Limit) isn't built, so a vault-limit save and discard both land on Home" line was replaced with the current routing: a vault-limit save routes to C3 at `/messages/limit?from=save_race` (FU-38, Chunk 8); only discard lands on Home.
+- `src/lib/messages/speech-duration.ts` header — the "nothing measures real audio duration yet / no duration column" line was replaced with: the estimate is a pre-load fallback; the pipeline now measures real duration (`pending_generations.audio_duration_ms`, derived in `mp3-duration.ts`, written on a successful render — FU-37 resolved).
+Pure comment change, no behaviour and no test impact. tsc ✅ · lint ✅ · unit ✅ on the branch. Original entry below.
+
+---
 Two header/JSDoc comments in shipping Step 6 files describe a world the Chunk 8–10 work has since changed, so they now mislead a maintainer:
 - `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx:16-20` — claims *"C3 (Vault Limit) isn't built, so a vault-limit save and discard both land on Home."* C3 shipped (Chunk 8, #38 resolved) and the code routes a vault-limit save **to C3** (`:229`); only discard lands on Home.
 - `src/lib/messages/speech-duration.ts:4-9` — claims *"Nothing in the pipeline measures real audio duration yet… no duration column (FOLLOW_UPS #37)."* #37 is resolved: `audio_duration_ms` exists, `mp3-duration.ts` derives the real duration, `audio.ts:89` writes it. The wpm estimate is now only a pre-load fallback.
