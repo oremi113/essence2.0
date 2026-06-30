@@ -22,7 +22,8 @@
  *   #btn-trigger  fires the confirmed seal     #btn-rm toggles reduced motion
  *   .preseal-btn  (×3) the pre-seal integrity states
  *   #ro-phase #ro-ember #ro-shimmer #ro-seam #ro-guard  readout mirrors
- *   .v-establish / .v-sealed-cool / .v-sealed  the three vault layers (opacity-gated)
+ *   #seal-vault  the ONE canvas; data-mech-t / data-ember-t mirror its drive
+ *                (iris-close = mech-t 0→1; ember-catch = ember-t 0→1)
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -54,11 +55,6 @@ test.afterEach(() => {
 function phase(page: Page) {
   return page.locator('#stage');
 }
-async function opacityOf(page: Page, selector: string): Promise<number> {
-  return page.locator(selector).evaluate((el) =>
-    parseFloat(getComputedStyle(el as Element).opacity),
-  );
-}
 
 // ── §SEAL-INTEGRITY: the seal fires only from the confirmed trigger ───────────
 
@@ -72,10 +68,10 @@ test.describe('seal gating', () => {
 
       await expect(phase(page)).toHaveAttribute('data-phase', 'idle');
       await expect(phase(page)).toHaveAttribute('data-preseal', '');
-      // The sealed (ignited) unit must be fully hidden — no seal can exist here.
-      expect(await opacityOf(page, '.v-sealed')).toBe(0);
-      expect(await opacityOf(page, '.v-sealed-cool')).toBe(0);
-      expect(await opacityOf(page, '.v-establish')).toBeGreaterThan(0.9);
+      // The one canvas renders the cool open vessel — mechanism open, ember
+      // cool. No code path warms it here; no seal can exist.
+      await expect(page.locator('#seal-vault')).toHaveAttribute('data-mech-t', '0.00');
+      await expect(page.locator('#seal-vault')).toHaveAttribute('data-ember-t', '0.00');
       await expect(page.locator('#ro-ember')).toHaveText('cool');
       await expect(page.locator('#ro-shimmer')).toHaveText('0');
       await expect(page.locator('#ro-guard')).toContainText(/no seal/i);
@@ -140,20 +136,23 @@ test.describe('confirmed seal timeline', () => {
     page,
   }) => {
     await page.locator('#btn-trigger').click();
-    // Once sealed, the ignited unit is shown; through the handoff it stays shown
-    // (vault does not move — only copy crossfades).
+    // Once sealed, the ignited frame holds; through the handoff it stays the
+    // same drive (one canvas — the vault cannot swap or move, only copy fades).
     await page.waitForFunction(
       () => document.getElementById('stage')?.getAttribute('data-phase') === 'sealed',
       undefined,
       { timeout: 4000 },
     );
-    expect(await opacityOf(page, '.v-sealed')).toBeGreaterThan(0.9);
+    await expect(page.locator('#seal-vault')).toHaveAttribute('data-mech-t', '1.00');
+    await expect(page.locator('#seal-vault')).toHaveAttribute('data-ember-t', '1.00');
     await page.waitForFunction(
       () => document.getElementById('stage')?.getAttribute('data-phase') === 'handoff',
       undefined,
       { timeout: 6000 },
     );
-    expect(await opacityOf(page, '.v-sealed')).toBeGreaterThan(0.9); // unchanged across seam
+    // ignited + shut, continuous across the seam — unchanged from the settle.
+    await expect(page.locator('#seal-vault')).toHaveAttribute('data-mech-t', '1.00');
+    await expect(page.locator('#seal-vault')).toHaveAttribute('data-ember-t', '1.00');
     await expect(page.locator('#ro-seam')).toHaveText('Processing');
     // only the active copy line is exposed to AT
     await expect(page.locator('.proc-copy')).toHaveAttribute('aria-hidden', 'false');
@@ -180,7 +179,9 @@ test.describe('reduced motion', () => {
 
     await expect(phase(page)).toHaveAttribute('data-phase', 'sealed');
     await expect(phase(page)).toHaveAttribute('data-rm', '');
-    expect(await opacityOf(page, '.v-sealed')).toBeGreaterThan(0.9);
+    // RM renders the settled frame directly — ignited + shut, painted once.
+    await expect(page.locator('#seal-vault')).toHaveAttribute('data-mech-t', '1.00');
+    await expect(page.locator('#seal-vault')).toHaveAttribute('data-ember-t', '1.00');
     await expect(page.locator('#ro-ember')).toHaveText('ignited');
 
     // No closing/catching/settling steps in RM — it renders the rest frame.

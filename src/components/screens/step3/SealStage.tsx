@@ -1,7 +1,7 @@
 'use client';
 
+import { SealVaultCanvas } from './SealVaultCanvas';
 import type { ActiveCopy, SealPhase } from './useSealTimeline';
-import { VaultObject } from './VaultObject';
 
 interface SealStageProps {
   // Root id — the seal.spec DOM contract addresses the stage as `#stage`.
@@ -37,19 +37,13 @@ export function SealStage({ id = 'stage', phase, preseal, rm, presealCaption, ac
 
       <div className="step3-body">
         <div className="step3-ceremony">
-          {/* Three opacity-gated layers: establish → sealed-cool (close) →
-              sealed (catch). Decorative — the aria-live copy carries state. */}
+          {/* ONE canvas plays the iris-close and ember-catch internally off the
+              phase clock (SealVaultCanvas). The micro-settle scale still rides
+              the stack off [data-phase]. Decorative — the aria-live copy carries
+              state. */}
           <div className="seal-vault">
             <div className="seal-vault-stack">
-              <div className="v-establish">
-                <VaultObject phase="establish" emberState="cool" decorative />
-              </div>
-              <div className="v-sealed-cool">
-                <VaultObject phase="sealed" emberState="cool" decorative />
-              </div>
-              <div className="v-sealed">
-                <VaultObject phase="sealed" emberState="ignited" decorative />
-              </div>
+              <SealVaultCanvas phase={phase} preseal={preseal} rm={rm} />
             </div>
           </div>
 

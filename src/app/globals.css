@@ -4222,18 +4222,10 @@
 
   /* ── Vault object (one shared SVG primitive) ──────────────── */
   .step3-vault-stage { display: flex; justify-content: center; padding: var(--space-md) 0; }
-  .step3-vault { width: 196px; height: 196px; }
-  /* fills come from gradients (token stops, set inline in the component);
-     strokes are prototype-local effect alphas applied here, not in the JSX. */
-  .step3-vault__rim       { stroke: var(--step3-rim-light); }
-  .step3-vault__rim--warm { stroke: var(--step3-rim-light-w); }
-  .step3-vault__ring      { stroke: var(--step3-line); }
-  .step3-vault__ring--soft{ stroke: var(--step3-line-soft); }
-  .step3-vault__interior-edge { stroke: var(--step3-interior); }
-  .step3-vault__blade     { stroke: var(--step3-blade); }
-  .step3-vault__ember-edge{ stroke: var(--step3-ember-edge); }
-  .step3-vault__seam      { stroke: var(--step3-interior); }
-  .step3-vault__boss-edge { stroke: var(--step3-boss-edge); }
+  /* Canvas 2D vault (src/lib/vault-render). block so no inline descender gap;
+     the backing store is sized to 196px × DPR by paintVaultFrame. All color +
+     lighting now lives in the engine palette (no SVG stroke classes). */
+  .step3-vault { display: block; width: 196px; height: 196px; }
 
   /* ── Value + price ────────────────────────────────────────── */
   .step3-value { font-size: var(--text-body); color: var(--color-text-primary); line-height: 1.6; }
@@ -4263,8 +4255,8 @@
 
   /* ── Ceremonial centering (hold / sealed / park / processing) ─ */
   .step3-ceremony { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--space-lg); padding-bottom: var(--space-4xl); }
-  .step3-ceremony__copy { font-family: var(--font-display); font-size: var(--text-title); line-height: var(--line-height-title); color: var(--color-text-primary); max-width: 280px; }
-  .step3-ceremony__sub { font-size: var(--text-body); color: var(--color-text-secondary); max-width: 280px; }
+  .step3-ceremony__copy { font-family: var(--font-display); font-size: var(--text-title); line-height: var(--line-height-title); color: var(--color-text-primary); max-width: 280px; margin-inline: auto; }
+  .step3-ceremony__sub { font-size: var(--text-body); color: var(--color-text-secondary); max-width: 280px; margin-inline: auto; }
   .step3-link-quiet { background: transparent; border: 0; color: var(--color-mineral-dark); font-size: var(--text-small); font-weight: 600; cursor: pointer; min-height: 44px; padding: var(--space-sm) var(--space-lg); }
   .step3-link-quiet:hover { color: var(--color-text-primary); }
 
@@ -4308,15 +4300,10 @@
     position: absolute; inset: 0; transform: scale(1);
     transition: transform 300ms var(--ease-seal-ember); will-change: transform;
   }
-  .step3-seal .seal-vault-stack > div { position: absolute; inset: 0; }
-
-  /* will-change promotes the three crossfade layers at mount (idle), so the
-     iris-close onset is NOT paying first-frame layer-promotion cost on the
-     single most important instant of the ceremony (the catch). Without this
-     the worst frame at the phase flip straddles the 50ms gate. */
-  .step3-seal .v-establish   { opacity: 1; transition: opacity 800ms var(--ease-seal-iris); will-change: opacity; }
-  .step3-seal .v-sealed-cool { opacity: 0; transition: opacity 800ms var(--ease-seal-iris); will-change: opacity; }
-  .step3-seal .v-sealed      { opacity: 0; transition: opacity 400ms var(--ease-seal-ember); will-change: opacity; }
+  /* The one canvas fills the stack. The iris-close + ember-catch are drawn
+     INTO it by SealVaultCanvas off the phase clock — no per-layer opacity
+     crossfade to promote (that was the Pass-2 three-SVG approach). */
+  .step3-seal .seal-vault-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 
   /* Copy deck: crossfade only, the seam. Fixed height so the swap never shifts. */
   .step3-seal .copy-deck { position: relative; min-height: 84px; width: 100%; display: flex; justify-content: center; }
@@ -4327,26 +4314,9 @@
   .step3-seal .preseal-cap { transition: opacity 200ms var(--ease-seal-ember); }
 
   /* ── Phase machine ───────────────────────────────────────────── */
-  /* IDLE: establish only, cool, shimmer 0, no copy. */
-  .step3-seal[data-phase="idle"] .v-establish { opacity: 1; }
-
-  /* CLOSING: case closes cool (establish → sealed-cool). Ember stays cool. */
-  .step3-seal[data-phase="closing"] .v-establish { opacity: 0; }
-  .step3-seal[data-phase="closing"] .v-sealed-cool { opacity: 1; }
-
-  /* CATCHING → HANDOFF: establish gone; ember catches (sealed-cool → sealed). */
-  .step3-seal[data-phase="catching"] .v-establish,
-  .step3-seal[data-phase="settling"] .v-establish,
-  .step3-seal[data-phase="sealed"]   .v-establish,
-  .step3-seal[data-phase="handoff"]  .v-establish { opacity: 0; }
-  .step3-seal[data-phase="catching"] .v-sealed-cool { opacity: 0; transition: opacity 400ms var(--ease-seal-ember); }
-  .step3-seal[data-phase="settling"] .v-sealed-cool,
-  .step3-seal[data-phase="sealed"]   .v-sealed-cool,
-  .step3-seal[data-phase="handoff"]  .v-sealed-cool { opacity: 0; }
-  .step3-seal[data-phase="catching"] .v-sealed,
-  .step3-seal[data-phase="settling"] .v-sealed,
-  .step3-seal[data-phase="sealed"]   .v-sealed,
-  .step3-seal[data-phase="handoff"]  .v-sealed { opacity: 1; }
+  /* The vault frames (establish → closed-cool → ignited) are drawn by
+     SealVaultCanvas off [data-phase]; only the copy, micro-settle, and shimmer
+     are CSS-driven below. */
 
   /* Micro-settle: tiny lift on the catch, rests at 1.0 from the settle on. */
   .step3-seal[data-phase="catching"] .seal-vault-stack { transform: scale(1.012); }
@@ -4366,21 +4336,17 @@
   .step3-seal[data-phase="handoff"] .seal-copy { opacity: 0; }
   .step3-seal[data-phase="handoff"] .proc-copy { opacity: 1; }
 
-  /* ── Pre-seal integrity panel: establish, cool ember, shimmer 0, no seal ── */
-  .step3-seal[data-preseal] .v-establish { opacity: 1; }
-  .step3-seal[data-preseal] .v-sealed-cool,
-  .step3-seal[data-preseal] .v-sealed { opacity: 0; }
+  /* ── Pre-seal integrity panel: establish, cool ember, shimmer 0, no seal ──
+     SealVaultCanvas renders the cool open vessel for [data-preseal]; here we
+     only hold the copy + shimmer 0. */
   .step3-seal[data-preseal] .seal-copy,
   .step3-seal[data-preseal] .proc-copy { opacity: 0; }
   .step3-seal[data-preseal] .preseal-cap { opacity: 1; }
   .step3-seal[data-preseal] { --shimmer-intensity: 0; }
 
   /* ── Reduced motion: settled frame rendered directly, zero animation ──
-     The orchestrator jumps phase straight to 'sealed'; [data-rm] kills the
-     transitions so nothing animates in between. Ember static-ignited. */
-  .step3-seal[data-rm] .v-establish,
-  .step3-seal[data-rm] .v-sealed-cool,
-  .step3-seal[data-rm] .v-sealed,
+     The orchestrator jumps phase straight to 'sealed'; SealVaultCanvas paints
+     the settled frame once, and [data-rm] kills the copy/shimmer transitions. */
   .step3-seal[data-rm] .seal-vault-stack,
   .step3-seal[data-rm] .step3__ground-shimmer,
   .step3-seal[data-rm] .copy-line { transition: none !important; }
