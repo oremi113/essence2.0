@@ -670,3 +670,17 @@ Two header/JSDoc comments in shipping Step 6 files describe a world the Chunk 8�
 **Why it matters:** comments asserting a screen "isn't built" or a column "doesn't exist" when both now ship send the next maintainer down a wrong path. Pure documentation, no functional risk.
 **Fix shape:** update both comments to match current behavior. Trivial; fold into any Step 6 touch.
 **Pick up when:** any Step 6 file pass, or the next docs/comment sweep.
+
+### 68. [P2 · decision] Vault breath during Step 3 Processing (reverses shipped dead-still)
+Owner directive (2026-06-30): the canvas vault should **breathe** during Processing (the rig has a ~3.5s breath grammar). The shipped canvas swap (`a4bf38e`) renders the vault **dead-still** through the wait, per Motion Spec §5 / §SEAL-INTEGRITY — and that stillness is **load-bearing**: it's "the budget for the Reveal's pour" and protects the ember-as-single-constant thread. So this is a real reversal of a reasoned lock, not drift.
+
+**Why it matters:** breath during Processing spends the contrast the Step 4 Reveal pour lands against; done full-amplitude it can flatten the payoff. There's a middle path (restrained vessel breath, ember held static). Also a perf consideration: the static frame was free; a continuous canvas breath must clear 60fps @ 4× on a **production** build (per FU-73), not `next dev`.
+**Fix shape:** owner picks A (full rig breath) / B (restrained breath, recommended) / C (reconfirm stillness). Then amend Motion Spec §5 + §SEAL-INTEGRITY, implement in `SealVaultCanvas.tsx` / `VaultObject.tsx` / `paintVault.ts` on a small branch off `main`, re-run the 4× perf gate, update `seal.spec.ts` / `processing.spec.ts` if the motion contract shifts. Full analysis + options: `docs/session-step3-card-capture/Decision_Breath_During_Processing_2026-06-30.md`.
+**Pick up when:** owner confirms A/B/C. Carries kickoff §4 Q3 (the unmapped reds `#ff8a80`/`#5c2b2e` — error/declined state?) as a sub-question to close the engine's state map.
+
+### 69. [P2 · decision] BreathStone state mapping for Vault Continuity & Seal is approximated, undocumented
+`VaultContinuityScreen.tsx:11` renders `BreathStone state="guidance"` and `VaultSealScreen.tsx:13` renders `state="infused"` because the prototype's intended states (`loss-framing` for Continuity, `vault-final` for Seal) **don't exist in the stone engine** — so they were silently approximated with the nearest existing state during the Session-7a/7c build. No `docs/FOLLOW_UPS.md` entry was filed (this is that entry).
+
+**Why it matters:** the approximation means two vault screens don't render the emotional state the prototype intends — Continuity's "loss-framing" beat especially, which the owner has explicitly located *at the pay moment* (see `project_vault_card_capture_decisions`). Entangled with **#406** (the stone reads dull pale-taupe on light grounds — warming the engine touches every stone usage), so the fix wants to ride that warmth pass. Routing the state-map call is design/owner, not mechanical.
+**Fix shape:** decide whether to (a) add `loss-framing` / `vault-final` states to the stone engine (design + engineering), or (b) formally accept the `guidance`/`infused` approximation and document it. Either way, record the decision; don't leave it silent.
+**Pick up when:** the #406 stone-warmth pass, or a Step 4 vault polish chunk — whichever lands first. Pairs with the Step 4 freshness audit (2026-06-30).
