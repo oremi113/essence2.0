@@ -33,6 +33,12 @@ const ACTION_BY_MODE: Record<RestoreMode, { line: string; cta: string }> = {
   },
 };
 
+// Warm, recoverable copy for a restore that never reached Stripe. Money voice:
+// reassure first ("nothing was charged"), no "Error/Failed". Provisional — gets
+// the Step 10 error-copy clarity pass (like the A4 pass) before launch.
+const RESTORE_ERROR =
+  "We couldn't reach our payment partner. Nothing was charged — please try again.";
+
 export interface VaultRestoreScreenProps {
   hasRecordings: boolean;
   /** Decides the action line + CTA label. Defaults to update_card. */
@@ -40,6 +46,8 @@ export interface VaultRestoreScreenProps {
   onRestore: () => void;
   /** Optional — lets the page gate duplicate clicks while the handoff spins up. */
   isRestoring?: boolean;
+  /** Surfaces a warm, recoverable error when the restore handoff couldn't start. */
+  restoreFailed?: boolean;
 }
 
 export function VaultRestoreScreen({
@@ -47,6 +55,7 @@ export function VaultRestoreScreen({
   mode = 'update_card',
   onRestore,
   isRestoring = false,
+  restoreFailed = false,
 }: VaultRestoreScreenProps) {
   const reassurance = hasRecordings ? REASSURANCE_HAS_RECORDINGS : REASSURANCE_NO_RECORDINGS;
   const action = ACTION_BY_MODE[mode];
@@ -69,6 +78,12 @@ export function VaultRestoreScreen({
         >
           {action.cta}
         </button>
+
+        {restoreFailed && (
+          <p className="vault-error vault-restore-screen__error" role="alert">
+            {RESTORE_ERROR}
+          </p>
+        )}
       </div>
     </main>
   );

@@ -10,13 +10,25 @@ interface VaultProtectScreenProps {
   onPlanChange: (plan: BillingPlan) => void;
   onCheckoutInitiate: (plan: BillingPlan) => void;
   onDismiss: () => void;
+  /** Disables the CTA while the checkout request is in flight. */
+  isProcessing?: boolean;
+  /** Surfaces a warm, recoverable error when checkout couldn't start. */
+  checkoutFailed?: boolean;
 }
+
+// Warm, recoverable copy for a checkout that never reached Stripe. Money voice:
+// reassure first ("nothing was charged"), no "Error/Failed". Provisional — gets
+// the Step 10 error-copy clarity pass (like the A4 pass) before launch.
+const CHECKOUT_ERROR =
+  "We couldn't reach our payment partner. Nothing was charged — please try again.";
 
 export function VaultProtectScreen({
   plan,
   onPlanChange,
   onCheckoutInitiate,
   onDismiss,
+  isProcessing = false,
+  checkoutFailed = false,
 }: VaultProtectScreenProps) {
   const pricing = VAULT_PRICING[plan];
 
@@ -98,10 +110,17 @@ export function VaultProtectScreen({
             type="button"
             className="vault-cta"
             onClick={() => onCheckoutInitiate(plan)}
+            disabled={isProcessing}
           >
             Start 7-Day Trial
           </button>
-          <p className="vault-card__reassurance">7 days free. Cancel anytime.</p>
+          {checkoutFailed ? (
+            <p className="vault-error" role="alert">
+              {CHECKOUT_ERROR}
+            </p>
+          ) : (
+            <p className="vault-card__reassurance">7 days free. Cancel anytime.</p>
+          )}
         </div>
 
         <button type="button" className="vault-dismiss" onClick={onDismiss}>

@@ -3217,6 +3217,10 @@
   }
   .vault-cta:hover { background-color: var(--color-mineral-darker); }
   .vault-cta:active { transform: translateY(1px); }
+  .vault-cta:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
   .vault-card__reassurance {
     font-family: var(--font-body);
@@ -3319,6 +3323,18 @@
     font-size: var(--text-body);
   }
   .vault-dismiss--secondary { margin-top: 0; }
+
+  /* Recoverable payment/restore error — warm terracotta, accessible at small
+     size (6.72:1), sits inline under the CTA so recovery is right where the
+     user tapped. Shared by Seal / Protect / Restore. */
+  .vault-error {
+    margin: 0;
+    max-width: 320px;
+    color: var(--color-status-error);
+    font-size: var(--text-small);
+    line-height: 1.5;
+    text-align: center;
+  }
 
   /* ─── Screen 5: Sealed ───────────────────────────────────────────────── */
   .vault-sealed__object { width: 320px; height: 320px; }
@@ -3509,6 +3525,7 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+  .vault-restore-screen__error { margin-top: var(--space-md); }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
