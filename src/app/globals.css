@@ -3163,7 +3163,10 @@
   .vault-card__price-alt {
     font-family: var(--font-body);
     font-size: var(--text-caption);
-    color: var(--color-text-tertiary);
+    /* Was --color-text-tertiary (~2:1 on the warm card) — fails WCAG on this
+       12px fine-print pricing line. Secondary matches the sibling price-period
+       and clears 4.5:1. (Step 4 freshness, 2026-06-30.) */
+    color: var(--color-text-secondary);
     margin-top: var(--space-sm);
   }
 
@@ -3225,7 +3228,11 @@
   .vault-dismiss {
     font-family: var(--font-body);
     font-size: var(--text-body);
-    color: var(--color-text-tertiary);
+    /* Was --color-text-tertiary (~2:1) on a 16px actionable button — fails
+       WCAG (not large text). Secondary keeps it quietly de-emphasized while
+       clearing 4.5:1; hover darkens to primary to preserve the affordance.
+       (Step 4 freshness, 2026-06-30.) */
+    color: var(--color-text-secondary);
     background: transparent;
     border: none;
     padding: var(--space-md) var(--space-lg);
@@ -3234,7 +3241,7 @@
     cursor: pointer;
     transition: color var(--duration-micro) var(--ease-essence);
   }
-  .vault-dismiss:hover { color: var(--color-text-secondary); }
+  .vault-dismiss:hover { color: var(--color-text-primary); }
 
   /* ─── Screen 3: Continuity ───────────────────────────────────────────── */
   .vault-continuity__object { width: 280px; height: 280px; }
@@ -3309,7 +3316,7 @@
   /* Slightly larger target for the ceremonial commit moment. */
   .vault-cta--final {
     min-height: 56px;
-    font-size: 16px;
+    font-size: var(--text-body);
   }
   .vault-dismiss--secondary { margin-top: 0; }
 
@@ -3437,7 +3444,9 @@
   /* Elevated register, not operational. Centered, quiet, ceremonial.
      No banner, no chrome. The vault is paused — the screen holds the user. */
   .vault-restore-screen {
-    min-height: 100vh;
+    /* 100dvh, matching .vault-screen — 100vh clips under the mobile URL bar.
+       (Step 4 freshness, 2026-06-30.) */
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
