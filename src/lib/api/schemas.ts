@@ -4,36 +4,8 @@
  */
 import { z } from "zod";
 
-// ---------------------------------------------------------------------------
-// POST /api/messages
-// ---------------------------------------------------------------------------
-
-const MAX_PROMPT_LENGTH = 2000;
-
-export const messageCreateSchema = z
-  .object(
-    {
-      voiceProfileId: z
-        .string({ error: "voiceProfileId is required" })
-        .transform((v) => v.trim())
-        .refine((v) => v.length > 0, { message: "voiceProfileId is required" }),
-      promptText: z
-        .string({ error: "promptText is required" })
-        .max(MAX_PROMPT_LENGTH, {
-          message: `promptText must be ${MAX_PROMPT_LENGTH} characters or fewer`,
-        })
-        .refine((v) => v.trim().length > 0, {
-          message: "promptText is required",
-        }),
-      title: z.string().optional(),
-      recipientId: z.string().optional(),
-    },
-    // Non-object / null body -> "Invalid JSON body" to match the old hand parser.
-    { error: "Invalid JSON body" },
-  )
-  .loose();
-
-export type MessageCreateBody = z.infer<typeof messageCreateSchema>;
+// (The `messageCreateSchema` for the legacy `POST /api/messages` create
+// handler was removed with that route — FOLLOW_UPS #59.)
 
 // ---------------------------------------------------------------------------
 // POST /api/audio/init-upload
