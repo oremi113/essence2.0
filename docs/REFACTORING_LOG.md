@@ -23,6 +23,21 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-06-30 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 4 new backlog items (FU-70/71/72/73); no code touched.
+- Scanned: health checks on `main` (f9af765) — typecheck ✅ · lint ✅ (lone warning is in the WIP step3 doc folder) · unit **342/342** ✅. Deep-read the two largest merges that hadn't been reviewed as shipping code since the 06-19 triage: **Step 7 Memory Shelf** (PR #61 — playback controller, serializer, list/play routes, shelf client) and the **cross-journey analytics funnel** (PR #59 — `journey.ts`/`context.ts`/`JourneyBeacon` + all call sites). Also reviewed the new `checked-write` primitives + the `no-unchecked-supabase-write` ESLint rule from #70, and ran a marker-debt grep over `src/`.
+- Excluded as work-in-progress: `step3/build-prep` (Step 3 Card Capture — active, last commit 2026-06-29; all `src/components/screens/step3/*` + `globals.css`) and the unmerged `feat/stripe-hardening` branch (restore/webhook surface). Files those branches touch were treated as WIP.
+- Discovered (new FOLLOW_UPS entries):
+  - FU-70 [P3] Memory Shelf playback controller — in-flight signed-URL fetch race (no AbortController/active-attempt guard) plays the wrong recording on rapid card-switch; + swallowed resume failure (silent "playing"); + dead `retry()`; engine has zero unit coverage.
+  - FU-71 [P3] Journey funnel once-guards (3 sites) ship with no test coverage — the StrictMode/effect-refire surface that silently breaks funnel counts; only `trackJourney`'s envelope is tested.
+  - FU-72 [P4] `journey.voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel (doc flags it but nothing enforces it).
+  - FU-73 [P4] Analytics doc↔code drift: `app_opened` doc says it covers all onboarded returns; code fires it only in the voice-ready Home B branch.
+- Verified-clean (no entry): the unchecked-write bug class (FU-42–46/66) is genuinely root-fixed by #70 — success writes inline-checked + return 500/502, only failure marks/bookkeeping use `bestEffortWrite`; the `checkedWrite` `expectRows` zero-row guard is sound. **FU-66 is resolved in code — recommend the fixer strikes it** (discovery flags, fixer strikes, §5). The `import "server-only"` lock is satisfied transitively via `service.ts`/`elevenlabs.ts`, so routes lacking the literal import can't leak a key (not logged). Marker grep: nothing untracked.
+- Triggers came true: FU-22's "Pick up when" (M2 Step 3 card-capture-before-processing reorder) is now **in-flight** on `step3/build-prep` — noted, not promoted (it's WIP + a decision-coupled item, not draggable debt). FU-24/25 connection-pass triggers remain met but unchanged (decision-gated) since the 06-16 flag.
+- Branch / commit: `triage/2026-06-30` @ <this commit>
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-22 — scheduled (scan-only)
 - Outcome: Scan-only — the app is healthy and nothing was cleanly fixable this
   run. Every item near the top of the queue is already being handled in an open
