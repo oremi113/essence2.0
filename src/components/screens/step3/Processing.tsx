@@ -58,8 +58,10 @@ function processingView(p: Step3Props, entry: ProcessingEntry): ProcessingView {
 
 // Processing (handoff §SEAM): owns the post-seal wait, the silent retry loop,
 // generation-failure degradation, and the exit to the neutral handoff frame.
-// The vault and ember are dead-still through the entire wait (Motion Spec §5);
-// the ONLY motion is the ground shimmer. No re-pay control ever.
+// The sealed vault breathes restrained through the wait (Motion Spec §5, Option B,
+// decision 2026-06-30) — a GPU scale-about-center pulse, ember held static; it
+// settles to rest at the neutral handoff so the Reveal builds from a still frame.
+// The ground shimmer is the other motion. No re-pay control ever.
 export function Processing(props: ProcessingProps) {
   const view = processingView(props, props.entry ?? 'seal');
   // The single ground-shimmer primitive. Writes --shimmer-intensity onto the
@@ -70,7 +72,7 @@ export function Processing(props: ProcessingProps) {
     <Step3Frame shimmer={0} groundRef={groundRef} groundId="shimmer">
       <div className="step3-body">
         <div className="step3-ceremony" data-neutral-handoff={view.isNeutralHandoff ? '' : undefined}>
-          <VaultObject phase="sealed" emberState="ignited" />
+          <VaultObject phase="sealed" emberState="ignited" breathing={!view.isNeutralHandoff} />
 
           {view.showLandingBadge && (
             <span className="step3-badge">Picking up where you left off</span>
