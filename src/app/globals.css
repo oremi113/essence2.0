@@ -4238,6 +4238,28 @@
      lighting now lives in the engine palette (no SVG stroke classes). */
   .step3-vault { display: block; width: 196px; height: 196px; }
 
+  /* Breath B (decision 2026-06-30, Decision_Breath_During_Processing): during
+     Processing the sealed vault breathes — a restrained, GPU-only scale pulse so
+     the keepsake reads as alive without spending the Reveal's pour budget. It
+     scales about center, so the ember (at center) holds static — the one-constant
+     thread (Motion Spec §SEAL-INTEGRITY). The painted canvas is never repainted;
+     the transform is compositor-only, so it holds 60fps at 4× CPU. The curve is a
+     symmetric ease-in-out — NOT --ease-breath, which is Stone-only (§Curve
+     discipline). Starts and ends at scale(1) so the mount frame stays pixel-
+     identical to CardCapture's settled frame (§SEAM). */
+  .step3-vault--breathing {
+    transform-origin: center;
+    will-change: transform;
+    animation: step3-vault-breath 3500ms ease-in-out infinite;
+  }
+  @keyframes step3-vault-breath {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.008); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .step3-vault--breathing { animation: none; transform: none; }
+  }
+
   /* ── Value + price ────────────────────────────────────────── */
   .step3-value { font-size: var(--text-body); color: var(--color-text-primary); line-height: 1.6; }
   .step3-plan-toggle { display: flex; gap: var(--space-sm); }

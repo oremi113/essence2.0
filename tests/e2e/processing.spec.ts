@@ -8,7 +8,7 @@
  *   - the exit ease-down eases active → neutral (0.025) and stops on the
  *     neutral handoff contract frame (§5/§7) — a real, nameable boundary
  *   - reduced motion renders the static faint rest (0.05), zero animation
- *   - the vault + ember are dead-still through the wait (only the ground moves)
+ *   - the sealed vault breathes restrained while the ember center holds static
  *   - zero console errors
  *
  * GATED (not asserted green here): the notify-landing cold-start re-fetch
@@ -23,7 +23,7 @@
  *   #shimmer        the ground-shimmer element (opacity = --shimmer-intensity)
  *   #btn-play  walks normal → extended (climb)   #btn-exit  gen complete (exit)
  *   #btn-rm    reduced-motion toggle
- *   state buttons by visible label; .step3-vault is the dead-still vault
+ *   state buttons by visible label; .step3-vault is the (restrained-breathing) vault
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -135,21 +135,37 @@ test.describe('reduced motion', () => {
   });
 });
 
-// ── Processing stillness: the vault never moves ──────────────────────────────
+// ── Processing breath: vessel breathes restrained, ember center holds static ──
+// Breath B (2026-06-30, Motion Spec §5 amended). The sealed vault carries a
+// restrained ~0.8% scale-about-center pulse: it reads alive, but the center
+// (the ember — the one-constant thread, §SEAL-INTEGRITY) never moves.
 
-test.describe('stillness', () => {
-  test('vault + ember are dead-still while the ground shimmer breathes', async ({ page }) => {
+test.describe('breath', () => {
+  test('the sealed vault breathes restrained while the ember center holds static', async ({ page }) => {
     await selectState(page, 'extended');
     await page.waitForTimeout(2600);
-    const box1 = await page.locator('.step3-vault').boundingBox();
-    await page.waitForTimeout(1200);
-    const box2 = await page.locator('.step3-vault').boundingBox();
-    expect(box1).not.toBeNull();
-    expect(box2).not.toBeNull();
-    expect(box2!.x).toBeCloseTo(box1!.x, 1);
-    expect(box2!.y).toBeCloseTo(box1!.y, 1);
-    expect(box2!.width).toBeCloseTo(box1!.width, 1);
-    expect(box2!.height).toBeCloseTo(box1!.height, 1);
+    // Sample the vault box across a full breath cycle (~3.5s).
+    const cxs: number[] = [];
+    const cys: number[] = [];
+    const ws: number[] = [];
+    for (let i = 0; i < 9; i++) {
+      const b = await page.locator('.step3-vault').boundingBox();
+      expect(b).not.toBeNull();
+      cxs.push(b!.x + b!.width / 2);
+      cys.push(b!.y + b!.height / 2);
+      ws.push(b!.width);
+      await page.waitForTimeout(420);
+    }
+    const range = (a: number[]) => Math.max(...a) - Math.min(...a);
+    // The ember (vault center) holds static — the breath scales about center, so
+    // the center never drifts. This is the one-constant thread (§SEAL-INTEGRITY).
+    expect(range(cxs), 'center x drift').toBeLessThan(1);
+    expect(range(cys), 'center y drift').toBeLessThan(1);
+    // The vessel breathes (alive) but stays restrained — well under the Reveal's
+    // amplitude. ~0.8% scale on a 196px box ≈ 1.6px of width travel.
+    const wSpread = range(ws);
+    expect(wSpread, 'breath width spread (it moves)').toBeGreaterThan(0.3);
+    expect(wSpread, 'breath is restrained').toBeLessThan(Math.min(...ws) * 0.03);
   });
 });
 

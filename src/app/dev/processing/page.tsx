@@ -5,7 +5,8 @@ import { Processing } from '@/components/screens/step3/Processing';
 import { PROCESSING_STATES } from '@/components/screens/step3/mockStates';
 
 // Permanent dev sandbox + tuning harness for the Processing screen (Pass 3).
-// The vault is dead-still; the only motion is the ground shimmer. Switching
+// The sealed vault breathes restrained (Breath B, 2026-06-30; ember static); the
+// ground shimmer is the other motion. Switching
 // states animates the activation transitions (climb faint→active, exit
 // active→neutral); "Play the wait" / "Gen complete" walk the full arc.
 // notify-landing renders as a static shell — its cold-start re-fetch is GATED
@@ -107,7 +108,7 @@ export default function ProcessingDevPage() {
             ? 'cold-start re-fetch GATED · notify infra'
             : stateId === 'neutral-exit'
               ? 'neutral handoff frame · Reveal builds from here'
-              : 'vault + ember dead-still · no pour'}
+              : 'vessel breathes restrained · ember static · no pour'}
         </span>
       </div>
 
