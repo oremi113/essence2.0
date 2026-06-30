@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VaultProtectScreen } from '@/components/screens/vault/VaultProtectScreen';
 import type { BillingPlan } from '@/lib/vault';
@@ -14,7 +15,22 @@ export function ProtectActions() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = readPlan(new URLSearchParams(searchParams.toString()));
-  const handleCheckout = useCheckout('protect');
+  const checkout = useCheckout('protect');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [checkoutFailed, setCheckoutFailed] = useState(false);
+
+  const handleCheckout = async (next: BillingPlan) => {
+    if (isProcessing) return;
+    setCheckoutFailed(false);
+    setIsProcessing(true);
+    const handled = await checkout(next);
+    // handled: navigation is underway, this component unmounts. Otherwise the
+    // request failed — re-enable the CTA and show a recoverable error.
+    if (!handled) {
+      setCheckoutFailed(true);
+      setIsProcessing(false);
+    }
+  };
 
   const handlePlanChange = (next: BillingPlan) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -32,6 +48,8 @@ export function ProtectActions() {
       onPlanChange={handlePlanChange}
       onCheckoutInitiate={handleCheckout}
       onDismiss={handleDismiss}
+      isProcessing={isProcessing}
+      checkoutFailed={checkoutFailed}
     />
   );
 }
