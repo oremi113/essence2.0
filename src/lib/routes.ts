@@ -42,6 +42,9 @@ export const ROUTES = {
   vaultReveal: "/app/vault/reveal",
   vaultSeal: "/app/vault/seal",
   vaultSealed: "/app/vault/sealed",
+
+  /** Step 9 Settings & Trust — the control + reassurance surface (gear on Home B). */
+  settings: "/app/settings",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

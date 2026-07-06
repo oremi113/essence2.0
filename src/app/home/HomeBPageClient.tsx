@@ -65,9 +65,7 @@ export function HomeBPageClient({
       // Home B's 3/3 isn't a blocked attempt. Documented divergence from the
       // prototype, which predates the app's C2/C3 split (session brief).
       onWaitlist={() => router.push(ROUTES.messagesWaitlist)}
-      // Settings (Step 9 / M3) isn't built yet — the affordance lives here, the
-      // route lands later. Intentionally a no-op until then (FOLLOW_UPS).
-      onSettings={() => {}}
+      onSettings={() => router.push(ROUTES.settings)}
     />
   );
 }

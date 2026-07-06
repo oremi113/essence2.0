@@ -164,6 +164,17 @@
   --ease-seal-iris:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* placeholder = --ease-essence; vault thread tunes later (one-token swap) */
   --ease-seal-ember: cubic-bezier(0.2, 0.0, 0.5, 1);  /* ember catch + shimmer onset (Pass 2) */
   --ease-seal-exit:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* Processing exit ease-down (Pass 3); tune tail toward (0.4,0,0.15,1) on oat */
+
+  /* ─── STEP 9 · SETTINGS & TRUST ───────────────────────
+     Lands BEFORE SettingsScreen references it (per the Step 3 contract:
+     ported verbatim against the old @theme these var()s resolved to
+     nothing and the paused-pill fills / borders / row hairlines rendered
+     blank). Source of truth: prototypes/essence-step9-settings-trust.html
+     PORT NOTE 1. The lapsed family is muted-warm, never red — a paused
+     subscription reassures, it does not alarm. */
+  --color-lapsed-surface: #EBE3D6;  /* paused/lapsed/cancelled pill fill */
+  --color-lapsed-border:  #DCD0BC;  /* pill + switch + confirm-field + trust-band borders */
+  --color-hairline:       rgba(28, 26, 24, 0.08);  /* row top-borders — weightier than --color-border for stacked settings rows */
 }
 
 @layer base {
