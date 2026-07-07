@@ -15,7 +15,11 @@ export const ONBOARDING_TIMING = {
   CONVEYOR_PHRASE_DURATION_MS: 1500,
   /** Screen 2 — silence after the last transient phrase before "Your voice." lands. */
   CONVEYOR_FINAL_BEAT_MS: 1500,
-  /** Screen 2 — silence after "Your voice." before the CTA fades in. */
+  /** Screen 2 — widened beat after "Your voice." before "Their timeline." lands
+   *  below it (the stacked conclusion). Salvaged from the animation-polish
+   *  conveyor tuning (its tail landed ~1.4s after the final phrase). */
+  CONVEYOR_TAIL_BEAT_MS: 1400,
+  /** Screen 2 — silence after "Their timeline." before the CTA fades in. */
   CONVEYOR_CTA_BEAT_MS: 3000,
 
   /** Screen 6→7 — depress → release window on the advance button (DESIGN BRIEF 002). */
