@@ -164,6 +164,17 @@
   --ease-seal-iris:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* placeholder = --ease-essence; vault thread tunes later (one-token swap) */
   --ease-seal-ember: cubic-bezier(0.2, 0.0, 0.5, 1);  /* ember catch + shimmer onset (Pass 2) */
   --ease-seal-exit:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* Processing exit ease-down (Pass 3); tune tail toward (0.4,0,0.15,1) on oat */
+
+  /* ─── STEP 9 · SETTINGS & TRUST ───────────────────────
+     Lands BEFORE SettingsScreen references it (per the Step 3 contract:
+     ported verbatim against the old @theme these var()s resolved to
+     nothing and the paused-pill fills / borders / row hairlines rendered
+     blank). Source of truth: prototypes/essence-step9-settings-trust.html
+     PORT NOTE 1. The lapsed family is muted-warm, never red — a paused
+     subscription reassures, it does not alarm. */
+  --color-lapsed-surface: #EBE3D6;  /* paused/lapsed/cancelled pill fill */
+  --color-lapsed-border:  #DCD0BC;  /* pill + switch + confirm-field + trust-band borders */
+  --color-hairline:       rgba(28, 26, 24, 0.08);  /* row top-borders — weightier than --color-border for stacked settings rows */
 }
 
 @layer base {
@@ -4235,6 +4246,28 @@
      the backing store is sized to 196px × DPR by paintVaultFrame. All color +
      lighting now lives in the engine palette (no SVG stroke classes). */
   .step3-vault { display: block; width: 196px; height: 196px; }
+
+  /* Breath B (decision 2026-06-30, Decision_Breath_During_Processing): during
+     Processing the sealed vault breathes — a restrained, GPU-only scale pulse so
+     the keepsake reads as alive without spending the Reveal's pour budget. It
+     scales about center, so the ember (at center) holds static — the one-constant
+     thread (Motion Spec §SEAL-INTEGRITY). The painted canvas is never repainted;
+     the transform is compositor-only, so it holds 60fps at 4× CPU. The curve is a
+     symmetric ease-in-out — NOT --ease-breath, which is Stone-only (§Curve
+     discipline). Starts and ends at scale(1) so the mount frame stays pixel-
+     identical to CardCapture's settled frame (§SEAM). */
+  .step3-vault--breathing {
+    transform-origin: center;
+    will-change: transform;
+    animation: step3-vault-breath 3500ms ease-in-out infinite;
+  }
+  @keyframes step3-vault-breath {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.008); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .step3-vault--breathing { animation: none; transform: none; }
+  }
 
   /* ── Value + price ────────────────────────────────────────── */
   .step3-value { font-size: var(--text-body); color: var(--color-text-primary); line-height: 1.6; }

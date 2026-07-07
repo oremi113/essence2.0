@@ -29,7 +29,7 @@
 
 **The ember is the constant.** It catches at confirmed commit, holds lit and static through the entire wait, and is still the last thing lit when the Reveal takes over. One element threads the whole ceremonial arc (capture to processing to Reveal). Every timing decision below protects that thread.
 
-**Stillness is the budget for the pour.** Processing is deliberately under-animated (one ambient layer, vault and ember dead-still). The quiet is what makes the Reveal's pour land. Do not spend motion on the vessel during the wait.
+**Stillness is the budget for the pour.** Processing is deliberately under-animated (one ambient ground layer; the ember dead-still). The quiet is what makes the Reveal's pour land. *(Amended 2026-06-30, Breath B Option B: the vessel now carries a **restrained** breath — see §5. It is sized deliberately below the Reveal's motion and holds the ember static, so the budget for the pour is preserved. Do not let the breath grow toward the Reveal's amplitude — the moment it competes with the pour, it has overspent.)*
 
 **Curve discipline.** The vault uses `var(--ease-seal-iris)` (iris close), `var(--ease-seal-ember)` (ember catch + shimmer onset), and `var(--ease-seal-exit)` (Processing exit). `var(--ease-page)` is **not** used by the vault — the exit moved off it in Pass 3 (see §2). `var(--ease-breath)` is Stone-only and never touches the vault or the shimmer. **Do not retune `--ease-essence` for the close** — it is the universal state-transition curve (~60 references across `globals.css`); a hero-moment tweak there shifts every transition app-wide. The close gets its own token instead (see §2).
 
@@ -124,7 +124,27 @@ One primitive, spec'd globally, activated only in the ceremonial/waiting registe
 
 ## §5 Processing motion and exit
 
-**During the wait.** Vault dead-still, sealed, ember static-ignited. The only motion is the ground shimmer at the intensity for the current state (§4). Copy progresses on timers: normal → extended → notify-handoff. No vault motion at any point.
+> **Amendment — Breath B (owner decision, 2026-06-30; Option B in
+> `Decision_Breath_During_Processing_2026-06-30.md`).** The earlier rule was
+> *vault dead-still through the wait*. The owner chose to let the sealed vault
+> **breathe** during Processing. We took the **restrained** option: a small,
+> compositor-only scale pulse that reads as a living keepsake while deliberately
+> staying far below the Reveal's motion, so it does **not** spend the pour budget
+> (§SEAL-INTEGRITY, amended), and that scales **about center** so the ember holds
+> static — the one-constant thread survives. The text below reflects the amended
+> behavior.
+
+**During the wait.** The sealed vault **breathes restrained**: a ~3.5s scale
+pulse of ~0.8% (CSS `transform`, compositor-only, no canvas repaint), centered so
+the ember **holds static-ignited** — the ember never moves or brightens. The
+ground shimmer is the other motion, at the intensity for the current state (§4).
+Copy progresses on timers: normal → extended → notify-handoff. The breath is the
+**only** vault motion, and it is bounded: enough to feel alive, not enough to
+compete with the Reveal's pour. Curve: a symmetric ease-in-out (**not**
+`--ease-breath`, which is Stone-only — §Curve discipline). The breath starts and
+ends at scale 1, so Processing's mount frame stays pixel-identical to
+CardCapture's settled frame (§SEAM), and it **settles to rest at the neutral
+handoff** (gen ready) so the Reveal builds from a still frame.
 
 **Exit on completion (gen ready).** The shimmer eases from `active` (0.12) down to `neutral` (0.025) over ~1200ms using `var(--ease-seal-exit)`. Stillness softens. This is the held breath releasing. It lands on the neutral contract frame (§7) and stops there.
 
@@ -142,7 +162,7 @@ Single source of truth: the `useReducedMotion` hook. Pin to peak/mid resting val
 |---|---|
 | Seal | No iris animation, no ember bloom. Render the sealed resting frame directly: iris closed, ember lit (static), at peak/mid. Copy shows "Sealed. Your voice is on its way." instantly (no crossfade), then the same ~2.5s dwell timing holds before the Processing copy swaps in (the dwell is copy-pacing, not motion, so RM keeps the beat). |
 | Shimmer | Static faint rest frame. No loop, no onset animation. |
-| Processing | Already still. Shimmer at static rest. |
+| Processing | The vault breath is disabled — the sealed vault renders at its static rest frame (scale 1, the §SEAM frame). Shimmer at static rest. (Breath B: the breath is a CSS animation gated behind `prefers-reduced-motion: reduce`.) |
 | Processing exit | No animated ease-down. The neutral contract frame is rendered directly. |
 | Reveal handoff | Reveal builds from neutral under its own RM rules. |
 

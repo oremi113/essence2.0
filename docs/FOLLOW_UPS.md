@@ -670,3 +670,32 @@ Two header/JSDoc comments in shipping Step 6 files describe a world the Chunk 8�
 **Why it matters:** comments asserting a screen "isn't built" or a column "doesn't exist" when both now ship send the next maintainer down a wrong path. Pure documentation, no functional risk.
 **Fix shape:** update both comments to match current behavior. Trivial; fold into any Step 6 touch.
 **Pick up when:** any Step 6 file pass, or the next docs/comment sweep.
+
+## Step 9 · Settings & Trust (2026-07-06)
+
+### 68. [P3] Notification toggles are optimistic-only — no prefs store, so they revert on reload
+`src/components/screens/settings/SettingsScreen.tsx` renders the two notification switches (`trial_reminders`, `payment_notices`) with local optimistic state seeded from props, and `SettingsPageClient.tsx`'s `onToggleNotification` is a deliberate no-op — there is no `notification_prefs` store to persist to, and no `/api/analytics` allowlist entry for the `settings.*` namespace (so a `track()` call would be dropped).
+
+**Why it matters:** a user who turns a toggle off sees it flip back on after a reload (props re-seed from the page defaults `{true,true}`). The emails themselves (trial/renewal reminders, payment notices) are the only ones sent regardless, so nothing over-sends — but the control currently doesn't *do* anything. Also blocks the specced `settings.notification_toggled` telemetry (see `docs/analytics/2026-07-06-settings.md`).
+**Fix shape:** add a `notification_prefs` column/table (per-user booleans), read it in `src/app/app/settings/page.tsx` instead of the hardcoded defaults, and make `onToggleNotification` persist via a checked write + fire `settings.notification_toggled` once the `settings.*` events are allowlisted in `/api/analytics`. Screen needs no change — the prop contract already carries `(key, next)`.
+**Pick up when:** notification prefs become a product requirement, or the next settings/telemetry pass.
+
+### 69. [P3] Delete-failure terminal says "reach us" but there's no support destination wired
+The "your account is still here" partial-failure terminal (`SettingsScreen.tsx`, `terminal === 'failed'`) copy reads "…or reach us and we'll take care of it," but there is no support email/in-app contact behind it — the only actions are "Try again" (reopens delete beat 2) and "Not now" (dismiss). The prototype header (`RISKY CONTROLS`) flags this as owner-to-confirm.
+**Why it matters:** a user whose teardown half-failed is told they can reach us, with no way to. Low frequency (only on a teardown that partially fails) but high-stakes for the person who hits it.
+**Fix shape:** owner decides the support destination (a `mailto:` support address or an in-app contact route); wire it as a third action or an inline link in the failure terminal. Copy is already reassurance-first; just needs the real target.
+**Pick up when:** owner confirms the support destination (also referenced in the prototype's `confirmDelete` note).
+
+### 70. [P3] `settings.delete_account_invoked` logs `outcome: 'success'` before the teardown runs
+`src/app/app/settings/actions.ts:144` fires `logEvent({ event: 'settings.delete_account_invoked', …, outcome: 'success' })` at the top of `deleteAccountAction`, before any Stripe/storage/row work. It's an "invocation started" marker (real completion is `settings.delete_account_complete` at :205), but `outcome: 'success'` on a pre-work event reads as "the delete succeeded" in a naive log/funnel query.
+
+**Why it matters:** anyone filtering `outcome = 'success'` for delete telemetry double-counts every attempt as a completion, masking partial-failures — the exact gap the analytics note (`docs/analytics/2026-07-06-settings.md`) says the invoked-without-complete pair should surface. Pure telemetry-accuracy issue; no functional risk.
+**Fix shape:** set `outcome: 'pending'` (or omit `outcome`) on the invoked event so only `delete_account_complete` carries `success`. One-line change; re-check the analytics note's "what to watch" phrasing still matches.
+**Pick up when:** the next settings/telemetry pass, or before wiring `settings.*` into `usage_events`.
+
+### 71. [P3] Email-change sheet can double-submit on a fast second Enter
+`src/components/screens/settings/SettingsScreen.tsx` (email input `onKeyDown`, ~:735) calls `submitEmail()` on Enter regardless of `emailPhase`. The "Send the link" button is `disabled` during `'sending'`, but the keydown handler isn't guarded, so a second Enter while the first request is in flight fires `onChangeEmail` (→ `changeEmailAction`, a real Supabase `updateUser`) twice.
+
+**Why it matters:** a duplicate magic-link identity-change request — low frequency and Supabase is idempotent enough that it's not corrupting, but it's a wasted round-trip and a second confirm email to the new address. Cheap to close.
+**Fix shape:** early-return in `submitEmail` (or the Enter handler) when `emailPhase === 'sending'`, mirroring the button's disabled guard.
+**Pick up when:** any SettingsScreen touch, or the next input-hardening sweep.

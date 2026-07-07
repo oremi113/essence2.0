@@ -11,6 +11,12 @@ interface VaultObjectProps {
   // aria-live copy + readouts carry state) — suppress role/label so AT does not
   // announce three overlapping "Your Vault" images.
   decorative?: boolean;
+  // Processing only: a restrained, GPU-composited breath on the sealed vault
+  // (Motion Spec §5, decision 2026-06-30). A CSS scale-about-center pulse — the
+  // ember holds static, the canvas is never repainted. Default off; every other
+  // usage (CardCapture seal, the seal stack) paints dead-still. Reduced motion
+  // disables the animation in CSS.
+  breathing?: boolean;
 }
 
 // The single signature Vault object — the Canvas 2D engine (src/lib/vault-render)
@@ -27,7 +33,7 @@ interface VaultObjectProps {
 // Memoized: in the seal stack three VaultObjects render with constant props.
 // memo keeps a phase flip on the parent from repainting layers whose props did
 // not change.
-function VaultObjectImpl({ phase, emberState, decorative = false }: VaultObjectProps) {
+function VaultObjectImpl({ phase, emberState, decorative = false, breathing = false }: VaultObjectProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -51,7 +57,7 @@ function VaultObjectImpl({ phase, emberState, decorative = false }: VaultObjectP
   return (
     <canvas
       ref={canvasRef}
-      className="step3-vault"
+      className={breathing ? 'step3-vault step3-vault--breathing' : 'step3-vault'}
       {...a11y}
       data-phase={phase}
       data-ember={emberState}
