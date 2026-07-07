@@ -31,22 +31,97 @@ Home B prototype must land before build can start. M0 + M1 are complete.
 
 ## Status update — 2026-07-06 (supersedes the 2026-06-17 audit above)
 
-The build has moved well past the June snapshot. **Every journey screen now
-exists in the repo.** Reconciled against `main` + the open PRs:
+The build has moved well past the June snapshot. **Every primary journey screen
+exists in the repo, and the M2/M3 feature batch is merged to `main`:**
 
-- **M2 Hub + subscribe** — Step 8 **Home B built** (merged, PR #61). Step 3
-  **Card Capture in active build** (`components/screens/step3/CardCapture.tsx` +
-  Processing + Sealed through "Pass 3"); PR **#81** open. ~90%.
-- **M3 Account/trust/system** — Step 9 **Settings & Trust built** (PR **#83** →
-  `main`). Step 10 **per-flow error states** in flight (PR **#79**, Ch2 payment
-  recovery). Step 4 **Vault freshness** in flight (PR **#80**).
+- **M2 Hub + subscribe** — ✅ Step 8 Home B (PR #61) + Step 3 Card Capture
+  (PR #73/#81). Complete.
+- **M3 Account/trust/system** — ✅ Step 9 Settings & Trust (PR #83) · ✅ Step 4
+  Vault freshness (PR #80) · 🔨 Step 10 per-flow error states **partial** — only
+  Ch2 (payment/restore recovery, PR #79) landed.
 - **M4** — not started.
 
-**Near-term reality: a PR pile-up.** ~9 open PRs, several 1–2 weeks stale
-(features #82/#81/#80/#79 + tech-debt #77/#75/#72/#74 + triage #74). `main` looks
-further along than it is. **Recommended order:** land the backlog (Step 9 #83 →
-finish M2/M3 via #81/#80/#79 → clear the debt PRs) *before* opening M4, so
-integration/hardening runs against a clean, coherent `main`.
+### Reality check: what "every screen exists" hides *(surfaced by a 2026-07-06 code scan)*
+
+The roadmap read as if only hardening/polish remained. It doesn't — these are
+**genuine unbuilt requirements still on the launch path**, not polish:
+
+1. **Step 10 error states are ~1/4 done.** Only payment-recovery (Ch2) shipped.
+   Generation-failure, audio-can't-play, and offline states are unbuilt
+   (MASTER_SPEC Ch.12).
+2. **C3 "Vault Limit" screen is unbuilt** (FOLLOW_UPS #38) — the 3-lifetime-messages
+   enforcement UI. **Gates the core monetization rule**, so not optional.
+3. **First Breath ceremony audio is unwired** — `TODO` placeholders only
+   (harmonic swell / resonant bell). May need sound design.
+4. **Legal/launch surfaces don't exist** — only an onboarding privacy *modal*;
+   no privacy-policy or terms pages, no production deploy hardening/monitoring.
+5. **Debt + leftovers** — ~65 open FOLLOW_UPS to triage for launch-blockers; a
+   dead `record/complete/stub` checkout stub to remove; Home A is still a stub
+   (confirm whether V1 needs it).
+
+**So the state is "back third of the build," not "final coat of paint."**
+
+---
+
+## Remaining work to launch — recalibrated 2026-07-06 (full path, no lean cut)
+
+Calibrated to observed velocity: ~21 weeks elapsed (Feb 11 → Jul 7), bursty
+cadence (heavy weeks ~20–25 commits, quiet weeks ~2–4), recent per-screen rhythm
+of **1–2 calendar weeks each = an initial AI build sweep + 1–2 audit/verify/polish
+rounds** (each round is a real focused session, as the Step 9 finalize showed).
+
+| # | Bucket | Focused hrs (AI-assisted) |
+|---|---|---|
+| 1 | Step 10 remaining error chapters (gen-fail / playback / offline) | 15–30 |
+| 2 | C3 Vault Limit screen (design-gated + build) | 10–24 |
+| 3 | First Breath ceremony audio (assets + wiring; may need sound design) | 8–20 |
+| 4 | Full-journey integration & wiring (1→10 as one app) | 20–40 |
+| 5 | Stripe lifecycle hardening (trial→active→lapse→restore) + real-voice cost at volume | 12–28 |
+| 6 | Mobile-web polish (responsive, touch targets, optional PWA) | 10–24 |
+| 7 | **Real-device QA + bug-fix passes** (least AI-compressible) | 30–60 |
+| 8 | Launch prep: privacy/terms build, analytics→validation, deploy hardening + monitoring | 12–30 |
+| 9 | Launch-blocking debt triage (subset of the ~65 FOLLOW_UPS) | 10–25 |
+| 10 | Cross-app design/polish rounds (the audit texture, applied everywhere) | 15–35 |
+| | **Total** | **~140–315 focused hrs** |
+
+**Calendar at current engaged pace** (~15–25 productive AI-assisted hrs/active
+week): **~2.5–5 months, realistic middle ~3–3.5 months.** The spread is driven by
+the items AI can't compress and that need the **owner**: real-device QA surprises,
+legal content, Stripe production + tax setup, ceremony sound design, and the
+"is this launch-quality?" call per flow. Design-gated items (C3, the Step 10
+states) add calendar that isn't coding.
+
+## Launch punch-list (burn-down)
+
+Track these to done. `[ ]` = open, grouped by the buckets above.
+
+**Finish the journey**
+- [ ] Step 10 Ch — generation-failure state (create flow can't render a voice)
+- [ ] Step 10 Ch — audio-can't-play state (playback failure on shelf/first-breath)
+- [ ] Step 10 Ch — offline / connection-lost state
+- [ ] C3 Vault Limit screen — design prototype → build → wire the 3-message cap
+- [ ] First Breath ceremony audio — source/produce assets + wire the swell + bell
+- [ ] Remove dead `record/complete/stub`; confirm Card Capture is the only checkout path
+- [ ] Decide Home A: build its brief, or delete the stub for V1
+
+**Integrate & harden**
+- [ ] Full-journey wiring 1→10 — nav, state, transitions, the seams as one app
+- [ ] Stripe lifecycle E2E — trial → active → lapse → restore, verified live
+- [ ] Real-voice cost validation at expected volume
+- [ ] Mobile-web polish — responsive, touch targets, (optional) PWA/installable
+- [ ] Real-device QA matrix — walk the whole journey on real phones; bug-fix passes
+- [ ] Launch-blocking FOLLOW_UPS triage — mark which of the ~65 block launch, fix those
+
+**Launch prep** *(owner-dependent items flagged)*
+- [ ] Privacy policy + terms — content **(owner)** + build the pages
+- [ ] Analytics wired to the validation question (do people pay $12.99?)
+- [ ] Production deploy hardening + monitoring
+- [ ] Stripe production + tax setup **(owner)**
+- [ ] Final launch-bar sign-off **(owner)**
+
+*Estimates are planning ranges, not commitments — software estimation is
+unreliable (see notes below). Biggest single unknown: how many cross-flow bugs
+real-device QA surfaces once 1→10 is wired end-to-end.*
 
 ## Estimating notes (read before trusting the numbers)
 - **"Coding hours"** = focused engineering by one experienced dev. AI-assisted
@@ -162,9 +237,10 @@ parallelizes around it.
 - **Step 9 Settings & Trust** — ✅ built (PR #83). Account, subscription
   management, **delete account** (ships dark behind `ACCOUNT_DELETE_ENABLED`;
   also required later for the App Store), transparency surfaces.
-- **Step 10 per-flow error states** — 🔨 in flight (PR #79, Ch2): generation
-  failure, payment lapse, audio-can't-play, offline.
-- **Step 4 vault freshness check** — 🔨 in flight (PR #80).
+- **Step 10 per-flow error states** — 🔨 **partial**: only Ch2 payment/restore
+  recovery merged (PR #79). Generation-failure, audio-can't-play, offline still
+  unbuilt — see the punch-list above.
+- **Step 4 vault freshness check** — ✅ merged (PR #80).
 - *Exit:* a user can fully manage and leave their account; failures handled gracefully.
 
 ### M4 — Integration, hardening & launch
