@@ -27,6 +27,27 @@ current in `MASTER_SPEC.md` §V1.1 (Vault $12.99/mo · $119/yr · 7-day trial ·
 **Next move:** M2 is the active milestone but is **design-gated** — the Step 8
 Home B prototype must land before build can start. M0 + M1 are complete.
 
+---
+
+## Status update — 2026-07-06 (supersedes the 2026-06-17 audit above)
+
+The build has moved well past the June snapshot. **Every journey screen now
+exists in the repo.** Reconciled against `main` + the open PRs:
+
+- **M2 Hub + subscribe** — Step 8 **Home B built** (merged, PR #61). Step 3
+  **Card Capture in active build** (`components/screens/step3/CardCapture.tsx` +
+  Processing + Sealed through "Pass 3"); PR **#81** open. ~90%.
+- **M3 Account/trust/system** — Step 9 **Settings & Trust built** (PR **#83** →
+  `main`). Step 10 **per-flow error states** in flight (PR **#79**, Ch2 payment
+  recovery). Step 4 **Vault freshness** in flight (PR **#80**).
+- **M4** — not started.
+
+**Near-term reality: a PR pile-up.** ~9 open PRs, several 1–2 weeks stale
+(features #82/#81/#80/#79 + tech-debt #77/#75/#72/#74 + triage #74). `main` looks
+further along than it is. **Recommended order:** land the backlog (Step 9 #83 →
+finish M2/M3 via #81/#80/#79 → clear the debt PRs) *before* opening M4, so
+integration/hardening runs against a clean, coherent `main`.
+
 ## Estimating notes (read before trusting the numbers)
 - **"Coding hours"** = focused engineering by one experienced dev. AI-assisted
   build (as in recent sessions) compresses the **screen/web** work a lot; it
@@ -130,19 +151,20 @@ parallelizes around it.
   states (288 unit tests).
 - *Exit:* ✅ save a message → revisit/replay it on a redesigned shelf. Core loop whole.
 
-### M2 — The hub + the subscribe moment
-- **Step 8 Home B** — build from design; the hub linking create / shelf / settings.
-- **Step 3 Card Capture** — build the redesigned subscribe moment (Stripe
-  checkout underneath already works).
+### M2 — The hub + the subscribe moment *(🔨 ~90% — see 2026-07-06 status above)*
+- **Step 8 Home B** — ✅ built (PR #61). The hub linking create / shelf / settings.
+- **Step 3 Card Capture** — 🔨 in active build (PR #81); Stripe checkout underneath
+  already works.
 - *Exit:* full happy path — home → subscribe ($12.99) → create → hear → shelf —
   coherent and payable.
 
-### M3 — Account, trust & system completeness
-- **Step 9 Settings & Trust** — account, subscription management, **delete
-  account** (also required later for the App Store), transparency surfaces.
-- **Step 10 per-flow error states** — now that flows exist: generation failure,
-  payment lapse, audio-can't-play, offline.
-- **Step 4 vault freshness check** — quick polish on the oldest redesigned screens.
+### M3 — Account, trust & system completeness *(🔨 in progress — see 2026-07-06 status above)*
+- **Step 9 Settings & Trust** — ✅ built (PR #83). Account, subscription
+  management, **delete account** (ships dark behind `ACCOUNT_DELETE_ENABLED`;
+  also required later for the App Store), transparency surfaces.
+- **Step 10 per-flow error states** — 🔨 in flight (PR #79, Ch2): generation
+  failure, payment lapse, audio-can't-play, offline.
+- **Step 4 vault freshness check** — 🔨 in flight (PR #80).
 - *Exit:* a user can fully manage and leave their account; failures handled gracefully.
 
 ### M4 — Integration, hardening & launch
