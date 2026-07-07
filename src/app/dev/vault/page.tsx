@@ -17,6 +17,7 @@ import type { BillingPlan } from '@/lib/vault';
 export default function VaultDevSandbox() {
   const [plan, setPlan] = useState<BillingPlan>('annual');
   const [lastAction, setLastAction] = useState<string>('(none)');
+  const [checkoutFailed, setCheckoutFailed] = useState(false);
 
   const log = (action: string) =>
     setLastAction(`${new Date().toLocaleTimeString()} — ${action}`);
@@ -47,6 +48,13 @@ export default function VaultDevSandbox() {
           >
             toggle plan
           </button>
+          <button
+            type="button"
+            onClick={() => setCheckoutFailed((v) => !v)}
+            style={{ padding: '4px 8px', fontSize: 12 }}
+          >
+            checkoutFailed: {String(checkoutFailed)}
+          </button>
           <div>
             Last action: <strong>{lastAction}</strong>
           </div>
@@ -66,6 +74,7 @@ export default function VaultDevSandbox() {
           }}
           onCheckoutInitiate={(p) => log(`checkout initiate → ${p}`)}
           onDismiss={() => log('dismiss → continuity')}
+          checkoutFailed={checkoutFailed}
         />
       </Section>
 
@@ -78,6 +87,7 @@ export default function VaultDevSandbox() {
           billingPlan={plan}
           onCheckoutInitiate={(p) => log(`SEAL checkout initiate → ${p}`)}
           onDismiss={() => log('dismiss → home')}
+          checkoutFailed={checkoutFailed}
         />
       </Section>
 

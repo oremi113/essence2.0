@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ESSENCE · Step 3 · Processing · Pass 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  ======================================================================
+  ESSENCE · STEP 3 · PROCESSING · PASS 3
+  Design memo for the production code architect.
+  Companion specs: ESSENCE_Step3_Motion_Spec.md (§2,§4,§5,§6,§7, live version)
+                   ESSENCE_Step3_Pass3_Decisions.md (the four locks below)
+                   token-prep.md (intensity values)
+  Builds on Pass 2 (essence-step3-seal-pass2.html). Picks up at the post-settle
+  frame and carries the ground forward through Processing to the neutral handoff.
+  ======================================================================
+
+  WHAT THIS PASS IS
+  The calm wait, not the commit moment. Pass 2 ended at the seal settle with
+  shimmer just ignited to faint (0.05). Pass 3 carries that ground forward:
+  the faint to active climb, the ambient breath loop, Processing stillness
+  across every state, the exit ease-down on gen-complete, the reduced-motion
+  rest, and the neutral handoff contract frame the Reveal builds from. Pass 3
+  builds TO that frame and stops. No seal replay (Pass 2 is the locked hero).
+  No pour (the pour is the Reveal's, entirely).
+
+  THE FOUR LOCKS THIS IMPLEMENTS (see ESSENCE_Step3_Pass3_Decisions.md)
+  1. EXIT CURVE. New token --ease-seal-exit (NOT --ease-page). Start value
+     cubic-bezier(0.4,0,0.2,1), ~1200ms. The exit is a release, an ease-out,
+     not the snappy fast-out of --ease-page. Same lesson that moved the ember
+     off --ease-page (Motion Spec §2). Tune the decel tail toward
+     cubic-bezier(0.4,0,0.15,1) on oat if the release reads quick.
+  2. NEUTRAL-EXIT INTENSITY = 0.025. Below faint (0.05) so "done" reads distinct
+     from "waiting"; above 0 so the Reveal has a warm ground to rise from; clear
+     of the retired 0.03. Start value, re-tune on the oat surface.
+  3. SHIMMER LOOP. Slow sine, period 7s, ambient (not an ease). The state's
+     activation value is the CEILING; the sine only dips below it (active 0.12
+     never pushes past 0.12). Start amplitude is a ~25% dip (active breathes
+     ~0.09 to 0.12); this is the live on-device dial. Runs in the active-work
+     states only. Held and done frames are static.
+  4. CLIMB. Fixed slow ceremonial ramp, coarse waiting-to-working register, NOT
+     a progress bar bound to gen. The prototype shows it on a COMPRESSED demo
+     clock so the climb and breath are watchable; production paces the ramp to
+     the fixed normal-wait window, not the real gen elapsed.
+
+  THE SHIMMER MECHANISM (what the architect mirrors)
+  One ground-layer primitive --shimmer-intensity, driven each frame off three
+  inputs: a per-state base (the activation value), a climb or exit tween, and
+  the breath multiplier. effective = base * breath, set on the ground layer
+  only. The vault object never moves. In this prototype one rAF loop computes
+  it; in production the same three inputs drive the same single token. No second
+  intensity token is minted: the new values and the loop run through the
+  existing --shimmer-intensity (carry-forward contract). For the exit, this file
+  samples cubic-bezier(0.4,0,0.2,1) in JS; that sampler mirrors --ease-seal-exit
+  exactly, so the token is the source of truth and the JS is its shadow.
+
+  CARRY-FORWARD, BYTE-IDENTICAL (do not re-fork)
+  - Token block mirrors Pass 2 / globals.css @theme. --ease-seal-exit is the
+    one addition; it must land in @theme BEFORE the screen references it, or the
+    transition silently falls back to the default ease keyword (the same trap as
+    --ease-seal-ember). Mirror into design-tokens.md only after, never before.
+  - #vault-sealed is the shared seam unit. Processing mounts the SAME sealed
+    vault, dead-still. Do not redraw it, do not animate the vault object. The
+    real rig is not needed here (the vault is static through the whole wait), so
+    the stub #vault-sealed is sufficient and Pass 3 is unblocked while the rig
+    is still in build.
+  - Oat phone surface, plain opacity, NO screen blend (screen is only right on
+    dark ceremonial grounds), no brightness(), --ease-breath is Stone-only.
+
+  THE NEUTRAL HANDOFF CONTRACT FRAME (§7) is a real, pinnable state here
+  (neutral-exit), not an implicit end-of-animation position: sealed vault, ember
+  lit and static, shimmer at 0.025, ground calm, no warmth poured. The Reveal
+  owns the pour and builds FROM this frame whether or not Processing's exit just
+  played (a notify deep-link can land a cold session straight into the Reveal).
+
+  GATED: notify-landing renders as a static shell at active. Its cold-start
+  re-fetch verification depends on the transactional notify infra, which is a
+  build prerequisite and does not exist yet. Do NOT declare that axis green by
+  stubbing the one thing it exists to verify. Split it out and gate it.
+
+  VERIFICATION BAR (Build Handoff §9.4 / Motion Spec §8) to run in the build,
+  not embedded here: Playwright across both rails at 390x844, 4x CPU throttle,
+  60fps, zero console errors. The breath loop holds 60fps at active intensity;
+  a cold-start deep-link into Processing renders the right state via re-fetch
+  (never blank, never paywall); a cold-start deep-link into the Reveal builds
+  from the neutral frame with no dependency on Processing's exit; RM renders
+  every resting frame with zero animation, ember static. Extend seal.spec.ts to
+  cover these (it already asserts the seam and the shimmer onset).
+
+  DOC RECONCILIATION (fold in): Motion Spec §5 still says the exit uses
+  var(--ease-page); per lock 1 it is now var(--ease-seal-exit). token-prep
+  intensity table gains neutral-exit = 0.025. --duration-ceremonial is
+  referenced by the spec but is not in the token ramp; either add it to @theme
+  or drive the ramp as a long timed value (this file uses a timed value).
+  ======================================================================
+-->
+
+<style>
+:root{
+  /* ---- canonical tokens (mirror of globals.css @theme; Pass 2 block) ---- */
+  --color-bg-warm-phase:#F2EDE4;
+  --color-bg-gold:#F2E8D6;
+  --color-bg-neutral:#F6F0E5;
+  --color-surface-card:#F6F0E5;
+  --color-mineral:#7A8088;
+  --color-mineral-dark:#656B73;
+  --color-text-primary:#1C1A18;
+  --color-text-secondary:#6B6B6B;
+
+  --font-display:'Spectral', Georgia, serif;
+  --font-body:'Inter', system-ui, sans-serif;
+  --text-title:28px;
+  --text-body:16px;
+  --text-small:14px;
+  --text-caption:12px;
+  --line-height-title:1.4;
+
+  --space-xs:4px; --space-sm:8px; --space-md:12px; --space-lg:16px;
+  --space-xl:24px; --space-2xl:32px; --space-3xl:40px; --space-4xl:48px;
+
+  --radius-md:8px; --radius-lg:10px; --radius-xl:12px; --radius-2xl:16px; --radius-full:9999px;
+
+  /* Easing. Mirror of the running @theme (canonical), not the stale doc. */
+  --ease-essence:cubic-bezier(0.4, 0.0, 0.2, 1);    /* universal transitions */
+  --ease-seal-iris:cubic-bezier(0.4, 0.0, 0.2, 1);  /* iris close (Pass 2); placeholder = ease-essence, owned by vault thread */
+  --ease-seal-ember:cubic-bezier(0.2, 0.0, 0.5, 1); /* warm arrival: ember catch + shimmer onset (Pass 2) */
+  --ease-seal-exit:cubic-bezier(0.4, 0.0, 0.2, 1);  /* NEW (Pass 3, lock 1). Processing exit ease-down. Own token; tune tail toward (0.4,0,0.15,1) on oat. */
+  --ease-page:cubic-bezier(0.22, 1, 0.36, 1);       /* CANONICAL (snappy fast-out). Mirrored only; UNUSED in Pass 3 (exit moved off it). */
+  --ease-breath:cubic-bezier(0.37, 0, 0.63, 1);     /* CANONICAL. Stone-only, never the vault or shimmer. Unused here. */
+
+  /* Shimmer ground primitive (driven by JS in this prototype). */
+  --shimmer-intensity:0;
+  --color-glow-warm-rgb:214, 162, 92;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:#15140F;
+  color:var(--color-text-primary);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  padding:28px 12px 64px; gap:18px;
+}
+button{font-family:inherit;}
+
+/* ---- harness ---- */
+.harness{display:flex; flex-direction:column; align-items:center; gap:10px; max-width:780px;}
+.harness__title{font-family:var(--font-body); font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.46);}
+.harness__note{font-size:11px; color:rgba(255,255,255,0.34); max-width:580px; text-align:center; line-height:1.6;}
+.dev-group{display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center;}
+.dev-group__label{font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.34); margin-right:4px;}
+.dev-group button{
+  background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.66);
+  border:1px solid rgba(255,255,255,0.12); border-radius:14px;
+  padding:6px 12px; font-size:11px; letter-spacing:0.02em; cursor:pointer; transition:all 160ms ease;
+}
+.dev-group button:hover{background:rgba(255,255,255,0.14); color:#fff;}
+.dev-group button.is-current{background:var(--color-mineral); color:#fff; border-color:var(--color-mineral);}
+.dev-group button.is-primary{background:rgba(122,128,136,0.28); color:#fff; border-color:rgba(122,128,136,0.5);}
+.dev-group button:disabled{opacity:0.34; cursor:not-allowed;}
+
+/* readout */
+.readout{
+  display:flex; gap:16px; flex-wrap:wrap; justify-content:center; align-items:center;
+  font-size:11px; color:rgba(255,255,255,0.5); letter-spacing:0.04em;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px; padding:8px 16px; min-height:34px; max-width:660px;
+}
+.readout b{color:rgba(255,255,255,0.82); font-weight:600;}
+.readout .ok{color:#8fb9a6;}
+.readout .warn{color:#caa15a;}
+.readout .gate{color:#c79b6a;}
+
+/* ---- phone frame ---- */
+.prototype-wrapper{
+  width:390px; height:812px; border-radius:48px; overflow:hidden;
+  box-shadow:0 0 0 10px #1A1715, 0 0 0 12px var(--color-mineral), 0 50px 100px rgba(0,0,0,0.45);
+  position:relative; flex-shrink:0; background:var(--color-bg-warm-phase);
+}
+@media (max-width:440px){.prototype-wrapper{transform:scale(0.88); transform-origin:top center;}}
+.phone{
+  width:100%; height:100%; position:relative; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--color-bg-warm-phase); color:var(--color-text-primary);
+}
+.phone__status{
+  position:absolute; inset:0 0 auto 0; height:44px; display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px 0; font-weight:600; font-size:var(--text-small); z-index:10; pointer-events:none;
+}
+.phone__status-icons{display:flex; gap:6px; align-items:center;}
+.phone__island{position:absolute; top:11px; left:50%; transform:translateX(-50%); width:120px; height:30px; border-radius:999px; background:#0B0B0B; z-index:11;}
+.phone__home-indicator{position:absolute; left:50%; bottom:8px; transform:translateX(-50%); width:134px; height:5px; border-radius:3px; background:rgba(28,26,24,0.32); z-index:10;}
+.variant-label{position:absolute; top:13px; left:16px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:rgba(28,26,24,0.42); z-index:12; pointer-events:none;}
+
+.phone__screen{position:absolute; inset:44px 0 0 0; display:flex; flex-direction:column; z-index:3;}
+
+/* ground shimmer: ground layer only, never the vault. Plain opacity on the oat
+   surface, no mix-blend. Intensity is JS-driven (one rAF). */
+.ground-shimmer{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  opacity:var(--shimmer-intensity);
+  will-change:opacity;
+  background:radial-gradient(ellipse 80% 60% at 50% 44%,
+    rgba(var(--color-glow-warm-rgb),0.5) 0%, rgba(var(--color-glow-warm-rgb),0.18) 46%, transparent 76%);
+}
+.atmosphere-vignette{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:radial-gradient(ellipse 120% 92% at 50% 50%, transparent 52%, rgba(60,45,25,0.05) 86%, rgba(60,45,25,0.1) 100%);
+}
+
+/* ceremonial stage (same geometry as the seam side so the vault sits at the
+   identical pixel as the CardCapture settled frame) */
+.body{position:relative; z-index:1; flex:1; padding:4px var(--space-xl) var(--space-3xl); display:flex; flex-direction:column; overflow:hidden;}
+.ceremony{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:var(--space-lg); padding-bottom:var(--space-4xl);}
+.ceremony__copy{font-family:var(--font-display); font-size:var(--text-title); line-height:var(--line-height-title); color:var(--color-text-primary); max-width:280px;}
+.ceremony__sub{font-family:var(--font-body); font-size:var(--text-body); color:var(--color-text-secondary); max-width:280px; margin-top:var(--space-md);}
+
+/* sealed vault (the shared seam unit, dead-still) */
+.seal-vault{position:relative; width:196px; height:196px;}
+.seal-vault .vault{position:absolute; inset:0; width:196px; height:196px;}
+
+/* cold-start badge: notify-landing only */
+.pr-landing-badge{
+  display:none; align-items:center; gap:6px;
+  font-size:var(--text-caption); font-weight:600; letter-spacing:0.04em;
+  color:var(--color-mineral-dark); background:var(--color-bg-neutral);
+  border:1px solid rgba(0,0,0,0.06); border-radius:var(--radius-full);
+  padding:6px 14px;
+}
+.stage[data-state="notify-landing"] .pr-landing-badge{display:inline-flex;}
+
+/* copy per state */
+.pr-copy{display:none; flex-direction:column; align-items:center;}
+.stage[data-state="processing-normal"] .pr-normal,
+.stage[data-state="notify-landing"] .pr-normal,
+.stage[data-state="neutral-exit"] .pr-normal{display:flex;}
+.stage[data-state="processing-extended"] .pr-extended{display:flex;}
+.stage[data-state="processing-notify-handoff"] .pr-handoff{display:flex;}
+.stage[data-state="post-seal-support"] .pr-support{display:flex;}
+
+/* keep-open-or-notify offer (handoff + support) */
+.pr-notify-offer{display:none; flex-direction:column; align-items:center; gap:var(--space-sm); margin-top:var(--space-sm);}
+.stage[data-state="processing-notify-handoff"] .pr-notify-offer,
+.stage[data-state="post-seal-support"] .pr-notify-offer{display:flex;}
+.link-quiet{background:transparent; border:0; color:var(--color-mineral-dark); font-size:var(--text-small); font-weight:600; cursor:pointer; min-height:44px; padding:var(--space-sm) var(--space-lg);}
+.link-quiet:hover{color:var(--color-text-primary);}
+
+/* reduced motion: honor OS setting and the in-page toggle. Zero animation. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important; animation-delay:0ms !important; transition-duration:0.01ms !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="harness">
+  <div class="harness__title">ESSENCE · Step 3 · Processing · Pass 3</div>
+  <div class="harness__note">The calm wait. Inherits the post-settle frame (sealed, ember lit, shimmer faint). The vault is dead-still; the only motion is the ground shimmer. Play the wait to see the climb, the breath, and the exit ease-down to the neutral handoff frame. Pin any state to inspect it. Numbers read on the prototype ground; final intensities tune on the oat surface.</div>
+
+  <div class="dev-group">
+    <span class="dev-group__label">Play</span>
+    <button id="btn-play" class="is-primary">Play the wait (full arc)</button>
+    <button id="btn-exit">Gen complete (exit)</button>
+    <button id="btn-reset">Reset</button>
+  </div>
+
+  <div class="dev-group">
+    <span class="dev-group__label">States</span>
+    <button class="pin-btn" data-s="processing-normal">processing-normal</button>
+    <button class="pin-btn" data-s="processing-extended">processing-extended</button>
+    <button class="pin-btn" data-s="processing-notify-handoff">processing-notify-handoff</button>
+    <button class="pin-btn" data-s="notify-landing">notify-landing</button>
+    <button class="pin-btn" data-s="post-seal-support">post-seal-support</button>
+    <button class="pin-btn" data-s="neutral-exit">neutral-exit (handoff)</button>
+  </div>
+
+  <div class="dev-group">
+    <span class="dev-group__label">Reduced motion</span>
+    <button id="btn-rm">Off</button>
+  </div>
+
+  <div class="readout">
+    <span>state <b id="ro-state">processing-normal</b></span>
+    <span>shimmer <b id="ro-shim">0.050</b></span>
+    <span>breath <b id="ro-breath">off</b></span>
+    <span>ember <b style="color:#caa15a">lit (static)</b></span>
+    <span id="ro-note" class="ok">vault + ember dead-still · no pour</span>
+  </div>
+</div>
+
+<!-- shared SVG defs. #vault-sealed is the seam unit, byte-identical to Pass 2.
+     Only the sealed case + ignited pilot is needed (the wait is static). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="caseMetalWarm" cx="42%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#a39c90"/><stop offset="52%" stop-color="#857c70"/><stop offset="100%" stop-color="#5f574c"/>
+    </radialGradient>
+    <radialGradient id="emberIgnited" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbe6c0"/><stop offset="38%" stop-color="#eecb84"/><stop offset="70%" stop-color="#d9a85a"/><stop offset="100%" stop-color="rgba(217,168,90,0)"/>
+    </radialGradient>
+  </defs>
+
+  <symbol id="vault-sealed" viewBox="0 0 196 196">
+    <circle cx="98" cy="98" r="40" fill="url(#emberIgnited)"/>
+    <circle cx="98" cy="98" r="92" fill="url(#caseMetalWarm)"/>
+    <circle cx="98" cy="98" r="92" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="74" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="2"/>
+    <circle cx="98" cy="98" r="50" fill="url(#caseMetalWarm)"/>
+    <g stroke="rgba(28,26,24,0.22)" stroke-width="1.5" stroke-linecap="round">
+      <line x1="98" y1="48" x2="98" y2="98"/><line x1="141" y1="73" x2="98" y2="98"/><line x1="141" y1="123" x2="98" y2="98"/>
+      <line x1="98" y1="148" x2="98" y2="98"/><line x1="55" y1="123" x2="98" y2="98"/><line x1="55" y1="73" x2="98" y2="98"/>
+    </g>
+    <circle cx="98" cy="98" r="50" fill="none" stroke="rgba(28,26,24,0.2)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="13" fill="url(#caseMetalWarm)"/>
+    <circle cx="98" cy="98" r="13" fill="none" stroke="rgba(28,26,24,0.3)" stroke-width="1.5"/>
+    <circle cx="98" cy="98" r="6" fill="#f3d9a4"/>
+  </symbol>
+</svg>
+
+<!-- ================= PROCESSING STAGE ================= -->
+<div class="prototype-wrapper">
+  <div class="phone stage" id="stage" data-state="processing-normal">
+    <div class="phone__island"></div>
+    <div class="phone__status">
+      <span>9:41</span>
+      <span class="phone__status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#1C1A18"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#1C1A18"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#1C1A18"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#1C1A18"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11"><rect x="0.5" y="0.5" width="18" height="10" rx="3" fill="none" stroke="#1C1A18" opacity="0.5"/><rect x="2" y="2" width="14" height="7" rx="1.5" fill="#1C1A18"/><rect x="19.5" y="3.5" width="1.5" height="4" rx="0.75" fill="#1C1A18" opacity="0.5"/></svg>
+      </span>
+    </div>
+    <div class="variant-label" id="vlabel">Processing · processing-normal</div>
+    <div class="phone__home-indicator"></div>
+
+    <div class="phone__screen">
+      <div class="ground-shimmer" id="shimmer"></div>
+      <div class="atmosphere-vignette"></div>
+
+      <div class="body">
+        <div class="ceremony">
+
+          <!-- sealed vault, ignited ember, dead-still (shared seam unit) -->
+          <div class="seal-vault">
+            <svg class="vault" viewBox="0 0 196 196"><use href="#vault-sealed"/></svg>
+          </div>
+
+          <!-- cold-start badge: notify-landing only -->
+          <span class="pr-landing-badge">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3v3l2 1.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="6" r="4.4" stroke="currentColor" stroke-width="1.2"/></svg>
+            Picking up where you left off
+          </span>
+
+          <!-- copy per state -->
+          <div class="pr-copy pr-normal">
+            <p class="ceremony__copy">Preparing your voice.</p>
+          </div>
+          <div class="pr-copy pr-extended">
+            <p class="ceremony__copy">Preparing your voice.</p>
+            <p class="ceremony__sub">Taking a little longer than usual. It's safe and on its way.</p>
+          </div>
+          <div class="pr-copy pr-handoff">
+            <p class="ceremony__copy">Your Vault is sealed and your voice is safe.</p>
+            <p class="ceremony__sub">It's taking a little longer to prepare than usual. We'll have it ready soon.</p>
+          </div>
+          <div class="pr-copy pr-support">
+            <p class="ceremony__copy">Your Vault is sealed and your voice is safe.</p>
+            <p class="ceremony__sub">We're making sure it gets created, and we'll reach out within a day.</p>
+          </div>
+
+          <!-- keep-open-or-notify offer (handoff + support) -->
+          <div class="pr-notify-offer">
+            <p class="ceremony__sub" style="margin-top:0">You can keep this open, or we'll let you know the moment your voice is ready to hear.</p>
+            <button class="link-quiet">Email me when it's ready</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* =================================================================
+     INTENSITY VALUES (token-prep; the source of truth is the @theme
+     primitive, these mirror it). All read on the prototype ground;
+     re-tune on the oat surface.
+     ================================================================= */
+  var FAINT   = 0.05;   // waiting
+  var ACTIVE  = 0.12;   // working (loop ceiling)
+  var NEUTRAL = 0.025;  // neutral handoff frame (lock 2)
+  var RM_REST = 0.05;   // reduced-motion faint rest (motion-spec §6)
+
+  /* LOOP (lock 3): slow sine, ambient. State value is the ceiling; the sine
+     only dips below it. */
+  var BREATH_PERIOD = 7000;  // production value (not compressed)
+  var BREATH_DIP    = 0.25;  // active breathes ~0.09 to 0.12; the on-device dial
+
+  /* CLIMB + EXIT timings. CLIMB is COMPRESSED for the demo (lock 4): production
+     paces the ramp to the fixed normal-wait window, not the real gen elapsed.
+     BREATH_HOLD is demo-only (how long the active breath shows before the demo
+     auto-completes). EXIT is the production value. */
+  var CLIMB_DUR  = 6000;   // demo-compressed
+  var BREATH_HOLD= 9000;   // demo-only
+  var EXIT_DUR   = 1200;   // production (lock 1)
+
+  /* --ease-seal-exit mirrored in JS so the rAF exit matches the token exactly.
+     If the token value changes, change it here too (one curve, two homes). */
+  function cubicBezier(p1x,p1y,p2x,p2y){
+    function A(a,b){return 1-3*b+3*a;} function B(a,b){return 3*b-6*a;} function C(a){return 3*a;}
+    function calc(t,a,b){return ((A(a,b)*t+B(a,b))*t+C(a))*t;}
+    function slope(t,a,b){return 3*A(a,b)*t*t+2*B(a,b)*t+C(a);}
+    function solveX(x){var t=x;for(var i=0;i<6;i++){var s=slope(t,p1x,p2x);if(s===0)break;t-=(calc(t,p1x,p2x)-x)/s;}return t;}
+    return function(x){if(x<=0)return 0;if(x>=1)return 1;return calc(solveX(x),p1y,p2y);};
+  }
+  var easeExit  = cubicBezier(0.4,0,0.2,1);  // --ease-seal-exit
+  var easeClimb = cubicBezier(0.4,0,0.2,1);  // ceremonial rise (calm ease-in-out)
+
+  /* per-state base + whether it breathes + which copy */
+  var DEF = {
+    'processing-normal':        { base:FAINT,   breath:false },
+    'processing-extended':      { base:ACTIVE,  breath:true  },
+    'processing-notify-handoff':{ base:ACTIVE,  breath:true  },
+    'notify-landing':           { base:ACTIVE,  breath:true  },
+    'post-seal-support':        { base:FAINT,   breath:false },
+    'neutral-exit':             { base:NEUTRAL, breath:false }
+  };
+
+  var stage   = document.getElementById('stage');
+  var shimmer = document.getElementById('shimmer');
+  var vlabel  = document.getElementById('vlabel');
+  var roState = document.getElementById('ro-state');
+  var roShim  = document.getElementById('ro-shim');
+  var roBreath= document.getElementById('ro-breath');
+  var roNote  = document.getElementById('ro-note');
+  var btnPlay = document.getElementById('btn-play');
+  var btnExit = document.getElementById('btn-exit');
+  var btnReset= document.getElementById('btn-reset');
+  var btnRm   = document.getElementById('btn-rm');
+  var pinBtns = document.querySelectorAll('.pin-btn');
+
+  var rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var state = 'processing-normal';
+  var currentBase = FAINT;
+  var breathing = false;
+  var anim = null;       // {kind:'climb'|'exit', from, to, start, dur, ease}
+  var raf = null;
+  var timers = [];
+
+  function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+  function stopRaf(){ if(raf){ cancelAnimationFrame(raf); raf = null; } }
+  function startRaf(){ if(!raf) raf = requestAnimationFrame(loop); }
+
+  function setShimmer(v){
+    shimmer.style.setProperty('--shimmer-intensity', v.toFixed(4));
+    roShim.textContent = v.toFixed(3);
+  }
+  function setNote(){
+    if(state === 'notify-landing'){
+      roNote.textContent = 'cold-start re-fetch GATED · notify infra';
+      roNote.className = 'gate';
+    } else if(state === 'neutral-exit'){
+      roNote.textContent = 'neutral handoff frame · Reveal builds from here';
+      roNote.className = 'ok';
+    } else {
+      roNote.textContent = 'vault + ember dead-still · no pour';
+      roNote.className = 'ok';
+    }
+  }
+  function setLabels(){
+    roState.textContent = state;
+    roBreath.textContent = breathing ? 'on (7s)' : 'off';
+    vlabel.textContent = 'Processing · ' + state + (rm ? ' · RM' : '');
+    setNote();
+  }
+  function setStateAttr(s){ state = s; stage.setAttribute('data-state', s); }
+
+  function markPin(){
+    pinBtns.forEach(function(b){ b.classList.toggle('is-current', b.getAttribute('data-s') === state); });
+  }
+
+  /* the single ground-shimmer loop: base (or tween) times breath */
+  function loop(now){
+    raf = null;
+    var base;
+    if(anim){
+      var t = (now - anim.start) / anim.dur;
+      if(t < 0) t = 0;
+      var done = t >= 1;
+      if(done) t = 1;
+      base = anim.from + (anim.to - anim.from) * anim.ease(t);
+      if(done){
+        var kind = anim.kind; anim = null;
+        currentBase = base;
+        if(kind === 'climb') enterActive();
+        else if(kind === 'exit') enterNeutral();
+        if(!raf && (anim || breathing)) startRaf();
+        return; // enter* set the next frame up
+      }
+    } else {
+      base = currentBase;
+    }
+    var mul = 1;
+    if(breathing){
+      // sine starts at the ceiling, dips to (1 - DIP), smooth, never above 1
+      var phase = 2 * Math.PI * (now % BREATH_PERIOD) / BREATH_PERIOD;
+      var d = 0.5 - 0.5 * Math.cos(phase); // 0 at phase 0, 1 at phase pi
+      mul = 1 - BREATH_DIP * d;
+    }
+    setShimmer(base * mul);
+    if(anim || breathing) startRaf();
+  }
+
+  /* the active working register: breath begins (lock 3) */
+  function enterActive(){
+    setStateAttr('processing-extended');
+    currentBase = ACTIVE;
+    breathing = true;
+    markPin(); setLabels();
+    startRaf();
+    // demo-only: after the breath has shown, auto-complete to the exit
+    clearTimers();
+    timers.push(setTimeout(triggerExit, BREATH_HOLD));
+  }
+
+  /* the neutral handoff contract frame: static, the Reveal launches from here */
+  function enterNeutral(){
+    breathing = false;
+    anim = null;
+    setStateAttr('neutral-exit');
+    currentBase = NEUTRAL;
+    markPin(); setLabels();
+    setShimmer(NEUTRAL);
+    stopRaf();
+  }
+
+  /* PLAY: the full arc. climb (no breath) -> active (breath) -> exit -> neutral.
+     Walks through extended so the climb, breath, and exit all show. */
+  function playWait(){
+    clearTimers(); stopRaf(); anim = null;
+    if(rm){
+      // reduced motion: rendered directly, no animation (§6)
+      enterNeutral();
+      roNote.textContent = 'RM · neutral frame rendered directly, no animation';
+      roNote.className = 'ok';
+      return;
+    }
+    setStateAttr('processing-normal');
+    breathing = false;
+    currentBase = FAINT;
+    markPin(); setLabels();
+    setShimmer(FAINT);
+    anim = { kind:'climb', from:FAINT, to:ACTIVE, start:performance.now(), dur:CLIMB_DUR, ease:easeClimb };
+    roBreath.textContent = 'off (climbing)';
+    startRaf();
+  }
+
+  /* EXIT: gen complete. Release active -> neutral on --ease-seal-exit. */
+  function triggerExit(){
+    clearTimers();
+    if(rm){ enterNeutral(); roNote.textContent = 'RM · neutral frame rendered directly, no animation'; roNote.className = 'ok'; return; }
+    breathing = false;
+    setStateAttr('processing-extended'); // the release reads from the active wait
+    var from = (currentBase > NEUTRAL) ? currentBase : ACTIVE;
+    currentBase = from;
+    setLabels(); roBreath.textContent = 'off (releasing)';
+    anim = { kind:'exit', from:from, to:NEUTRAL, start:performance.now(), dur:EXIT_DUR, ease:easeExit };
+    startRaf();
+  }
+
+  /* PIN: inspect any state statically (or breathing, if it is an active state).
+     RM collapses every wait state to the faint rest; neutral stays 0.025. */
+  function pinState(s){
+    clearTimers(); stopRaf(); anim = null;
+    var def = DEF[s] || DEF['processing-normal'];
+    setStateAttr(s);
+    if(rm){
+      breathing = false;
+      currentBase = (s === 'neutral-exit') ? NEUTRAL : RM_REST;
+      markPin(); setLabels();
+      setShimmer(currentBase);
+      return;
+    }
+    currentBase = def.base;
+    breathing = !!def.breath;
+    markPin(); setLabels();
+    if(breathing){ startRaf(); }
+    else { setShimmer(currentBase); }
+  }
+
+  function reset(){
+    clearTimers(); stopRaf(); anim = null; breathing = false;
+    pinState('processing-normal');
+  }
+
+  function applyRm(){
+    btnRm.textContent = rm ? 'On' : 'Off';
+    btnRm.classList.toggle('is-current', rm);
+  }
+
+  /* wiring */
+  btnPlay.addEventListener('click', playWait);
+  btnExit.addEventListener('click', triggerExit);
+  btnReset.addEventListener('click', reset);
+  btnRm.addEventListener('click', function(){ rm = !rm; applyRm(); pinState(state === 'neutral-exit' ? 'neutral-exit' : state); });
+  pinBtns.forEach(function(b){ b.addEventListener('click', function(){ pinState(b.getAttribute('data-s')); }); });
+
+  applyRm();
+  pinState('processing-normal'); // inherited entry: post-settle faint rest
+})();
+</script>
+</body>
+</html>

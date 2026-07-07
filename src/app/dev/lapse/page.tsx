@@ -84,6 +84,18 @@ export default function LapseDevPage() {
           <VaultRestoreScreen hasRecordings={false} mode="restart" onRestore={noop} />
         </div>
       </section>
+
+      <section>
+        <h2 style={labelStyle}>Restore — recovery handoff failed (Step 10 error state)</h2>
+        <div style={frameStyle}>
+          <VaultRestoreScreen
+            hasRecordings={true}
+            mode="restart"
+            onRestore={noop}
+            restoreFailed={true}
+          />
+        </div>
+      </section>
     </div>
   );
 }

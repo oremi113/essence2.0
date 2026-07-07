@@ -84,6 +84,52 @@ describe('useCheckout', () => {
     expect(assignSpy).not.toHaveBeenCalled();
   });
 
+  it('returns true when the request is handled (navigation underway)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ checkoutUrl: 'https://checkout.stripe.com/c/pay/abc' })));
+    const { result } = renderHook(() => useCheckout('seal'));
+
+    let outcome: boolean | undefined;
+    await act(async () => { outcome = await result.current('annual'); });
+
+    expect(outcome).toBe(true);
+  });
+
+  it('returns true on a 401 redirect (still handled)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ redirect: '/auth/sign-in' }, false, 401)));
+    const { result } = renderHook(() => useCheckout('protect'));
+
+    let outcome: boolean | undefined;
+    await act(async () => { outcome = await result.current('annual'); });
+
+    expect(outcome).toBe(true);
+  });
+
+  it('returns false on a failure without redirect (so the caller can recover)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ error: 'boom' }, false, 500)));
+    const { result } = renderHook(() => useCheckout('protect'));
+
+    let outcome: boolean | undefined;
+    await act(async () => { outcome = await result.current('annual'); });
+
+    expect(outcome).toBe(false);
+  });
+
+  it('returns false and recovers when the request throws (offline)', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    const { result } = renderHook(() => useCheckout('seal'));
+
+    let outcome: boolean | undefined;
+    // No unhandled rejection: the hook catches the network error and signals failure.
+    await act(async () => { outcome = await result.current('monthly'); });
+
+    expect(outcome).toBe(false);
+    expect(errSpy).toHaveBeenCalledWith('[seal] checkout request errored', expect.any(TypeError));
+    expect(push).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
   it('posts the chosen plan to the checkout endpoint', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({ checkoutUrl: '/x' }));
     vi.stubGlobal('fetch', fetchMock);

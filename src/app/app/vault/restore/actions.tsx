@@ -15,9 +15,11 @@ export function RestoreActions({
   plan: BillingPlan;
 }) {
   const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreFailed, setRestoreFailed] = useState(false);
 
   async function handleRestore() {
     if (isRestoring) return;
+    setRestoreFailed(false);
     setIsRestoring(true);
 
     try {
@@ -33,6 +35,7 @@ export function RestoreActions({
             return;
           }
           console.error('[vault/restore] portal session failed', data);
+          setRestoreFailed(true);
           setIsRestoring(false);
           return;
         }
@@ -59,6 +62,7 @@ export function RestoreActions({
           return;
         }
         console.error('[vault/restore] checkout session failed', data);
+        setRestoreFailed(true);
         setIsRestoring(false);
         return;
       }
@@ -66,7 +70,10 @@ export function RestoreActions({
       // Full-page handoff to Stripe Checkout — it's the flow, not a side errand.
       window.location.href = data.checkoutUrl;
     } catch (err) {
+      // Offline / connection dropped — recover instead of dead-ending on a
+      // silent reset (Step 10 / Chapter 12: no dead ends).
       console.error('[vault/restore] restore request errored', err);
+      setRestoreFailed(true);
       setIsRestoring(false);
     }
   }
@@ -77,6 +84,7 @@ export function RestoreActions({
       mode={mode}
       onRestore={handleRestore}
       isRestoring={isRestoring}
+      restoreFailed={restoreFailed}
     />
   );
 }
