@@ -23,6 +23,43 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-07 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged **8 new backlog items** (FU-80…87); no code touched.
+- Scanned: health on `main` (db298a3) — typecheck ✅ · lint ✅ · unit 355/355 ✅. Read the
+  batch merged since the 2026-06-30 triage: **Step 9** Settings & Trust (esp. the
+  delete-account teardown), **Step 10 Ch2** payment/restore recovery (`useCheckout` + the
+  vault protect/seal/restore actions), **Step 3** Card Capture / Processing / canvas-seal +
+  `vault-render` engine, **Step 4** vault freshness, and the Screen 2 conveyor salvage.
+  Marker-debt grep: no new untracked debt. Webhook confirmation path re-checked — clean.
+- Excluded as WIP/unbuilt (not debt): Step 10 gen-fail / audio-can't-play / offline chapters,
+  C3 Vault Limit, First Breath audio — all roadmap-known unbuilt on the launch path.
+- Discovered (new FOLLOW_UPS entries):
+  - FU-80 [P2] Delete-account teardown swallows the `subscriptions` read → a closed account can
+    keep being billed (money leak; landmine — fix before `ACCOUNT_DELETE_ENABLED` flips).
+  - FU-81 [P2] Teardown wipes storage before the row/auth deletes → a mid-teardown failure loses
+    the user's audio under a "Nothing was lost" screen (flag-OFF landmine).
+  - FU-82 [P2] Vault restore (past_due) opens the Stripe Portal with `window.open` after an
+    `await` → blocked on iOS Safari, silent dead-end (LIVE surface).
+  - FU-83 [P3] `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate.
+  - FU-84 [P3] `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl`.
+  - FU-85 [P3] Account-teardown + vault-restore client flows have no test coverage.
+  - FU-86 [P3] Step 3 Card Capture/Processing/canvas seal built but mounted only on `/dev`;
+    prod still on the legacy paywall; roadmap marks it "complete" (keep FU-22 OFF).
+  - FU-87 [P4] Double-tap guards on checkout/delete actions read render-state, not a ref.
+- Triggers came true: **FU-62** — Step 9 shipped, `HomeBPageClient.tsx:68` now wires
+  `onSettings` → `ROUTES.settings`. Resolved-in-code; flagged for the fixer to strike
+  (discovery doesn't strike). Noted in the priority table.
+- Reviewed-and-cleared: Stripe webhook handlers (errors inspected + thrown), Step 4 freshness
+  fixes and the Screen 2 conveyor (contrast/token/animation only, no hidden debt).
+- Not logged (kept out to avoid noise): 3 lower-value Step 3 motion/paint nits (shimmer-trough
+  brightness pop on the Reveal handoff, two-clock drift on the seal, missing resize/DPR repaint
+  on `VaultObject`) — all in `/dev`-only code (see FU-86), unreachable until the M4 wiring pass.
+- Numbering: started at 80 to clear the overlapping lower numbers carried by still-open PRs
+  #74 (proposes 70–73) and #78 (proposes 68–69), which renumber on merge.
+- Branch / commit: `triage/2026-07-07` @ <this commit>.
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: <stamped later when the owner merges>.
+
 ## 2026-06-22 — scheduled (scan-only)
 - Outcome: Scan-only — the app is healthy and nothing was cleanly fixable this
   run. Every item near the top of the queue is already being handled in an open

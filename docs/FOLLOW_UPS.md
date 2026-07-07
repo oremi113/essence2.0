@@ -45,6 +45,15 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 71 | P3 | Consented older-voice sample is a placeholder — CardCapture sample renders on `/mock/generic-elder.mp3` until the real clip exists (Step 3 handoff §8) | ⏳ asset dependency; swap `clipUrl` when delivered |
 | 72 | P3 | Processing renders discrete wait states; the live timed progression (normal→extended→notify-handoff on the wait clock, and pacing the shimmer climb to the fixed normal-wait window) is the deferred reducer (handoff NOTE-FOR-CODE-ARCHITECT #2). Pass 3 ships the activation map + exit; the clock that walks between them is not built. | ⏳ build with real generation polling; `src/components/screens/step3/useShimmerLoop.ts` CLIMB_DUR is a demo tween until then |
 | 73 | P3 | The e2e suite (incl. the 4× CPU-throttle motion-perf gate, `tests/e2e/seal.spec.ts` + `processing.spec.ts`) is NOT run in CI — `ci.yml` runs lint/typecheck/unit/build only. The CLAUDE.md motion bar is therefore enforced only locally. The perf-ms assertion is also only meaningful against a **production** build (`next start`); `next dev` inflates the worst-frame tail. | ⏳ add a Chromium e2e job against a prod build (functional specs are CI-safe; treat the perf-ms assert as informational on shared runners or pin a representative runner) |
+| 80 | P2 | Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed *(new 2026-07-07)* | ⚠️ owner-paired (Stripe); fix before enabling ACCOUNT_DELETE_ENABLED |
+| 81 | P2 | Delete-account teardown erases audio *before* the DB/auth deletes → a mid-teardown failure loses recordings under a "Nothing was lost" screen *(new 2026-07-07)* | ⚠️ fix before enabling ACCOUNT_DELETE_ENABLED |
+| 82 | P2 | Vault restore (past_due) opens the Stripe Portal via `window.open`-after-`await` → blocked on iOS Safari, silent dead-end *(new 2026-07-07)* | ✅ agent-fixable (client) |
+| 83 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(new 2026-07-07)* | ✅ agent-fixable (one guard) |
+| 84 | P3 | `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl` → CTA can stick; `push(undefined)` returns `true` *(new 2026-07-07)* | ✅ agent-fixable |
+| 85 | P3 | Account-teardown + vault-restore client flows have no test coverage *(new 2026-07-07)* | ✅ agent-fixable (tests) |
+| 86 | P3 | Step 3 Card Capture/Processing/canvas seal built but mounted only on `/dev` — prod still on legacy paywall; roadmap says "complete" *(new 2026-07-07)* | ⚠️ wiring is M4; owner-aware (keep FU-22 OFF) |
+| 87 | P4 | Double-tap guards on checkout/delete actions read render-state not a ref → stray duplicate checkout session *(new 2026-07-07)* | ✅ agent-fixable (extends FU-71) |
+| 62 | P4 | Home B settings affordance — trigger FIRED: Step 9 shipped, `onSettings` now wired to `ROUTES.settings` *(triage 2026-07-07)* | ✅ resolved-in-code (recommend fixer strike) |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
@@ -702,3 +711,181 @@ The "your account is still here" partial-failure terminal (`SettingsScreen.tsx`,
 **Why it matters:** a duplicate magic-link identity-change request — low frequency and Supabase is idempotent enough that it's not corrupting, but it's a wasted round-trip and a second confirm email to the new address. Cheap to close.
 **Fix shape:** early-return in `submitEmail` (or the Enter handler) when `emailPhase === 'sending'`, mirroring the button's disabled guard.
 **Pick up when:** any SettingsScreen touch, or the next input-hardening sweep.
+
+## Discovery pass (triage 2026-07-07)
+
+Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health on `main` (db298a3):
+typecheck ✅ · lint ✅ · unit tests 355/355 ✅. This pass read the batch merged since
+the 2026-06-30 triage — **Step 3** Card Capture / Processing / canvas seal
+(`src/components/screens/step3/*`, `src/lib/vault-render/*`), **Step 9** Settings &
+Trust (incl. the delete-account teardown), **Step 4** vault freshness, and **Step 10
+Ch2** payment/restore recovery (`useCheckout` + the vault protect/seal/restore
+actions). Screens/states the roadmap lists as still-unbuilt were treated as WIP and
+**excluded**: Step 10's generation-failure / audio-can't-play / offline chapters, C3
+Vault Limit, and First Breath audio.
+
+Marker-debt grep over `src/`: no new untracked debt (FirstBreath audio = FU-41, exit
+= FU-25, `useResource` = FU-32, `guards.ts` MVP stub documented; the rest are
+conventional exhaustive-deps / `<img>` disables). **Trigger fired:** FU-62 (Home B
+settings dead-link) — Step 9 shipped and `HomeBPageClient.tsx:68` now routes
+`onSettings` to `ROUTES.settings`; resolved-in-code, flagged for the fixer to strike
+(discovery doesn't strike). Step 4 and the Screen 2 conveyor salvage were reviewed and
+found clean (contrast/token/animation only; no hidden debt). The webhook confirmation
+path was checked and is clean — every `{ error }` is inspected and throws.
+
+New numbers start at **80** to clear the overlapping lower numbers carried by the
+still-open PRs #74 (proposes 70–73) and #78 (proposes 68–69), which renumber on merge.
+Several lower-value Step 3 motion/paint nits (a shimmer-trough brightness pop on the
+Reveal handoff, a two-clock drift between the seal timeline and its canvas, a missing
+resize/DPR repaint on `VaultObject`) were found but **not logged** — they live in code
+that is mounted only on `/dev` today (see #86), so they're unreachable until the M4
+wiring pass and would be noise now.
+
+### 80. [P2 · owner-paired] Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed
+`src/app/app/settings/actions.ts:191-195` — the teardown reads the user's subscriptions
+as `const { data: subs } = await service.from('subscriptions').select(...)`, discarding
+`{ error }`. A failed Supabase read returns `{ data: null, error }` (it does not throw),
+so a transient DB/PostgREST hiccup yields `subs ?? []` → the cancel loop runs zero times
+→ **no Stripe cancellation happens** — and the teardown then wipes storage, deletes rows,
+and deletes the auth user, returning `ok: true` ("Your account is closed"). The file's own
+header promises "cancel any live Stripe subscription so a deleted account is never billed";
+a swallowed read breaks exactly that. (The repo's `checkedWrite` lint guard covers *writes*,
+so this *read* slipped through.)
+**Why it matters:** a paying user who deletes their account during a brief read blip loses
+their account, rows, storage, and login, but their live Stripe subscription is never
+cancelled — they're billed every month against an orphaned customer with no account to
+manage or cancel from. Not live today (`ACCOUNT_DELETE_ENABLED` is OFF), so this is a
+landmine to close before the flag flips, not a current leak.
+**Fix shape:** inspect the error on the subscriptions select and abort into the "still here"
+failure terminal *before* any data loss if it's non-null — the teardown's reads need the
+same fail-closed treatment as its writes. Owner-paired (Stripe surface).
+**Pick up when:** before `ACCOUNT_DELETE_ENABLED` is enabled (the flag's own comment defers
+turn-on until "the teardown … is signed off" — this is part of that sign-off). Pairs with #81/#83.
+
+### 81. [P2] Delete-account teardown erases audio *before* the row/auth deletes → a mid-teardown failure loses recordings under a "Nothing was lost" screen
+`src/app/app/settings/actions.ts:215-245`; copy at
+`src/components/screens/settings/SettingsScreen.tsx:462-465`. Teardown order is: Stripe
+cancel → **wipe audio + avatar storage (step 2, irreversible)** → row deletes (step 3) →
+auth-user delete (step 4). If any step-3 `checkedWrite` throws or the step-4
+`auth.admin.deleteUser` returns an error, the action returns `ok: false` and the screen
+renders the failure terminal: *"Your account is still here … Nothing was lost, and
+everything is just as it was."* That is untrue once step 2 has run — the person's voice
+recordings and photo (the core "essence" asset) are already gone, while the account still
+works. The header comment's "aborts BEFORE any data loss" only holds for a *Stripe* failure.
+**Why it matters:** the highest-stakes screen actively reassures the user nothing was lost
+at the exact moment their irreplaceable recordings *were* lost. Not live today (flag OFF).
+**Fix shape:** do the irreversible step last — delete rows + auth user first, storage last
+(a storage failure then just orphans objects for a later sweep, recoverable), **or** soften
+the post-storage failure copy so it doesn't promise "nothing was lost." Reorder is the real fix.
+**Pick up when:** before `ACCOUNT_DELETE_ENABLED` is enabled; same batch as #80/#83.
+
+### 82. [P2] Vault restore (past_due) opens the Stripe Portal via `window.open` *after* an `await` → blocked on iOS Safari, silent dead-end
+`src/app/app/vault/restore/actions.tsx:29,44` — the `update_card` branch (the recovery path
+for a past_due user whose card is failing) awaits the portal-session fetch, then calls
+`window.open(data.portalUrl, '_blank', …)`. Browsers that require a live user-gesture for
+`window.open` (notably iOS/Safari, and desktop Chrome under some settings) treat an open that
+runs *after* an `await` as non-user-initiated and block it; the returned handle is ignored and
+line 45 just re-enables the button — `restoreFailed` is never set, so **no error is shown.**
+**Why it matters:** a past_due user on an iPhone taps "Update my card," the tab is blocked,
+and nothing happens and nothing explains why — the exact silent dead-end Step 10 Ch2 exists to
+eliminate, on the money-recovery path. This one is **live** (the restore screen is the shipped
+surface). The `restart`/lapsed branch is fine — it uses `window.location.href`.
+**Fix shape:** open a placeholder tab synchronously in the click handler and set its
+`location` after the fetch, **or** navigate the current tab with `window.location.href`
+(matching the restart branch) and rely on the portal `return_url`; and surface `restoreFailed`
+when the opened handle is `null`. Client-side fix.
+**Pick up when:** next Step 10 / vault-recovery touch, or before real past_due users appear.
+
+### 83. [P3] `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — the irreversible teardown is reachable while the feature "ships dark"
+`src/app/app/settings/actions.ts:170` (whole action). The flag comment
+(`src/lib/feature-flags.ts:9-13`) says delete "ships dark: OFF until the teardown … is signed
+off." But `ACCOUNT_DELETE_ENABLED` is consulted only in `page.tsx:131` to set the `deleteEnabled`
+prop that *hides the button*; the server action performs no flag check and is passed to the
+client on both the happy and error render paths (`page.tsx:134,150`). Next.js server actions
+are addressable POST endpoints, so the full irreversible teardown is invocable by an
+authenticated caller even while the feature is supposedly disabled — i.e. before it's been
+signed off, which is the whole reason it's dark.
+**Why it matters:** defense-in-depth on the single most destructive action in the app; the
+"dark" safety posture the flag advertises isn't actually enforced server-side.
+**Fix shape:** first line of `deleteAccountAction` → `if (!isFeatureEnabled('ACCOUNT_DELETE_ENABLED')) return { ok: false, error: … }`.
+Gate the destructive action, not just the button.
+**Pick up when:** before `ACCOUNT_DELETE_ENABLED` is enabled; same batch as #80/#81.
+
+### 84. [P3] `useCheckout` success path doesn't guard `res.json()` / a missing `checkoutUrl` → the CTA can stick disabled, and `push(undefined)` reports success
+`src/lib/stripe/useCheckout.ts:54-63` — the error path defensively parses JSON
+(`.catch(() => ({}))`, line 45), but the success path does `const { checkoutUrl } = (await res.json())`
+unguarded. Callers await it with no try/catch (e.g. `vault/protect/actions.tsx:26`,
+`seal/actions.tsx`), so a throw leaves `setIsProcessing(false)` unreached → the CTA stays
+`disabled` forever with no error. And if the body is valid JSON but missing the field,
+`checkoutUrl` is `undefined` → the `^https?` test is false → `router.push(undefined)` no-ops →
+the function still `return true`, so the caller thinks navigation is underway and also stays stuck.
+**Why it matters:** both cases defeat the hook's own stated "no dead spinner" mandate. Requires a
+malformed/contract-breaking 200 (proxy interstitial, truncated body, a field-name change), so
+it's robustness debt rather than a bug that fires under normal operation — but the
+`push(undefined)`-returns-`true` logic hole is real regardless of trigger.
+**Fix shape:** wrap the success parse in the same try/catch and validate
+`typeof checkoutUrl === 'string' && checkoutUrl` before navigating; return `false` on parse
+failure or missing URL so callers surface the recoverable error. *Note:* the restore restart
+branch (`vault/restore/actions.tsx:52-71`) inlines this same fetch instead of reusing
+`useCheckout`, so the guard must be applied there too (or the duplication collapsed) or lapsed
+users keep the unguarded behavior after Seal/Protect are fixed.
+**Pick up when:** next checkout/Step 10 touch. Agent-fixable.
+
+### 85. [P3] The account-teardown and vault-restore client flows — the app's highest-stakes money/destructive paths — have no test coverage
+`src/app/app/settings/actions.ts` (the `deleteAccountAction` teardown) and
+`src/app/app/vault/restore/actions.tsx` (`handleRestore`) have no `*.test.*`. Nothing asserts
+that Stripe cancel precedes data deletion, that a failed subscriptions read aborts before
+deletion (#80), that a partial failure reports `ok:false`, that the FK-safe delete order holds,
+or — on restore — that portal-failure surfaces `restoreFailed`, that the 401→redirect branch
+fires, and that restart-checkout success/failure behave. `useCheckout.test.tsx` and the
+portal/checkout API-route tests exist, but the branch-heavy client orchestrators between them
+don't. Findings #80 and #82 would both have been caught by a basic failure-injection test here.
+**Why it matters:** the two flows that can leak money or destroy data are the two with the least
+safety net; a future refactor can silently reintroduce #80/#82 with nothing red in CI.
+**Fix shape:** add teardown tests (sub-read error → abort; Stripe-cancel failure → abort before
+storage; row-delete failure → `ok:false`; happy-path ordering) and a `RestoreActions` test
+(portal success / portal failure→`restoreFailed` / 401→redirect / restart success+failure /
+offline→recover). Agent-fixable.
+**Pick up when:** with any fix to #80–#84 (land the test alongside the fix, per the house
+"extract, then test" rhythm).
+
+### 86. [P3 · drift] Step 3 Card Capture / Processing / canvas seal are built + merged but mounted only on `/dev` — production checkout still runs the legacy paywall
+`src/components/screens/step3/CardCapture.tsx` + `Processing.tsx` + the canvas vault rig
+(`SealVaultCanvas`, `VaultObject`, `src/lib/vault-render/*`) are referenced **only** by
+`src/app/dev/card-capture/`, `dev/processing/`, `dev/seal/`, and `dev/vault-canvas/` — no
+production `src/app/app/**` route imports them. The live paywall/checkout is still the older
+`src/app/app/vault/protect/actions.tsx` → `VaultProtectScreen` and `.../vault/seal/actions.tsx`
+→ `VaultSealScreen`. Meanwhile `Roadmap_Phase1_Phase2.md` (2026-07-06) marks "Step 3 Card
+Capture — ✅ Complete" under M2 with an exit of a "payable happy path," and the full-journey
+wiring is deferred to M4.
+**Why it matters:** it reads as shipped/live when it's dark, so (a) the redesigned subscribe
+moment isn't what real users hit, (b) all of the Step 3 code — including its §SEAL-INTEGRITY
+money-safety invariant in `cardCaptureView`/`processingView` (`CardCapture.tsx:40-53`,
+`Processing.tsx:38-57`), which has **no unit test** — is unexercised, and (c) **FU-22's payment
+gate must stay OFF**: FU-22 waits on the "card-capture-before-processing reorder," which this
+unmounted flow means has *not* actually landed in production — flipping
+`VOICE_CREATION_REQUIRES_PAYMENT` on now would 402 the live happy path.
+**Fix shape:** not agent-fixable as a code change — it's the M4 wiring decision (mount the Step 3
+flow as the real checkout, or explicitly keep it staged and correct the roadmap's "complete"
+line). When wiring lands, add (1) a synchronous in-flight/`ref` double-submit guard on the
+"Keep my voice" CTA (`CardCapture.tsx:202-208` today relies only on a parent-supplied `busy`
+prop), and (2) a truth-table unit test over `cardCaptureView`/`processingView` asserting
+`sealed` ⇔ `checkout.confirmed` and that hold/timeout never expose a re-pay control.
+**Pick up when:** the M4 full-journey wiring pass, or the next roadmap reconciliation — whichever
+is first. Owner-aware (keep FU-22's flag OFF until this is genuinely wired).
+
+### 87. [P4] Double-tap guards on the checkout + delete actions read render-state, not a ref → a fast double-tap can fire two `create-checkout-session` POSTs
+The `if (isProcessing) return` / `if (isRestoring) return` / `if (deletePending) return` guards in
+`src/app/app/vault/protect/actions.tsx:23`, `seal/actions.tsx`, `restore/actions.tsx:21`, and
+`SettingsScreen.tsx` (delete confirm) all read a `useState` value captured at render time, so two
+handlers firing in the same tick both see the stale `false` and both proceed; the button's
+`disabled` prop is the only guard that actually holds (and only after a re-render). Extends the
+same class already logged for the email sheet (FU-71).
+**Why it matters:** low and bounded — a mobile double-tap can create two Stripe Checkout sessions
+(one abandoned) or two portal fetches; it is **not** a double-charge (only one checkout completes)
+and the delete path is further protected server-side (the second run finds no auth user). Real, but
+mitigated.
+**Fix shape:** flip a `useRef` latch synchronously at the top of each handler
+(`if (inFlight.current) return; inFlight.current = true`) instead of relying on the state read —
+the same fix FU-71 wants for the email handler; do them together.
+**Pick up when:** any input-hardening sweep, or alongside FU-71. Agent-fixable.
