@@ -816,6 +816,25 @@
     animation: onb-conveyor-land 650ms var(--ease-page) both;
   }
 
+  /* ---- tail line: "Their timeline." lands a beat below "Your voice." ----
+     A sibling of .onboarding-conveyor (not a child) so it positions and
+     suppresses on its own. Delay is set inline from Screen2.tsx (tailLandMs)
+     so it recomputes with the phrase count. Excluded from the generic step
+     reveal below (it owns its animation); hidden on mobile with the conveyor. */
+  .onboarding-conveyor-tail {
+    max-width: 340px;
+    margin: 0 auto 24px;
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-style: italic;
+    color: var(--color-text-tertiary);
+    opacity: 0;
+    transform: translateX(16px);
+    animation: onb-conveyor-land 650ms var(--ease-page) both;
+    pointer-events: none;
+  }
+
   @keyframes onb-conveyor-pass {
     0%   { opacity: 0; transform: translateX(16px); }
     21%  { opacity: 1; transform: translateX(0); }   /* 400ms of 1900 */
@@ -1042,7 +1061,7 @@
      • .onboarding-conveyor   — has its own cinematic phrase sequence.
      • .onboarding-ctas--delayed — waits for the conveyor to land. */
 
-  .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-ctas--delayed) {
+  .onboarding-step > *:not(.onboarding-stone-slot):not(.onboarding-conveyor):not(.onboarding-conveyor-tail):not(.onboarding-ctas--delayed) {
     opacity: 0;
     transform: translateY(10px);
     animation: onb-reveal var(--duration-page) var(--ease-page) both;
@@ -1146,8 +1165,10 @@
     }
 
     /* Screen 2 conveyor: suppress entirely. The body paragraphs above it
-       already carry the screen's meaning. The conveyor is pure decoration. */
-    .onboarding-conveyor {
+       already carry the screen's meaning. The conveyor is pure decoration.
+       The tail line ("Their timeline.") is suppressed with it. */
+    .onboarding-conveyor,
+    .onboarding-conveyor-tail {
       display: none;
     }
 
