@@ -63,6 +63,38 @@ The roadmap read as if only hardening/polish remained. It doesn't — these are
 
 ---
 
+## Status update — 2026-07-08 (supersedes the Step 10 + C3 items above)
+
+Since the 2026-07-06 scan, the two items flagged as "genuine unbuilt
+requirements" have moved — the reality-check list above overstates what's left:
+
+- **C3 Vault Limit is BUILT** (was listed unbuilt, FU #38). `VaultLimitScreen`
+  + `/messages/limit` route + `/dev/messages-limit`; copy re-anchored to the
+  sealed-Vault-at-rest framing (PR #87). Confirm it's wired to the live
+  3-message cap, then close FU #38.
+- **Step 10 is no longer ~1/4 done.** Per the scope doc
+  (`docs/Step10_Error_Chapters_Scope.md`, 2026-07-07) the work was never three
+  equal chapters. Current state by §12 category:
+  - **Generation-failure (S10-A)** — ✅ shipped (PR #88): contact-as-care ceiling
+    after the 3-attempt limit.
+  - **Playback (S10-C)** — Shelf audio-error + retry ✅ done; **First-Breath
+    playback-error is the only gap, and it's blocked on FU #41** (First-Breath
+    ceremony audio is unwired — can't build an error state for audio that
+    doesn't play yet).
+  - **Offline / connection-lost (S10-B)** — 🎨 **design source of truth landed**
+    (`prototypes/essence-step10-offline.html` + `docs/Step10_Offline_Design_Handoff.md`).
+    Build pending: `useOnline` hook + shared connectivity treatment +
+    resume-safety audit + telemetry. Sync-MVP lock holds — detect/inform/
+    degrade/resume, **no write-queue**.
+  - **Error-copy pass (X)** — one consolidated warm-voice pass owed across all
+    error surfaces (Ch2 + A5 + new) once they settle.
+
+**Net:** M3 is nearly closed. Remaining Step 10 build = S10-B (offline) now, then
+S10-C when FU #41 lands. After that only M4 (integration/hardening/launch)
+stands between here and a launchable product.
+
+---
+
 ## Remaining work to launch — recalibrated 2026-07-06 (full path, no lean cut)
 
 Calibrated to observed velocity: ~21 weeks elapsed (Feb 11 → Jul 7), bursty
@@ -96,10 +128,11 @@ states) add calendar that isn't coding.
 Track these to done. `[ ]` = open, grouped by the buckets above.
 
 **Finish the journey**
-- [ ] Step 10 Ch — generation-failure state (create flow can't render a voice)
-- [ ] Step 10 Ch — audio-can't-play state (playback failure on shelf/first-breath)
-- [ ] Step 10 Ch — offline / connection-lost state
-- [ ] C3 Vault Limit screen — design prototype → build → wire the 3-message cap
+- [x] Step 10 S10-A — generation-failure state (contact-as-care ceiling, PR #88)
+- [~] Step 10 S10-C — audio-can't-play state (Shelf ✅; First-Breath blocked on FU #41)
+- [ ] Step 10 S10-B — offline / connection-lost state (design landed → **build**)
+- [ ] Step 10 X — consolidated error-copy pass across all surfaces (Ch2 + A5 + new)
+- [x] C3 Vault Limit screen — built (PR #87); confirm 3-message cap is wired, close FU #38
 - [ ] First Breath ceremony audio — source/produce assets + wire the swell + bell
 - [ ] Remove dead `record/complete/stub`; confirm Card Capture is the only checkout path
 - [ ] Decide Home A: build its brief, or delete the stub for V1
@@ -237,9 +270,10 @@ parallelizes around it.
 - **Step 9 Settings & Trust** — ✅ built (PR #83). Account, subscription
   management, **delete account** (ships dark behind `ACCOUNT_DELETE_ENABLED`;
   also required later for the App Store), transparency surfaces.
-- **Step 10 per-flow error states** — 🔨 **partial**: only Ch2 payment/restore
-  recovery merged (PR #79). Generation-failure, audio-can't-play, offline still
-  unbuilt — see the punch-list above.
+- **Step 10 per-flow error states** — 🔨 **mostly done** (see 2026-07-08 update):
+  payment/restore recovery (PR #79) ✅ · generation-failure S10-A (PR #88) ✅ ·
+  playback Shelf ✅ (First-Breath S10-C blocked on FU #41) · **offline S10-B
+  design landed, build pending** · consolidated copy pass owed.
 - **Step 4 vault freshness check** — ✅ merged (PR #80).
 - *Exit:* a user can fully manage and leave their account; failures handled gracefully.
 
