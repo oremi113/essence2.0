@@ -11,6 +11,7 @@ export type CreateCheckoutSessionErrorCode =
   | 'unauthenticated'
   | 'profile_missing'
   | 'profile_lookup_failed'
+  | 'already_subscribed'
   | 'missing_price_id'
   | 'stripe_error';
 
@@ -134,6 +135,43 @@ export async function createCheckoutSession(
   }
 
   const grantTrial = !priorSub;
+
+  // Duplicate-subscription guard (FOLLOW_UPS #77). Never mint a SECOND
+  // subscription for a user who already holds a live one. The happy-path UI
+  // prevents reaching here (reveal/protect redirect trial/active users to
+  // /record; restore only restarts terminal states), so this backs a direct or
+  // abnormal POST to the endpoint. Without it such a call creates a duplicate
+  // Stripe subscription — double billing — and getSubscriptionStatus's
+  // newest-row read would hide the older, still-charging one. Terminal statuses
+  // (lapsed/cancelled) intentionally fall through: that IS the restore→restart
+  // path, whose fresh trial is already gated by the guard above.
+  const { data: liveSub, error: liveSubError } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('status', ['trial', 'active', 'past_due'])
+    .limit(1)
+    .maybeSingle();
+
+  if (liveSubError) {
+    console.error(
+      '[createCheckoutSession] live-subscription lookup failed',
+      liveSubError,
+    );
+    throw Object.assign(new Error('Subscription lookup failed'), {
+      code: 'profile_lookup_failed' satisfies CreateCheckoutSessionErrorCode,
+    });
+  }
+
+  if (liveSub) {
+    console.warn(
+      '[createCheckoutSession] refusing duplicate checkout — user already has a live subscription',
+      user.id,
+    );
+    throw Object.assign(new Error('You already have an active subscription.'), {
+      code: 'already_subscribed' satisfies CreateCheckoutSessionErrorCode,
+    });
+  }
 
   const priceId =
     plan === 'annual'
