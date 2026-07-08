@@ -29,6 +29,11 @@
 import { useEffect, useState } from 'react';
 import { BreathStone } from '@/components/breath-stone';
 import { useReducedMotion } from '@/lib/animation/useReducedMotion';
+import { useOnline } from '@/lib/system/useOnline';
+import {
+  OfflineActionNote,
+  OFFLINE_ACTION_COPY,
+} from '@/components/system/OfflineActionNote';
 import type { GenerationScreenProps } from './GenerationScreen.types';
 import { GENERATION_CSS } from './GenerationScreen.css';
 
@@ -100,6 +105,10 @@ export function GenerationScreen({
   onContactSupport,
 }: GenerationScreenProps) {
   const reducedMotion = useReducedMotion();
+  // S10-B: retrying generation needs the network; offline gates only the retry
+  // path (the contact-support / adjust-note fallbacks work offline), so the
+  // failed state never dead-ends.
+  const online = useOnline();
 
   // The beat whose copy is shown. `fading` dims it to 0.3 mid-swap so the
   // text changes behind a brief cross-fade rather than a hard cut.
@@ -175,14 +184,23 @@ export function GenerationScreen({
               type="button"
               className="gen__btn"
               onClick={exhausted ? onContactSupport : onRetry}
+              // Primary is the network retry only when not exhausted.
+              disabled={!exhausted && !online}
             >
               {level.primary}
             </button>
+            {/* Reason sits directly under the CTA (prototype .cta-reason),
+                collapsed to zero height when online. */}
+            <OfflineActionNote blocked={!online}>
+              {OFFLINE_ACTION_COPY.generate}
+            </OfflineActionNote>
             {showSecondary ? (
               <button
                 type="button"
                 className="gen__btn gen__btn--link"
                 onClick={exhausted ? onRetry : onAdjustNote}
+                // Secondary is the network retry only when exhausted.
+                disabled={exhausted && !online}
               >
                 {level.secondary}
               </button>
