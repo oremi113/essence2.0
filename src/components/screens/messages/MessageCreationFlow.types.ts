@@ -63,4 +63,11 @@ export interface MessageCreationFlowProps {
    * A4→A5 chunk; until then the page may resolve not-ok.
    */
   onGenerate: (request: GenerateRequest) => Promise<PersonalNoteSubmitResult>;
+  /**
+   * Opens the support contact (a `mailto:`) for A5's contact-as-care ceiling
+   * (Step 10 gen-fail — offered after 3 failed attempts). Page-owned side
+   * effect; the flow only decides *when* to surface it. Optional: without it,
+   * A5 keeps the plain "Try again" retry with no exhausted state.
+   */
+  onContactSupport?: () => void;
 }

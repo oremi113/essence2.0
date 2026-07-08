@@ -15,6 +15,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ✅ RESOLVED 2026-06-16 (stripe-hardening — confirmations answered, CTA branch built) |
 | 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
 | 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (error check + throw shipped; retry-in-place error UI now landed — the deferred sibling) |
+| 75 | P2 | `SUPPORT_EMAIL` is a placeholder (`support@essence.example`) — Step 10 contact-as-care CTAs mailto a dead address *(new 2026-07-07)* | 🚫 LAUNCH-BLOCKER — swap for the real monitored inbox in `src/lib/config/support.ts` before launch |
 | 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED 2026-06-11 (35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
 | 1 | P3 | Prompt auto-advance lint workaround (ref-during-render) | ✅ RESOLVED 2026-06-11 (35d7372 — adjust-state-during-render, no disable) |
 | 2 | P3 | Failed upload leaves stale internal state between retries | ✅ RESOLVED 2026-06-11 (35d7372 — `resetPipeline()` in catch) |
@@ -687,8 +688,8 @@ Two header/JSDoc comments in shipping Step 6 files describe a world the Chunk 8�
 ### 69. [P3] Delete-failure terminal says "reach us" but there's no support destination wired
 The "your account is still here" partial-failure terminal (`SettingsScreen.tsx`, `terminal === 'failed'`) copy reads "…or reach us and we'll take care of it," but there is no support email/in-app contact behind it — the only actions are "Try again" (reopens delete beat 2) and "Not now" (dismiss). The prototype header (`RISKY CONTROLS`) flags this as owner-to-confirm.
 **Why it matters:** a user whose teardown half-failed is told they can reach us, with no way to. Low frequency (only on a teardown that partially fails) but high-stakes for the person who hits it.
-**Fix shape:** owner decides the support destination (a `mailto:` support address or an in-app contact route); wire it as a third action or an inline link in the failure terminal. Copy is already reassurance-first; just needs the real target.
-**Pick up when:** owner confirms the support destination (also referenced in the prototype's `confirmDelete` note).
+**Fix shape:** owner decides the support destination (a `mailto:` support address or an in-app contact route); wire it as a third action or an inline link in the failure terminal. Copy is already reassurance-first; just needs the real target. **Now enabled:** S10-A shipped the shared `SUPPORT_EMAIL` / `supportMailto()` primitive (`src/lib/config/support.ts`) — the settles-side fix is now just a page-layer `mailto:` reusing it (once the real address lands, #75). Left out of S10-A to keep that chunk to the gen-fail surface.
+**Pick up when:** owner confirms the support destination (also referenced in the prototype's `confirmDelete` note) — the primitive is ready; only the real address (#75) and the SettingsScreen wiring remain.
 
 ### 70. [P3] `settings.delete_account_invoked` logs `outcome: 'success'` before the teardown runs
 `src/app/app/settings/actions.ts:144` fires `logEvent({ event: 'settings.delete_account_invoked', …, outcome: 'success' })` at the top of `deleteAccountAction`, before any Stripe/storage/row work. It's an "invocation started" marker (real completion is `settings.delete_account_complete` at :205), but `outcome: 'success'` on a pre-work event reads as "the delete succeeded" in a naive log/funnel query.
@@ -711,4 +712,13 @@ The approved C3 design prototype (`prototypes/essence-c3-vault-limit.html` / del
 
 **Why it matters:** three copies of the vault engine drift independently; and the prototype's headline "edit the token, the canvas follows" contract silently no-ops in production, so a future token change won't move the render — a false sense of themeability on the app's core monetized object.
 **Fix shape:** C3 screen calls `paintVaultFrame(canvas, 1, {...})` with the lib's exported `RELIQUARY`; delete the inlined `initVaultEngine`/`drawVault`/local `RELIQUARY`/`readAnchors`. Render the still rest-ground at the screen layer via `--shimmer-intensity` (or add `--shimmer-alpha`/`--shimmer-r-rest` to `@theme` first, with rationale, if the 2-param model is kept). **Do not mutate the exported `RELIQUARY`** (it's shared with the reveal/restore vault screens). The `metalCool #7A8088` vs `--color-vault-bronze #888278` reconciliation is invisible at C3's `t=1` and already tracked in `docs/session-step3-card-capture/palette-token-reconciliation.md` — out of scope for the C3 port.
-**Pick up when:** the C3 Vault Limit build (in progress 2026-07-07). This entry closes when the port lands consuming `src/lib/vault-render/`.
+**Pick up when:** ✅ RESOLVED 2026-07-07 (PR #87 / `62d7525`) — C3 ships consuming `src/lib/vault-render/` via `paintVaultFrame(cv, {mechT:1,emberT:1})`; no inlined engine, no palette mutation, rest-ground on `--shimmer-intensity`.
+
+### 75. [P2] `SUPPORT_EMAIL` is a placeholder — contact-as-care CTAs mailto a dead address
+`src/lib/config/support.ts` ships `SUPPORT_EMAIL = 'support@essence.example'` — a deliberately unroutable placeholder (`.example` is reserved) introduced with the Step 10 generation-failure contact-as-care ceiling (S10-A). The A5 "Reach us and we'll shape it with you" primary (after 3 failed attempts) opens `supportMailto(...)` against it.
+
+**Why it matters:** a user reaching contact-as-care is already stuck; a `mailto:` to a dead address is a silent dead end — exactly what §12.5 ("no dead ends") forbids. Placeholder was owner-approved to unblock the build, but it must not reach real users.
+**Fix shape:** swap `SUPPORT_EMAIL` for the real monitored inbox (one constant). While there, adopt the same constant at the other "reach us" sites — see #69.
+**Pick up when:** before launch (hard gate). Trivial once the inbox exists.
+
+**Sub-note — gen-fail telemetry gap (P3, related):** `step6.generation_failed` is *catalogued* (`analytics/2026-06-01-step6-events.md:94`) but **not wired** anywhere in the flow (grep-confirmed), so neither the failure nor the exhausted/contact-as-care surface is instrumented. S10-A deliberately left this out of scope (no client `trackStep6('generation_failed', …)` call yet); wire it — plus a "support contacted" signal — with the base gen-fail telemetry, and drop the `docs/analytics/` note then.
