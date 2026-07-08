@@ -45,6 +45,12 @@ export const ROUTES = {
 
   /** Step 9 Settings & Trust — the control + reassurance surface (gear on Home B). */
   settings: "/app/settings",
+
+  // Legal — public, unauthenticated pages (not in middleware's protected set).
+  // Placeholder copy pending owner/counsel review; linked from Settings once
+  // the Step 9 settings surface lands (see docs/FOLLOW_UPS.md).
+  privacy: "/privacy",
+  terms: "/terms",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
