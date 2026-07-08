@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { MessageCreationFlow } from '@/components/screens/messages/MessageCreationFlow';
 import { clearFlowId } from '@/lib/analytics/step6';
+import { supportMailto } from '@/lib/config/support';
 import type { GenerateRequest } from '@/components/screens/messages/MessageCreationFlow.types';
 import type { PersonalNoteSubmitResult } from '@/components/screens/messages/PersonalNoteScreen.types';
 import type { ExistingRecipient } from '@/components/screens/messages/RecipientSetupScreen.types';
@@ -46,6 +47,14 @@ export function MessagesNewPageClient({
     clearFlowId();
     router.push(ROUTES.home);
   }, [router]);
+
+  // A5 contact-as-care (after the 3-attempt generation ceiling). The page owns
+  // the side effect per the three-layer rule; the flow/screen only decide when
+  // to offer it. mailto so a stuck user reaches a human without leaving the app
+  // context behind.
+  const handleContactSupport = useCallback(() => {
+    window.location.href = supportMailto('Help with my message');
+  }, []);
 
   const handleGenerate = useCallback(
     async ({ recipient, category, note }: GenerateRequest): Promise<PersonalNoteSubmitResult> => {
@@ -91,6 +100,7 @@ export function MessagesNewPageClient({
       savedCountBefore={savedCountBefore}
       onExitFlow={handleExit}
       onGenerate={handleGenerate}
+      onContactSupport={handleContactSupport}
     />
   );
 }
