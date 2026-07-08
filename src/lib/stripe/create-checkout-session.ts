@@ -103,6 +103,38 @@ export async function createCheckoutSession(
     }
   }
 
+  // Trial-abuse guard (roadmap bucket #5). The 7-day trial is a one-time,
+  // first-subscription benefit. The restore flow sends lapsed/cancelled users
+  // back through THIS same checkout to restart, so without this gate every
+  // restart would mint a fresh trial — a cancel-before-convert loop would be
+  // perpetual free access. Grant the trial only to a user who has never held a
+  // subscription of any kind. A returning subscriber is charged immediately.
+  //
+  // Keyed on user_id (stable) rather than the Stripe customer, so it survives a
+  // customer-id reset from the stale-customer reconciliation above. RLS allows a
+  // user to SELECT their own subscription rows, so the server client suffices.
+  const { data: priorSub, error: priorSubError } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (priorSubError) {
+    // Match the profile-lookup pattern: never guess the trial state. Abort and
+    // let the caller retry rather than silently grant (re-opens abuse) or deny
+    // (charges a legitimate first-timer on a transient blip).
+    console.error(
+      '[createCheckoutSession] prior-subscription lookup failed',
+      priorSubError,
+    );
+    throw Object.assign(new Error('Subscription history lookup failed'), {
+      code: 'profile_lookup_failed' satisfies CreateCheckoutSessionErrorCode,
+    });
+  }
+
+  const grantTrial = !priorSub;
+
   const priceId =
     plan === 'annual'
       ? process.env.STRIPE_PRICE_ID_VAULT_ANNUAL
@@ -122,7 +154,8 @@ export async function createCheckoutSession(
     payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {
-      trial_period_days: 7,
+      // First-timers only — see the trial-abuse guard above.
+      ...(grantTrial ? { trial_period_days: 7 } : {}),
       metadata: {
         user_id: user.id,
         billing_period: plan,

@@ -44,6 +44,9 @@ function mockServer({
         eq() {
           return builder;
         },
+        limit() {
+          return builder;
+        },
         maybeSingle() {
           return builder;
         },
@@ -174,6 +177,62 @@ describe('createCheckoutSession — FOLLOW_UPS #44: customer-id persist is check
     await expect(createCheckoutSession('monthly')).resolves.toBeTruthy();
     expect(srv.calls.updates[0]).toMatchObject({ stripe_customer_id: 'cus_new' });
     expect(stripe.checkout.sessions.create).toHaveBeenCalledOnce();
+  });
+});
+
+describe('createCheckoutSession — roadmap #5: trial-abuse guard', () => {
+  // The restore flow re-enters this same checkout for lapsed/cancelled users.
+  // The 7-day trial must be a one-time benefit, or a cancel-before-convert loop
+  // = perpetual free access. Queue order after a reused live customer is
+  // [profile select, prior-subscription lookup].
+  it('does NOT grant a trial to a returning subscriber (prior subscription exists)', async () => {
+    mockServer({
+      results: [
+        { data: { stripe_customer_id: 'cus_live' }, error: null },
+        { data: { id: 'sub_prior' }, error: null },
+      ],
+    });
+    vi.mocked(stripe.customers.retrieve).mockResolvedValue({ id: 'cus_live' } as never);
+
+    await createCheckoutSession('monthly');
+
+    const arg = vi.mocked(stripe.checkout.sessions.create).mock.calls[0]?.[0];
+    if (!arg) throw new Error('checkout.sessions.create was not called');
+    expect(arg.subscription_data?.trial_period_days).toBeUndefined();
+    // Metadata is still stamped so the webhook can attribute the restart.
+    expect(arg.subscription_data?.metadata).toMatchObject({
+      user_id: 'user_1',
+      billing_period: 'monthly',
+    });
+  });
+
+  it('grants the 7-day trial to a first-timer (no prior subscription row)', async () => {
+    mockServer({
+      results: [
+        { data: { stripe_customer_id: 'cus_live' }, error: null },
+        { data: null, error: null },
+      ],
+    });
+    vi.mocked(stripe.customers.retrieve).mockResolvedValue({ id: 'cus_live' } as never);
+
+    await createCheckoutSession('monthly');
+
+    const arg = vi.mocked(stripe.checkout.sessions.create).mock.calls[0]?.[0];
+    if (!arg) throw new Error('checkout.sessions.create was not called');
+    expect(arg.subscription_data?.trial_period_days).toBe(7);
+  });
+
+  it('aborts (no checkout) when the prior-subscription lookup errors', async () => {
+    mockServer({
+      results: [
+        { data: { stripe_customer_id: 'cus_live' }, error: null },
+        { data: null, error: { message: 'boom' } },
+      ],
+    });
+    vi.mocked(stripe.customers.retrieve).mockResolvedValue({ id: 'cus_live' } as never);
+
+    await expectCode(createCheckoutSession('monthly'), 'profile_lookup_failed');
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 });
 
