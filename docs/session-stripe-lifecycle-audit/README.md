@@ -48,8 +48,24 @@ statuses fall through — that IS the restore→restart path.
 - `tests/unit/create-checkout-session.test.ts` — +3 cases (live sub → reject;
   terminal returner → restart allowed, no trial; lookup error → abort).
 
-Combined: checkout test suite 12 → 18; full Stripe suite 66 → 72 green. No new
-migration, no schema change, no telemetry event added/removed.
+**Fix (F3) — lapse-vs-cancel label no longer depends solely on Stripe's reason.**
+`handleSubscriptionDeleted` labelled `lapsed` only when
+`cancellation_details.reason === 'payment_failed'`, else `cancelled`. Stripe
+docs confirm it stamps `payment_failed` reliably on dunning-exhaustion — but the
+field can be null or another value (`payment_disputed`,
+`canceled_by_retention_policy`, legacy events). The handler now keeps the two
+explicit reasons as fast paths and, for an ambiguous reason, falls back to OUR
+own state: a delete out of `past_due` (only ever set from
+`invoice.payment_failed`) is a lapse, not a voluntary cancel. Read failure →
+conservative `cancelled`, never blocks the delete.
+
+- `src/app/api/stripe/webhook/handlers.ts` — reason fast-paths + past_due
+  fallback.
+- `tests/unit/stripe-webhook-handlers.test.ts` — +3 (reason-missing×past_due →
+  lapse; payment_disputed×past_due → lapse; read-error → cancelled, no throw).
+
+Combined: full Stripe suite 66 → 75 green. No new migration, no schema change,
+no telemetry event added/removed.
 
 ## Audit findings (full)
 
@@ -57,7 +73,7 @@ migration, no schema change, no telemetry event added/removed.
 |----|----------|---------|-------------|
 | F1 | HIGH | Unlimited free trials via lapse→restart loop | **Fixed** (commit 0682fb9) |
 | F2 | MEDIUM | No already-subscribed guard on checkout → double billing on direct call | **Fixed** (commit 3824407; FOLLOW_UPS #77 now resolved) |
-| F3 | LOW-MED | Lapse-vs-cancel label depends on `cancellation_details.reason` | Logged → FOLLOW_UPS #78 |
+| F3 | LOW-MED | Lapse-vs-cancel label depends on `cancellation_details.reason` | **Fixed** (commit pending; FOLLOW_UPS #78 now resolved) |
 | F4 | LOW | No webhook event-ID idempotency ledger (handlers idempotent by construction) | Logged → FOLLOW_UPS #79 |
 
 Lower notes (not bugs, captured for context): `unpaid`→`past_due` mapping offers
@@ -69,7 +85,7 @@ nudge); no in-app "resume" for a `cancel_at_period_end` sub before period end
 
 ## Verification status
 
-- typecheck ✅ · lint ✅ · unit 72/72 ✅ (Stripe suite).
+- typecheck ✅ · lint ✅ · unit 75/75 ✅ (Stripe suite).
 - **Not** yet verified live: the true E2E (real Stripe test-mode lapse→restart
   asserting the new subscription carries no trial) needs the Stripe test harness
   + a returning-subscriber state, which isn't reproducible in this environment.
