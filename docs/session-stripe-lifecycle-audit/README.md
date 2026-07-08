@@ -34,16 +34,29 @@ to true first-timers; returning subscribers are charged immediately.
   file's existing fail-loud profile-lookup pattern — never guess trial state).
 - `tests/unit/create-checkout-session.test.ts` — +3 cases (returning subscriber
   gets no trial; first-timer gets the trial; lookup error aborts before Stripe).
-  Suite 12 → 15; full Stripe suite 66 → 69 green.
 
-No new migration, no schema change, no telemetry event added/removed.
+**Fix (F2) — checkout rejects a duplicate subscription** (commit `3824407`).
+`createCheckoutSession` never checked for an existing subscription; a direct
+POST by a trial/active/past_due user would mint a second Stripe subscription
+(double billing). Now it looks up any live subscription for the user and throws
+`already_subscribed` (→ 409 in the route) before touching Stripe. Terminal
+statuses fall through — that IS the restore→restart path.
+
+- `src/lib/stripe/create-checkout-session.ts` — live-subscription guard +
+  `already_subscribed` error code.
+- `src/app/api/stripe/create-checkout-session/route.ts` — maps it to 409.
+- `tests/unit/create-checkout-session.test.ts` — +3 cases (live sub → reject;
+  terminal returner → restart allowed, no trial; lookup error → abort).
+
+Combined: checkout test suite 12 → 18; full Stripe suite 66 → 72 green. No new
+migration, no schema change, no telemetry event added/removed.
 
 ## Audit findings (full)
 
 | ID | Severity | Finding | Disposition |
 |----|----------|---------|-------------|
-| F1 | HIGH | Unlimited free trials via lapse→restart loop | **Fixed this session** |
-| F2 | MEDIUM | No already-subscribed guard on checkout → double billing on direct call | Logged → FOLLOW_UPS #77 |
+| F1 | HIGH | Unlimited free trials via lapse→restart loop | **Fixed** (commit 0682fb9) |
+| F2 | MEDIUM | No already-subscribed guard on checkout → double billing on direct call | **Fixed** (commit 3824407; FOLLOW_UPS #77 now resolved) |
 | F3 | LOW-MED | Lapse-vs-cancel label depends on `cancellation_details.reason` | Logged → FOLLOW_UPS #78 |
 | F4 | LOW | No webhook event-ID idempotency ledger (handlers idempotent by construction) | Logged → FOLLOW_UPS #79 |
 
@@ -56,7 +69,7 @@ nudge); no in-app "resume" for a `cancel_at_period_end` sub before period end
 
 ## Verification status
 
-- typecheck ✅ · lint ✅ · unit 69/69 ✅ (Stripe suite).
+- typecheck ✅ · lint ✅ · unit 72/72 ✅ (Stripe suite).
 - **Not** yet verified live: the true E2E (real Stripe test-mode lapse→restart
   asserting the new subscription carries no trial) needs the Stripe test harness
   + a returning-subscriber state, which isn't reproducible in this environment.
