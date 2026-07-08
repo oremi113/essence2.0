@@ -50,6 +50,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 77 | P2 | Checkout has no already-subscribed guard — a direct `POST /api/stripe/create-checkout-session` by a trial/active/past_due user mints a 2nd Stripe subscription → double billing *(stripe lifecycle audit 2026-07-08)* | ⏳ add a live-subscription pre-check (see §77) |
 | 78 | P3 | Lapse-vs-cancel label depends on `cancellation_details.reason` — a dunning delete with a null/other reason is stored as a *voluntary* cancel (wrong analytics + restore copy) *(stripe lifecycle audit 2026-07-08)* | ⏳ verify Stripe retry config stamps `payment_failed`, else add a fallback (see §78) |
 | 79 | P4 | No Stripe webhook event-ID idempotency ledger — handlers are idempotent by construction, so belt-and-suspenders, not a live bug *(stripe lifecycle audit 2026-07-08)* | ⏳ optional `stripe_events` dedup table (see §79) |
+| 80 | P2 | S10-B offline: only the Generate retry is gated. Save + Checkout CTAs, the SystemScreen offline variant, and the `system.offline_encountered` telemetry are unbuilt *(S10-B build 2026-07-08)* | ⏳ finish the blocked-action gates + hard-blocked route + telemetry (see §80) |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ✅ RESOLVED 2026-07-08 — procedural Web Audio engine (`src/lib/audio/firstBreathAudio.ts`) synthesises all three layers live; no asset files. Owner still needs to review by ear (headless verify can't) |
@@ -769,3 +770,16 @@ The webhook handlers are idempotent *by construction* — terminal states are st
 **Why it matters:** low. It's the one canonical Stripe hardening item still absent, and future handlers (e.g. one that increments a counter or sends an email) would NOT be automatically idempotent — the ledger is the safety net that makes "add a new handler" safe by default.
 **Fix shape:** a `stripe_events (event_id text primary key, type text, processed_at timestamptz default now())` table; at the top of `dispatchEvent`, insert the id and skip if it already exists (`ignoreDuplicates`). Service-role only, mirrors the `subscriptions` RLS pattern.
 **Pick up when:** before adding any non-idempotent webhook handler, or as part of a pre-launch billing-hardening pass.
+
+### 80. [P2] S10-B offline — blocked-action gates, hard-blocked route, and telemetry unfinished
+The connectivity spine shipped (S10-B.1–.3c): `useOnline`/`useConnectivity` (`src/lib/system/useOnline.ts`), the app-wide indicator (`src/components/system/OfflineIndicator.tsx`, mounted in `src/app/layout.tsx`), the shared blocked-action note (`src/components/system/OfflineActionNote.tsx`), and the first real gate (Generate retry). What's left:
+
+**What:**
+1. **Wire the remaining network CTAs** — Save (message-creation Seal/Save) and Checkout (Card Capture). Same pattern as `GenerationScreen`: read `useOnline`, disable only the network action, render `<OfflineActionNote>` with `OFFLINE_ACTION_COPY.save` / `.checkout`. Checkout lives near the `feat/stripe-trial-abuse-guard` worktree — coordinate to avoid a collision on the checkout surface.
+2. **SystemScreen offline variant** — the hard-blocked full-route fallback (`src/components/system/SystemScreen.tsx`) for a route that can't render offline; copy: "You're offline. This page will be here the moment you're back."
+3. **Telemetry** — new `system.offline_encountered` event (`surface` / `blocked_action`); drop a `docs/analytics/2026-07-*.md` note in that PR (new analytics event).
+4. **Unit tests** — `useOnline`/`useConnectivity` (offline flip, reconnect pulse, SSR default), `deriveOfflineStatus`, and the Generate offline-gate contract.
+
+**Why it matters:** offline is spec'd as **Ships** for V1 (`MASTER_SPEC:135`). The passive/indicator half is done; the action-prevention half is only 1/3 wired, so a Save or Checkout tapped offline still fails as a generic error.
+**Fix shape:** above; all additive, no new plumbing — the primitives exist. Stays inside the sync-MVP lock (detect/inform/degrade/resume, **no write-queue**).
+**Pick up when:** next S10-B session (continues directly from `a3bbc07` on `main`).
