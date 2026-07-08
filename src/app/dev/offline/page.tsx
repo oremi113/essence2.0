@@ -17,16 +17,28 @@ import {
   OfflineIndicator,
   type OfflineStatus,
 } from '@/components/system/OfflineIndicator';
+import {
+  OfflineActionNote,
+  OFFLINE_ACTION_COPY,
+} from '@/components/system/OfflineActionNote';
 
-const STATES: { id: OfflineStatus; label: string; hint: string }[] = [
+// The rail exposes one extra state beyond the indicator's: "blocked" keeps the
+// indicator offline while a network-required CTA is prevented with its note.
+type DevState = OfflineStatus | 'blocked';
+
+const STATES: { id: DevState; label: string; hint: string }[] = [
   { id: 'online', label: 'Online', hint: 'Baseline — indicator absent; everything works.' },
   { id: 'offline', label: 'Offline · passive', hint: 'Connection dropped while reading. Pill present; content stays usable.' },
+  { id: 'blocked', label: 'Offline · blocked action', hint: 'A network CTA is prevented (not failed) — disabled, with a calm reason beneath.' },
   { id: 'reconnecting', label: 'Reconnecting', hint: 'Back online — the pill flips to a brief sage beat, then retreats (~1.6s).' },
 ];
 
 export default function OfflineDevPage() {
-  const [status, setStatus] = useState<OfflineStatus>('online');
+  const [status, setStatus] = useState<DevState>('online');
   const hint = STATES.find((s) => s.id === status)?.hint ?? '';
+  const blocked = status === 'blocked';
+  // A blocked action still reads as offline on the indicator.
+  const indicatorStatus: OfflineStatus = blocked ? 'offline' : status;
 
   return (
     <>
@@ -47,7 +59,7 @@ export default function OfflineDevPage() {
         <div style={hintStyle}>{hint}</div>
       </div>
 
-      <OfflineIndicator status={status} />
+      <OfflineIndicator status={indicatorStatus} />
 
       {/* Mock content so the pill reads in context against a real ground. */}
       <div style={mockStyle}>
@@ -57,9 +69,44 @@ export default function OfflineDevPage() {
           Offline is a condition the app calmly holds — nothing here is lost, and
           it picks right back up when you’re connected.
         </p>
+
+        {/* Mock network-required CTA — prevented (not failed) while offline. */}
+        <div style={ctaWrapStyle}>
+          <button type="button" style={ctaStyle(blocked)} disabled={blocked}>
+            Seal this message
+          </button>
+          <OfflineActionNote blocked={blocked}>
+            {OFFLINE_ACTION_COPY.save}
+          </OfflineActionNote>
+        </div>
       </div>
     </>
   );
+}
+
+const ctaWrapStyle: React.CSSProperties = {
+  marginTop: 32,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+};
+
+function ctaStyle(disabled: boolean): React.CSSProperties {
+  return {
+    width: '100%',
+    minHeight: 52,
+    padding: '14px 24px',
+    background: 'var(--color-mineral-dark)',
+    color: '#fff',
+    fontFamily: 'var(--font-body)',
+    fontWeight: 600,
+    fontSize: 18,
+    border: 0,
+    borderRadius: 'var(--radius-lg)',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.45 : 1,
+    transition: 'opacity var(--duration-small) var(--ease-essence)',
+  };
 }
 
 const railStyle: React.CSSProperties = {
