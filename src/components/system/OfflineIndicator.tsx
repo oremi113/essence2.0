@@ -66,8 +66,8 @@ export const OFFLINE_INDICATOR_CSS = `
   display: flex; align-items: center; gap: var(--space-sm);
   padding: 8px 16px; border-radius: var(--radius-pill);
   background: var(--color-surface-card);
-  border: 1px solid rgba(28, 26, 24, 0.06);
-  box-shadow: var(--shadow-pill);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
   font-family: var(--font-body);
   font-size: var(--text-small); font-weight: 500;
   color: var(--color-text-primary);
@@ -87,6 +87,9 @@ export const OFFLINE_INDICATOR_CSS = `
   background: var(--color-mineral); flex-shrink: 0;
 }
 /* Reconnect beat — sage tint + success dot, its own brief copy. */
+/* prototype-local: sage reconnect wash — @theme defines the sage *ink*
+   (--color-status-success) but no matching light *fill*; a @theme token here
+   would be tree-shaken (only referenced from this runtime <style>). */
 .offline-indicator__pill[data-status="reconnecting"] { background: #EAF1EC; }
 .offline-indicator__pill[data-status="reconnecting"] .offline-indicator__dot {
   background: var(--color-status-success);

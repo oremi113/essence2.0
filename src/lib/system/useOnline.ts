@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 // Step 10 · S10-B — the connectivity primitive.
 //
@@ -50,22 +50,25 @@ export interface Connectivity {
 export function useConnectivity(): Connectivity {
   const online = useOnline();
   const [justReconnected, setJustReconnected] = useState(false);
-  // Undefined until the first client read so an SSR/hydration default of
-  // `online` never counts as a reconnection.
-  const wasOnline = useRef<boolean | undefined>(undefined);
 
   useEffect(() => {
-    const reconnected = wasOnline.current === false && online === true;
-    wasOnline.current = online;
-    if (!reconnected) return;
-
-    setJustReconnected(true);
-    const timer = window.setTimeout(
-      () => setJustReconnected(false),
-      RECONNECT_PULSE_MS,
-    );
-    return () => window.clearTimeout(timer);
-  }, [online]);
+    // The pulse is event-driven. The browser fires `online` only on a real
+    // offline→online transition (never on initial load), so we drive the beat
+    // straight off that event rather than deriving it from the boolean — which
+    // would put a setState in the effect body. Here setState lives in the event
+    // handler / timer callback, not the effect body.
+    let timer = 0;
+    const onReconnect = () => {
+      setJustReconnected(true);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setJustReconnected(false), RECONNECT_PULSE_MS);
+    };
+    window.addEventListener('online', onReconnect);
+    return () => {
+      window.removeEventListener('online', onReconnect);
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   return { online, justReconnected };
 }

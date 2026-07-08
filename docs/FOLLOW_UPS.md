@@ -47,9 +47,13 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 72 | P3 | Processing renders discrete wait states; the live timed progression (normal→extended→notify-handoff on the wait clock, and pacing the shimmer climb to the fixed normal-wait window) is the deferred reducer (handoff NOTE-FOR-CODE-ARCHITECT #2). Pass 3 ships the activation map + exit; the clock that walks between them is not built. | ⏳ build with real generation polling; `src/components/screens/step3/useShimmerLoop.ts` CLIMB_DUR is a demo tween until then |
 | 73 | P3 | The e2e suite (incl. the 4× CPU-throttle motion-perf gate, `tests/e2e/seal.spec.ts` + `processing.spec.ts`) is NOT run in CI — `ci.yml` runs lint/typecheck/unit/build only. The CLAUDE.md motion bar is therefore enforced only locally. The perf-ms assertion is also only meaningful against a **production** build (`next start`); `next dev` inflates the worst-frame tail. | ⏳ add a Chromium e2e job against a prod build (functional specs are CI-safe; treat the perf-ms assert as informational on shared runners or pin a representative runner) |
 | 74 | P3 | C3 Vault Limit port must reuse `src/lib/vault-render/`, not the prototype's inlined engine fork; and reconcile 2 shimmer tokens absent from `@theme` | ⏳ addressed by the C3 port (see §74) |
+| 77 | P2 | Checkout has no already-subscribed guard — a direct `POST /api/stripe/create-checkout-session` by a trial/active/past_due user mints a 2nd Stripe subscription → double billing *(stripe lifecycle audit 2026-07-08)* | ⏳ add a live-subscription pre-check (see §77) |
+| 78 | P3 | Lapse-vs-cancel label depends on `cancellation_details.reason` — a dunning delete with a null/other reason is stored as a *voluntary* cancel (wrong analytics + restore copy) *(stripe lifecycle audit 2026-07-08)* | ⏳ verify Stripe retry config stamps `payment_failed`, else add a fallback (see §78) |
+| 79 | P4 | No Stripe webhook event-ID idempotency ledger — handlers are idempotent by construction, so belt-and-suspenders, not a live bug *(stripe lifecycle audit 2026-07-08)* | ⏳ optional `stripe_events` dedup table (see §79) |
+| 80 | P2 | S10-B offline: only the Generate retry is gated. Save + Checkout CTAs, the SystemScreen offline variant, and the `system.offline_encountered` telemetry are unbuilt *(S10-B build 2026-07-08)* | ⏳ finish the blocked-action gates + hard-blocked route + telemetry (see §80) |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
-| 41 | P4 | First Breath audio spec'd only in code TODOs | ⏳ asset work |
+| 41 | P4 | First Breath audio spec'd only in code TODOs | ✅ RESOLVED 2026-07-08 — procedural Web Audio engine (`src/lib/audio/firstBreathAudio.ts`) synthesises all three layers live; no asset files. Owner still needs to review by ear (headless verify can't) |
 | 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ RESOLVED 2026-06-18 (5fef4ea — record moved below the sign) |
 | 57 | P4 | Onboarding completion failure resets silently — no visible "couldn't save, try again" message *(new 2026-06-16)* | ⚠️ code landed (a595256 — retry-in-place error UI on Screen 12, the #42 sibling); visual verify pending |
 | 60 | P4 | Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action; stamp-only partial duplicate *(new 2026-06-19)* | ⚠️ delete after owner confirms no external caller (URL removal) |
@@ -498,8 +502,18 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 ## First Breath audio layer (from refactoring-system seed scan, 2026-06-12)
 
-### 41. [P4] First Breath audio is spec'd only in code TODOs, untracked here
+### 41. [P4] ✅ RESOLVED 2026-07-08 — First Breath audio wired via procedural Web Audio (no asset files)
 
+**Resolution:** the five in-code TODOs are gone. Rather than source three mastered audio files (none ever existed — the prototype `first-breath-stone.html` shipped silent too), the ceremony now synthesises all three layers live in `src/lib/audio/firstBreathAudio.ts` (owner chose this over placeholder .mp3s or plumbing-only):
+- **Ambient bed** — detuned-saw pad (Db2/Ab2/Db3) through a lowpass with a slow 0.06 Hz filter LFO, plus a sub sine at the root; a 38 Hz master highpass honours the "sub rolloff < 40 Hz" spec. Continuous oscillators → the loop has no splice seam.
+- **Crystallize swell** — harmonic cluster on Db3, 0.4s in / 1.8s sustain / 0.6s out (≈2.8s), fired on the `crystallize` beat.
+- **Reveal bell** — inharmonic additive partials on Db2 (hum/prime/tierce/quint/nominal + upper) with per-partial exponential ring-down and a generated 4.5s convolution-reverb tail; soft 12 ms mallet attack. Fired on the `revealTone` beat so it lands on the bloom + gold-ring peak.
+
+Relative levels mirror the −24 / −20 / −18 LUFS ordering as gain (not metered loudness). iOS autoplay handled: the engine attempts an immediate resume and arms a one-time document-gesture unlock; one-shots that fire while still suspended are dropped (no stale bell). Fades out on route exit; skipped entirely under reduced motion. Beats surface from `FirstBreathSequence.phases.ts` as `onCrystallizeBeat` / `onRevealBeat` callbacks (the phases file's "wiring belongs in the consumer" note is satisfied); the consumer owns the engine lifecycle in a `useEffect`.
+
+Verified: `tsc` + lint clean; unit tests for the pitch math + null-safe fallback (`tests/unit/first-breath-audio.test.ts`, full suite 365/365); headless Playwright drove the full `/dev/record-complete` timeline (mount → gesture-unlock → crystallize → reveal → CTA) with the AudioContext reaching `running` and **zero** audio-graph errors. **Not verified: audibility / mix quality** — headless has no audio-out and I can't listen. The owner should review by ear on a real device and tune the level/pitch/decay constants (all centralised at the top of `firstBreathAudio.ts`). Original entry below.
+
+---
 **Files:** `src/components/screens/FirstBreathSequence.tsx:65–75`, `src/components/screens/FirstBreathSequence.phases.ts:95,104`.
 **What:** five in-code TODOs spec the First Breath audio design (soft pad 4:30 seamless loop at −24 LUFS, harmonic-cluster one-shot, low resonant bell on the bloom peak) with no corresponding FOLLOW_UPS entry — the only marker debt in `src/` not already tracked (house rule: no in-code TODO without an entry). This entry adopts them.
 **Why it matters:** the ceremony currently plays silent; the audio layer is a designed-but-unbuilt half of the First Breath moment. No functional risk.
@@ -722,3 +736,50 @@ The approved C3 design prototype (`prototypes/essence-c3-vault-limit.html` / del
 **Pick up when:** before launch (hard gate). Trivial once the inbox exists.
 
 **Sub-note — gen-fail telemetry gap (P3, related):** `step6.generation_failed` is *catalogued* (`analytics/2026-06-01-step6-events.md:94`) but **not wired** anywhere in the flow (grep-confirmed), so neither the failure nor the exhausted/contact-as-care surface is instrumented. S10-A deliberately left this out of scope (no client `trackStep6('generation_failed', …)` call yet); wire it — plus a "support contacted" signal — with the base gen-fail telemetry, and drop the `docs/analytics/` note then.
+
+### 76. [P3] Legal pages (`/privacy`, `/terms`) aren't linked from Settings yet
+The Privacy Policy and Terms pages shipped greenfield (task C, 2026-07-08): `src/app/{privacy,terms}/`, screens in `src/components/screens/legal/`, dev pages `/dev/{privacy,terms}`, routes registered as `ROUTES.privacy` / `ROUTES.terms`. They are reachable by URL and cross-link to each other, but **nothing in the app navigates to them** — the intended entry point is Settings, which lives on the unmerged `step9/settings-trust` branch (PR #83) and has no legal-links row.
+
+**Why it matters:** app stores and platform review expect Privacy + Terms to be reachable from within the product (typically Settings/About), not URL-only. Until Settings lands and links them, a real user can't find these pages.
+**Fix shape:** when `step9/settings-trust` merges, add a "Legal" group to `src/components/screens/settings/SettingsScreen.tsx` (or its trust band) with two rows → `ROUTES.privacy` / `ROUTES.terms`. One additive edit, no new plumbing — the routes already exist. Consider also a slim footer link on the sign-in / onboarding entry so they're reachable pre-auth.
+**Pick up when:** immediately after PR #83 (Step 9 Settings) merges — this is its natural home. Related: #62 (Home B settings affordance).
+
+**Owner action (copy):** the legal body is *placeholder, on-brand draft copy* flagged in-page with a "Draft — pending legal review" banner (`placeholder` prop on `LegalDocument`). Replace with counsel-reviewed text and set a real effective date, then flip the banner off. Files: `PrivacyPolicyScreen.tsx`, `TermsScreen.tsx`.
+
+---
+
+*Findings #77–#79 surfaced in the Stripe subscription-lifecycle audit (roadmap bucket #5, 2026-07-08). The audit's HIGH finding — unlimited free trials via the lapse→restart loop — was fixed in the same pass (`feat/stripe-trial-abuse-guard`; trial now first-subscription-only). See `docs/session-stripe-lifecycle-audit/`.*
+
+### 77. [P2] Checkout has no already-subscribed guard — a direct call can mint a second subscription
+`createCheckoutSession` (`src/lib/stripe/create-checkout-session.ts`) resolves the customer, decides the trial, and creates the session — but never checks whether the user *already* has a live subscription. The happy-path UI hides this (the reveal/protect pages redirect `trial`/`active` users to `/record`, and restore only offers restart for terminal states), so it isn't reachable by clicking through the app today.
+
+**Why it matters:** the route is a plain authenticated `POST`. A `trial`/`active`/`past_due` user hitting `/api/stripe/create-checkout-session` directly gets a **second** Stripe subscription on the same customer → double billing. And `getSubscriptionStatus` reads only the newest row (`order created_at desc limit 1`), so the older, still-charging subscription becomes invisible to the app. Defense-in-depth that matches this file's existing fail-loud ethos (it already pre-checks the profile FK and the customer-id write).
+**Fix shape:** before `stripe.checkout.sessions.create`, `select … from subscriptions where user_id = … and status in ('trial','active','past_due') limit 1`. If one exists, throw a new `already_subscribed` error code the route maps to a 409 (or redirect to the Customer Portal). Cheap — reuses the same server client and RLS SELECT the trial-abuse guard already added.
+**Pick up when:** next Stripe/billing touch, or before opening the billing surface to any non-happy-path entry (deep links, Settings re-subscribe).
+
+### 78. [P3] Lapse-vs-cancel label leans on `cancellation_details.reason`
+`handleSubscriptionDeleted` (`src/app/api/stripe/webhook/handlers.ts`) records `lapsed` only when `sub.cancellation_details?.reason === 'payment_failed'`, and `cancelled` otherwise. Both route to restore→restart, so the *flow* is correct either way — this is purely about the stored label.
+
+**Why it matters:** if Stripe delivers a dunning-exhaustion `customer.subscription.deleted` with `reason` null or something other than `payment_failed` (this depends on the Dashboard billing-retry setting — "cancel subscription" vs "mark unpaid", and whether Stripe stamps the reason in the configured mode), a payment lapse is mislabeled a *voluntary* cancellation. That corrupts the pause-vs-choice distinction the restore copy and analytics are built on (the whole point of the split in the handler comment).
+**Fix shape:** (1) confirm the live Stripe retry config actually stamps `reason = 'payment_failed'` on auto-cancel, and document it in the session decisions; (2) as a belt-and-suspenders fallback, treat a delete as `lapsed` when the row was already `past_due` (we know retries were in flight) regardless of `reason`. Unit-testable against the existing webhook-handler suite.
+**Pick up when:** first live Stripe test-mode dunning run, or when the restore/analytics split is trusted for reporting.
+
+### 79. [P4] No webhook event-ID idempotency ledger
+The webhook handlers are idempotent *by construction* — terminal states are sticky, `upsertSubscription` is `onConflict: stripe_subscription_id`, and the delete/`payment_failed` updates are row-count-guarded and terminal-safe. So a duplicate/redelivered Stripe event re-runs harmlessly today. There is no explicit processed-event ledger.
+
+**Why it matters:** low. It's the one canonical Stripe hardening item still absent, and future handlers (e.g. one that increments a counter or sends an email) would NOT be automatically idempotent — the ledger is the safety net that makes "add a new handler" safe by default.
+**Fix shape:** a `stripe_events (event_id text primary key, type text, processed_at timestamptz default now())` table; at the top of `dispatchEvent`, insert the id and skip if it already exists (`ignoreDuplicates`). Service-role only, mirrors the `subscriptions` RLS pattern.
+**Pick up when:** before adding any non-idempotent webhook handler, or as part of a pre-launch billing-hardening pass.
+
+### 80. [P2] S10-B offline — blocked-action gates, hard-blocked route, and telemetry unfinished
+The connectivity spine shipped (S10-B.1–.3c): `useOnline`/`useConnectivity` (`src/lib/system/useOnline.ts`), the app-wide indicator (`src/components/system/OfflineIndicator.tsx`, mounted in `src/app/layout.tsx`), the shared blocked-action note (`src/components/system/OfflineActionNote.tsx`), and the first real gate (Generate retry). What's left:
+
+**What:**
+1. **Wire the remaining network CTAs** — Save (message-creation Seal/Save) and Checkout (Card Capture). Same pattern as `GenerationScreen`: read `useOnline`, disable only the network action, render `<OfflineActionNote>` with `OFFLINE_ACTION_COPY.save` / `.checkout`. Checkout lives near the `feat/stripe-trial-abuse-guard` worktree — coordinate to avoid a collision on the checkout surface.
+2. **SystemScreen offline variant** — the hard-blocked full-route fallback (`src/components/system/SystemScreen.tsx`) for a route that can't render offline; copy: "You're offline. This page will be here the moment you're back."
+3. **Telemetry** — new `system.offline_encountered` event (`surface` / `blocked_action`); drop a `docs/analytics/2026-07-*.md` note in that PR (new analytics event).
+4. **Unit tests** — `useOnline`/`useConnectivity` (offline flip, reconnect pulse, SSR default), `deriveOfflineStatus`, and the Generate offline-gate contract.
+
+**Why it matters:** offline is spec'd as **Ships** for V1 (`MASTER_SPEC:135`). The passive/indicator half is done; the action-prevention half is only 1/3 wired, so a Save or Checkout tapped offline still fails as a generic error.
+**Fix shape:** above; all additive, no new plumbing — the primitives exist. Stays inside the sync-MVP lock (detect/inform/degrade/resume, **no write-queue**).
+**Pick up when:** next S10-B session (continues directly from `a3bbc07` on `main`).
