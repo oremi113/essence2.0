@@ -36,6 +36,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (code === 'already_subscribed') {
+      // 409 Conflict — the caller already has a live subscription. Not a
+      // happy-path outcome (the UI routes subscribed users away); this backs a
+      // direct/abnormal call so it never silently double-bills.
+      return NextResponse.json(
+        { error: 'You already have an active subscription.', code },
+        { status: 409 },
+      );
+    }
+
     if (code === 'profile_missing' || code === 'profile_lookup_failed') {
       return NextResponse.json(
         { error: 'Account setup incomplete. Please contact support.', code },

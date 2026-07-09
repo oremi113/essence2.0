@@ -48,9 +48,35 @@ export async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
   // cancellation_details.reason so the restore screen + analytics can
   // tell a pause from a choice.
   const reason = sub.cancellation_details?.reason;
-  const status: 'lapsed' | 'cancelled' = reason === 'payment_failed' ? 'lapsed' : 'cancelled';
-
   const supabase = createSupabaseServiceClient();
+
+  // Primary signal: Stripe stamps cancellation_details.reason 'payment_failed'
+  // on dunning-exhaustion cancels and 'cancellation_requested' on voluntary
+  // ones. But it can be null or another value (payment_disputed,
+  // canceled_by_retention_policy, legacy events), so for an ambiguous reason we
+  // fall back to OUR own state: 'past_due' is only ever set from
+  // invoice.payment_failed, so a delete out of past_due is a payment lapse, not
+  // a choice — it must not be recorded as a voluntary 'cancelled'. (FOLLOW_UPS #78.)
+  let status: 'lapsed' | 'cancelled';
+  if (reason === 'payment_failed') {
+    status = 'lapsed';
+  } else if (reason === 'cancellation_requested') {
+    status = 'cancelled';
+  } else {
+    const { data: existing, error: readError } = await supabase
+      .from('subscriptions')
+      .select('status')
+      .eq('stripe_subscription_id', sub.id)
+      .maybeSingle();
+    if (readError) {
+      // Never block the delete on a read failure — fall back to the
+      // conservative 'cancelled' (it never over-promises a lapse-flavoured
+      // restore path to a user who actually chose to leave).
+      console.error('[stripe-webhook] deleted: prior-status read failed', readError);
+    }
+    status = existing?.status === 'past_due' ? 'lapsed' : 'cancelled';
+  }
+
   const { data: updated, error } = await supabase
     .from('subscriptions')
     .update({

@@ -11,6 +11,7 @@ export type CreateCheckoutSessionErrorCode =
   | 'unauthenticated'
   | 'profile_missing'
   | 'profile_lookup_failed'
+  | 'already_subscribed'
   | 'missing_price_id'
   | 'stripe_error';
 
@@ -103,6 +104,75 @@ export async function createCheckoutSession(
     }
   }
 
+  // Trial-abuse guard (roadmap bucket #5). The 7-day trial is a one-time,
+  // first-subscription benefit. The restore flow sends lapsed/cancelled users
+  // back through THIS same checkout to restart, so without this gate every
+  // restart would mint a fresh trial — a cancel-before-convert loop would be
+  // perpetual free access. Grant the trial only to a user who has never held a
+  // subscription of any kind. A returning subscriber is charged immediately.
+  //
+  // Keyed on user_id (stable) rather than the Stripe customer, so it survives a
+  // customer-id reset from the stale-customer reconciliation above. RLS allows a
+  // user to SELECT their own subscription rows, so the server client suffices.
+  const { data: priorSub, error: priorSubError } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (priorSubError) {
+    // Match the profile-lookup pattern: never guess the trial state. Abort and
+    // let the caller retry rather than silently grant (re-opens abuse) or deny
+    // (charges a legitimate first-timer on a transient blip).
+    console.error(
+      '[createCheckoutSession] prior-subscription lookup failed',
+      priorSubError,
+    );
+    throw Object.assign(new Error('Subscription history lookup failed'), {
+      code: 'profile_lookup_failed' satisfies CreateCheckoutSessionErrorCode,
+    });
+  }
+
+  const grantTrial = !priorSub;
+
+  // Duplicate-subscription guard (FOLLOW_UPS #77). Never mint a SECOND
+  // subscription for a user who already holds a live one. The happy-path UI
+  // prevents reaching here (reveal/protect redirect trial/active users to
+  // /record; restore only restarts terminal states), so this backs a direct or
+  // abnormal POST to the endpoint. Without it such a call creates a duplicate
+  // Stripe subscription — double billing — and getSubscriptionStatus's
+  // newest-row read would hide the older, still-charging one. Terminal statuses
+  // (lapsed/cancelled) intentionally fall through: that IS the restore→restart
+  // path, whose fresh trial is already gated by the guard above.
+  const { data: liveSub, error: liveSubError } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('status', ['trial', 'active', 'past_due'])
+    .limit(1)
+    .maybeSingle();
+
+  if (liveSubError) {
+    console.error(
+      '[createCheckoutSession] live-subscription lookup failed',
+      liveSubError,
+    );
+    throw Object.assign(new Error('Subscription lookup failed'), {
+      code: 'profile_lookup_failed' satisfies CreateCheckoutSessionErrorCode,
+    });
+  }
+
+  if (liveSub) {
+    console.warn(
+      '[createCheckoutSession] refusing duplicate checkout — user already has a live subscription',
+      user.id,
+    );
+    throw Object.assign(new Error('You already have an active subscription.'), {
+      code: 'already_subscribed' satisfies CreateCheckoutSessionErrorCode,
+    });
+  }
+
   const priceId =
     plan === 'annual'
       ? process.env.STRIPE_PRICE_ID_VAULT_ANNUAL
@@ -122,7 +192,8 @@ export async function createCheckoutSession(
     payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {
-      trial_period_days: 7,
+      // First-timers only — see the trial-abuse guard above.
+      ...(grantTrial ? { trial_period_days: 7 } : {}),
       metadata: {
         user_id: user.id,
         billing_period: plan,
