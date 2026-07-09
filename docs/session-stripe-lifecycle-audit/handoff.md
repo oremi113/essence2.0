@@ -55,3 +55,11 @@ is not reproducible in the build environment. Steps are in
   lowest severity (handlers are idempotent by construction), needs a
   `stripe_events` migration. Pick up in a pre-launch billing-hardening pass or
   before adding any non-idempotent webhook handler.
+- **NEW follow-up to log — F2 is best-effort, not atomic.** The duplicate-sub
+  guard reads-then-acts, so it can't stop a duplicate minted in the
+  checkout-started-but-webhook-not-yet-written window, nor two concurrent
+  checkouts. It backs a direct/abnormal POST and claims no race-safety. To make
+  it a hard guarantee, add a partial unique index
+  `(user_id) WHERE status IN ('trial','active','past_due')` on `subscriptions`.
+  Surfaced by the pre-merge independent review. Low priority (happy-path UI
+  already routes subscribed users away).

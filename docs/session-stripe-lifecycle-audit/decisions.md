@@ -32,12 +32,26 @@ Fail-open would re-open the abuse vector on a transient blip; fail-closed
 (silent no-trial) would wrongly charge a legitimate first-timer. Aborting lets
 the caller retry with the trial state unambiguous.
 
-## D2 — Fix only F1 now; log F2/F3/F4
+## D2 — Scope grew, by explicit owner request, from F1 to F1+F2+F3
 
-Owner-selected scope: fix the HIGH money-path finding (F1) only. F2 (double-sub
-guard), F3 (lapse/cancel label), F4 (event ledger) are logged as FOLLOW_UPS
-#77/#78/#79 with fix shapes rather than built, to keep this one chunk → one
-review surface.
+Initial scope was the HIGH money-path finding (F1) only; F2/F3/F4 were logged as
+FOLLOW_UPS #77/#78/#79. The owner then asked to continue, so **F2 (double-sub
+guard) and F3 (lapse/cancel label) were subsequently built in this same
+session** — each as its own commit, re-agreed before starting (not silent scope
+creep). **F4 (event-ID ledger) remains deferred** (#79): lowest severity,
+handlers are idempotent by construction, and it needs a DB migration. On merge,
+#77 and #78 flip to RESOLVED; #79 stays open.
+
+## D2a — F2 is a best-effort guard, not an atomic one
+
+F2 reads the `subscriptions` table then decides — there is no DB unique partial
+index on live subscriptions, so it can't prevent a duplicate created in the
+"checkout session started, webhook not yet written" window, nor two truly
+concurrent checkouts. It backs a direct/abnormal POST (the happy-path UI already
+routes subscribed users away), and the code comments + README are deliberately
+honest about this — no race-safety is claimed. Making it a hard guarantee needs
+a partial unique index `(user_id) WHERE status IN ('trial','active','past_due')`;
+logged as a follow-up on merge (see handoff.md).
 
 ## D3 — Fresh branch, not the stale `feat/stripe-hardening`
 
