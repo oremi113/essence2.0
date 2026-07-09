@@ -2,23 +2,25 @@
 
 Review-ready summary for landing `feat/stripe-trial-abuse-guard`.
 
-## Integration note (read first)
+## Integration note
 
-The branch was cut before S10-B was squash-merged to `main` (`#89`), so it
-carries the *original* S10-B commits (`1c54c66` and its parents) that `main`
-now holds as a single squash. **Rebase onto current `main` and keep only the
-four Stripe commits below** — the S10-B originals are already represented by the
-squash and should drop out. (Verified: none of the touched files were modified
-on `main` since the merge-base, so the code itself merges cleanly.)
+The branch was originally cut before S10-B was squash-merged to `main` (`#89`),
+so it briefly carried the pre-squash S10-B commits. It has since been **rebased
+onto `origin/main`** and now contains only the Stripe commits below — nothing
+from S10-B. The PR diff is Stripe + session-docs only (9 files), and none of the
+touched source files were modified on `main`, so it merges cleanly. (Commit SHAs
+are intentionally omitted here — they change on rebase/squash; see the PR's own
+commit list for the authoritative set.)
 
 ## Commits to land
 
-| Commit | What | Why |
-|--------|------|-----|
-| `0682fb9` | **F1** — trial is first-subscription-only | Closes the lapse→restart loop that farmed unlimited free trials (HIGH, money-path) |
-| `3824407` | **F2** — reject checkout if a live subscription exists (→ 409 `already_subscribed`) | Stops a direct/abnormal call from minting a 2nd subscription = double billing (MEDIUM) |
-| `48ad348` | doc — session README records F2 | — |
-| `b24a49c` | **F3** — disambiguate lapse-vs-cancel via `past_due` fallback | A dunning delete with a null / `payment_disputed` reason no longer mislabels a lapse as a voluntary cancel (LOW-MED) |
+| Fix | Commit (by title) | Why |
+|-----|-------------------|-----|
+| **F1** | `feat(stripe): trial is first-subscription-only` | Closes the lapse→restart loop that farmed unlimited free trials (HIGH, money-path) |
+| **F2** | `feat(stripe): reject checkout when the user already has a live subscription` (→ 409 `already_subscribed`) | Stops a direct/abnormal call from minting a 2nd subscription = double billing (MEDIUM) |
+| — | `docs(stripe): record F2 … in the session README` | — |
+| **F3** | `feat(stripe): disambiguate lapse-vs-cancel … via past_due fallback` | A dunning delete with a null / `payment_disputed` reason no longer mislabels a lapse as a voluntary cancel (LOW-MED) |
+| — | `docs(stripe): add review-ready handoff` (this file) | — |
 
 ## Context
 
