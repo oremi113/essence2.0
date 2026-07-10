@@ -795,3 +795,17 @@ The #77 fix (PR #92) rejects a checkout when the user already has a live subscri
 **Why it matters:** low today — the happy-path UI routes subscribed users away, so the guard backs a direct/abnormal POST, and the code + docs claim no race-safety (no overclaim). But it's the difference between a best-effort check and a hard guarantee on a money path.
 **Fix shape:** add a partial unique index on `subscriptions (user_id) WHERE status IN ('trial','active','past_due')` so the DB itself rejects a second live row regardless of timing; have `createCheckoutSession` treat the unique-violation as the same `already_subscribed` outcome. Needs a migration. Related: the now-resolved #77.
 **Pick up when:** pre-launch billing-hardening pass, or the next time the checkout / subscription surface is touched.
+
+### 82. [P3] Card Capture sample has no "example voice" asset
+`src/app/app/vault/protect/CardCaptureActions.tsx` renders the Step 3 sample row ("Hear what a preserved voice sounds like. An example, from another family.") but there is **no audio asset** — `public/mock/` doesn't exist and no generic-sample clip is sourced. `onPlaySample` currently only reveals the after-copy (the visible design beat); it plays no sound.
+
+**Why it matters:** the sample is a trust/warmth beat in the commercial-heart moment (Step 3 handoff §1) — a play button that produces silence reads as broken. Not launch-blocking (the commit path is independent), but it undercuts the moment.
+**Fix shape:** source/produce a short, licensed generic "preserved voice" example (another family, per copy), drop it at a real asset path (e.g. `public/samples/…`), thread its URL through `page.tsx` → `sample.clipUrl`, and wire `onPlaySample` to actually play it (+ a played/paused state). Confirm licensing for a stranger's voice used as a marketing sample.
+**Pick up when:** Card Capture polish, alongside the spine-wiring reveal fast-follow (docs/session-stitch/spine-wiring-spec.md §6.1).
+
+### 83. [P3] Step 3 CardCapture hydration mismatch (pre-existing)
+Loading the Step 3 CardCapture screen throws a React hydration error ("server rendered text didn't match the client") plus a downstream `Cannot read properties of null (reading 'parentNode')`. **Confirmed pre-existing** — it reproduces on `/dev/card-capture` (mock data, no page wiring), so it predates the spine-wiring S1 work that put CardCapture on the live `/app/vault/protect` route. The screen renders and React recovers by regenerating client-side, so it's not user-visibly broken — but a hydration mismatch on the commercial-heart money screen is worth fixing.
+
+**Why it matters:** hydration mismatches cause a full client re-render (jank risk on mid-range devices at 4× — the exact motion bar for this screen) and mask real bugs by normalizing console errors. Now that CardCapture is a production route, not dev-only, it's on a live path.
+**Fix shape:** isolate the mismatching node — likely a non-deterministic value rendered during SSR inside `CardCapture` / `VaultObject` / `SealStage` (e.g. an unstable SVG gradient/id, a `useReducedMotion` branch that changes text/markup between server and client, or a font-className boundary). Diff the SSR HTML vs first client render for the `.step3` subtree; make the initial render deterministic (stable ids, gate client-only motion behind a mounted flag).
+**Pick up when:** spine-wiring S2/S3 (the same screens get touched for the seal/processing states), or the Card Capture polish pass — whichever first.
