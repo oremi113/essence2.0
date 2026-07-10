@@ -247,9 +247,12 @@ before "done"; 4× CPU on mobile sim is the motion bar.
   exit repointed off the stub → `/messages/new`. Verified live: full walk record →
   Card Capture → mock → processing → Reveal → First Breath (See My Stone → Continue)
   → `/messages/new`. **The whole spine is now walkable end-to-end.**
-- **Chunk S4 — Retire old arc + stub.** Delete/redirect old vault screens + the
-  record-complete stub + dead routes; remove `ROUTES.recordCompleteStub`. Verify: no
-  orphan routes, no dead inbound edges (re-run the integration-map orphan check).
+- **Chunk S4 — Retire old arc + dead code.** ✅ DONE (commit 7080a03). Deleted the
+  4 old-arc screens + their actions + `VoiceCreationView`; retired routes
+  (`/app/vault/{continuity,seal,sealed}`, `/app/record/complete/stub`) → stable
+  redirects to Home; dropped the dead plan helpers; trimmed `/dev/vault`. Verified:
+  tsc/lint clean (no dangling refs), 374 tests, live redirect + Card Capture intact.
+  Kept `recordCompleteStub` in ROUTES (now a redirect shim) rather than removing it.
 - **Chunk S5 — Flip flags on for real + real price IDs (owner/ops).** Only after
   S1–S4 verified live. Analytics note per CLAUDE.md (monetization event moves).
 
