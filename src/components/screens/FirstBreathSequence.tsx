@@ -1,9 +1,13 @@
 'use client';
 
-import { useCallback, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { track } from '@/lib/analytics/client';
+import {
+  createFirstBreathAudio,
+  type FirstBreathAudioEngine,
+} from '@/lib/audio/firstBreathAudio';
 import { useReducedMotion } from '@/lib/animation/useReducedMotion';
 import { useCopyCrossfade } from '@/lib/animation/useCopyCrossfade';
 import { ROUTES } from '@/lib/routes';
@@ -55,31 +59,31 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
 
-  // ─── Audio scaffolding ──────────────────────────────────────────────
-  // The three tracks below are placeholders documenting the intended audio
-  // layering for this sequence. All `src` values are empty — drop final
-  // assets in when sound design lands. Playback is gated behind the first
-  // user interaction on the page (iOS autoplay policy).
-  //
-  // 1. audioAmbientRef — ambient breath-room
-  //      TODO: soft pad + sub-bass, 4:30 seamless loop, -24 LUFS,
-  //            sub rolloff < 40 Hz, fades out on route exit.
-  //      Trigger: mount (after first gesture).
-  //
-  // 2. audioCrystallizeRef — crystallize harmonic swell
-  //      TODO: harmonic cluster, 2.8s one-shot, 400ms fade-in /
-  //            600ms fade-out, -20 LUFS.
-  //      Trigger: entering crystallize (t = CRYSTALLIZE_AT_MS).
-  //
-  // 3. audioRevealRef — stone reveal tone
-  //      TODO: low resonant bell (Db2 or Eb2), soft mallet + 4.5s tail,
-  //            -18 LUFS. Lands on the bloom + ring peak.
-  //      Trigger: PRESERVED_AT_MS + RING_FIRE_AT_MS.
-  //
-  // Mix target: hold under -16 LUFS short-term so iOS doesn't auto-duck.
-  const audioAmbientRef = useRef<HTMLAudioElement>(null);
-  const audioCrystallizeRef = useRef<HTMLAudioElement>(null);
-  const audioRevealRef = useRef<HTMLAudioElement>(null);
+  // ─── Ceremony audio ─────────────────────────────────────────────────
+  // Three procedurally-synthesised layers (no asset files) — ambient bed on
+  // mount, a harmonic swell on the crystallize beat, a resonant bell on the
+  // reveal peak. See src/lib/audio/firstBreathAudio.ts. The engine gates itself
+  // behind the first gesture for iOS autoplay and fades out on unmount. Skipped
+  // entirely under reduced motion (the timed beats it syncs to don't fire).
+  const audioRef = useRef<FirstBreathAudioEngine | null>(null);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const engine = createFirstBreathAudio();
+    audioRef.current = engine;
+    engine?.start();
+    return () => {
+      audioRef.current = null;
+      engine?.dispose();
+    };
+  }, [prefersReducedMotion]);
+
+  const handleCrystallizeBeat = useCallback(() => {
+    audioRef.current?.playCrystallize();
+  }, []);
+  const handleRevealBeat = useCallback(() => {
+    audioRef.current?.playReveal();
+  }, []);
 
   const {
     phase,
@@ -90,7 +94,12 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     entranceActive,
     skipToPreserved,
     goToDetail,
-  } = useFirstBreathPhases({ voiceProfileId, prefersReducedMotion });
+  } = useFirstBreathPhases({
+    voiceProfileId,
+    prefersReducedMotion,
+    onCrystallizeBeat: handleCrystallizeBeat,
+    onRevealBeat: handleRevealBeat,
+  });
 
   const { entering: enteringCopyPhase, exiting: exitingCopyPhase } =
     useCopyCrossfade<Phase>(phase, { disabled: prefersReducedMotion });
@@ -166,11 +175,6 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   return (
     <main style={rootStyle}>
       <style>{screenKeyframes}</style>
-
-      {/* Sound design scaffolding — see comment block near audio refs. */}
-      <audio ref={audioAmbientRef} preload="auto" loop aria-hidden="true" />
-      <audio ref={audioCrystallizeRef} preload="auto" aria-hidden="true" />
-      <audio ref={audioRevealRef} preload="auto" aria-hidden="true" />
 
       <div aria-hidden style={sanctuaryGlowStyle} />
       <div aria-hidden style={vignetteStyle} />
