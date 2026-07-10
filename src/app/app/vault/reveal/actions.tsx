@@ -6,5 +6,8 @@ import { ROUTES } from '@/lib/routes';
 
 export function RevealActions() {
   const router = useRouter();
-  return <VaultRevealScreen onAdvance={() => router.push(ROUTES.vaultProtect)} />;
+  // Spine-wiring S3: the Reveal advances into the First Breath ceremony (first
+  // playback), not back into the old vault arc. MASTER_SPEC §4.4 immutable rule 3:
+  // Reveal before First Playback.
+  return <VaultRevealScreen onAdvance={() => router.push(ROUTES.recordComplete)} />;
 }
