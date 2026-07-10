@@ -91,7 +91,7 @@
     }
     .stone-hero canvas{width:100%;height:100%;display:block}
     /* feather the canvas rect corners so no box edge shows behind the stone */
-    .stone-hero canvas, .voice-stone canvas{
+    .stone-hero canvas{
       -webkit-mask:radial-gradient(circle closest-side at 50% 50%, #000 86%, transparent 100%);
       mask:radial-gradient(circle closest-side at 50% 50%, #000 86%, transparent 100%);
     }
@@ -113,6 +113,7 @@
     }
     .vault-copy h1{font-size:clamp(27px,7vw,33px)}
     .vault-copy .body{max-width:26ch}
+    .vault-sub{font-size:13px;line-height:1.6;color:var(--text3);max-width:28ch;margin-top:12px}
 
     /* the two copy states cross-fade in place */
     .copy-state{
@@ -141,11 +142,47 @@
       padding:20px 22px;box-shadow:0 2px 8px rgba(28,26,24,0.04);
     }
     .prompt-card p{font-family:var(--serif);font-size:18px;line-height:1.5;color:var(--text1)}
-    .voice-stone{
-      width:min(52vw,188px);aspect-ratio:1;flex:none;position:relative;
-      margin-top:clamp(8px,2.4vh,22px);
+    /* instruction line above the prompt (mirrors production .record-instruction) */
+    .rec-instruction{
+      margin-top:clamp(8px,2vh,16px);font-size:13px;color:var(--text3);letter-spacing:0.02em;
     }
-    .voice-stone canvas{width:100%;height:100%;display:block}
+    /* personalization tokens — name + city stamped into the read-aloud script.
+       Highlighted so the "this line was written for you" moment reads at a glance. */
+    .prompt-fill{
+      color:var(--mineral-dark);font-weight:600;font-style:normal;
+      background:rgba(122,128,136,0.10);border-radius:4px;padding:0 3px;
+    }
+    /* Live waveform — ported from production .record-waveform (globals.css):
+       8 baseline-anchored bars, sand at rest, mineral + bouncing while live.
+       Replaces the earlier breathing-stone; the real record screen shows a
+       waveform, not a stone. */
+    .record-waveform{
+      display:flex;align-items:flex-end;justify-content:center;gap:4px;
+      height:24px;width:88px;margin:clamp(10px,2.6vh,22px) auto 0;
+      opacity:0;transition:opacity .3s var(--ease);
+    }
+    .record-waveform.is-active{opacity:1}
+    .record-waveform__bar{
+      width:3px;height:6px;max-width:4px;flex:1;background:var(--sand);
+      border-radius:1.5px;transform-origin:center;transition:height 100ms ease-out;
+    }
+    .record-waveform.is-active .record-waveform__bar{
+      background:var(--mineral);
+      animation:wf-bounce 1.2s cubic-bezier(0.45,0.05,0.55,0.95) infinite;
+    }
+    .record-waveform.is-active .record-waveform__bar:nth-child(1){animation-delay:0s;animation-duration:1.10s}
+    .record-waveform.is-active .record-waveform__bar:nth-child(2){animation-delay:.15s;animation-duration:1.40s}
+    .record-waveform.is-active .record-waveform__bar:nth-child(3){animation-delay:.08s;animation-duration:.95s}
+    .record-waveform.is-active .record-waveform__bar:nth-child(4){animation-delay:.22s;animation-duration:1.25s}
+    .record-waveform.is-active .record-waveform__bar:nth-child(5){animation-delay:.05s;animation-duration:1.15s}
+    .record-waveform.is-active .record-waveform__bar:nth-child(6){animation-delay:.18s;animation-duration:1.35s}
+    .record-waveform.is-active .record-waveform__bar:nth-child(7){animation-delay:.11s;animation-duration:1.05s}
+    .record-waveform.is-active .record-waveform__bar:nth-child(8){animation-delay:.25s;animation-duration:1.20s}
+    .record-waveform__bar:nth-child(1),.record-waveform__bar:nth-child(8){--peak-height:14px}
+    .record-waveform__bar:nth-child(2),.record-waveform__bar:nth-child(7){--peak-height:18px}
+    .record-waveform__bar:nth-child(3),.record-waveform__bar:nth-child(6){--peak-height:22px}
+    .record-waveform__bar:nth-child(4),.record-waveform__bar:nth-child(5){--peak-height:24px}
+    @keyframes wf-bounce{0%,100%{height:6px}50%{height:var(--peak-height,22px)}}
     .rec-controls{
       margin-top:clamp(8px,2vh,20px);
       display:flex;flex-direction:column;align-items:center;gap:12px;
@@ -188,8 +225,22 @@
     }
     .rec-label{font-size:13px;color:var(--text2);letter-spacing:0.02em;min-height:1.2em}
     .rec-timer{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text3);letter-spacing:0.1em}
-    .rec-label .check{color:var(--mineral);font-weight:600}
+    .rec-label .check{color:#3E6A4D;font-weight:600}
     .rec-button.is-recording ~ .rec-label{color:#9C3528}
+    /* finished/saved — button settles to green, ported from production
+       .record-button--finished; label greens to match .record-label--saved. */
+    .rec-button.is-done{
+      background:radial-gradient(circle at 30% 28%, #6EAA80, #5E9A70 20%, #4A7A5B 50%, #3E6A4D 100%);
+      box-shadow:
+        0 12px 28px rgba(74,122,91,0.3),
+        inset 8px 8px 16px rgba(251,248,244,0.15),
+        inset -8px -8px 16px rgba(28,26,24,0.15);
+      animation:none;pointer-events:none;
+    }
+    .rec-button.is-done .ico-mic{display:none}
+    .rec-button.is-done .ico-stop{display:block}
+    .rec-label--saving{color:var(--text2)}
+    .rec-label--saved{color:#3E6A4D}
 
     /* ---- Card capture slide ---- */
     #s-card{justify-content:flex-start;text-align:left;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -214,6 +265,21 @@
     .sample-play.is-playing .ico-play{display:none}
     .sample-play.is-playing .ico-pause{display:block}
     .sample-text{font-size:13px;line-height:1.5;color:var(--text2)}
+    .sample-block{display:flex;flex-direction:column;gap:10px}
+    /* after-copy: revealed once the sample plays (mirrors CardCapture showAfterCopy) */
+    .sample-aftercopy{
+      font-family:var(--serif);font-style:italic;font-size:14px;line-height:1.5;color:var(--text1);
+      opacity:0;max-height:0;overflow:hidden;
+      transition:opacity .5s var(--ease), max-height .5s var(--ease);
+    }
+    .sample-block.is-played .sample-aftercopy{opacity:1;max-height:4em}
+    /* cool, unsealed vault on the paywall — canonical reliquary, static at t=0 */
+    .paywall-vault{width:min(52vw,190px);aspect-ratio:1;margin:2px auto;flex:none}
+    .paywall-vault canvas{
+      width:100%;height:100%;display:block;
+      -webkit-mask:radial-gradient(circle closest-side at 50% 50%, #000 86%, transparent 100%);
+      mask:radial-gradient(circle closest-side at 50% 50%, #000 86%, transparent 100%);
+    }
     .card-turn{font-family:var(--serif);font-style:italic;font-size:18px;line-height:1.5;color:var(--text1)}
     .card-value{font-size:14.5px;line-height:1.6;color:var(--text1)}
     .plan-toggle{display:flex;gap:10px}
@@ -261,21 +327,57 @@
     .pb-play .ico-pause{display:none}
     .pb-play.is-playing .ico-play{display:none}
     .pb-play.is-playing .ico-pause{display:block}
-    .pb-scrub{width:min(64vw,220px);height:3px;border-radius:2px;background:var(--sand);margin-top:20px;overflow:hidden}
+    /* player row: scrubber + time, ported from PreviewRefineScreen .player__bar */
+    .pb-player{display:flex;align-items:center;gap:12px;margin-top:22px}
+    .pb-scrub{position:relative;width:min(52vw,190px);height:3px;border-radius:2px;background:var(--sand)}
     .pb-scrub__fill{width:0%;height:100%;background:var(--mineral);border-radius:2px}
-    .pb-caption{margin-top:16px;font-size:14px;color:var(--text2);max-width:26ch}
+    .pb-scrub__thumb{
+      position:absolute;top:50%;left:0%;width:11px;height:11px;border-radius:50%;
+      background:var(--mineral);transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(122,128,136,0.5);
+    }
+    .pb-time{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--text3);letter-spacing:0.02em;min-width:8ch;text-align:left}
+    /* pre-play hint (real .play-hint copy); fades out once playing */
+    .pb-hint{margin-top:16px;font-size:14px;color:var(--text3);transition:opacity .4s var(--ease)}
+    .pb-hint.is-hidden{opacity:0}
 
     /* ---- Message creation slide ---- */
     #s-message{justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch}
     .msg-scroll{width:100%;display:flex;flex-direction:column;gap:clamp(14px,2.4vh,20px)}
+    /* [hidden] must beat the .msg-scroll display:flex (higher specificity) */
+    .msg-scroll[hidden]{display:none}
     .crumb{font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--mineral);text-align:left}
-    .chip-row{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{
-      font-family:var(--sans);font-size:13px;color:var(--text2);cursor:pointer;
-      background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:8px 14px;
-      transition:border-color .25s, color .25s, background .25s;
+    /* back-crumb (mirrors production .crumb chevron + "For {name}") */
+    .crumb-link{
+      align-self:flex-start;display:inline-flex;align-items:center;gap:5px;
+      background:none;border:none;cursor:pointer;padding:2px 0;
+      font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:0.06em;
+      text-transform:uppercase;color:var(--mineral);
     }
-    .chip.is-active{border-color:var(--mineral);color:var(--text1);background:var(--card);font-weight:500}
+    .crumb-link svg{width:12px;height:12px}
+    .msg-title{font-family:var(--serif);font-size:clamp(25px,6.6vw,30px);font-weight:600;line-height:1.18;text-align:left}
+    .msg-aside{font-size:14px;line-height:1.55;color:var(--text2);text-align:left;margin-top:-4px}
+    /* category radiogroup — mirrors production .selectable-card list:
+       icon · (name + description) · check. Selected → mineral ring + check. */
+    .cat-list{display:flex;flex-direction:column;gap:10px}
+    .cat-card{
+      display:flex;align-items:center;gap:13px;text-align:left;cursor:pointer;
+      background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px 15px;
+      transition:border-color .22s, box-shadow .22s, background .22s;
+    }
+    .cat-card.is-selected{border-color:var(--mineral);box-shadow:0 0 0 3px rgba(122,128,136,0.16);background:var(--honey)}
+    .cat-card__icon{
+      width:40px;height:40px;flex:none;border-radius:50%;
+      background:var(--bg);border:1px solid var(--border);color:var(--mineral-dark);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .cat-card.is-selected .cat-card__icon{background:#fff;color:var(--mineral)}
+    .cat-card__icon svg{width:20px;height:20px}
+    .cat-card__main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .cat-card__name{font-size:15px;font-weight:600;color:var(--text1)}
+    .cat-card__sub{font-size:12.5px;line-height:1.4;color:var(--text2)}
+    .cat-card__check{width:18px;height:18px;flex:none;color:var(--mineral);opacity:0;transition:opacity .2s}
+    .cat-card.is-selected .cat-card__check{opacity:1}
+    .msg-cta[disabled]{opacity:0.4;cursor:default;box-shadow:none}
     .msg-card{
       display:flex;gap:14px;align-items:flex-start;text-align:left;
       background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 18px;
@@ -345,6 +447,96 @@
       text-decoration:none;padding:10px;margin-top:2px;
       background:none;border:none;cursor:pointer;font-family:var(--sans);
     }
+
+    /* ---- Memory Shelf slide (mirrors production MemoryShelf.tsx) ---- */
+    #s-shelf{justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .shelf-scroll{width:100%;display:flex;flex-direction:column;gap:clamp(12px,2.2vh,18px)}
+    .shelf-header{text-align:left}
+    .shelf-title{font-family:var(--serif);font-size:clamp(26px,7vw,31px);font-weight:600;line-height:1.15}
+    .shelf-tagline{font-size:14px;line-height:1.5;color:var(--text2);margin-top:4px}
+    .shelf-cards{display:flex;flex-direction:column;gap:12px}
+    /* flat house surface + hairline + soft shadow, per the prototype */
+    .shelf-card{
+      text-align:left;background:var(--card);border:1px solid var(--border);border-radius:16px;
+      padding:16px 18px;box-shadow:0 2px 8px rgba(28,26,24,0.04);
+    }
+    .shelf-card__recipient{font-size:15px;font-weight:600;color:var(--text1)}
+    /* woven category caption — never a pill */
+    .shelf-card__occasion{font-size:12px;font-weight:600;letter-spacing:0.04em;color:var(--mineral);margin-top:2px}
+    .shelf-card__excerpt{font-family:var(--serif);font-size:15px;line-height:1.5;color:var(--text1);margin-top:9px}
+    .shelf-card__meta{font-size:12.5px;color:var(--text3);margin-top:10px}
+    .shelf-card__footer{margin-top:12px}
+    .shelf-btn-play{
+      display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+      background:var(--bg);border:1px solid var(--border);border-radius:999px;
+      padding:7px 16px 7px 14px;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--mineral-dark);
+      transition:border-color .2s, background .2s;
+    }
+    .shelf-btn-play::before{
+      content:"";width:0;height:0;border-style:solid;border-width:5px 0 5px 8px;
+      border-color:transparent transparent transparent var(--mineral-dark);
+    }
+    .shelf-btn-play.is-playing::before{
+      border-width:0;width:8px;height:8px;background:var(--mineral-dark);border-radius:1px;
+    }
+    .shelf-btn-play.is-playing{border-color:var(--mineral);color:var(--mineral)}
+    .shelf-btn-play.is-playing::before{background:var(--mineral)}
+    /* "Three, kept." full-shelf close */
+    .shelf-complete{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;margin-top:6px;padding-bottom:8px}
+    .shelf-complete__rule{width:40px;height:2px;border-radius:1px;background:var(--sand);margin-bottom:6px}
+    .shelf-complete__title{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--text1)}
+    .shelf-complete__body{font-size:13.5px;line-height:1.55;color:var(--text2);max-width:30ch}
+    .shelf-complete__link{background:none;border:none;cursor:pointer;color:var(--mineral-dark);font-size:13.5px;font-weight:600;padding:8px 10px;font-family:var(--sans)}
+
+    /* ---- Shelf ceremonial playback overlay (mirrors production PlaybackOverlay) ---- */
+    .ov{
+      position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+      background:rgba(28,26,24,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+      padding:24px;animation:ovFade .3s var(--ease);
+    }
+    .ov[hidden]{display:none}
+    .ov__card{
+      position:relative;width:100%;max-width:400px;max-height:90%;overflow-y:auto;
+      background:var(--bg);border-radius:24px;padding:40px 26px 30px;text-align:center;
+      box-shadow:0 30px 80px -20px rgba(28,26,24,0.42);animation:ovRise .35s var(--ease);
+    }
+    .ov__close{
+      position:absolute;top:12px;right:12px;width:40px;height:40px;border:none;background:none;
+      color:var(--text2);font-size:24px;line-height:1;cursor:pointer;border-radius:8px;
+      display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s;
+    }
+    .ov__close:hover{background:rgba(0,0,0,0.05);color:var(--text1)}
+    .ov__stone{width:132px;aspect-ratio:1;margin:0 auto 22px}
+    .ov__stone canvas{
+      width:100%;height:100%;display:block;
+      -webkit-mask:radial-gradient(circle closest-side at 50% 50%,#000 86%,transparent 100%);
+      mask:radial-gradient(circle closest-side at 50% 50%,#000 86%,transparent 100%);
+    }
+    .ov__recipient{font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--mineral);margin-bottom:12px}
+    .ov__excerpt{font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--text1);max-width:32ch;margin:0 auto 24px}
+    .ov__controls{display:flex;flex-direction:column;align-items:center;gap:14px}
+    .ov-timer{font-variant-numeric:tabular-nums;font-size:13px;color:var(--text3);letter-spacing:0.06em}
+    .ov-btn{
+      background:var(--mineral-dark);color:#fff;border:none;border-radius:12px;padding:14px 40px;
+      font-size:16px;font-weight:600;cursor:pointer;min-width:200px;box-shadow:0 8px 22px -8px rgba(101,107,115,0.7);
+      transition:transform .16s var(--ease),background .3s;
+    }
+    .ov-btn:active{transform:scale(0.98)}
+    .ov-btn--sec{background:none;color:var(--mineral-dark);border:1px solid var(--border);box-shadow:none;min-width:0;padding:14px 26px}
+    .ov-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .ov-link{background:none;border:none;color:var(--mineral-dark);font-size:13.5px;font-weight:600;cursor:pointer;padding:6px 10px;font-family:var(--sans)}
+    .ov-transcript{
+      position:absolute;inset:0;background:var(--bg);border-radius:24px;padding:20px 22px;
+      text-align:left;display:flex;flex-direction:column;gap:12px;animation:ovRise .25s var(--ease);
+    }
+    .ov-transcript[hidden]{display:none}
+    .ov-transcript__head{display:flex;align-items:center;justify-content:space-between}
+    .ov-transcript__head span{font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--mineral)}
+    .ov-transcript__head .ov__close{position:static}
+    .ov-transcript__meta{font-size:12.5px;color:var(--text3)}
+    .ov-transcript__body{font-family:var(--serif);font-size:16px;line-height:1.6;color:var(--text1);overflow-y:auto}
+    @keyframes ovFade{from{opacity:0}to{opacity:1}}
+    @keyframes ovRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
     .sealed-badge{
       display:inline-flex;align-items:center;gap:8px;margin-top:2px;
@@ -423,18 +615,27 @@
 
       <!-- ============ SLIDE 1 — VOICE CAPTURE ============ -->
       <section class="slide" id="s-voice" data-slide="voice">
-        <div class="eyebrow">Moment 7 of 25 · Everyday</div>
+        <div class="eyebrow">Moment 1 of 25 · Everyday</div>
+        <p class="rec-instruction">Speak naturally.</p>
         <div class="prompt-card">
-          <p>Describe your typical morning — the first thing you do, what the light looks like, a sound you always hear.</p>
+          <!-- A real prompt from the production script: a first-person line the
+               person reads aloud, with their name + city stamped in. The fill-ins
+               are the personalization that's unique to us. -->
+          <p>Good morning! My name is <span class="prompt-fill">Eleanor</span>, and I'm here in <span class="prompt-fill">Savannah</span>. It's a beautiful morning, and I'm excited to be doing this. This is actually kind of fun! How does my voice sound so far?</p>
         </div>
-        <div class="voice-stone"><canvas id="voiceCanvas" aria-hidden="true"></canvas></div>
+        <div class="record-waveform" id="recWave" aria-hidden="true">
+          <div class="record-waveform__bar"></div><div class="record-waveform__bar"></div>
+          <div class="record-waveform__bar"></div><div class="record-waveform__bar"></div>
+          <div class="record-waveform__bar"></div><div class="record-waveform__bar"></div>
+          <div class="record-waveform__bar"></div><div class="record-waveform__bar"></div>
+        </div>
         <div class="rec-controls">
           <button class="rec-button" id="recBtn" aria-label="Record">
             <svg class="ico-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
             <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2.5"/></svg>
           </button>
           <div class="rec-label" id="recLabel">Tap to record</div>
-          <div class="rec-timer" id="recTimer">00:00</div>
+          <div class="rec-timer" id="recTimer" style="opacity:0;transition:opacity .3s ease">00:00</div>
         </div>
       </section>
 
@@ -446,19 +647,25 @@
             <h1 class="card-headline">That's your voice.</h1>
             <p class="card-sub">Twenty-five prompts, in your own words. The hard part's done.</p>
           </div>
-          <div class="sample-row">
-            <button class="sample-play" id="sampleBtn" aria-label="Play example">
-              <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
-            </button>
-            <span class="sample-text">Hear what a preserved voice sounds like — an example, from another family.</span>
+          <div class="sample-block">
+            <div class="sample-row">
+              <button class="sample-play" id="sampleBtn" aria-label="Play example">
+                <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
+              </button>
+              <span class="sample-text">Hear what a preserved voice sounds like. An example, from another family.</span>
+            </div>
+            <span class="sample-aftercopy" id="sampleAfter">That warmth and presence is what gets preserved. Yours, next.</span>
           </div>
+          <!-- the vault — cool, unsealed (CardCapture places it here, between the
+               sample and the turn; canonical reliquary at t=0). -->
+          <div class="paywall-vault"><canvas id="paywallVault" width="600" height="600" aria-hidden="true"></canvas></div>
           <p class="card-turn">Right now, it's only a recording. A beginning, not something kept.</p>
-          <p class="card-value">Keeping it safe means the people you love can hear you whenever they need to.</p>
+          <p class="card-value">Sealing it keeps your voice safe and ready, so the people you love can hear you whenever they need to.</p>
           <div class="plan-toggle" id="planToggle">
             <button class="plan is-active" data-plan="annual">
               <div class="plan-name">Annual</div>
-              <div class="plan-price">$119 yearly · about $10/mo</div>
+              <div class="plan-price">$119 yearly · about $10 a month</div>
             </button>
             <button class="plan" data-plan="monthly">
               <div class="plan-name">Monthly</div>
@@ -478,20 +685,20 @@
           <canvas id="heroVault" width="600" height="600"></canvas>
         </div>
         <div class="vault-copy">
-          <!-- state A: pre-seal -->
+          <!-- state A: pre-seal — copy mirrors production VaultRevealScreen.
+               No pricing here: payment already happened on the paywall beat, and
+               production keeps the vault reveal free of price. -->
           <div class="copy-state" id="vault-open">
-            <div class="eyebrow">The work is done</div>
             <h1>Your Voice Vault</h1>
-            <p class="body">Everything you recorded now has a home. Seal it to keep your voice protected for the people you love.</p>
-            <button class="cta" id="sealBtn">Seal your Vault</button>
-            <div class="cta-sub">7-day trial · then $12.99/month</div>
+            <p class="body">This is where your voice is preserved.</p>
+            <button class="cta" id="sealBtn">Seal My Vault</button>
+            <p class="vault-sub">For now, it's being kept with care.</p>
           </div>
-          <!-- state B: sealed -->
+          <!-- state B: sealed — copy mirrors production VaultSealedScreen. -->
           <div class="copy-state hidden" id="vault-sealed">
-            <div class="eyebrow">Protected</div>
-            <h1>Your voice is safe.</h1>
-            <p class="body">Sealed, warm, and ready — held for whenever you need it.</p>
-            <div class="sealed-badge">Voice Vault · Protected</div>
+            <h1>Your voice is protected.</h1>
+            <p class="body">Your Voice Vault is sealed. Your preserved voice is protected.</p>
+            <p class="vault-sub">Take your time. When you're ready, you can create a message for someone you love. Your voice will be there.</p>
             <button class="replay" id="replayBtn">Replay the seal</button>
           </div>
         </div>
@@ -500,36 +707,57 @@
       <!-- ============ SLIDE 4 — FIRST PLAYBACK ============ -->
       <section class="slide" id="s-playback" data-slide="playback">
         <div class="eyebrow">For the first time</div>
-        <h1 class="pb-headline">Hear yourself, preserved.</h1>
+        <!-- headline mirrors production PreviewRefineScreen ("Here it is, in
+             your voice.") — the real first-hearing moment. -->
+        <h1 class="pb-headline">Here it is, in your voice.</h1>
         <div class="pb-stone"><canvas id="playbackCanvas" aria-hidden="true"></canvas></div>
         <button class="pb-play" id="pbPlay" aria-label="Play">
           <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
           <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
         </button>
-        <div class="pb-scrub"><div class="pb-scrub__fill" id="pbFill"></div></div>
-        <div class="pb-caption" id="pbCaption">This is your voice, kept exactly as it is.</div>
+        <!-- scrubber + time label, ported from PreviewRefineScreen .player__bar
+             (track · fill · thumb · "0:05 / 0:20"). -->
+        <div class="pb-player">
+          <div class="pb-scrub"><div class="pb-scrub__fill" id="pbFill"></div><div class="pb-scrub__thumb" id="pbThumb"></div></div>
+          <span class="pb-time" id="pbTime">0:00 / 0:13</span>
+        </div>
+        <div class="pb-hint" id="pbHint">Tap to hear it.</div>
       </section>
 
       <!-- ============ SLIDE 5 — MESSAGE CREATION ============ -->
       <section class="slide" id="s-message" data-slide="message">
-        <div class="msg-scroll">
-          <div class="crumb" id="msgCrumb">For Sarah · A Message for the Future</div>
-          <div class="chip-row" id="chipRow">
-            <button class="chip is-active" data-cat="future">A Message for the Future</button>
-            <button class="chip" data-cat="birthday">Birthday</button>
-            <button class="chip" data-cat="encouragement">Encouragement</button>
-            <button class="chip" data-cat="checkin">Just Checking In</button>
-          </div>
+        <!-- state 1 · category selector — mirrors production CategorySelectorScreen
+             (A3): "What do you want to say?" with the real 7-category radiogroup
+             of icon + name + description cards. Cards built in JS from the
+             canonical CATEGORY_DISPLAY_ORDER. -->
+        <div class="msg-scroll" id="msgSelect">
+          <button class="crumb-link" type="button" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <span>For Sarah</span>
+          </button>
+          <h1 class="msg-title">What do you want to say?</h1>
+          <p class="msg-aside">Pick the shape. The words come next.</p>
+          <div class="cat-list" id="catList" role="radiogroup" aria-label="Message category"></div>
+          <button class="msg-cta" id="beginShaping" disabled>Begin shaping</button>
+        </div>
+
+        <!-- state 2 · generated preview — mirrors production PreviewRefineScreen
+             (A6): the message written in the preserved voice. -->
+        <div class="msg-scroll" id="msgPreview" hidden>
+          <button class="crumb-link" id="previewBack" type="button" aria-label="Back to categories">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <span id="msgCrumb">For Sarah · A message for the future</span>
+          </button>
           <div class="msg-card">
             <button class="msg-play" id="msgPlay" aria-label="Play message">
               <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
             </button>
-            <p class="msg-text" id="msgText">If you're hearing this, I want you to know how proud I am of you. Whatever today holds, take a breath. You've always been stronger than you know.</p>
+            <p class="msg-text" id="msgText"></p>
           </div>
-          <div class="msg-note">Generated in your preserved voice · about 10 seconds.</div>
-          <button class="msg-cta" id="msgCta">Save to your shelf</button>
-          <button class="msg-secondary">Add a personal note</button>
+          <div class="msg-note" id="msgNote">Generated in your preserved voice · about 10 seconds.</div>
+          <button class="msg-cta" id="msgCta">Save this message</button>
+          <button class="msg-secondary" id="msgChange">Make a change</button>
         </div>
       </section>
 
@@ -566,13 +794,83 @@
               </div>
               <button class="msg-row__play" data-row-play data-cat="checkin" aria-label="Play message"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
             </div>
-            <button class="archive-link" type="button">Open your Memory Shelf →</button>
+            <button class="archive-link" id="openShelf" type="button">Open your Memory Shelf →</button>
           </div>
         </div>
       </section>
 
-      <!-- ==== all seven beats present ==== -->
+      <!-- ============ SLIDE 7 — MEMORY SHELF ============ -->
+      <!-- Mirrors production MemoryShelf.tsx (3-full "complete" state): header,
+           the saved-message cards (woven category caption, "Kept on … · m:ss",
+           Play), and the "Three, kept." full-shelf close. -->
+      <section class="slide" id="s-shelf" data-slide="shelf">
+        <div class="shelf-scroll">
+          <button class="crumb-link" id="shelfBack" type="button" aria-label="Back to home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <span>Home</span>
+          </button>
+          <header class="shelf-header">
+            <h1 class="shelf-title">Memory Shelf</h1>
+            <p class="shelf-tagline">Each message is a keepsake for someone you love</p>
+          </header>
+          <div class="shelf-cards">
+            <article class="shelf-card" data-cat="future">
+              <div class="shelf-card__recipient">For Sarah</div>
+              <div class="shelf-card__occasion">A message for later</div>
+              <p class="shelf-card__excerpt">If you're hearing this, I want you to know how proud I am of you. Whatever today holds, take a breath. You've always been stronger than you know.</p>
+              <div class="shelf-card__meta">Kept on Jul 10, 2026 · 0:10</div>
+              <div class="shelf-card__footer">
+                <button class="shelf-btn-play" data-shelf-play data-cat="future" type="button"><span>Play</span></button>
+              </div>
+            </article>
+            <article class="shelf-card" data-cat="birthday">
+              <div class="shelf-card__recipient">For Mom</div>
+              <div class="shelf-card__occasion">A birthday message</div>
+              <p class="shelf-card__excerpt">Happy birthday, sweetheart. I hope today feels warm and easy. I'm thinking of you, and I love you more than words can hold.</p>
+              <div class="shelf-card__meta">Kept on Jul 7, 2026 · 0:08</div>
+              <div class="shelf-card__footer">
+                <button class="shelf-btn-play" data-shelf-play data-cat="birthday" type="button"><span>Play</span></button>
+              </div>
+            </article>
+            <article class="shelf-card" data-cat="checkin">
+              <div class="shelf-card__recipient">For Dad</div>
+              <div class="shelf-card__occasion">Just checking in</div>
+              <p class="shelf-card__excerpt">Hey, it's me. No reason, really. I just wanted you to hear my voice today. I hope you're doing okay.</p>
+              <div class="shelf-card__meta">Kept on Jul 3, 2026 · 0:05</div>
+              <div class="shelf-card__footer">
+                <button class="shelf-btn-play" data-shelf-play data-cat="checkin" type="button"><span>Play</span></button>
+              </div>
+            </article>
+          </div>
+          <section class="shelf-complete">
+            <div class="shelf-complete__rule" aria-hidden="true"></div>
+            <h2 class="shelf-complete__title">Three, kept.</h2>
+            <p class="shelf-complete__body">Your shelf is full. Each message here is preserved and yours to keep.</p>
+            <button class="shelf-complete__link" type="button">See what's coming</button>
+          </section>
+        </div>
+      </section>
 
+      <!-- ==== all eight beats present ==== -->
+
+    </div>
+
+    <!-- Ceremonial playback overlay (mirrors production shelf PlaybackOverlay):
+         tap a shelf message → focus it, stone "speaks", prePlay → playing →
+         complete/replay, with a transcript sheet. -->
+    <div class="ov" id="shelfOverlay" hidden role="dialog" aria-modal="true" aria-label="Message playback">
+      <div class="ov__card">
+        <button class="ov__close" id="ovClose" aria-label="Close">×</button>
+        <div class="ov__stone"><canvas id="ovStone" aria-hidden="true"></canvas></div>
+        <div class="ov__recipient" id="ovRecipient">For Sarah</div>
+        <p class="ov__excerpt" id="ovExcerpt"></p>
+        <div class="ov__controls" id="ovControls"></div>
+        <div class="ov-transcript" id="ovTranscript" hidden>
+          <div class="ov-transcript__head"><span>Transcript</span><button class="ov__close" id="ovTrClose" aria-label="Close transcript">×</button></div>
+          <div class="ov-transcript__meta" id="ovTrMeta"></div>
+          <div class="ov-transcript__body" id="ovTrBody"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Chrome -->
@@ -1239,8 +1537,13 @@ const RELIQUARY = {
   }
   // paywall sample - "Hear what a preserved voice sounds like" (an elder, another family)
   const sampleBtn = document.getElementById('sampleBtn');
+  const sampleBlock = sampleBtn && sampleBtn.closest('.sample-block');
   if (sampleBtn){
-    const sampleControl = { src: CLIPS.sample, setPlaying(on){ sampleBtn.classList.toggle('is-playing', on); } };
+    const sampleControl = { src: CLIPS.sample, setPlaying(on){
+      sampleBtn.classList.toggle('is-playing', on);
+      // once played, the after-copy stays revealed (mirrors CardCapture showAfterCopy)
+      if (on && sampleBlock) sampleBlock.classList.add('is-played');
+    } };
     sampleBtn.addEventListener('click', ()=> audioToggle(sampleControl));
   }
   // saved-message rows on Home - each plays its own occasion's message
@@ -1250,47 +1553,63 @@ const RELIQUARY = {
     btn.addEventListener('click', ()=> audioToggle(rowControl));
   });
 
-  /* ---- Voice capture beat (its own breathing stone that reacts to recording) ---- */
-  const voiceCanvas = document.getElementById('voiceCanvas');
-  const voiceEngine = new BreathStoneEngine(voiceCanvas);
+  /* ---- Voice capture beat (waveform-driven, mirrors production record flow) ----
+     Flow ported from RecordScreen PromptView: idle → recording (terracotta,
+     live waveform, timer counting) → stop → "Saving…" → "Saved" (button greens,
+     waveform settles) → auto-advance to the next beat. No stone here; the real
+     record screen shows a waveform. */
   const recBtn = document.getElementById('recBtn');
   const recLabel = document.getElementById('recLabel');
   const recTimer = document.getElementById('recTimer');
-  let recState = 'idle', recSecs = 0, recInt = null, recResetT = null;
+  const recWave = document.getElementById('recWave');
+  let recState = 'idle', recSecs = 0, recInt = null, recSaveT = null, recAdvT = null;
 
-  function sizeVoice(){ const b=voiceCanvas.parentElement; if(b.clientWidth>0) voiceEngine.resize(b.clientWidth, b.clientHeight); }
   function fmtTime(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
-  function startVoice(){ sizeVoice(); voiceEngine.setState('idle'); voiceEngine.start(); }
   function resetRec(){
-    clearInterval(recInt); recInt=null;
-    recState='idle'; recSecs=0; recTimer.textContent='00:00';
-    recBtn.classList.remove('is-recording'); recLabel.textContent='Tap to record';
-    voiceEngine.setState('idle');
-  }
-  function stopVoice(){
-    voiceEngine.stop();
-    clearInterval(recInt); recInt=null; clearTimeout(recResetT);
-    resetRec();
+    clearInterval(recInt); recInt=null; clearTimeout(recSaveT); clearTimeout(recAdvT);
+    recState='idle'; recSecs=0; recTimer.textContent='00:00'; recTimer.style.opacity='0';
+    recBtn.classList.remove('is-recording','is-done');
+    recLabel.className='rec-label'; recLabel.textContent='Tap to record';
+    recWave.classList.remove('is-active');
   }
   recBtn.addEventListener('click', ()=>{
     if(recState==='idle'){
-      recState='recording'; recSecs=0; recTimer.textContent='00:00';
-      recBtn.classList.add('is-recording'); recLabel.textContent='Recording — tap to stop';
-      voiceEngine.setState('recording');
+      recState='recording'; recSecs=0; recTimer.textContent='00:00'; recTimer.style.opacity='1';
+      recBtn.classList.add('is-recording');
+      recLabel.className='rec-label'; recLabel.textContent='Recording...';
+      recWave.classList.add('is-active');
       clearInterval(recInt);
       recInt=setInterval(()=>{ recSecs++; recTimer.textContent=fmtTime(recSecs); }, 1000);
     } else if(recState==='recording'){
-      recState='done'; clearInterval(recInt); recInt=null;
-      recBtn.classList.remove('is-recording');
-      recLabel.innerHTML='<span class="check">✓</span> Moment captured';
-      voiceEngine.setState('celebrate');
-      recResetT=setTimeout(()=>{ if(recState==='done') voiceEngine.setState('ready'); }, 1500);
-    } else {
-      resetRec();
+      // stop → brief "Saving…" → "Saved" (green), then advance to the paywall beat
+      recState='saving'; clearInterval(recInt); recInt=null;
+      recBtn.classList.remove('is-recording'); recWave.classList.remove('is-active');
+      recLabel.className='rec-label rec-label--saving'; recLabel.textContent='Saving…';
+      recSaveT=setTimeout(()=>{
+        if(recState!=='saving') return;
+        recState='done';
+        recBtn.classList.add('is-done');
+        recLabel.className='rec-label rec-label--saved';
+        recLabel.innerHTML='<span class="check">✓</span> Saved';
+        recAdvT=setTimeout(()=>{ if(recState==='done') go(at+1); }, 1400);
+      }, 850);
     }
+    // once done, the button is inert (pointer-events:none) — advance carries on
   });
 
   /* ---- Card capture beat (plan toggle + commit) ---- */
+  // Cool, unsealed vault shown on the paywall (CardCapture places it between the
+  // sample and the turn). Painted static at t=0 with the canonical reliquary.
+  const paywallVaultCanvas = document.getElementById('paywallVault');
+  const pvctx = paywallVaultCanvas.getContext('2d');
+  function paintPaywallVault(){
+    pvctx.clearRect(0,0,600,600);
+    vaultEng.drawVault(pvctx, 300, 300, 600, 0, RELIQUARY);
+  }
+  function enterCard(){
+    paintPaywallVault();
+    if (sampleBlock) sampleBlock.classList.remove('is-played'); // fresh first-look each visit
+  }
   const planToggle = document.getElementById('planToggle');
   const priceLine = document.getElementById('priceLine');
   const PRICES = {
@@ -1305,25 +1624,45 @@ const RELIQUARY = {
   // committing carries the story forward into the Vault Reveal
   document.getElementById('cardCta').addEventListener('click', ()=> go(at+1));
 
-  /* ---- First playback beat (stone "speaks" while playing) ---- */
+  /* ---- First playback beat — mirrors PreviewRefineScreen "Here it is, in your
+     voice.": the stone "speaks" (playback state) while the scrubber (fill + thumb)
+     and the "0:05 / 0:18" time label track the audio. ---- */
   const playbackCanvas = document.getElementById('playbackCanvas');
   const playbackEngine = new BreathStoneEngine(playbackCanvas);
   const pbBtn = document.getElementById('pbPlay');
   const pbFill = document.getElementById('pbFill');
-  const PB_DUR = 7000;
+  const pbThumb = document.getElementById('pbThumb');
+  const pbTime = document.getElementById('pbTime');
+  const pbHint = document.getElementById('pbHint');
+  const PB_DUR = 13000; // fallback total (~the Carol clip) until real metadata lands
   let pbPlaying=false, pbRAF=null, pbStart=0, pbElapsed=0;
 
+  function fmtT(s){ s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  function pbSeek(frac,cur,dur){
+    const pct=Math.min(1,Math.max(0,frac))*100;
+    pbFill.style.width=pct+'%'; pbThumb.style.left=pct+'%';
+    pbTime.textContent=fmtT(cur)+' / '+fmtT(dur);
+  }
   function sizePlayback(){ const b=playbackCanvas.parentElement; if(b.clientWidth>0) playbackEngine.resize(b.clientWidth,b.clientHeight); }
   function pbReset(){
-    pbPlaying=false; pbElapsed=0; pbFill.style.width='0%';
-    pbBtn.classList.remove('is-playing');
+    pbPlaying=false; pbElapsed=0;
+    pbSeek(0, 0, PB_DUR/1000);
+    pbBtn.classList.remove('is-playing'); pbHint.classList.remove('is-hidden');
   }
-  function startPlayback(){ sizePlayback(); pbReset(); playbackEngine.setState('ready'); playbackEngine.start(); }
+  function startPlayback(){
+    sizePlayback(); pbReset(); playbackEngine.setState('ready'); playbackEngine.start();
+    // Set the resting total from the real clip's metadata (robust to ?clip swaps).
+    const a = elFor(clipOverride || CLIPS.playback);
+    if(a){
+      const applyTotal=()=>{ if(!pbPlaying && a.duration && isFinite(a.duration)) pbTime.textContent='0:00 / '+fmtT(a.duration); };
+      if(a.readyState>=1) applyTotal(); else a.addEventListener('loadedmetadata', applyTotal, {once:true});
+    }
+  }
   function stopPlayback(){ playbackEngine.stop(); if(pbRAF){cancelAnimationFrame(pbRAF);pbRAF=null;} pbReset(); }
   function pbFrame(ts){
     if(!pbPlaying){ pbRAF=null; return; }
-    const t=Math.min(1, (pbElapsed + (ts - pbStart))/PB_DUR);
-    pbFill.style.width=(t*100)+'%';
+    const ms=pbElapsed + (ts - pbStart), t=Math.min(1, ms/PB_DUR);
+    pbSeek(t, ms/1000, PB_DUR/1000);
     if(t>=1){ pbPlaying=false; pbRAF=null; pbBtn.classList.remove('is-playing'); playbackEngine.setState('ready'); pbElapsed=0; return; }
     pbRAF=requestAnimationFrame(pbFrame);
   }
@@ -1331,15 +1670,19 @@ const RELIQUARY = {
   // "speaks" (playback state) while sound plays and settles when it stops
   const pbControl = {
     src: CLIPS.playback,
-    setPlaying(on){ pbBtn.classList.toggle('is-playing', on); playbackEngine.setState(on ? 'playback' : 'ready'); },
-    onTime(cur,dur){ pbFill.style.width = (Math.min(1, cur/dur)*100)+'%'; },
-    onEnd(){ pbFill.style.width='0%'; }
+    setPlaying(on){
+      pbBtn.classList.toggle('is-playing', on);
+      playbackEngine.setState(on ? 'playback' : 'ready');
+      if(on) pbHint.classList.add('is-hidden');
+    },
+    onTime(cur,dur){ pbSeek(dur?cur/dur:0, cur, dur||0); },
+    onEnd(){ pbSeek(0, 0, PB_DUR/1000); pbHint.classList.remove('is-hidden'); }
   };
   pbBtn.addEventListener('click', ()=>{
     if (audioAvailable()){ audioToggle(pbControl); return; }
     // fallback: no clip yet → timer-driven scrubber so the beat still animates
     if(!pbPlaying){
-      pbPlaying=true; pbBtn.classList.add('is-playing'); playbackEngine.setState('playback');
+      pbPlaying=true; pbBtn.classList.add('is-playing'); playbackEngine.setState('playback'); pbHint.classList.add('is-hidden');
       if(pbElapsed>=PB_DUR) pbElapsed=0;
       pbStart=performance.now(); pbRAF=requestAnimationFrame(pbFrame);
     } else {
@@ -1349,39 +1692,84 @@ const RELIQUARY = {
     }
   });
 
-  /* ---- Message creation beat (category swaps the generated message) ---- */
-  const MESSAGES = {
-    future:        { occasion:'A Message for the Future', text:"If you're hearing this, I want you to know how proud I am of you. Whatever today holds, take a breath. You've always been stronger than you know." },
-    birthday:      { occasion:'Birthday',                 text:"Happy birthday, sweetheart. I hope today feels warm and easy. I'm thinking of you, and I love you more than words can hold." },
-    encouragement: { occasion:'Encouragement',            text:"I know things feel heavy right now. Take it one small step at a time. I believe in you — I always have." },
-    checkin:       { occasion:'Just Checking In',         text:"Hey, it's me. No reason, really. I just wanted you to hear my voice today. I hope you're doing okay." }
+  /* ---- Message creation beat — category selector (A3) -> generated preview (A6) ----
+     Real 7-category radiogroup from the canonical CATEGORY_DISPLAY_ORDER (label +
+     description + line-art icon). Pick one -> "Begin shaping" reveals the message
+     written in the preserved voice. Audio plays for the sampled voices. */
+  const ICON = {
+    cake:'<path d="M4 21h16v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8z"/><path d="M4 15c2 0 2 1.4 4 1.4S10 15 12 15s2 1.4 4 1.4S18 15 20 15"/><path d="M12 8V5"/>',
+    award:'<circle cx="12" cy="9" r="5"/><path d="M8.6 13l-1 7 4.4-2.2L16.4 20l-1-7"/>',
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/>',
+    hourglass:'<path d="M7 3h10M7 21h10M7 3c0 5 5 5 5 9s-5 4-5 9M17 3c0 5-5 5-5 9s5 4 5 9"/>',
+    mug:'<path d="M4 8h12v7a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8z"/><path d="M16 10h2a2 2 0 0 1 0 5h-2"/><path d="M8 3v2M11 3v2"/>',
+    calendar:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M9 3v3M15 3v3"/>',
+    heart:'<path d="M12 20.5S3.5 15.5 3.5 9.3C3.5 6.4 5.6 5 7.6 5c1.7 0 3.2 1 4.4 2.6C13.2 6 14.7 5 16.4 5c2 0 4.1 1.4 4.1 4.3 0 6.2-8.5 11.2-8.5 11.2z"/>'
   };
-  const chipRow = document.getElementById('chipRow');
+  function svgIco(paths){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>'; }
+  const CATS = [
+    { key:'birthday',       label:'Birthday',                 desc:'For the day itself, or the night before.',          icon:'cake',      clip:'birthday',      secs:8,  text:"Happy birthday, sweetheart. I hope today feels warm and easy. I'm thinking of you, and I love you more than words can hold." },
+    { key:'encouragement',  label:'Encouragement',            desc:"For when they're up against something hard.",       icon:'award',     clip:'encouragement', secs:7,  text:"I know things feel heavy right now. Take it one small step at a time. I believe in you — I always have." },
+    { key:'daily_reminder', label:'Daily reminder',           desc:'Something to wake up to. Like a good-morning call.', icon:'sun',       clip:null,            secs:8,  text:"Good morning, sweetheart. Before the day gets loud — drink your water, stand up tall, and know that someone's proud of you. That's me. Always." },
+    { key:'future_message', label:'A message for the future', desc:'Saved now. Opened on a date you choose.',            icon:'hourglass', clip:'future',        secs:10, text:"If you're hearing this, I want you to know how proud I am of you. Whatever today holds, take a breath. You've always been stronger than you know." },
+    { key:'comfort',        label:'Comfort',                  desc:'For the quiet, heavy hours.',                       icon:'mug',       clip:null,            secs:9,  text:"I know it's one of the heavy hours. You don't have to carry it alone. Just sit here with me a minute. It softens. It always does." },
+    { key:'holiday',        label:'Holiday',                  desc:'A familiar voice at the door.',                     icon:'calendar',  clip:null,            secs:9,  text:"The house always felt fuller when you were home for the holidays. Wherever you are this year, there's a place set for you, and I'm thinking of you." },
+    { key:'checking_in',    label:'Just checking in',         desc:'No reason at all. You came to mind.',               icon:'heart',     clip:'checkin',       secs:5,  text:"Hey, it's me. No reason, really. I just wanted you to hear my voice today. I hope you're doing okay." }
+  ];
+  const catList = document.getElementById('catList');
+  const msgSelect = document.getElementById('msgSelect');
+  const msgPreview = document.getElementById('msgPreview');
+  const beginBtn = document.getElementById('beginShaping');
   const msgCrumb = document.getElementById('msgCrumb');
   const msgText = document.getElementById('msgText');
-  const msgNote = document.querySelector('#s-message .msg-note');
-  const MSG_SECS = { future:10, birthday:8, encouragement:7, checkin:5 };
-  let msgCat = 'future';
-  function setMsgNote(){ if(msgNote) msgNote.textContent = 'Generated in your preserved voice \u00b7 about ' + (MSG_SECS[msgCat]||10) + ' seconds.'; }
-  setMsgNote();
-  chipRow.addEventListener('click', (e)=>{
-    const c=e.target.closest('.chip'); if(!c) return;
-    chipRow.querySelectorAll('.chip').forEach(x=>x.classList.toggle('is-active', x===c));
-    msgCat = c.dataset.cat;
-    const m=MESSAGES[msgCat];
-    msgCrumb.textContent = 'For Sarah \u00b7 ' + m.occasion;
-    msgText.textContent = m.text;
-    setMsgNote();
-    haltAudio();   // stop a now-mismatched message clip when the text changes
+  const msgNote = document.getElementById('msgNote');
+  const msgSection = document.getElementById('s-message');
+  let msgCat = null;
+
+  CATS.forEach(cat=>{
+    const b = document.createElement('button');
+    b.type='button'; b.className='cat-card'; b.setAttribute('role','radio');
+    b.setAttribute('aria-checked','false'); b.dataset.cat=cat.key;
+    b.innerHTML =
+      '<span class="cat-card__icon">'+svgIco(ICON[cat.icon])+'</span>'+
+      '<span class="cat-card__main"><span class="cat-card__name">'+cat.label+'</span>'+
+      '<span class="cat-card__sub">'+cat.desc+'</span></span>'+
+      '<svg class="cat-card__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    b.addEventListener('click', ()=>{
+      msgCat = cat.key;
+      catList.querySelectorAll('.cat-card').forEach(c=>{
+        const on = c===b; c.classList.toggle('is-selected', on); c.setAttribute('aria-checked', on?'true':'false');
+      });
+      beginBtn.disabled = false;
+    });
+    catList.appendChild(b);
   });
-  // message play - the on-screen generated message, in the preserved voice
+
+  function catFor(key){ return CATS.find(c=>c.key===key) || CATS[3]; }
+  function showSelector(){ haltAudio(); msgPreview.hidden = true; msgSelect.hidden = false; msgSection.scrollTop = 0; }
+  function showPreview(){
+    const cat = catFor(msgCat);
+    msgCrumb.textContent = 'For Sarah · ' + cat.label;
+    msgText.textContent = cat.text;
+    msgNote.textContent = 'Generated in your preserved voice · about ' + cat.secs + ' seconds.';
+    haltAudio(); msgSelect.hidden = true; msgPreview.hidden = false; msgSection.scrollTop = 0;
+  }
+  function resetMessage(){
+    msgCat = null; beginBtn.disabled = true;
+    catList.querySelectorAll('.cat-card').forEach(c=>{ c.classList.remove('is-selected'); c.setAttribute('aria-checked','false'); });
+    showSelector();
+  }
+  beginBtn.addEventListener('click', ()=>{ if(msgCat) showPreview(); });
+  document.getElementById('previewBack').addEventListener('click', showSelector);
+  document.getElementById('msgChange').addEventListener('click', showSelector);
+
+  // message play - the generated message, in the preserved voice
   const msgPlayBtn = document.getElementById('msgPlay');
   if (msgPlayBtn){
-    const msgControl = { src: ()=> CLIPS.msg[msgCat] || CLIPS.msg.future,
+    const msgControl = { src: ()=>{ const c=catFor(msgCat); return c.clip ? CLIPS.msg[c.clip] : null; },
       setPlaying(on){ msgPlayBtn.classList.toggle('is-playing', on); } };
     msgPlayBtn.addEventListener('click', ()=> audioToggle(msgControl));
   }
-  document.getElementById('msgCta').addEventListener('click', ()=> go(at+1)); // save → home
+  document.getElementById('msgCta').addEventListener('click', ()=> go(at+1)); // save -> home
 
   /* ---- Home / Memory Shelf beat (infused stone) ---- */
   const homeCanvas = document.getElementById('homeCanvas');
@@ -1393,6 +1781,85 @@ const RELIQUARY = {
   document.querySelector('#s-home .home-cta').addEventListener('click', ()=>{
     const i = slides.findIndex(s=>s.dataset.slide==='message');
     if(i>=0) go(i);
+  });
+
+  /* ---- Memory Shelf beat (opens from Home) ---- */
+  function gotoSlide(name){ const i = slides.findIndex(s=>s.dataset.slide===name); if(i>=0) go(i); }
+  document.getElementById('openShelf').addEventListener('click', ()=> gotoSlide('shelf'));
+  document.getElementById('shelfBack').addEventListener('click', ()=> gotoSlide('home'));
+
+  /* ---- Shelf ceremonial playback overlay (mirrors production PlaybackOverlay):
+     tap a card → focus it, the stone "speaks" (playback state), prePlay → playing
+     → complete/replay, plus a transcript sheet. ---- */
+  const shelfOverlay = document.getElementById('shelfOverlay');
+  const ovStoneCanvas = document.getElementById('ovStone');
+  const ovStoneEngine = new BreathStoneEngine(ovStoneCanvas);
+  const ovRecipient = document.getElementById('ovRecipient');
+  const ovExcerpt = document.getElementById('ovExcerpt');
+  const ovControls = document.getElementById('ovControls');
+  const ovTranscript = document.getElementById('ovTranscript');
+  const ovTrMeta = document.getElementById('ovTrMeta');
+  const ovTrBody = document.getElementById('ovTrBody');
+  let ovCat=null, ovPhase='prePlay', ovPaused=false, ovCur=0, ovDur=0, ovDateStr='';
+
+  function parseClock(s){ const p=(s||'').trim().split(':').map(Number); return (p[0]||0)*60+(p[1]||0); }
+  function sizeOvStone(){ const b=ovStoneCanvas.parentElement; if(b.clientWidth>0) ovStoneEngine.resize(b.clientWidth,b.clientHeight); }
+  function renderOvControls(){
+    if(ovPhase==='prePlay'){
+      ovControls.innerHTML='<button class="ov-btn" data-ov="play">▷ Play</button>';
+    } else if(ovPhase==='playing'){
+      ovControls.innerHTML=
+        '<div class="ov-timer" id="ovTimer">'+fmtT(ovCur)+' / '+fmtT(ovDur)+'</div>'+
+        '<button class="ov-btn" data-ov="toggle">'+(ovPaused?'▷ Resume':'❙❙ Pause')+'</button>'+
+        '<button class="ov-link" data-ov="transcript">View transcript</button>';
+    } else {
+      ovControls.innerHTML=
+        '<div class="ov-row"><button class="ov-btn" data-ov="replay">↻ Replay</button>'+
+        '<button class="ov-btn ov-btn--sec" data-ov="close">Close</button></div>'+
+        '<button class="ov-link" data-ov="transcript">View transcript</button>';
+    }
+  }
+  const ovControl = {
+    src: ()=> ovCat ? (CLIPS.msg[ovCat] || null) : null,
+    setPlaying(on){
+      ovPaused = !on;
+      ovStoneEngine.setState(on ? 'playback' : (ovPhase==='complete' ? 'idle' : 'ready'));
+      if(ovPhase==='playing') renderOvControls();
+    },
+    onTime(cur,dur){ ovCur=cur; if(dur) ovDur=dur; const t=document.getElementById('ovTimer'); if(t) t.textContent=fmtT(ovCur)+' / '+fmtT(ovDur); },
+    onEnd(){ ovPhase='complete'; ovStoneEngine.setState('idle'); renderOvControls(); }
+  };
+  function openShelfOverlay(card){
+    ovCat = card.dataset.cat;
+    ovRecipient.textContent = card.querySelector('.shelf-card__recipient').textContent;
+    const body = card.querySelector('.shelf-card__excerpt').textContent;
+    ovExcerpt.textContent = body;
+    const parts = card.querySelector('.shelf-card__meta').textContent.split('·'); // "Kept on … · 0:10"
+    ovDateStr = (parts[0]||'').replace(/Kept on/i,'').trim();
+    ovDur = parseClock(parts[1]); ovCur=0;
+    ovTrMeta.textContent = ovRecipient.textContent + ' · ' + ovDateStr;
+    ovTrBody.textContent = body;
+    ovPhase='prePlay'; ovPaused=false; ovTranscript.hidden=true;
+    shelfOverlay.hidden=false;
+    sizeOvStone(); ovStoneEngine.setState('ready'); ovStoneEngine.start();
+    renderOvControls();
+  }
+  function closeShelfOverlay(){ haltAudio(); ovStoneEngine.stop(); ovTranscript.hidden=true; shelfOverlay.hidden=true; ovPhase='prePlay'; }
+  ovControls.addEventListener('click', (e)=>{
+    const b=e.target.closest('[data-ov]'); if(!b) return;
+    const act=b.dataset.ov;
+    if(act==='play'){ ovPhase='playing'; ovPaused=false; renderOvControls(); audioToggle(ovControl); }
+    else if(act==='toggle'){ audioToggle(ovControl); }
+    else if(act==='replay'){ ovPhase='playing'; ovPaused=false; ovCur=0; renderOvControls(); haltAudio(); audioToggle(ovControl); }
+    else if(act==='close'){ closeShelfOverlay(); }
+    else if(act==='transcript'){ ovTranscript.hidden=false; }
+  });
+  document.getElementById('ovClose').addEventListener('click', closeShelfOverlay);
+  document.getElementById('ovTrClose').addEventListener('click', ()=>{ ovTranscript.hidden=true; });
+  shelfOverlay.addEventListener('click', (e)=>{ if(e.target===shelfOverlay) closeShelfOverlay(); });
+  // whole card (and its Play button, which bubbles up) opens the ceremony
+  document.querySelectorAll('#s-shelf .shelf-card').forEach(card=>{
+    card.addEventListener('click', ()=> openShelfOverlay(card));
   });
 
   /* ---- Vault hero drive (reliquary engine, single seal axis t: 0->1) ---- */
@@ -1480,14 +1947,17 @@ const RELIQUARY = {
   // per-slide lifecycle hooks
   const hooks = {
     intro:    { enter(){ startStone(); },                        leave(){ stopStone(); } },
-    voice:    { enter(){ startVoice(); },                        leave(){ stopVoice(); } },
+    voice:    { enter(){ resetRec(); },                          leave(){ resetRec(); } },
+    card:     { enter(){ enterCard(); } },
     vault:    { enter(){ enterVault(); },                        leave(){ leaveVault(); } },
     playback: { enter(){ startPlayback(); },                     leave(){ stopPlayback(); } },
+    message:  { enter(){ resetMessage(); } },
+    shelf:    { enter(){ const s=document.getElementById('s-shelf'); if(s) s.scrollTop=0; }, leave(){ closeShelfOverlay(); } },
     home:     { enter(){ startHome(); },                         leave(){ stopHome(); } }
   };
 
   // keep the active canvas crisp on rotation / resize
-  const SIZERS = { intro:sizeStone, voice:sizeVoice, playback:sizePlayback, home:sizeHome };
+  const SIZERS = { intro:sizeStone, playback:sizePlayback, home:sizeHome };
   let resizeT=null;
   window.addEventListener('resize', ()=>{
     const fn = SIZERS[slides[at]?.dataset.slide];
