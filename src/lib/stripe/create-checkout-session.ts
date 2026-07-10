@@ -199,7 +199,7 @@ export async function createCheckoutSession(
         billing_period: plan,
       },
     },
-    success_url: `${origin}/app/vault/sealed?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${origin}/app/voice/processing?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/app/vault/protect?checkout=cancelled`,
     metadata: {
       user_id: user.id,
