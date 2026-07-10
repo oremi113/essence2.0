@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import { VaultRevealScreen } from '@/components/screens/vault/VaultRevealScreen';
-import { SealAnimation } from '@/components/vault/SealAnimation';
+import { BronzeVault } from '@/components/vault/BronzeVault';
 
 // Dev sandbox for the surviving vault screen. The old subscribe arc
 // (protect/continuity/seal/sealed) was retired in spine-wiring S4 — Card Capture
 // (/dev/card-capture) + Processing (/dev/processing) replaced it. VaultRevealScreen
 // is temp-reused as the post-payment payoff (spine-wiring-spec §6.1) until the
-// relocated reveal lands.
+// relocated reveal lands. Both the Reveal and the standalone modes now render the
+// canonical bronze vault engine (BronzeVault → paintVaultFrame), not the retired
+// gray SealAnimation.
 //
 // Dev sandbox conventions:
 //   - Top-level at src/app/dev/, never inside src/app/app/dev/.
@@ -45,7 +47,7 @@ export default function VaultDevSandbox() {
         <VaultRevealScreen onAdvance={() => log('advance → First Breath')} />
       </Section>
 
-      <Section label="SealAnimation — standalone (all three modes)">
+      <Section label="BronzeVault — standalone (all three modes)">
         <div
           style={{
             background: '#EDE3D0',
@@ -57,19 +59,19 @@ export default function VaultDevSandbox() {
           }}
         >
           <div style={{ textAlign: 'center' }}>
-            <SealAnimation mode="open" size={200} />
+            <BronzeVault mode="open" size={200} />
             <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#6B6B6B', marginTop: 8 }}>
               open
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <SealAnimation mode="sealed" size={200} />
+            <BronzeVault mode="sealed" size={200} />
             <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#6B6B6B', marginTop: 8 }}>
               sealed
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <SealAnimation
+            <BronzeVault
               mode="animate"
               size={200}
               onComplete={() => log('seal animation complete')}
