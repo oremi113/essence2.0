@@ -189,7 +189,10 @@ export function RecordScreen({ data }: RecordScreenProps) {
   if (view.type === 'ready')
     return (
       <PageTransition>
-        <ReadyView onContinue={() => router.push(ROUTES.voiceCreate)} />
+        {/* Spine-wiring S2b: after the reference clips, the journey goes to Card
+            Capture (pay), then processing creates the voice — the paywall sits
+            before creation per MASTER_SPEC §4.4, not after it. */}
+        <ReadyView onContinue={() => router.push(ROUTES.vaultProtect)} />
       </PageTransition>
     );
 

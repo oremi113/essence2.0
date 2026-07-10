@@ -16,10 +16,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Mock path — preserves 7a behavior when the flag is off.
+  // Mock path — stands in for a successful checkout while VAULT_STRIPE_ENABLED is
+  // off. Spine-wiring S2b: lands on the processing beat (was the old sealed
+  // screen). The mock writes no subscription, so processing honours `?mock=true`
+  // as "paid" until real Stripe lands (S5).
   if (!isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
     return NextResponse.json({
-      checkoutUrl: `${ROUTES.vaultSealed}?mock=true&plan=${plan}`,
+      checkoutUrl: `${ROUTES.voiceProcessing}?mock=true&plan=${plan}`,
     });
   }
 

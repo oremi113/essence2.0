@@ -17,16 +17,30 @@ import { ROUTES, signInWithNext } from '@/lib/routes';
 //   trial | active | past_due  → proceed; if the voice is already `ready`
 //                                (refresh / returning), skip straight to the Reveal
 //                                (first-run-only, decision 6.4).
-export default async function VoiceProcessingPage() {
+//
+// `?mock=true`: the mock checkout (VAULT_STRIPE_ENABLED off) writes no
+// subscription, so a real trial doesn't exist yet — the mock stands in for
+// "paid." Bypass the paid-guard for the mock path only. Removed when real Stripe
+// lands (S5), where the webhook writes the trial before this page is reached.
+export default async function VoiceProcessingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mock?: string }>;
+}) {
+  const { mock } = await searchParams;
+  const isMock = mock === 'true';
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect(signInWithNext(ROUTES.voiceProcessing));
 
-  const sub = await getSubscriptionStatus(user.id);
-  if (sub.status === 'none') redirect(ROUTES.vaultProtect);
-  if (sub.status === 'lapsed' || sub.status === 'cancelled') redirect(ROUTES.vaultRestore);
+  if (!isMock) {
+    const sub = await getSubscriptionStatus(user.id);
+    if (sub.status === 'none') redirect(ROUTES.vaultProtect);
+    if (sub.status === 'lapsed' || sub.status === 'cancelled') redirect(ROUTES.vaultRestore);
+  }
 
   const voiceProfile = await getOrCreateVoiceProfile();
   if (voiceProfile.status === 'ready') redirect(ROUTES.vaultReveal);

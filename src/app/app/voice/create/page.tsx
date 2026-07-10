@@ -1,20 +1,11 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { VoiceCreationView } from "@/components/voice/VoiceCreationView";
-import { ROUTES, signInWithNext } from "@/lib/routes";
+import { ROUTES } from "@/lib/routes";
 
-export default async function VoiceCreatePage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect(signInWithNext(ROUTES.voiceCreate));
-  }
-
-  return (
-    <>
-      <VoiceCreationView />
-    </>
-  );
+// Spine-wiring S2b: voice creation moved to /app/voice/processing, which runs it
+// only AFTER payment (MASTER_SPEC §4.4). This route no longer triggers creation —
+// it forwards to Card Capture, where the user commits before processing. The old
+// VoiceCreationView is now unused and is deleted in S4. The URL is kept as a
+// stable forward (DECISIONS lock: URLs don't change during a redesign).
+export default function VoiceCreatePage() {
+  redirect(ROUTES.vaultProtect);
 }
