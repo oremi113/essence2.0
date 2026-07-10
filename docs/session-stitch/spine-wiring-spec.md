@@ -225,14 +225,23 @@ replaying the activation spine.
 Per CLAUDE.md: one chunk → one review surface → one commit; visual/live verify UI
 before "done"; 4× CPU on mobile sim is the motion bar.
 
-- **Chunk S1 — Card Capture wired at `/app/vault/protect`.** New page.tsx + actions
-  wrapper; `onKeep` → checkout; guard inversion; reference-clip exit repointed to it.
-  Verify: `none` user records → lands on Card Capture; plan toggle; commit opens
-  Stripe (mock path with `VAULT_STRIPE_ENABLED` off first).
-- **Chunk S2 — Processing wired + `/start` moved + gate flip (behind env).** Stripe
-  `success_url` → Processing; Processing calls `/start`, polls to `ready`; flip flags
-  in a preview env only. Verify: paid user → processing → `ready` → reveal; a
-  `none` user can't reach `/start` (402).
+- **Chunk S1 — Card Capture wired at `/app/vault/protect`.** ✅ DONE (commit 622a540).
+  New page.tsx + actions wrapper; `onKeep` → checkout; guard inversion; reference-clip
+  exit repointed. Verified live (guard both branches, plan toggle, park/resume, mock commit).
+- **Chunk S2 — split into S2a (additive) + S2b (cutover); gate flip deferred to S5.**
+  - **S2a** ✅ DONE (4ed4bc7): new `/app/voice/processing` route + polling wrapper
+    (triggers `/start`, polls to `ready`, → Reveal). Additive, off the live path.
+  - **S2b** ✅ DONE (80b6e01): `success_url` + mock URL → processing; `voice/create`
+    neutralized (no pre-payment `/start`); record/RecordScreen exits → Card Capture;
+    processing honours `?mock=true` as paid (flags off). Verified live end-to-end
+    (record → Card Capture → mock → processing → reveal).
+  - **Gate flip** (`VOICE_CREATION_REQUIRES_PAYMENT` + `VAULT_STRIPE_ENABLED`) →
+    **moved to S5** (owner-triggered, with a vendor-backed walk). The code is correct
+    with flags off; the flip only closes the direct-`/start` free loophole.
+
+  **Known transitional edges (resolve in S3/S5):** a paid-but-not-ready user who
+  re-enters the record flow currently routes to Card Capture → (guard) home rather
+  than back into processing; the `?mock=true` processing bypass is removed at S5.
 - **Chunk S3 — Reveal (temp or new) → First Breath → First Message.** Repoint
   `FirstBreathSequence` exit off the stub; guard inversion on reveal. Verify: full
   walk record → pay → process → reveal → ceremony (audio) → `/messages/new`, at 4×.
