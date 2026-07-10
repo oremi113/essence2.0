@@ -24,6 +24,7 @@ export const ROUTES = {
   /** Placeholder First-Breath exit; pending a real destination — FOLLOW_UPS #25. */
   recordCompleteStub: "/app/record/complete/stub",
   voiceCreate: "/app/voice/create",
+  voiceProcessing: "/app/voice/processing",
   shelf: "/app/shelf",
 
   // Canonical message-creation route (the Step 6 spine). The legacy
