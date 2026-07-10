@@ -23,6 +23,26 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-10 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 8 new backlog items (FU-81–88), added a refining sub-note to FU-72, and noted 1 further P4 (restore checkout duplication) not logged. No code touched.
+- Scanned: health checks on `main` (`1983bb9`): typecheck ✅ · lint ✅ · unit tests **370/370** ✅. Deep-read the subsystems that shipped since the last triage but were never read at depth — the Step 9 account-deletion teardown, the Step 3 vault-render / card-capture canvas engine, the Step 6 message-generation routes (cost-control + failure paths), the Step 10 gen-failure / offline surfaces, and the record / onboarding shared libs. Marker-debt grep over `src/`: no new untracked debt (the FirstBreath audio TODOs are FU-41, the exit-destination TODO is FU-25, every `eslint-disable` is conventional or FU-32).
+- Excluded as work-in-progress: `feat/legal-pages` and `feat/first-breath-audio` (both last touched 2026-07-08) — the files they touch (legal screens/routes, FirstBreath audio) were treated as WIP. The freshly-merged Stripe lifecycle audit (#92 → FU-77/78/79) and S10-B offline (#89 → FU-80) were not re-scanned (already covered).
+- Discovered (new FOLLOW_UPS entries):
+  - FU-81 [P2, owner-paired] Account-delete teardown drops the `subscriptions` read error → a transient DB hiccup deletes the account while its Stripe subscription keeps billing (`settings/actions.ts:191`, breaks the step-1 "never billed" invariant).
+  - FU-82 [P2, owner-paired] `retry_audio` renders paid ElevenLabs audio with no cost cap / hourly gate / ledger → an authenticated loop = unbounded vendor spend (`regenerate/route.ts:94-135`).
+  - FU-83 [P2] A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever (`generate/route.ts` + `MessagesNewPageClient.tsx:76`).
+  - FU-84 [P3] Single-clip playback retry guard resets itself every fetch → an undecodable clip bursts the rate-limited playback endpoint (`RecordingUpload.tsx:263`).
+  - FU-85 [P3] Account-delete storage wipe caps each prefix at 1000 objects with no pagination → a heavy user's audio survives "your voice has been erased" (`settings/actions.ts:263`).
+  - FU-86 [P3] No unit tests on `RecordScreen.reducer` + `useSequenceTimeline` (central shipping logic + a reused timer primitive).
+  - FU-87 [P3] The TTS→upload→duration→status pipeline is duplicated (`audio.ts` vs `commit/route.ts`) and will drift on a vendor-spend path.
+  - FU-88 [P4] Onboarding draft-save persists the expiring `avatarUrl` signed URL to localStorage, violating the module's own "never persisted" contract (`state.ts:153`).
+- Refined FU-72: two latent `useShimmerLoop.ts` bugs (shimmer transitions snap instead of tween at `:143`; dead `: ACTIVE` branch at `:175`) — inert until the real Processing clock lands, so noted as a sub-note rather than standalone entries.
+- Reconciliation note for the fixer: `audio.ts:97-119` now **checks** its audio success-mark write on `main` — one of FU-66's three flagged sites appears resolved in code. Discovery does not strike; recommend the fixer verify + strike the resolved half.
+- Triggers checked: FU-76 (legal → Settings) — Settings merged but `/privacy` `/terms` are still on the unmerged `feat/legal-pages`, so the trigger is blocked, not fired. FU-22 (voice payment gate) — Step 3 `CardCapture` exists but is only wired to `/dev/card-capture`, not a live pre-processing route, so still coupled/decision. FU-24 (VoiceCreationView → First Breath) — still routes to `messagesNew`, unchanged.
+- Branch / commit: `triage/2026-07-10` @ <this commit>
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-22 — scheduled (scan-only)
 - Outcome: Scan-only — the app is healthy and nothing was cleanly fixable this
   run. Every item near the top of the queue is already being handled in an open
