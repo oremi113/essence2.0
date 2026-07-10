@@ -89,7 +89,10 @@ export const OFFLINE_INDICATOR_CSS = `
 /* Reconnect beat — sage tint + success dot, its own brief copy. */
 /* prototype-local: sage reconnect wash — @theme defines the sage *ink*
    (--color-status-success) but no matching light *fill*; a @theme token here
-   would be tree-shaken (only referenced from this runtime <style>). */
+   would be tree-shaken (only referenced from this runtime style element).
+   NB: do not write the literal open/close style-tag text in this comment — inside
+   a style element the server emits it verbatim but React escapes it on the client
+   (\\73 tyle), which fails hydration on every page (FOLLOW_UPS #83). */
 .offline-indicator__pill[data-status="reconnecting"] { background: #EAF1EC; }
 .offline-indicator__pill[data-status="reconnecting"] .offline-indicator__dot {
   background: var(--color-status-success);
