@@ -262,21 +262,65 @@ describe('handleSubscriptionDeleted', () => {
     expect(findOp(mock, (o) => o.method === 'update')?.payload?.status).toBe('cancelled');
   });
 
-  it('marks cancelled when reason is missing (conservative default)', async () => {
-    const mock = useService([{ data: [{ id: 'row_1' }], error: null }]);
+  // FOLLOW_UPS #78 — ambiguous reason (null / disputed / retention). For these,
+  // the handler reads OUR prior status first, so the queue is [read, update].
+  it('marks cancelled when reason is missing and prior status was not past_due', async () => {
+    const mock = useService([
+      { data: { status: 'active' }, error: null },
+      { data: [{ id: 'row_1' }], error: null },
+    ]);
     await handleSubscriptionDeleted(makeSub());
     expect(findOp(mock, (o) => o.method === 'update')?.payload?.status).toBe('cancelled');
   });
 
-  it('warns without throwing when no row matched (out-of-order delete)', async () => {
-    useService([{ data: [], error: null }]);
+  it('marks lapsed when reason is missing but prior status was past_due (dunning fallback)', async () => {
+    const mock = useService([
+      { data: { status: 'past_due' }, error: null },
+      { data: [{ id: 'row_1' }], error: null },
+    ]);
+    await handleSubscriptionDeleted(makeSub());
+    expect(findOp(mock, (o) => o.method === 'update')?.payload?.status).toBe('lapsed');
+  });
+
+  it('treats a payment_disputed cancel out of past_due as a lapse (fallback)', async () => {
+    const mock = useService([
+      { data: { status: 'past_due' }, error: null },
+      { data: [{ id: 'row_1' }], error: null },
+    ]);
+    await handleSubscriptionDeleted(
+      makeSub({ cancellation_details: { reason: 'payment_disputed' } } as Partial<Stripe.Subscription>),
+    );
+    expect(findOp(mock, (o) => o.method === 'update')?.payload?.status).toBe('lapsed');
+  });
+
+  it('falls back to cancelled (no throw) when the prior-status read errors', async () => {
+    const mock = useService([
+      { data: null, error: { message: 'read boom' } },
+      { data: [{ id: 'row_1' }], error: null },
+    ]);
     await expect(handleSubscriptionDeleted(makeSub())).resolves.toBeUndefined();
+    expect(findOp(mock, (o) => o.method === 'update')?.payload?.status).toBe('cancelled');
+  });
+
+  it('warns without throwing when no row matched (out-of-order delete)', async () => {
+    // Explicit reason → no prior-status read → queue is just [update].
+    useService([{ data: [], error: null }]);
+    await expect(
+      handleSubscriptionDeleted(
+        makeSub({ cancellation_details: { reason: 'payment_failed' } } as Partial<Stripe.Subscription>),
+      ),
+    ).resolves.toBeUndefined();
     expect(console.warn).toHaveBeenCalledOnce();
   });
 
-  it('throws on a DB error', async () => {
+  it('throws on a DB error during the update', async () => {
+    // Explicit reason → single update op carries the error.
     useService([{ data: null, error: { message: 'db down' } }]);
-    await expect(handleSubscriptionDeleted(makeSub())).rejects.toBeTruthy();
+    await expect(
+      handleSubscriptionDeleted(
+        makeSub({ cancellation_details: { reason: 'payment_failed' } } as Partial<Stripe.Subscription>),
+      ),
+    ).rejects.toBeTruthy();
   });
 });
 
