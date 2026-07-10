@@ -253,11 +253,19 @@ export function VoiceCreationView() {
         <h2>Your voice is yours.</h2>
         <p>Ready to be kept. You can now use this voice to create messages.</p>
         <div style={{ marginTop: 16 }}>
+          {/*
+            Spine-wiring S1 (docs/session-stitch/spine-wiring-spec.md §4.1): the
+            post-reference-clip exit now leads into Card Capture, not straight to
+            message creation — the paywall sits between them per the immutable
+            journey order (MASTER_SPEC §4.4). The full reorder (voice processing
+            moves to *after* payment) lands in S2; here the reference-clip flow is
+            simply repointed so Card Capture becomes reachable on the happy path.
+          */}
           <button
             type="button"
-            onClick={() => router.push(ROUTES.messagesNew)}
+            onClick={() => router.push(ROUTES.vaultProtect)}
           >
-            Create a message
+            Continue
           </button>
           <button
             type="button"
