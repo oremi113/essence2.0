@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CardCapture } from '@/components/screens/step3/CardCapture';
 import type { BillingPlan, Step3Props } from '@/components/screens/step3/types';
@@ -18,11 +18,13 @@ import { useReducedMotion } from '@/lib/animation/useReducedMotion';
 // by the Stripe return flow, wired in S2 — this wrapper never produces those
 // statuses.
 
-// The sample plays a generic "example voice." Its asset isn't sourced yet
-// (see FOLLOW_UPS — no public/mock generic-sample); playing reveals the
-// after-copy but is silent until the asset lands. The commit path doesn't
-// depend on it.
+// The sample plays a warm "example voice" (Carol — ElevenLabs en-US, an older
+// American-English read) so the user hears what a preserved voice sounds like
+// before committing. Static asset in public/; the commit path doesn't depend on
+// it. Licensing: professional-tier library voice — confirm usage rights before
+// launch (FOLLOW_UPS #82).
 const SAMPLE_LABEL = 'Hear what a preserved voice sounds like. An example, from another family.';
+const SAMPLE_CLIP_URL = '/samples/carol-preserved-voice.mp3';
 
 // $119/yr ÷ 12 ≈ $9.92 → "$10". Derived from VAULT_PRICING so it can't drift.
 const MONTHLY_EQUIVALENT = `$${Math.round(VAULT_PRICING.annual.priceCents / 12 / 100)}`;
@@ -44,6 +46,28 @@ export function CardCaptureActions({ recordingId }: { recordingId: string }) {
   const [samplePlayed, setSamplePlayed] = useState(false);
   const [parked, setParked] = useState(false);
   const reducedMotion = useReducedMotion();
+
+  // The sample clip plays on demand (a user gesture → no autoplay problem).
+  // Lazily created; paused on unmount so it never bleeds into the next screen.
+  const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    return () => {
+      sampleAudioRef.current?.pause();
+      sampleAudioRef.current = null;
+    };
+  }, []);
+
+  const handlePlaySample = useCallback(() => {
+    setSamplePlayed(true);
+    if (!sampleAudioRef.current) {
+      sampleAudioRef.current = new Audio(SAMPLE_CLIP_URL);
+    }
+    const audio = sampleAudioRef.current;
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // A blocked/failed play still reveals the after-copy — no dead end.
+    });
+  }, []);
 
   const handleSelectPlan = useCallback(
     (next: BillingPlan) => {
@@ -79,7 +103,7 @@ export function CardCaptureActions({ recordingId }: { recordingId: string }) {
       monthlyEquivalent: MONTHLY_EQUIVALENT,
       trialDays: TRIAL_DAYS,
     },
-    sample: { status: samplePlayed ? 'played' : 'idle', clipUrl: '', label: SAMPLE_LABEL },
+    sample: { status: samplePlayed ? 'played' : 'idle', clipUrl: SAMPLE_CLIP_URL, label: SAMPLE_LABEL },
     vault: { phase: 'establish', emberPresent: true, emberState: 'cool' },
     checkout,
     generation: { status: 'idle', elapsedMs: 0, budgetMs: 120000 },
@@ -94,7 +118,7 @@ export function CardCaptureActions({ recordingId }: { recordingId: string }) {
     <CardCapture
       {...props}
       onBack={() => router.push(ROUTES.record)}
-      onPlaySample={() => setSamplePlayed(true)}
+      onPlaySample={handlePlaySample}
       onSelectPlan={handleSelectPlan}
       onKeep={handleKeep}
       onNotNow={() => setParked(true)}

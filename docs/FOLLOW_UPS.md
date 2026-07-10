@@ -796,12 +796,11 @@ The #77 fix (PR #92) rejects a checkout when the user already has a live subscri
 **Fix shape:** add a partial unique index on `subscriptions (user_id) WHERE status IN ('trial','active','past_due')` so the DB itself rejects a second live row regardless of timing; have `createCheckoutSession` treat the unique-violation as the same `already_subscribed` outcome. Needs a migration. Related: the now-resolved #77.
 **Pick up when:** pre-launch billing-hardening pass, or the next time the checkout / subscription surface is touched.
 
-### 82. [P3] Card Capture sample has no "example voice" asset
-`src/app/app/vault/protect/CardCaptureActions.tsx` renders the Step 3 sample row ("Hear what a preserved voice sounds like. An example, from another family.") but there is **no audio asset** — `public/mock/` doesn't exist and no generic-sample clip is sourced. `onPlaySample` currently only reveals the after-copy (the visible design beat); it plays no sound.
+### 82. [P3] ⚠️ MOSTLY RESOLVED 2026-07-10 — sample plays a real voice; licensing left to confirm
+The Step 3 sample now plays **Carol** (ElevenLabs "Relatable, Real, Senior", en-US — a warm older American-English read), generated with the app's TTS model (`eleven_multilingual_v2`) and stored at `public/samples/carol-preserved-voice.mp3` (~6.7s). `CardCaptureActions` sets `sample.clipUrl` and wires `onPlaySample` to play it on the user's tap (a gesture, so no autoplay problem) while still revealing the after-copy. Verified live: tap → after-copy shows + the asset decodes to 6.7s of playable audio, 0 console errors. The same voice is embedded in the investor demo (`prototypes/investor-demo.html`).
 
-**Why it matters:** the sample is a trust/warmth beat in the commercial-heart moment (Step 3 handoff §1) — a play button that produces silence reads as broken. Not launch-blocking (the commit path is independent), but it undercuts the moment.
-**Fix shape:** source/produce a short, licensed generic "preserved voice" example (another family, per copy), drop it at a real asset path (e.g. `public/samples/…`), thread its URL through `page.tsx` → `sample.clipUrl`, and wire `onPlaySample` to actually play it (+ a played/paused state). Confirm licensing for a stranger's voice used as a marketing sample.
-**Pick up when:** Card Capture polish, alongside the spine-wiring reveal fast-follow (docs/session-stitch/spine-wiring-spec.md §6.1).
+**Still open (why this isn't fully closed): licensing.** Carol is a *professional*-tier ElevenLabs library voice (actor-provided). Embedding her audio as a baked-in product sample has usage-terms implications — confirm the right to ship it (or swap for an owned/cleared voice) before launch. Not blocking dev/demo.
+**Pick up when:** pre-launch legal/asset pass.
 
 ### 83. [P3] ✅ RESOLVED 2026-07-10 — App-wide hydration mismatch (was mistitled "CardCapture")
 Every page threw a React hydration error ("server rendered text didn't match the client") plus a cascading `Cannot read properties of null (reading 'parentNode')`. Originally logged as a CardCapture/step3 issue because that's where it was first noticed — but the diagnosis was wrong.
