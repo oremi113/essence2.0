@@ -306,39 +306,8 @@
     }
     .card-optout:hover{color:var(--text2)}
 
-    /* ---- First playback slide ---- */
-    #s-playback .eyebrow{margin-bottom:14px}
-    .pb-headline{font-family:var(--serif);font-size:clamp(27px,7vw,34px);font-weight:600;line-height:1.15}
-    .pb-stone{width:min(56vw,208px);aspect-ratio:1;flex:none;position:relative;margin-top:clamp(10px,3vh,26px)}
-    .pb-stone canvas{
-      width:100%;height:100%;display:block;
-      -webkit-mask:radial-gradient(circle closest-side at 50% 50%, #000 86%, transparent 100%);
-      mask:radial-gradient(circle closest-side at 50% 50%, #000 86%, transparent 100%);
-    }
-    .pb-play{
-      margin-top:clamp(12px,3vh,26px);width:64px;height:64px;border-radius:50%;border:none;
-      background:var(--mineral);color:#fff;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 10px 24px -10px rgba(122,128,136,0.8);
-      transition:transform .16s var(--ease);
-    }
-    .pb-play:active{transform:scale(0.95)}
-    .pb-play svg{width:24px;height:24px}
-    .pb-play .ico-pause{display:none}
-    .pb-play.is-playing .ico-play{display:none}
-    .pb-play.is-playing .ico-pause{display:block}
-    /* player row: scrubber + time, ported from PreviewRefineScreen .player__bar */
-    .pb-player{display:flex;align-items:center;gap:12px;margin-top:22px}
-    .pb-scrub{position:relative;width:min(52vw,190px);height:3px;border-radius:2px;background:var(--sand)}
-    .pb-scrub__fill{width:0%;height:100%;background:var(--mineral);border-radius:2px}
-    .pb-scrub__thumb{
-      position:absolute;top:50%;left:0%;width:11px;height:11px;border-radius:50%;
-      background:var(--mineral);transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(122,128,136,0.5);
-    }
-    .pb-time{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--text3);letter-spacing:0.02em;min-width:8ch;text-align:left}
-    /* pre-play hint (real .play-hint copy); fades out once playing */
-    .pb-hint{margin-top:16px;font-size:14px;color:var(--text3);transition:opacity .4s var(--ease)}
-    .pb-hint.is-hidden{opacity:0}
+    /* (First playback slide CSS removed — the hearing player now lives in the
+       First Breath ceremony as .fb-player, styled for the dark sanctuary.) */
 
     /* ---- Message creation slide ---- */
     #s-message{justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -596,6 +565,157 @@
       .slide.is-active .swipe-hint{animation:none}
       .rec-button.is-recording{animation:none}
     }
+    /* =================================================================
+       FIRST BREATH CEREMONY (slide 2) — ported from
+       prototypes/first-breath-stone.html. All selectors namespaced `fb-`
+       and scoped under #s-firstbreath so nothing leaks into the paper-
+       themed beats. This one beat is a dark sanctuary: the flow dims for
+       the reveal, then returns to light on the paywall.
+       ================================================================= */
+    #s-firstbreath{
+      --fb-text:#F5F0EA; --fb-text-2:rgba(245,240,234,0.75); --fb-text-3:rgba(245,240,234,0.55);
+      background:linear-gradient(180deg,#15120F 0%,#1E1915 50%,#2A241E 100%);
+      color:var(--fb-text);
+      justify-content:center;
+      overflow:hidden;
+    }
+    .fb-sanctuary{
+      position:absolute;inset:0;z-index:1;pointer-events:none;
+      background:radial-gradient(ellipse 80% 60% at 50% 30%, rgba(210,160,110,0.14) 0%, rgba(180,130,90,0.06) 35%, transparent 72%);
+      transform-origin:50% 30%;will-change:opacity,transform;
+      animation:fbSanctuaryBreath 13s ease-in-out infinite;
+    }
+    @keyframes fbSanctuaryBreath{0%,100%{opacity:.80;transform:scale(.97)}50%{opacity:1;transform:scale(1.03)}}
+    .fb-vignette{
+      position:absolute;inset:0;z-index:5;pointer-events:none;
+      background:radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.10) 70%, rgba(0,0,0,0.22) 100%);
+    }
+
+    .fb-stage{
+      position:relative;width:260px;height:260px;flex:none;
+      display:flex;align-items:center;justify-content:center;margin-bottom:26px;z-index:2;
+    }
+    .fb-root.ended .fb-stage{opacity:.35;transition:opacity 1400ms ease}
+
+    .fb-halo{
+      position:absolute;width:320px;height:320px;border-radius:50%;pointer-events:none;
+      background:radial-gradient(circle, rgba(232,220,200,0.12) 0%, rgba(232,220,200,0.06) 40%, transparent 70%);
+      transform-origin:center;opacity:1;transition:opacity 1200ms ease, transform 800ms ease;
+    }
+    .fb-halo.pulsing{animation:fbHaloPulse 4500ms ease-in-out infinite}
+    .fb-halo.pulsing-calm{animation:fbHaloPulseCalm 7000ms ease-in-out infinite}
+    .fb-halo.hidden-detail{opacity:0}
+    @keyframes fbHaloPulse{0%,100%{opacity:.78;transform:scale(.97)}50%{opacity:1;transform:scale(1.04)}}
+    @keyframes fbHaloPulseCalm{0%,100%{opacity:.92;transform:scale(.99)}50%{opacity:1;transform:scale(1.01)}}
+
+    canvas#fbStone{
+      display:block;
+      -webkit-mask-image:radial-gradient(circle, black 0%, black 80%, transparent 98%);
+      mask-image:radial-gradient(circle, black 0%, black 80%, transparent 98%);
+    }
+    .fb-stone-wrap{transform-origin:center;will-change:transform,opacity}
+    .fb-stone-wrap.entering{animation:fbStoneEntrance 2500ms cubic-bezier(0.22,1,0.36,1) both}
+    @keyframes fbStoneEntrance{0%{opacity:.60;transform:scale(.80)}100%{opacity:1;transform:scale(1)}}
+
+    .fb-bloom{
+      position:absolute;left:50%;top:50%;width:280px;height:280px;border-radius:50%;
+      background:radial-gradient(circle, rgba(245,210,160,0.55) 0%, rgba(232,195,140,0.28) 30%, rgba(232,195,140,0.10) 55%, transparent 75%);
+      pointer-events:none;opacity:0;transform:translate(-50%,-50%);z-index:5;mix-blend-mode:screen;will-change:opacity,transform;
+    }
+    .fb-bloom.playing{animation:fbBloom 2500ms ease-in-out both}
+    @keyframes fbBloom{0%{opacity:0;transform:translate(-50%,-50%) scale(.60)}50%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}}
+
+
+    .fb-gold-ring{
+      position:absolute;left:50%;top:50%;width:160px;height:160px;border-radius:50%;
+      background:radial-gradient(circle, rgba(232,180,110,0.35) 0%, rgba(232,180,110,0.15) 40%, transparent 65%);
+      box-shadow:0 0 60px rgba(232,180,110,0.25);pointer-events:none;opacity:0;
+      transform:translate(-50%,-50%) scale(0.55);z-index:4;
+      animation:fbGoldRing 2200ms ease-out 1000ms both;
+    }
+    @keyframes fbGoldRing{0%{opacity:0;transform:translate(-50%,-50%) scale(.55)}12%{opacity:.65;transform:translate(-50%,-50%) scale(.85)}100%{opacity:0;transform:translate(-50%,-50%) scale(3.20)}}
+
+    .fb-particles{position:absolute;inset:0;pointer-events:none;opacity:1;transition:opacity 500ms ease;z-index:3}
+    .fb-particles.faded{opacity:0}
+    .fb-particle{
+      position:absolute;bottom:-8px;width:3px;height:3px;border-radius:50%;
+      background:rgba(232,220,200,0.6);animation:fbParticle linear infinite;
+    }
+    @keyframes fbParticle{0%{transform:translateY(0) scale(.8);opacity:0}10%{opacity:.2}100%{transform:translateY(-300px) scale(1.1);opacity:0}}
+
+    .fb-fragments{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity 500ms ease}
+    .fb-fragments.in{opacity:1}
+    .fb-fragment{
+      position:absolute;left:50%;top:50%;border-radius:50%;
+      background:rgba(232,200,150,0.9);box-shadow:0 0 8px rgba(232,200,150,0.55);
+      opacity:0;animation:fbFragmentConverge linear infinite;
+    }
+    @keyframes fbFragmentConverge{0%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(1)}12%{opacity:.95}85%{opacity:.55}100%{opacity:0;transform:translate(0,0) scale(0)}}
+
+    .fb-copy{max-width:420px;margin-bottom:22px;position:relative;z-index:10;min-height:96px;display:flex;flex-direction:column;justify-content:center}
+    .fb-copy-slot{display:block;opacity:0;transform:translateY(6px);transition:opacity 700ms ease, transform 700ms ease}
+    .fb-copy-slot.in{opacity:1;transform:translateY(0)}
+    .fb-copy-slot.exiting{position:absolute;left:0;right:0;top:0;pointer-events:none;animation:fbCopyFadeOut 400ms ease forwards}
+    @keyframes fbCopyFadeOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-4px)}}
+    .fb-headline{font-family:var(--serif);font-size:26px;font-weight:400;line-height:1.35;color:var(--fb-text);margin:0;letter-spacing:0}
+    .fb-headline.small-italic{font-size:22px;font-style:italic}
+    .fb-subtext{font-family:var(--serif);font-size:15px;font-style:italic;font-weight:400;line-height:1.65;letter-spacing:0.01em;color:var(--fb-text-2);margin-top:12px}
+    .fb-subtext.end-line{font-size:20px;margin-top:0;color:rgba(245,240,234,0.75);letter-spacing:0.02em}
+
+    /* Hearing finale player (detail phase) — folded from the retired playback
+       beat, restyled for the dark sanctuary. */
+    .fb-player{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:22px;position:relative;z-index:10;opacity:0;transition:opacity .6s var(--ease)}
+    .fb-player[hidden]{display:none}
+    .fb-player.in{opacity:1}
+    .fb-play{
+      width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      background:#E8DCC8;color:#1C1A18;box-shadow:0 4px 20px rgba(232,220,200,0.22);
+      transition:transform .16s var(--ease), filter .2s ease;
+    }
+    .fb-play:active{transform:scale(0.95)}
+    .fb-play svg{width:24px;height:24px}
+    .fb-play .ico-pause{display:none}
+    .fb-play.is-playing .ico-play{display:none}
+    .fb-play.is-playing .ico-pause{display:block}
+    .fb-scrub-row{display:flex;align-items:center;gap:12px}
+    .fb-scrub{position:relative;width:min(52vw,190px);height:3px;border-radius:2px;background:rgba(245,240,234,0.14)}
+    .fb-scrub__fill{width:0%;height:100%;background:#E8DCC8;border-radius:2px}
+    .fb-scrub__thumb{
+      position:absolute;top:50%;left:0%;width:11px;height:11px;border-radius:50%;
+      background:#E8DCC8;transform:translate(-50%,-50%);box-shadow:0 1px 5px rgba(0,0,0,0.4);
+    }
+    .fb-time{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--fb-text-3);letter-spacing:0.02em;min-width:8ch;text-align:left}
+    .fb-hint{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--fb-text-3);transition:opacity .4s var(--ease)}
+    .fb-hint.is-hidden{opacity:0}
+
+    .fb-cta{width:100%;max-width:320px;position:relative;z-index:10;display:flex;flex-direction:column;gap:8px;min-height:52px}
+    .fb-honey-btn{
+      background:#E8DCC8;color:#1C1A18;border-radius:16px;padding:18px 24px;
+      font-family:var(--sans);font-size:16px;line-height:1;font-weight:600;width:100%;border:none;cursor:pointer;
+      box-shadow:0 4px 20px rgba(232,220,200,0.20);opacity:0;transition:opacity 500ms ease, filter 200ms ease;
+    }
+    .fb-honey-btn.in{opacity:1}
+    .fb-honey-btn:active{filter:brightness(0.96)}
+
+    .fb-skip{
+      position:absolute;bottom:76px;right:22px;background:transparent;border:none;color:var(--fb-text-3);
+      font-family:var(--sans);font-size:13px;letter-spacing:0.04em;padding:6px 10px;opacity:0;cursor:pointer;
+      z-index:10;transition:opacity 400ms ease;pointer-events:none;
+    }
+    .fb-skip.in{opacity:.4;pointer-events:auto}
+    .fb-skip.in:hover{opacity:.9}
+
+    @media(prefers-reduced-motion:reduce){
+      .fb-sanctuary{animation:none;opacity:.9;transform:none}
+      .fb-halo.pulsing,.fb-halo.pulsing-calm{animation:none}
+      .fb-stone-wrap.entering{animation:none}
+      .fb-bloom.playing{animation:none;opacity:0}
+      .fb-gold-ring{animation:none;opacity:0}
+      .fb-particle,.fb-fragment{animation:none;opacity:0}
+      .fb-copy-slot{transition:none;opacity:1;transform:none}
+      .fb-copy-slot.exiting{animation:none;opacity:0}
+    }
   </style>
 </head>
 <body>
@@ -639,7 +759,51 @@
         </div>
       </section>
 
-      <!-- ============ SLIDE 2 — CARD CAPTURE ============ -->
+      <!-- ============ SLIDE 2 — FIRST BREATH (stone-forming ceremony) ============ -->
+      <!-- Ported from prototypes/first-breath-stone.html — the cinematic that
+           follows the first recording: forming → crystallize → the stone
+           revealed. Deliberately dark full-bleed (the sanctuary): the flow
+           dims for the one held-breath moment, then returns to the paper light
+           on the paywall beat. Mirrors the production First Breath ceremony. -->
+      <section class="slide fb-root" id="s-firstbreath" data-slide="firstbreath">
+        <div class="fb-sanctuary" aria-hidden="true"></div>
+        <div class="fb-vignette" aria-hidden="true"></div>
+
+        <div class="fb-stage" id="fbStage">
+          <div class="fb-halo" id="fbHalo" aria-hidden="true"></div>
+          <div class="fb-particles" id="fbParticles" aria-hidden="true"></div>
+          <div class="fb-fragments" id="fbFragments" aria-hidden="true"></div>
+          <div class="fb-gold-ring" id="fbGoldRing" aria-hidden="true" style="display:none"></div>
+          <div class="fb-stone-wrap" id="fbStoneWrap">
+            <canvas id="fbStone" aria-hidden="true"></canvas>
+          </div>
+          <div class="fb-bloom" id="fbBloom" aria-hidden="true"></div>
+        </div>
+
+        <div class="fb-copy" id="fbCopy"></div>
+
+        <!-- Hearing finale — folded in from the retired playback beat. Shown
+             only in the ceremony's detail phase (JS toggles #fbPlayer). The
+             stone "speaks" (playback state) while the preserved-voice clip
+             plays; the scrubber + time track it. -->
+        <div class="fb-player" id="fbPlayer" hidden>
+          <button class="fb-play" id="fbPlay" aria-label="Play in your voice">
+            <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
+          </button>
+          <div class="fb-scrub-row">
+            <div class="fb-scrub"><div class="fb-scrub__fill" id="fbFill"></div><div class="fb-scrub__thumb" id="fbThumb"></div></div>
+            <span class="fb-time" id="fbTime">0:00 / 0:13</span>
+          </div>
+          <div class="fb-hint" id="fbHint">Tap to hear it.</div>
+        </div>
+
+        <div class="fb-cta" id="fbCta"></div>
+
+        <button class="fb-skip" id="fbSkip" aria-label="Skip to the reveal">Skip</button>
+      </section>
+
+      <!-- ============ SLIDE 3 — CARD CAPTURE ============ -->
       <section class="slide" id="s-card" data-slide="card">
         <div class="card-scroll">
           <div>
@@ -704,27 +868,11 @@
         </div>
       </section>
 
-      <!-- ============ SLIDE 4 — FIRST PLAYBACK ============ -->
-      <section class="slide" id="s-playback" data-slide="playback">
-        <div class="eyebrow">For the first time</div>
-        <!-- headline mirrors production PreviewRefineScreen ("Here it is, in
-             your voice.") — the real first-hearing moment. -->
-        <h1 class="pb-headline">Here it is, in your voice.</h1>
-        <div class="pb-stone"><canvas id="playbackCanvas" aria-hidden="true"></canvas></div>
-        <button class="pb-play" id="pbPlay" aria-label="Play">
-          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
-        </button>
-        <!-- scrubber + time label, ported from PreviewRefineScreen .player__bar
-             (track · fill · thumb · "0:05 / 0:20"). -->
-        <div class="pb-player">
-          <div class="pb-scrub"><div class="pb-scrub__fill" id="pbFill"></div><div class="pb-scrub__thumb" id="pbThumb"></div></div>
-          <span class="pb-time" id="pbTime">0:00 / 0:13</span>
-        </div>
-        <div class="pb-hint" id="pbHint">Tap to hear it.</div>
-      </section>
+      <!-- (First playback folded into the First Breath ceremony's detail phase —
+           the "Here it is, in your voice." hearing now happens as the finale of
+           the stone reveal, before the paywall, so there is no separate beat.) -->
 
-      <!-- ============ SLIDE 5 — MESSAGE CREATION ============ -->
+      <!-- ============ SLIDE 4 — MESSAGE CREATION ============ -->
       <section class="slide" id="s-message" data-slide="message">
         <!-- state 1 · category selector — mirrors production CategorySelectorScreen
              (A3): "What do you want to say?" with the real 7-category radiogroup
@@ -1162,6 +1310,10 @@ const RELIQUARY = {
     shimmer:    { glowIntensity: 0.15, breathAmplitude: 0.03, irregularity: 0.04, colorTemp: 0.2,  backgroundBloom: 0,   spark: 0.5, innerPulse: 0,    vignette: 0, breathSpeed: 5000, voiceReactive: 0, sheen: 1.2, peakHold: 0.07 },
     guidance:   { glowIntensity: 0.07, breathAmplitude: 0.035,irregularity: 0.04, colorTemp: 0.1,  backgroundBloom: 0,   spark: 0,   innerPulse: 0.18, vignette: 0, breathSpeed: 6200, voiceReactive: 0, sheen: 0,   peakHold: 0.19 },
     working:    { glowIntensity: 0.04, breathAmplitude: 0.02, irregularity: 0.03, colorTemp: -0.2, backgroundBloom: 0,   spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 6000, voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
+    // archive — the settled, quiet stone at the moment of first reveal. Only
+    // the First Breath ceremony uses it; the CSS bloom + gold ring supply the
+    // brightness spike while the canvas itself sits calm and cool.
+    archive:    { glowIntensity: 0.02, breathAmplitude: 0,    irregularity: 0.03, colorTemp: -0.1, backgroundBloom: 0,   spark: 0,   innerPulse: 0,    vignette: 0, breathSpeed: 99999,voiceReactive: 0, sheen: 0,   peakHold: 0.07 },
   };
 
   class BreathStoneEngine {
@@ -1624,73 +1776,9 @@ const RELIQUARY = {
   // committing carries the story forward into the Vault Reveal
   document.getElementById('cardCta').addEventListener('click', ()=> go(at+1));
 
-  /* ---- First playback beat — mirrors PreviewRefineScreen "Here it is, in your
-     voice.": the stone "speaks" (playback state) while the scrubber (fill + thumb)
-     and the "0:05 / 0:18" time label track the audio. ---- */
-  const playbackCanvas = document.getElementById('playbackCanvas');
-  const playbackEngine = new BreathStoneEngine(playbackCanvas);
-  const pbBtn = document.getElementById('pbPlay');
-  const pbFill = document.getElementById('pbFill');
-  const pbThumb = document.getElementById('pbThumb');
-  const pbTime = document.getElementById('pbTime');
-  const pbHint = document.getElementById('pbHint');
-  const PB_DUR = 13000; // fallback total (~the Carol clip) until real metadata lands
-  let pbPlaying=false, pbRAF=null, pbStart=0, pbElapsed=0;
-
-  function fmtT(s){ s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
-  function pbSeek(frac,cur,dur){
-    const pct=Math.min(1,Math.max(0,frac))*100;
-    pbFill.style.width=pct+'%'; pbThumb.style.left=pct+'%';
-    pbTime.textContent=fmtT(cur)+' / '+fmtT(dur);
-  }
-  function sizePlayback(){ const b=playbackCanvas.parentElement; if(b.clientWidth>0) playbackEngine.resize(b.clientWidth,b.clientHeight); }
-  function pbReset(){
-    pbPlaying=false; pbElapsed=0;
-    pbSeek(0, 0, PB_DUR/1000);
-    pbBtn.classList.remove('is-playing'); pbHint.classList.remove('is-hidden');
-  }
-  function startPlayback(){
-    sizePlayback(); pbReset(); playbackEngine.setState('ready'); playbackEngine.start();
-    // Set the resting total from the real clip's metadata (robust to ?clip swaps).
-    const a = elFor(clipOverride || CLIPS.playback);
-    if(a){
-      const applyTotal=()=>{ if(!pbPlaying && a.duration && isFinite(a.duration)) pbTime.textContent='0:00 / '+fmtT(a.duration); };
-      if(a.readyState>=1) applyTotal(); else a.addEventListener('loadedmetadata', applyTotal, {once:true});
-    }
-  }
-  function stopPlayback(){ playbackEngine.stop(); if(pbRAF){cancelAnimationFrame(pbRAF);pbRAF=null;} pbReset(); }
-  function pbFrame(ts){
-    if(!pbPlaying){ pbRAF=null; return; }
-    const ms=pbElapsed + (ts - pbStart), t=Math.min(1, ms/PB_DUR);
-    pbSeek(t, ms/1000, PB_DUR/1000);
-    if(t>=1){ pbPlaying=false; pbRAF=null; pbBtn.classList.remove('is-playing'); playbackEngine.setState('ready'); pbElapsed=0; return; }
-    pbRAF=requestAnimationFrame(pbFrame);
-  }
-  // when a real clip exists, the scrubber tracks audio.currentTime; the stone
-  // "speaks" (playback state) while sound plays and settles when it stops
-  const pbControl = {
-    src: CLIPS.playback,
-    setPlaying(on){
-      pbBtn.classList.toggle('is-playing', on);
-      playbackEngine.setState(on ? 'playback' : 'ready');
-      if(on) pbHint.classList.add('is-hidden');
-    },
-    onTime(cur,dur){ pbSeek(dur?cur/dur:0, cur, dur||0); },
-    onEnd(){ pbSeek(0, 0, PB_DUR/1000); pbHint.classList.remove('is-hidden'); }
-  };
-  pbBtn.addEventListener('click', ()=>{
-    if (audioAvailable()){ audioToggle(pbControl); return; }
-    // fallback: no clip yet → timer-driven scrubber so the beat still animates
-    if(!pbPlaying){
-      pbPlaying=true; pbBtn.classList.add('is-playing'); playbackEngine.setState('playback'); pbHint.classList.add('is-hidden');
-      if(pbElapsed>=PB_DUR) pbElapsed=0;
-      pbStart=performance.now(); pbRAF=requestAnimationFrame(pbFrame);
-    } else {
-      pbPlaying=false; pbElapsed += performance.now()-pbStart;
-      if(pbRAF){cancelAnimationFrame(pbRAF);pbRAF=null;}
-      pbBtn.classList.remove('is-playing'); playbackEngine.setState('ready');
-    }
-  });
+  /* (First playback controller retired — the "Here it is, in your voice."
+     hearing now lives in the First Breath ceremony's detail phase; see the
+     FB player logic above.) */
 
   /* ---- Message creation beat — category selector (A3) -> generated preview (A6) ----
      Real 7-category radiogroup from the canonical CATEGORY_DISPLAY_ORDER (label +
@@ -1936,6 +2024,242 @@ const RELIQUARY = {
   // initial paint so the canvas isn't blank before first visit
   renderVaultStatic();
 
+  /* =====================================================================
+     FIRST BREATH CEREMONY — controller (slide 2)
+     Ported from prototypes/first-breath-stone.html. Phase machine:
+     forming → crystallize → preserved (reveal) → detail, then "Continue"
+     hands off to the paywall beat. Reuses the shared BreathStoneEngine
+     (states: working / infused / archive / shimmer). enter() starts the
+     sequence; leave() tears it down so re-entry always replays clean.
+     Audio: intentionally silent, matching the source cinematic's empty
+     scaffolding — the production ceremony's procedural audio is out of
+     scope for this visual port.
+     ===================================================================== */
+  const FB = {
+    root:      document.getElementById('s-firstbreath'),
+    halo:      document.getElementById('fbHalo'),
+    canvas:    document.getElementById('fbStone'),
+    copy:      document.getElementById('fbCopy'),
+    player:    document.getElementById('fbPlayer'),
+    playBtn:   document.getElementById('fbPlay'),
+    fill:      document.getElementById('fbFill'),
+    thumb:     document.getElementById('fbThumb'),
+    time:      document.getElementById('fbTime'),
+    hint:      document.getElementById('fbHint'),
+    cta:       document.getElementById('fbCta'),
+    skip:      document.getElementById('fbSkip'),
+    particles: document.getElementById('fbParticles'),
+    fragments: document.getElementById('fbFragments'),
+    stoneWrap: document.getElementById('fbStoneWrap'),
+    goldRing:  document.getElementById('fbGoldRing'),
+    bloom:     document.getElementById('fbBloom'),
+  };
+  const fbEngine = new BreathStoneEngine(FB.canvas);
+
+  const FB_PHASE = {
+    forming:     { state: 'working', size: 140 },
+    crystallize: { state: 'infused', size: 140 },
+    preserved:   { state: 'archive', size: 140 },
+    detail:      { state: 'shimmer', size: 200 },
+  };
+  const FB_CRYSTALLIZE_AT = 5000, FB_PRESERVED_AT = 7500, FB_SKIP_AT = 1000;
+  const FB_TEXT_DELAY = 1800, FB_CRYS_CAPTION = 900, FB_FORM_CAPTION = 300;
+  const FB_DETAIL_COPY = 400, FB_DETAIL_CTA = 1400; // headline+player settle, then Continue
+
+  // Build particles (forming) + fragments (crystallize) once.
+  (function fbBuild(){
+    const pf = document.createDocumentFragment();
+    for(let i=0;i<26;i++){
+      const s=document.createElement('span'); s.className='fb-particle';
+      s.style.left=((i*53)%100)+'%';
+      s.style.opacity=String(0.08+((i*7)%36)/100);
+      s.style.animationDuration=(6+(i%5)*0.8)+'s';
+      s.style.animationDelay=((i*0.37)%6)+'s';
+      pf.appendChild(s);
+    }
+    FB.particles.appendChild(pf);
+    const ff=document.createDocumentFragment(); const count=20;
+    for(let i=0;i<count;i++){
+      const angle=(i/count)*Math.PI*2+(i*0.213); const radius=160+((i*11)%55);
+      const size=3+(i%3);
+      const s=document.createElement('span'); s.className='fb-fragment';
+      s.style.width=size+'px'; s.style.height=size+'px';
+      s.style.marginLeft=(-size/2)+'px'; s.style.marginTop=(-size/2)+'px';
+      s.style.setProperty('--fx',(Math.cos(angle)*radius)+'px');
+      s.style.setProperty('--fy',(Math.sin(angle)*radius)+'px');
+      s.style.animationDuration=(1500+((i*13)%500))+'ms';
+      s.style.animationDelay=((i*97)%1400)+'ms';
+      s.style.animationTimingFunction='cubic-bezier(0.3,0,0.5,1)';
+      ff.appendChild(s);
+    }
+    FB.fragments.appendChild(ff);
+  })();
+
+  let fbPhase='forming', fbTimers=[];
+  function fbClearTimers(){ fbTimers.forEach(clearTimeout); fbTimers=[]; }
+
+  /* --- Hearing finale player (detail phase) — folded from the retired playback
+     beat. Reuses the shared audio helpers (audioToggle / CLIPS.playback); the
+     stone "speaks" (playback state) while the clip plays and settles back to
+     shimmer when it stops. Fallback timer keeps the scrubber alive if a clip is
+     ever missing. --- */
+  const FB_PLAY_DUR = 13000; // fallback total (~the Carol clip) until real metadata
+  let fbPlaying=false, fbPlayRAF=null, fbPlayStart=0, fbPlayElapsed=0;
+  function fbFmt(s){ s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  function fbSeek(frac,cur,dur){
+    const pct=Math.min(1,Math.max(0,frac))*100;
+    FB.fill.style.width=pct+'%'; FB.thumb.style.left=pct+'%';
+    FB.time.textContent=fbFmt(cur)+' / '+fbFmt(dur);
+  }
+  function fbResetPlayer(){
+    fbPlaying=false; fbPlayElapsed=0;
+    if(fbPlayRAF){ cancelAnimationFrame(fbPlayRAF); fbPlayRAF=null; }
+    fbSeek(0,0,FB_PLAY_DUR/1000);
+    FB.playBtn.classList.remove('is-playing'); FB.hint.classList.remove('is-hidden');
+    const a=elFor(clipOverride||CLIPS.playback);
+    if(a){
+      const applyTotal=()=>{ if(!fbPlaying && a.duration && isFinite(a.duration)) FB.time.textContent='0:00 / '+fbFmt(a.duration); };
+      if(a.readyState>=1) applyTotal(); else a.addEventListener('loadedmetadata', applyTotal, {once:true});
+    }
+  }
+  const fbPlayControl = {
+    src: CLIPS.playback,
+    setPlaying(on){
+      FB.playBtn.classList.toggle('is-playing', on);
+      fbEngine.setState(on ? 'playback' : 'shimmer'); // shimmer = detail rest
+      if(on) FB.hint.classList.add('is-hidden');
+    },
+    onTime(cur,dur){ fbSeek(dur?cur/dur:0, cur, dur||0); },
+    onEnd(){ fbSeek(0,0,FB_PLAY_DUR/1000); FB.hint.classList.remove('is-hidden'); }
+  };
+  function fbPlayFrame(ts){
+    if(!fbPlaying){ fbPlayRAF=null; return; }
+    const ms=fbPlayElapsed+(ts-fbPlayStart), t=Math.min(1, ms/FB_PLAY_DUR);
+    fbSeek(t, ms/1000, FB_PLAY_DUR/1000);
+    if(t>=1){ fbPlaying=false; fbPlayRAF=null; FB.playBtn.classList.remove('is-playing'); fbEngine.setState('shimmer'); fbPlayElapsed=0; FB.hint.classList.remove('is-hidden'); return; }
+    fbPlayRAF=requestAnimationFrame(fbPlayFrame);
+  }
+  FB.playBtn.addEventListener('click', ()=>{
+    if(audioAvailable()){ audioToggle(fbPlayControl); return; }
+    // fallback: no clip → timer-driven scrubber so the moment still animates
+    if(!fbPlaying){
+      fbPlaying=true; FB.playBtn.classList.add('is-playing'); fbEngine.setState('playback'); FB.hint.classList.add('is-hidden');
+      if(fbPlayElapsed>=FB_PLAY_DUR) fbPlayElapsed=0;
+      fbPlayStart=performance.now(); fbPlayRAF=requestAnimationFrame(fbPlayFrame);
+    } else {
+      fbPlaying=false; fbPlayElapsed+=performance.now()-fbPlayStart;
+      if(fbPlayRAF){ cancelAnimationFrame(fbPlayRAF); fbPlayRAF=null; }
+      FB.playBtn.classList.remove('is-playing'); fbEngine.setState('shimmer');
+    }
+  });
+
+  function fbSetCopy(p, delay){
+    Array.from(FB.copy.children).forEach((slot)=>{
+      if(slot.classList.contains('exiting')) return;
+      slot.classList.add('exiting'); setTimeout(()=>slot.remove(),500);
+    });
+    const slot=document.createElement('div'); slot.className='fb-copy-slot';
+    const h1=document.createElement('h1'); h1.className='fb-headline';
+    let sub=null;
+    if(p==='forming'){ h1.textContent='Your first Breath Stone is forming.'; sub='Something from your voice is taking shape.'; }
+    else if(p==='crystallize'){ h1.textContent='Your voice is becoming stone.'; }
+    else if(p==='preserved'){ h1.className='fb-headline small-italic'; h1.textContent='Your first Breath Stone.'; sub='A piece of you, held.'; }
+    // detail — the hearing finale (folded playback): now you hear what formed.
+    else if(p==='detail'){ h1.className='fb-headline small-italic'; h1.textContent='Here it is, in your voice.'; }
+    slot.appendChild(h1);
+    if(sub){ const pe=document.createElement('p'); pe.className='fb-subtext'; pe.textContent=sub; slot.appendChild(pe); }
+    FB.copy.appendChild(slot);
+    const showIn=()=>requestAnimationFrame(()=>slot.classList.add('in'));
+    if(delay>0) fbTimers.push(setTimeout(showIn, delay)); else showIn();
+  }
+
+  function fbSetCTA(p, delay){
+    FB.cta.innerHTML='';
+    const spec={
+      preserved:{ label:'See My Stone', next:()=>fbApplyPhase('detail') },
+      detail:   { label:'Continue',     next:()=>go(at+1) },
+    }[p];
+    if(!spec) return;
+    const btn=document.createElement('button'); btn.type='button'; btn.className='fb-honey-btn';
+    btn.textContent=spec.label; btn.addEventListener('click', spec.next);
+    FB.cta.appendChild(btn);
+    const showIn=()=>requestAnimationFrame(()=>btn.classList.add('in'));
+    if(delay>0) fbTimers.push(setTimeout(showIn, delay)); else showIn();
+  }
+
+  function fbApplyPhase(p){
+    fbPhase=p; const cfg=FB_PHASE[p];
+    fbEngine.resize(cfg.size, cfg.size); fbEngine.setState(cfg.state);
+    FB.halo.classList.toggle('pulsing', p==='forming' && !prefersReduced);
+    FB.halo.classList.toggle('pulsing-calm', (p==='crystallize'||p==='preserved') && !prefersReduced);
+    FB.halo.classList.toggle('hidden-detail', p==='detail');
+    FB.particles.classList.toggle('faded', p!=='forming');
+    FB.fragments.classList.toggle('in', p==='crystallize' && !prefersReduced);
+    if(p!=='forming' && p!=='crystallize') FB.skip.classList.remove('in');
+    // Reflow-reset entrance/bloom/ring so they replay on skip / re-entry.
+    FB.stoneWrap.classList.remove('entering');
+    FB.bloom.classList.remove('playing');
+    FB.goldRing.style.display='none';
+    if(p==='preserved' && !prefersReduced){
+      void FB.stoneWrap.offsetWidth; FB.stoneWrap.classList.add('entering');
+      void FB.bloom.offsetWidth; FB.bloom.classList.add('playing');
+      void FB.goldRing.offsetWidth; FB.goldRing.style.display='';
+    }
+    // Grow the stone into the detail 'behold' size (canvas 140→200) with a GPU
+    // transform so "See My Stone" swells the stone instead of hard-popping it.
+    if(p==='detail' && !prefersReduced){
+      FB.stoneWrap.style.transition='none';
+      FB.stoneWrap.style.transform='scale(0.7)';
+      void FB.stoneWrap.offsetWidth;
+      FB.stoneWrap.style.transition='transform 820ms cubic-bezier(0.22,1,0.36,1)';
+      FB.stoneWrap.style.transform='scale(1)';
+    } else {
+      FB.stoneWrap.style.transition=''; FB.stoneWrap.style.transform='';
+    }
+    // Hearing player — only in detail. Reset, then reveal after the headline settles.
+    if(p==='detail'){
+      fbResetPlayer();
+      const revealPlayer=()=>{ FB.player.hidden=false; requestAnimationFrame(()=>FB.player.classList.add('in')); };
+      if(!prefersReduced && FB_DETAIL_COPY>0) fbTimers.push(setTimeout(revealPlayer, FB_DETAIL_COPY)); else revealPlayer();
+    } else {
+      FB.player.classList.remove('in'); FB.player.hidden=true;
+    }
+    let copyDelay=0, ctaDelay=0;
+    if(!prefersReduced){
+      if(p==='forming'){ copyDelay=ctaDelay=FB_FORM_CAPTION; }
+      else if(p==='crystallize'){ copyDelay=ctaDelay=FB_CRYS_CAPTION; }
+      else if(p==='preserved'){ copyDelay=ctaDelay=FB_TEXT_DELAY; }
+      else if(p==='detail'){ copyDelay=FB_DETAIL_COPY; ctaDelay=FB_DETAIL_CTA; }
+    }
+    fbSetCopy(p, copyDelay); fbSetCTA(p, ctaDelay);
+  }
+
+  function fbStartSequence(){
+    fbClearTimers();
+    FB.root.classList.remove('ended');
+    FB.player.classList.remove('in'); FB.player.hidden=true; FB.skip.classList.remove('in');
+    if(prefersReduced){ fbApplyPhase('preserved'); return; }
+    fbApplyPhase('forming');
+    fbTimers.push(setTimeout(()=>FB.skip.classList.add('in'), FB_SKIP_AT));
+    fbTimers.push(setTimeout(()=>fbApplyPhase('crystallize'), FB_CRYSTALLIZE_AT));
+    fbTimers.push(setTimeout(()=>fbApplyPhase('preserved'), FB_PRESERVED_AT));
+  }
+  FB.skip.addEventListener('click', ()=>{ fbClearTimers(); fbApplyPhase('preserved'); });
+
+  function fbEnter(){ fbEngine.start(); fbStartSequence(); }
+  function fbLeave(){
+    fbClearTimers(); fbEngine.stop();
+    // stop any fallback-timer playback (real audio is halted by go()'s haltAudio)
+    fbPlaying=false; if(fbPlayRAF){ cancelAnimationFrame(fbPlayRAF); fbPlayRAF=null; }
+    FB.copy.innerHTML=''; FB.cta.innerHTML='';
+    FB.player.classList.remove('in'); FB.player.hidden=true; FB.playBtn.classList.remove('is-playing');
+    FB.skip.classList.remove('in');
+    FB.fragments.classList.remove('in');
+    FB.stoneWrap.classList.remove('entering'); FB.bloom.classList.remove('playing');
+    FB.stoneWrap.style.transition=''; FB.stoneWrap.style.transform='';
+    FB.goldRing.style.display='none'; FB.root.classList.remove('ended');
+  }
+
   /* ---- Slide deck ---- */
   const deck = document.getElementById('deck');
   const slides = Array.from(deck.querySelectorAll('.slide'));
@@ -1948,16 +2272,16 @@ const RELIQUARY = {
   const hooks = {
     intro:    { enter(){ startStone(); },                        leave(){ stopStone(); } },
     voice:    { enter(){ resetRec(); },                          leave(){ resetRec(); } },
+    firstbreath: { enter(){ fbEnter(); },                        leave(){ fbLeave(); } },
     card:     { enter(){ enterCard(); } },
     vault:    { enter(){ enterVault(); },                        leave(){ leaveVault(); } },
-    playback: { enter(){ startPlayback(); },                     leave(){ stopPlayback(); } },
     message:  { enter(){ resetMessage(); } },
     shelf:    { enter(){ const s=document.getElementById('s-shelf'); if(s) s.scrollTop=0; }, leave(){ closeShelfOverlay(); } },
     home:     { enter(){ startHome(); },                         leave(){ stopHome(); } }
   };
 
   // keep the active canvas crisp on rotation / resize
-  const SIZERS = { intro:sizeStone, playback:sizePlayback, home:sizeHome };
+  const SIZERS = { intro:sizeStone, home:sizeHome };
   let resizeT=null;
   window.addEventListener('resize', ()=>{
     const fn = SIZERS[slides[at]?.dataset.slide];
