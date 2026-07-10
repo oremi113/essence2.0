@@ -242,9 +242,11 @@ before "done"; 4× CPU on mobile sim is the motion bar.
   **Known transitional edges (resolve in S3/S5):** a paid-but-not-ready user who
   re-enters the record flow currently routes to Card Capture → (guard) home rather
   than back into processing; the `?mock=true` processing bypass is removed at S5.
-- **Chunk S3 — Reveal (temp or new) → First Breath → First Message.** Repoint
-  `FirstBreathSequence` exit off the stub; guard inversion on reveal. Verify: full
-  walk record → pay → process → reveal → ceremony (audio) → `/messages/new`, at 4×.
+- **Chunk S3 — Reveal (temp-reused) → First Breath → First Message.** ✅ DONE
+  (commit 5a4d5e8). Reveal guard inverted; advance → First Breath; FirstBreathSequence
+  exit repointed off the stub → `/messages/new`. Verified live: full walk record →
+  Card Capture → mock → processing → Reveal → First Breath (See My Stone → Continue)
+  → `/messages/new`. **The whole spine is now walkable end-to-end.**
 - **Chunk S4 — Retire old arc + stub.** Delete/redirect old vault screens + the
   record-complete stub + dead routes; remove `ROUTES.recordCompleteStub`. Verify: no
   orphan routes, no dead inbound edges (re-run the integration-map orphan check).
