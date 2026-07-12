@@ -95,6 +95,50 @@ stands between here and a launchable product.
 
 ---
 
+## Status update — 2026-07-12 (M3 closed; M4 wiring in flight)
+
+Everything the 2026-07-08 update listed as "remaining M3 build" has since merged
+to `main` and was **verified as real, wired code** (2026-07-12 audit — no stubs):
+
+- **S10-B offline — ✅ merged (PR #89).** `useOnline`/`useConnectivity`
+  (`src/lib/system/useOnline.ts`) + app-wide `OfflineIndicator` mounted in the
+  root layout.
+- **First Breath ceremony audio — ✅ merged (PR #91, FU #41).** A real 562-line
+  procedural Web Audio engine (`src/lib/audio/firstBreathAudio.ts`), wired into
+  `FirstBreathSequence` (start / crystallize swell / reveal bell / dispose). No
+  asset files. **Owner ear-review is the one thing still owed** — a headless
+  agent can't judge the sound.
+- **Stripe lifecycle guards — ✅ merged (PR #92).** Trial-abuse guard, double-sub
+  409 (`already_subscribed`), lapse-vs-cancel disambiguation. Live vendor-backed
+  E2E still owed (belongs to the spine's S5 flag-flip).
+- **C3 Vault Limit — cap confirmed wired.** `api/messages/save` returns 403
+  `vault_limit_reached` at `STEP6_MAX_SAVED_MESSAGES=3`; FU #38 resolved.
+- **S10-C** is now **unblocked** (FU #41 landed) — the First-Breath playback-error
+  state is buildable but not yet built.
+
+**So M3 is closed. The active work is M4 — full-journey integration.** The
+**monetization spine LANDED (PR #95, merged 2026-07-12)**: it wires
+record → Card Capture → processing → Reveal → First Breath → First Message (the
+journey was **0% connected** before) and closes the free-voice loophole by
+construction (the `/start` subscription gate is pre-wired; a no-op only while the
+flag is OFF). Flags stay OFF — nothing charges yet; turning monetization on is a
+deliberate later step (**S5**, owner-run: flip `VOICE_CREATION_REQUIRES_PAYMENT` +
+`VAULT_STRIPE_ENABLED`, swap real price IDs, drop the `?mock` bypass, and —
+**gating the flip** — resolve the `success_url`-vs-webhook race, FOLLOW_UPS #84).
+Landed with a pre-merge audit (gates green, three-layer clean, URL-stability
+lock respected) + the analytics note the change owed (`docs/analytics/2026-07-12-spine-monetization-move.md`).
+
+**Next: PR #96 (bronze vault engine)** migrates `VaultRevealScreen`/
+`VaultSealedScreen` — but #95 **deleted** several vault-arc screens, so #96 now
+needs a **rebase onto the new main + re-verify what survives** before it can
+land. (Serial-merge discipline main's branch protection already forces.)
+
+Open non-blocking PRs needing rebase: #90 legal (CONFLICTING + owner content),
+#93/#86 triage + #78/#75/#74/#72 ledger PRs (all edit FOLLOW_UPS.md → the known
+collision cascade; merge one-at-a-time).
+
+---
+
 ## Remaining work to launch — recalibrated 2026-07-06 (full path, no lean cut)
 
 Calibrated to observed velocity: ~21 weeks elapsed (Feb 11 → Jul 7), bursty
@@ -129,17 +173,17 @@ Track these to done. `[ ]` = open, grouped by the buckets above.
 
 **Finish the journey**
 - [x] Step 10 S10-A — generation-failure state (contact-as-care ceiling, PR #88)
-- [~] Step 10 S10-C — audio-can't-play state (Shelf ✅; First-Breath blocked on FU #41)
-- [ ] Step 10 S10-B — offline / connection-lost state (design landed → **build**)
+- [~] Step 10 S10-C — audio-can't-play state (Shelf ✅; First-Breath **now unblocked** — FU #41 landed, so the First-Breath playback-error state is buildable; not yet built)
+- [x] Step 10 S10-B — offline / connection-lost state — **built** (PR #89): `useOnline`/`useConnectivity` + app-wide `OfflineIndicator`
 - [ ] Step 10 X — consolidated error-copy pass across all surfaces (Ch2 + A5 + new)
-- [x] C3 Vault Limit screen — built (PR #87); confirm 3-message cap is wired, close FU #38
-- [ ] First Breath ceremony audio — source/produce assets + wire the swell + bell
-- [ ] Remove dead `record/complete/stub`; confirm Card Capture is the only checkout path
+- [x] C3 Vault Limit screen — built (PR #87); 3-message cap **confirmed wired** server-side (`api/messages/save` 403 `vault_limit_reached` at `STEP6_MAX_SAVED_MESSAGES=3`), FU #38 resolved
+- [x] First Breath ceremony audio — **built** (PR #91, FU #41): procedural Web Audio engine (`src/lib/audio/firstBreathAudio.ts`), no asset files. *Owner ear-review still owed — a headless agent can't judge the actual sound.*
+- [x] Remove dead `record/complete/stub`; confirm Card Capture is the only checkout path — **done (PR #95)**: old arc retired; stub → stable redirect (URL-lock kept)
 - [ ] Decide Home A: build its brief, or delete the stub for V1
 
 **Integrate & harden**
-- [ ] Full-journey wiring 1→10 — nav, state, transitions, the seams as one app
-- [ ] Stripe lifecycle E2E — trial → active → lapse → restore, verified live
+- [x] Full-journey wiring 1→10 (core spine) — **LANDED (PR #95, 2026-07-12)**: record → Card Capture → processing → Reveal → First Breath → First Message walkable end-to-end; free-voice loophole closed by construction. Flags OFF; S5 (owner) flips them — **gated on FOLLOW_UPS #84** (`success_url`-vs-webhook race)
+- [~] Stripe lifecycle E2E — guard logic **built** (PR #92: trial-abuse, double-sub 409, lapse-vs-cancel); live vendor-backed E2E walk still owed (spine S5, flags still OFF)
 - [ ] Real-voice cost validation at expected volume
 - [ ] Mobile-web polish — responsive, touch targets, (optional) PWA/installable
 - [ ] Real-device QA matrix — walk the whole journey on real phones; bug-fix passes
