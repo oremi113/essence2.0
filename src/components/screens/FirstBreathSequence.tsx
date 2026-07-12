@@ -106,10 +106,11 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
 
   const handleExit = useCallback(() => {
     track('breath_stone_cta_tapped', { voiceProfileId, phase: 'detail' });
-    // Routes to a placeholder; the real First-Breath exit destination is an
-    // open product decision — see FOLLOW_UPS #25. (Supersedes the old
-    // "/app/checkout when Session 7 is complete" TODO; Session 7 shipped.)
-    router.push(ROUTES.recordCompleteStub);
+    // Spine-wiring S3: First Breath hands off to first message creation
+    // (MASTER_SPEC §4.4 immutable rule 4: playback before first message). This
+    // replaces the old "coming soon" placeholder (recordCompleteStub,
+    // FOLLOW_UPS #25), which is now orphaned and retired in S4.
+    router.push(ROUTES.messagesNew);
   }, [router, voiceProfileId]);
 
   const stone = PHASE_CONFIG[phase];

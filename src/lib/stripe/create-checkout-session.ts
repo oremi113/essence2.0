@@ -199,7 +199,10 @@ export async function createCheckoutSession(
         billing_period: plan,
       },
     },
-    success_url: `${origin}/app/vault/sealed?session_id={CHECKOUT_SESSION_ID}`,
+    // The Checkout Session id rides along so the processing page can reconcile
+    // the subscription row directly if it lands before the
+    // `checkout.session.completed` webhook does (FOLLOW_UPS #84).
+    success_url: `${origin}/app/voice/processing?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/app/vault/protect?checkout=cancelled`,
     metadata: {
       user_id: user.id,

@@ -1,6 +1,6 @@
 'use client';
 
-import { SealAnimation } from '@/components/vault/SealAnimation';
+import { BronzeVault } from '@/components/vault/BronzeVault';
 
 interface VaultRevealScreenProps {
   userName?: string;
@@ -21,7 +21,7 @@ export function VaultRevealScreen({ onAdvance }: VaultRevealScreenProps) {
       <div className="vault-screen__texture" aria-hidden="true" />
       <div className="vault-screen__inner">
         <div className="vault-reveal__object">
-          <SealAnimation mode="open" size={320} />
+          <BronzeVault mode="open" size={320} />
         </div>
         <h1 className="vault-reveal__headline">Your Voice Vault</h1>
         <p className="vault-reveal__subline">This is where your voice is preserved.</p>
