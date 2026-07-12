@@ -2,9 +2,9 @@
 id: 2026-07-10-a-failed-message-generation-permanently-wedges-creation-the
 legacy_id: 93
 priority: P2
-status: open
+status: resolved
 opened: 2026-07-10
-resolved:
+resolved: 2026-07-12
 summary: A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)*
 ---
 
@@ -25,3 +25,13 @@ row that makes "Try again" fail with `pending_max` **forever** and blocks **ever
 `superseded_at` or delete it) so it stops counting; or route the A5 retry through `/regenerate`
 against the existing `generationId` instead of re-POSTing a cold-start.
 **Pick up when:** soon — shipping-path user lockout. Next Step 6 spine touch. Agent-fixable.
+
+**Resolved 2026-07-12** (`fix/step6-cost-control-wedge`): `generate/route.ts` now supersedes
+the just-created pending row (`discardFailedPending` → stamps `superseded_at`) at all three
+failure returns (text-fail, text-mark-fail, audio-fail), so a failed generation frees the
+single active-pending slot immediately and the A5 cold-start retry succeeds instead of 429ing
+`pending_max` forever. Chose the supersede path over re-routing A5 through `/regenerate` — it
+fixes edit-note failures too (the new row is superseded, the user's heard take stays active),
+and no client currently sends `retry_audio` (the endpoint has no live caller). Covered by
+`tests/unit/messages-generate-discard-pending.test.ts` (superseded on text-fail + audio-fail,
+NOT on success).

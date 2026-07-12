@@ -270,6 +270,28 @@ export const POST = defineRoute(
 
     const generationId = created.generation_id;
 
+    // A failed generation must NOT leave its pending row active. The row is
+    // inserted above BEFORE text/audio run; if either fails we return an error,
+    // but the row still has saved_message_id + superseded_at both null — exactly
+    // what countActivePending counts (cost-controls.ts:102). With the cap at one
+    // active flow per user, the orphan makes the A5 "Try again" (a fresh
+    // cold-start /generate POST — MessagesNewPageClient.tsx:77) 429 pending_max
+    // FOREVER, and blocks every future message (FOLLOW_UPS #93). Supersede the
+    // row on any failure so the slot frees immediately and the retry succeeds.
+    // Best-effort: a failed supersede is no worse than today, never blocks the
+    // error response. The saved_message_id guard mirrors the success-path
+    // supersede below — never touch a row that somehow already saved.
+    const discardFailedPending = () =>
+      bestEffortWrite(
+        supabase
+          .from("pending_generations")
+          .update({ superseded_at: new Date().toISOString() })
+          .eq("generation_id", generationId)
+          .eq("user_id", user.id)
+          .is("saved_message_id", null),
+        { op: "step6_discard_failed_pending", requestId, userId: user.id, meta: { generationId } },
+      );
+
     // --- Resolve the template (edit-note reuses prior variant) --------------
     const template =
       getTemplateById(effectiveCategory, templateVariant) ??
@@ -294,6 +316,7 @@ export const POST = defineRoute(
           .eq("user_id", user.id),
         { op: "step6_text_status_failed_mark", requestId, userId: user.id, meta: { generationId } },
       );
+      await discardFailedPending(); // FOLLOW_UPS #93 — free the active-pending slot
       logEvent({
         event: "step6_text_failed",
         requestId,
@@ -328,6 +351,7 @@ export const POST = defineRoute(
       // text-failure branch above uses; audio never ran, so audioStatus stays
       // "pending".
       logError({ event: "step6_text_mark_failed", requestId, userId: user.id, error: textMarkError, meta: { generationId } });
+      await discardFailedPending(); // FOLLOW_UPS #93 — free the active-pending slot
       return NextResponse.json(
         {
           generationId,
@@ -355,6 +379,7 @@ export const POST = defineRoute(
     });
 
     if (!audioOutcome.ok) {
+      await discardFailedPending(); // FOLLOW_UPS #93 — free the active-pending slot
       return NextResponse.json(
         {
           generationId,

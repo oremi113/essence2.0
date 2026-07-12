@@ -2,9 +2,9 @@
 id: 2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no
 legacy_id: 92
 priority: P2
-status: open
+status: resolved
 opened: 2026-07-10
-resolved:
+resolved: 2026-07-12
 owner_paired: true
 summary: `retry_audio` renders paid ElevenLabs audio with NO cost cap, hourly gate, or ledger → unbounded vendor spend *(triage 2026-07-10)*
 ---
@@ -28,3 +28,18 @@ active leak.
 `retry_audio` renders against a per-generation attempt cap, and require `audio_status !==
 'succeeded'` so a succeeded render can't be re-billed. Owner-paired (cost-control / vendor-spend).
 **Pick up when:** before launch, or the next Step 6 cost-control pass. Sibling of FU-22's lineage.
+
+**Resolved 2026-07-12** (`fix/step6-cost-control-wedge`): the `retry_audio` branch now (1)
+selects `audio_status` and **no-ops a succeeded render** (never re-billed), (2) checks
+`countGenerationsThisHour >= maxGenerationsPerHour` before the render, and (3) ledgers a
+`started` usage event under `STEP6_GENERATE_ACTION` — so the render both counts toward, and can
+no longer slip, the 20/hr backstop it used to evade. Unbounded → bounded. Covered by
+`tests/unit/messages-regenerate-retry-audio-cap.test.ts` (succeeded no-op, hourly 429, ledger
+precedes render).
+
+**Residual (low, intentionally not blocking):** no per-*generation* attempt sub-cap. It would
+need a dedicated column — `audio_render_count` can't be reused (deferred mode's `/commit` owns
+it, and reusing it would corrupt the committed-render dot count). Shipping code that depends on
+an unapplied migration was the worse trade, so the hourly cap + success-idempotency stands as
+the effective ceiling; an abuser cannot force ElevenLabs to fail, and a succeeded render halts
+the loop. Revisit only if a real per-generation burst is observed.
