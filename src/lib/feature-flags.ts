@@ -1,10 +1,16 @@
 export const FEATURE_FLAGS = {
+  // Master monetization switch. OFF: vault checkout returns a mock URL and the
+  // spine guards (processing `?mock=true`, reveal `none`) run in their permissive
+  // mock-walk form. ON (S5): checkout hits real Stripe, `?mock=true` goes inert,
+  // and `none` at the post-payment beats routes to the Card Capture paywall.
+  // Flip this together with VOICE_CREATION_REQUIRES_PAYMENT + real price IDs.
   VAULT_STRIPE_ENABLED: process.env.VAULT_STRIPE_ENABLED === 'true',
   // FOLLOW_UPS #22 — gate paid voice creation (ElevenLabs) on an active
-  // subscription. Decision is locked (gate=yes, no free path; Step 3 Card
-  // Capture handoff), but stays OFF until M2 Step 3 lands the
-  // card-capture-before-processing reorder. Before that reorder every user is
-  // `none` at /start, so flipping this on would 402 the live happy path.
+  // subscription ({trial, active}); other statuses get 402. Decision is locked
+  // (gate=yes, no free path; Step 3 Card Capture handoff). The card-capture-
+  // before-processing reorder that gives a user `trial` before `/start` has
+  // landed (spine S1–S3), so this is safe to flip on at S5 alongside
+  // VAULT_STRIPE_ENABLED.
   VOICE_CREATION_REQUIRES_PAYMENT: process.env.VOICE_CREATION_REQUIRES_PAYMENT === 'true',
   // Step 9 Settings — the self-serve "Delete account" control. Owner-approved
   // for P1 (simple self-serve, double-confirm), but ships dark: OFF until the
