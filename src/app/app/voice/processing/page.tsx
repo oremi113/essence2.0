@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getOrCreateVoiceProfile } from '@/lib/profile';
 import { getSubscriptionStatus } from '@/lib/subscription/get-status';
+import { reconcileCheckoutSession } from '@/lib/stripe/reconcile-checkout-session';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import { ProcessingActions } from './ProcessingActions';
 import { ROUTES, signInWithNext } from '@/lib/routes';
 
@@ -22,12 +24,20 @@ import { ROUTES, signInWithNext } from '@/lib/routes';
 // subscription, so a real trial doesn't exist yet — the mock stands in for
 // "paid." Bypass the paid-guard for the mock path only. Removed when real Stripe
 // lands (S5), where the webhook writes the trial before this page is reached.
+//
+// `?session_id=...` (real Stripe): the checkout `success_url` carries the
+// Checkout Session id. Stripe redirects here the instant checkout completes —
+// possibly BEFORE the `checkout.session.completed` webhook has written the trial
+// row, so a just-paid user can read as `none`. Before treating `none` as unpaid,
+// reconcile the row synchronously from the session (FOLLOW_UPS #84). Writing it
+// here — during this server render — closes the race for BOTH this guard and the
+// client-triggered `/start` entitlement guard, which reads the same row.
 export default async function VoiceProcessingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mock?: string }>;
+  searchParams: Promise<{ mock?: string; session_id?: string }>;
 }) {
-  const { mock } = await searchParams;
+  const { mock, session_id: sessionId } = await searchParams;
   const isMock = mock === 'true';
 
   const supabase = await createSupabaseServerClient();
@@ -37,7 +47,17 @@ export default async function VoiceProcessingPage({
   if (!user) redirect(signInWithNext(ROUTES.voiceProcessing));
 
   if (!isMock) {
-    const sub = await getSubscriptionStatus(user.id);
+    let sub = await getSubscriptionStatus(user.id);
+
+    // success_url vs webhook race (FOLLOW_UPS #84): reconcile from the
+    // authoritative Checkout Session before falling back to the paywall. Only on
+    // the real path (mock carries no session_id) and only when we'd otherwise
+    // bounce a possibly-just-paid user.
+    if (sub.status === 'none' && sessionId && isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
+      await reconcileCheckoutSession(sessionId, user.id);
+      sub = await getSubscriptionStatus(user.id);
+    }
+
     if (sub.status === 'none') redirect(ROUTES.vaultProtect);
     if (sub.status === 'lapsed' || sub.status === 'cancelled') redirect(ROUTES.vaultRestore);
   }

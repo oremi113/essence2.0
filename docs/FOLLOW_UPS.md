@@ -52,7 +52,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 79 | P4 | No Stripe webhook event-ID idempotency ledger — handlers are idempotent by construction, so belt-and-suspenders, not a live bug *(stripe lifecycle audit 2026-07-08)* | ⏳ optional `stripe_events` dedup table (see §79) |
 | 80 | P2 | S10-B offline: only the Generate retry is gated. Save + Checkout CTAs, the SystemScreen offline variant, and the `system.offline_encountered` telemetry are unbuilt *(S10-B build 2026-07-08)* | ⏳ finish the blocked-action gates + hard-blocked route + telemetry (see §80) |
 | 81 | P3 | F2 duplicate-subscription guard (§77, PR #92) is best-effort (read-then-act) — can't stop a duplicate in the checkout-started/webhook-not-yet-written window or two concurrent checkouts *(stripe review 2026-07-09)* | ⏳ add a partial unique index to make it atomic (see §81) |
-| 84 | P2 | Spine S5 landmine: real Stripe `success_url` → `/app/voice/processing`, whose paid-guard runs before `checkout.session.completed` writes the trial — a just-paid `none` user gets bounced back to Card Capture *(spine review 2026-07-12, PR #95)* | 🚫 resolve at S5 before flipping `VAULT_STRIPE_ENABLED` — verify via `session_id` or grace-poll, don't bounce (see §84) |
+| 84 | P2 | Spine S5 landmine: real Stripe `success_url` → `/app/voice/processing`, whose paid-guard runs before `checkout.session.completed` writes the trial — a just-paid `none` user gets bounced back to Card Capture *(spine review 2026-07-12, PR #95)* | ✅ RESOLVED 2026-07-12 (reconcile-on-landing: `reconcileCheckoutSession` retrieves the session + writes the row before the guard — closes the page-guard AND `/start` 402 races; see §84) |
 | 4 | P4 | Dead fallback import in audio/commit route | ✅ RESOLVED 2026-06-11 (35d7372 — fallback + import dropped) |
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ✅ RESOLVED 2026-07-08 — procedural Web Audio engine (`src/lib/audio/firstBreathAudio.ts`) synthesises all three layers live; no asset files. Owner still needs to review by ear (headless verify can't) |
@@ -812,6 +812,21 @@ Every page threw a React hydration error ("server rendered text didn't match the
 **Lesson:** a "screen-specific" console error that reproduces on a `/dev` page may actually be a root-layout issue — check a clean unrelated page before scoping the fix.
 
 ### 84. [P2] Spine S5 landmine — real Stripe `success_url` races the subscription webhook
+✅ **RESOLVED 2026-07-12** (session `docs/session-checkout-race/`). Fixed via
+**reconcile-on-landing**, the stronger of the two shapes below: `src/lib/stripe/
+reconcile-checkout-session.ts` retrieves the Checkout Session and — if it's
+`complete` and owned by the caller (metadata `user_id` match) — runs the exact
+`handleCheckoutCompleted` webhook path to write the `trial` row *synchronously
+during the processing page's server render*, before the guard decides.
+`processing/page.tsx` only reconciles when it would otherwise bounce a
+possibly-just-paid user (`none` + `session_id` + `VAULT_STRIPE_ENABLED`).
+Idempotent with the real webhook (upsert on `stripe_subscription_id` + terminal
+guards). Because the row lands before render completes, it also closes the
+sibling `/start` **402** race (`assertCanCreateVoice` reads the same row) — which
+the original write-up didn't call out. Chosen over a grace-poll: deterministic,
+authoritative, no flaky wait. Unit-tested (`tests/unit/reconcile-checkout-session.test.ts`).
+The S5 flag-flip is no longer gated on this. Original analysis below.
+
 Surfaced in the PR #95 audit (2026-07-12). With real Stripe on (`VAULT_STRIPE_ENABLED=true`), `createCheckoutSession` sets `success_url` → `/app/voice/processing?session_id=...` (no `?mock`). That page's server guard calls `getSubscriptionStatus`; on `none` it redirects to Card Capture. But Stripe redirects the browser to `success_url` the instant checkout completes — potentially **before** the `checkout.session.completed` webhook has landed and written the `trial` row. In that window a user who *just successfully paid* reads as `none` and gets **bounced back to the paywall.** The spine-wiring-spec (line ~135) optimistically assumes "status now `trial`" at landing; the known-edges list covers re-entry and flag-flip atomicity but not this specific redirect-vs-webhook race.
 
 **Why it matters:** it's a post-payment dead-end / double-charge-anxiety moment on the money path — the worst place to strand a user. Not live today (flags OFF; the mock path carries `?mock=true`, which bypasses the guard), so it's dormant until S5.

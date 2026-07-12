@@ -242,11 +242,13 @@ before "done"; 4× CPU on mobile sim is the motion bar.
   **Known transitional edges (resolve in S3/S5):** a paid-but-not-ready user who
   re-enters the record flow currently routes to Card Capture → (guard) home rather
   than back into processing; the `?mock=true` processing bypass is removed at S5.
-  **`success_url` vs webhook race (S5, FOLLOW_UPS #84):** the real `success_url`
-  lands on `/app/voice/processing`, whose paid-guard can run before
+  **`success_url` vs webhook race (FOLLOW_UPS #84): ✅ RESOLVED 2026-07-12.**
+  The real `success_url` lands on `/app/voice/processing` before
   `checkout.session.completed` writes the trial — a just-paid `none` user would be
-  bounced back to Card Capture. S5 must verify via `session_id` (or grace-poll)
-  rather than treat `none`-at-landing as unpaid. Gate the flag flip on this.
+  bounced back to Card Capture (and would 402 at `/start`). Fixed by
+  reconcile-on-landing: `reconcileCheckoutSession` retrieves the session and
+  writes the row synchronously before the guard decides. The flag flip is no
+  longer gated on this. See `docs/session-checkout-race/`.
 - **Chunk S3 — Reveal (temp-reused) → First Breath → First Message.** ✅ DONE
   (commit 5a4d5e8). Reveal guard inverted; advance → First Breath; FirstBreathSequence
   exit repointed off the stub → `/messages/new`. Verified live: full walk record →
