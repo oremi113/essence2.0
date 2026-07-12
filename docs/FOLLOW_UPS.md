@@ -77,7 +77,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 100 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | ✅ agent-fixable (guard the emit) |
 | 101 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | ✅ agent-fixable (RTL once-fire tests) |
 | 102 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | ⏳ reconcile intent (analytics-owned) |
-| 103 | P3 | `settings-screen.test.tsx` "email change confirmation" flaky under full-suite load (FU-55 class) *(found 2026-07-12)* | ✅ agent-fixable (await findByText) |
+| 103 | P3 | `settings-screen.test.tsx` "email change confirmation" flaky under full-suite load (FU-55 class) *(found 2026-07-12)* | ✅ RESOLVED 2026-07-12 (PR #103 — assertion now retry-based `findByText`) |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
 **Next-up fixable queue:** *(empty of clean agent-fixable code work.)* The unchecked-write batch (#43/#45/#46) and #42's error-UI sibling (#57) land resolved with #61; #44 and the lapse dead-end (#23) land resolved with the stripe-hardening work folded into #61. #26 (CI drift-check) is **blocked on owner setup** — its `types-drift` job ships with #61 but needs a Supabase access token added as a GitHub Actions secret before it can run green. The remaining open items are decisions (#22, #25, #16, #28, #12), UI/visual work needing in-browser verification (#7, #8, #9, #56, #57), or owner-confirm deletions (#59, #60).
@@ -1183,7 +1183,8 @@ wording at `:134`. If pre-voice-ready returns count, hoist `<JourneyBeacon event
 **Pick up when:** before the first retention-funnel read is trusted, or whenever Home A gets its own brief.
 Analytics-owned (scope is a product/measurement choice).
 
-### 103. [P3] `settings-screen.test.tsx` "email change confirmation" is flaky under full-suite load
+### 103. [P3] ✅ RESOLVED 2026-07-12 (PR #103) — `settings-screen.test.tsx` "email change confirmation" was flaky under full-suite load
+**Resolution:** the final assertion now uses a retrying `await screen.findByText(/We sent a link …/)` instead of a synchronous `getByText` fired right after the heading's `waitFor`, so it's robust to render timing. A comment guards against a regression back to `getByText`. If it ever recurs, the true root cause is a specific other test leaking state/timers into the shared parallel environment. Original entry below.
 *(found 2026-07-12 during the reconciliation CI run)*
 `tests/unit/settings-screen.test.tsx:135-147` ("shows the 'check your inbox' confirmation on a successful
 send") intermittently fails in CI with *"Unable to find … /We sent a link to rosa.new@example.com/"* on the
