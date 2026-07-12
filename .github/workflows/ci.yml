@@ -26,6 +26,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Follow-ups index up to date
+        run: npm run followups:check
+
       - name: Typecheck
         run: npm run typecheck
 
