@@ -23,6 +23,34 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-06-29 — scheduled
+- Outcome: Fixed — two shipping Step 6 source comments described behaviour the
+  code no longer has; both now match what the code actually does.
+- Item: FU-67 — Stale Step 6 doc-comments contradict the shipped code.
+- Root cause: symptom — a maintainer reading `PreviewRefinePageClient.tsx` is
+  told "C3 (Vault Limit) isn't built, so a vault-limit save lands on Home," and
+  reading `speech-duration.ts` is told "nothing measures real audio duration /
+  no duration column," when both statements are now false. Cause — the comments
+  were written before the Chunk 8 C3 screen (FU-38) and the FU-37 duration
+  column shipped; the code changed but the explanatory comments were not updated
+  alongside it. Why this addresses the cause — the comments are rewritten to
+  describe the current routing (vault-limit save → C3 at
+  `/messages/limit?from=save_race`; discard → Home) and the current duration
+  measurement (`pending_generations.audio_duration_ms`, derived in
+  `mp3-duration.ts`), so the documentation matches the code. No behaviour, type,
+  or test surface changes — comments only.
+- Branch / commit: refactor/fu-67-stale-step6-comments @ 23d927b
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (see run below).
+- Scanned / discovered: re-ran the §3 scan. FU-66 (Step 6 unchecked success
+  writes, the top open P3) is already fully fixed on `main` by commit 9e5ce2d
+  (#70, the unchecked-write prevention pass) — all three success-path writes in
+  `audio.ts`, `generate/route.ts`, and `regenerate/route.ts` now check `{ error }`;
+  its FOLLOW_UPS entry body was never struck (table reconciled this run, body
+  strike still pending). No new untracked marker debt found. No other clean
+  agent-fixable code item outranks FU-67 (the higher items are owner decisions,
+  M2-coupled wiring, infra, or URL-removal deletions).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-22 — scheduled (scan-only)
 - Outcome: Scan-only — the app is healthy and nothing was cleanly fixable this
   run. Every item near the top of the queue is already being handled in an open
