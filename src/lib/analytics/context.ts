@@ -6,10 +6,9 @@
  * device_type).
  *
  * Extracted so a new event family (journey.*) attaches the *same* envelope
- * as step6.* without re-importing the step6 wrapper. step6.ts still carries
- * its own copies of these helpers; folding it onto this module is tracked
- * in docs/FOLLOW_UPS.md (kept separate here only to respect the "don't
- * touch already-instrumented Step 6 files" boundary during parallel work).
+ * as step6.* without re-importing the step6 wrapper. step6.ts now imports
+ * these helpers from here too (FOLLOW_UPS #65 resolved), so the envelope has
+ * a single definition shared across both families.
  *
  * session_id is minted lazily on first use and shared across families via
  * the same sessionStorage key step6 uses, so one tab session reads as one
