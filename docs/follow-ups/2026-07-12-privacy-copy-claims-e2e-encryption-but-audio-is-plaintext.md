@@ -47,3 +47,11 @@ is "**access**" — reconcile the wording with counsel.
 **Pick up when:** before the privacy/legal copy is finalized for launch — this gates the Privacy
 Promise going live. Pairs with the deletion-promise follow-up
 (`2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone`).
+
+**Update 2026-07-12 (same day): copy trimmed to option (a).** `Screen4.tsx` "end-to-end encryption" →
+"Encrypted in transit and at rest"; `PrivacyPromiseModal.tsx` intro "encrypted the moment they leave
+your device… Not even our team can access them" → "encrypted in transit and at rest, and tied to your
+account alone. Our team doesn't listen to them" (practice commitment, not a claim of technical
+impossibility). Each edit carries an inline comment pointing here. **Remaining:** counsel blesses the
+replacement strings; and the prototype source (`prototypes/onboarding-flow.html:1997`) still carries the
+old wording — update it so a re-port doesn't reintroduce the false claim. Kept **open** pending sign-off.

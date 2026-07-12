@@ -40,3 +40,9 @@ permits-by-policy nor forbids it — it's simply silent, which is the worst posi
 
 **Pick up when:** with the Terms/consent authoring pass, before launch. Cheapest to build together with
 the consent gate — one surface, two affirmations.
+
+**Update 2026-07-12 (same day):** the `ownershipAttested` half is already carried by the consent
+scaffold that landed today — `assertVoiceConsent()` requires BOTH `consentToClone` and
+`ownershipAttested` when `VOICE_CONSENT_REQUIRED` is on. So the server enforcement exists (flag-OFF,
+inert); what remains for this item is counsel's exact attestation wording + the checkbox in the capture
+UI. Tracked jointly with `2026-07-12-no-affirmative-consent-gate-before-voice-cloning`.

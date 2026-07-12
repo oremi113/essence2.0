@@ -53,10 +53,14 @@ export function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
           </h2>
 
           <div className="privacy-modal__body">
+            {/* Copy trimmed 2026-07-12 to match implementation (no client-side/E2E
+                encryption; deletion timing depends on the confirmed vendor backup
+                window) — pending counsel sign-off. See
+                docs/follow-ups/2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md
+                and 2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone.md */}
             <p className="privacy-modal__intro">
-              Your recordings are encrypted the moment they leave your device.
-              They exist only for you and the people you choose. Not even our
-              team can access them.
+              Your recordings are encrypted in transit and at rest, and tied to
+              your account alone. Our team doesn&rsquo;t listen to them.
             </p>
 
             <ul className="privacy-modal__promises">
@@ -73,14 +77,13 @@ export function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
                   We will <span className="privacy-modal__emphasis">never</span> use your recordings to train AI models.
                 </p>
                 <p className="privacy-modal__proof">
-                  Not ours. Not anyone else&rsquo;s.
+                  Not to build a product. Not to sell you anything.
                 </p>
               </li>
               <li className="privacy-modal__promise">
                 <p className="privacy-modal__commitment">
-                  If you delete your account, your voice is{' '}
-                  <span className="privacy-modal__emphasis">permanently gone</span>{' '}
-                  from our servers within 48 hours.
+                  If you delete your account, your voice and recordings are{' '}
+                  <span className="privacy-modal__emphasis">permanently gone</span>.
                 </p>
               </li>
             </ul>

@@ -17,6 +17,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import { checkedWrite, bestEffortWrite } from '@/lib/supabase/checked-write';
 import { stripe } from '@/lib/stripe/client';
+import { deleteVoice } from '@/lib/elevenlabs';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 import { AVATAR_BUCKET } from '@/lib/profile/avatar';
 import { logEvent, logError, generateRequestId } from '@/lib/logger';
@@ -160,10 +161,16 @@ export async function removePhotoAction(): Promise<SettingsActionResult> {
  *  1. Cancel any live Stripe subscription so a deleted account is never billed.
  *     A hard Stripe failure aborts BEFORE any data loss (nothing irreversible
  *     has happened yet) — the screen shows the "still here" failure terminal.
- *  2. Wipe stored audio + avatar (storage is NOT cascaded by the auth delete).
- *  3. FK-safe row deletes (messages before voice_profiles — the FK RESTRICT the
+ *  2. Delete the cloned voice(s) on ElevenLabs so "permanently gone from our
+ *     servers" is true — the vendor holds the clone, and once the local
+ *     `vendor_voice_id` is gone (step 4) it can no longer be addressed for
+ *     deletion. Runs before any local data loss so a hard vendor failure aborts
+ *     while everything is still intact (same philosophy as the Stripe step); a
+ *     404 is success (already gone).
+ *  3. Wipe stored audio + avatar (storage is NOT cascaded by the auth delete).
+ *  4. FK-safe row deletes (messages before voice_profiles — the FK RESTRICT the
  *     `/api/me` teardown documents), each via `checkedWrite`.
- *  4. Delete the auth user last; it cascades `profiles` and the remaining rows
+ *  5. Delete the auth user last; it cascades `profiles` and the remaining rows
  *     and invalidates the session.
  * Any throw → `{ ok: false }`, and the screen renders the failure terminal.
  */
@@ -212,7 +219,29 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
       }
     }
 
-    // 2. Storage — audio + avatar (not cascaded by the auth delete).
+    // 2. ElevenLabs — delete the cloned voice(s) vendor-side BEFORE any local
+    //    data loss, so a hard failure aborts while the account is still intact
+    //    and we never orphan a clone we can no longer address (its id lives on
+    //    the voice_profiles row deleted in step 4).
+    const { data: voiceRows } = await service
+      .from('voice_profiles')
+      .select('vendor_voice_id')
+      .eq('user_id', userId);
+    for (const row of voiceRows ?? []) {
+      if (!row.vendor_voice_id) continue;
+      const result = await deleteVoice(row.vendor_voice_id);
+      if (!result.ok) {
+        logError({
+          event: 'settings.delete_account.voice_delete',
+          requestId,
+          userId,
+          error: new Error(`elevenlabs delete ${result.status}: ${result.message}`),
+        });
+        return { ok: false, error: 'We couldn’t finish closing your account just now.' };
+      }
+    }
+
+    // 3. Storage — audio + avatar (not cascaded by the auth delete).
     for (const bucket of [AUDIO_BUCKET, AVATAR_BUCKET]) {
       const paths = await listAllStorageObjects(service, bucket, `users/${userId}/`);
       if (paths.length > 0) {
@@ -224,7 +253,7 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
       }
     }
 
-    // 3. FK-safe row deletes (messages before voice_profiles — FK RESTRICT).
+    // 4. FK-safe row deletes (messages before voice_profiles — FK RESTRICT).
     const del = (table: 'usage_events' | 'messages' | 'training_clips' | 'voice_profiles') =>
       checkedWrite(service.from(table).delete().eq('user_id', userId), {
         op: `settings.delete_account.${table}`,
@@ -236,7 +265,7 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
     await del('training_clips');
     await del('voice_profiles');
 
-    // 4. Delete the auth user — cascades `profiles` (→ subscriptions, recipients,
+    // 5. Delete the auth user — cascades `profiles` (→ subscriptions, recipients,
     //    pending_generations) and invalidates the session.
     const { error: authErr } = await service.auth.admin.deleteUser(userId);
     if (authErr) {

@@ -39,3 +39,9 @@ claim that must be contractually true, not assumed.
 **Pick up when:** before the privacy copy is finalized for launch — this is a hard dependency on the
 ElevenLabs contract. Same vendor-verification bucket as the deletion-purge question in
 `2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone`.
+
+**Update 2026-07-12 (same day): copy softened interim.** The `PrivacyPromiseModal.tsx` proof line
+"Not ours. Not anyone else's." → "Not to build a product. Not to sell you anything." — this drops the
+unverified third-party absolute while keeping the commitment. The stronger "not anyone else's" claim can
+be restored once the ElevenLabs DPA confirms it (step 1 below). A ready-to-send ElevenLabs email is in
+`docs/legal/2026-07-12-vendor-terms-confirmation-checklist.md`. Kept **open** pending that confirmation.

@@ -48,3 +48,13 @@ soften it — an owner/counsel call.
 `2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext`. Note the existing
 per-file follow-ups on the teardown ordering (FU-86) and the 1000-object storage-wipe cap (FU-95) touch
 the same function — batch them.
+
+**Update 2026-07-12 (same day): code fix landed.** `deleteVoice()` added to `src/lib/elevenlabs.ts`
+(`DELETE /v1/voices/{id}`, 404 = idempotent success) and wired into `deleteAccountAction` as step 2 —
+before any local data loss, reading `vendor_voice_id` from `voice_profiles`, aborting the teardown on a
+hard vendor failure (same philosophy as the Stripe step) so a clone is never orphaned. Unit-tested
+(`tests/unit/elevenlabs-delete-voice.test.ts`). **Remaining (vendor fact, not code):** confirm ElevenLabs
+actually purges the clone + samples (incl. their backups) on `DELETE` and on what timeline — tracked in
+`2026-07-12-never-train-promise-unverified-against-elevenlabs-terms` and the vendor checklist
+(`docs/legal/2026-07-12-vendor-terms-confirmation-checklist.md`). Kept **open** until that confirmation +
+the copy is reconciled with the real Supabase backup window.

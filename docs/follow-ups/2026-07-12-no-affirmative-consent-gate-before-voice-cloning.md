@@ -37,3 +37,15 @@ Gate `/start` on its presence server-side.
 **Pick up when:** before launch, alongside the Terms/consent authoring pass. Pairs with
 `2026-07-12-no-ownership-impersonation-attestation-before-cloning` (same gate can carry both
 affirmations). This is a build item, not just copy — the consent surface does not exist today.
+
+**Update 2026-07-12 (same day): server scaffold landed, flag-OFF.** Mirroring the FU-22 pattern, the
+copy-independent guard is now built and inert: `VOICE_CONSENT_REQUIRED` flag (default OFF,
+`src/lib/feature-flags.ts`), `ErrorCode.CONSENT_REQUIRED`, `assertVoiceConsent()`
+(`src/lib/voice-creation/consent.ts`) wired into `POST /api/voice-profiles` after body parse, unit-tested
+both arms (`tests/unit/voice-consent-gate.test.ts`). **Remaining before flip:** (1) counsel provides the
+exact `consentToClone` + `ownershipAttested` strings; (2) build the capture UI checkboxes on
+`VoiceProfileCreateForm.tsx` (needs the flag exposed client-side, e.g. via a page prop or `NEXT_PUBLIC_`)
+so the form actually sends the two flags; (3) decide durable audit-grade storage for the consent record
+(a `usage_events` consent event is migration-free; a dedicated column/table is stronger) — today the
+guard only enforces presence; (4) flip `VOICE_CONSENT_REQUIRED=true`. Do NOT flip before (2) or every
+voice creation 422s.

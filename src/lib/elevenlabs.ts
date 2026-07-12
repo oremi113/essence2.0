@@ -114,6 +114,69 @@ export async function createVoiceFromClips(
   }
 }
 
+export type DeleteVoiceResult =
+  | { ok: true }
+  | { ok: false; status: number; code?: string; message: string };
+
+/**
+ * Delete an Instant Voice Clone from ElevenLabs (DELETE /v1/voices/{voice_id}).
+ * Used by account teardown so the cloned voice is purged vendor-side — not just
+ * the local `vendor_voice_id` pointer — backing the "permanently gone from our
+ * servers" promise. Idempotent: a 404 (already deleted / unknown id) is treated
+ * as success so a retried teardown never wedges.
+ */
+export async function deleteVoice(voiceId: string): Promise<DeleteVoiceResult> {
+  if (!voiceId?.trim()) {
+    return { ok: false, status: 400, message: "Voice ID is required" };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(
+      `${ELEVENLABS_BASE}/voices/${encodeURIComponent(voiceId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          "xi-api-key": getApiKey(),
+        },
+        signal: controller.signal,
+      },
+    );
+    clearTimeout(timeoutId);
+
+    // Already gone on ElevenLabs' side is success — the goal (no clone remains) holds.
+    if (res.status === 404) {
+      return { ok: true };
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const message =
+        typeof data?.detail?.message === "string"
+          ? data.detail.message
+          : typeof data?.message === "string"
+            ? data.message
+            : `ElevenLabs delete error ${res.status}`;
+      const code = data?.detail?.code ?? data?.error ?? data?.detail?.status;
+      console.error("[elevenlabs] delete voice failed:", res.status, code ?? "", message);
+      return { ok: false, status: res.status, code, message };
+    }
+    return { ok: true };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error) {
+      if (err.name === "AbortError") {
+        console.error("[elevenlabs] delete voice timeout");
+        return { ok: false, status: 504, message: "Request timed out" };
+      }
+      console.error("[elevenlabs] delete voice error:", err.message);
+      return { ok: false, status: 502, message: err.message };
+    }
+    return { ok: false, status: 502, message: "Unknown error" };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Text-to-Speech (Phase 6)
 // ---------------------------------------------------------------------------
