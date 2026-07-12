@@ -16,10 +16,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Mock path — preserves 7a behavior when the flag is off.
+  // Mock path — stands in for a successful checkout while VAULT_STRIPE_ENABLED is
+  // off. Spine-wiring S2b: lands on the processing beat (was the old sealed
+  // screen). The mock writes no subscription, so processing honours `?mock=true`
+  // as "paid" until real Stripe lands (S5).
   if (!isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
     return NextResponse.json({
-      checkoutUrl: `${ROUTES.vaultSealed}?mock=true&plan=${plan}`,
+      checkoutUrl: `${ROUTES.voiceProcessing}?mock=true&plan=${plan}`,
     });
   }
 
@@ -33,6 +36,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Not authenticated', redirect: signInWithNext(ROUTES.vaultProtect) },
         { status: 401 },
+      );
+    }
+
+    if (code === 'already_subscribed') {
+      // 409 Conflict — the caller already has a live subscription. Not a
+      // happy-path outcome (the UI routes subscribed users away); this backs a
+      // direct/abnormal call so it never silently double-bills.
+      return NextResponse.json(
+        { error: 'You already have an active subscription.', code },
+        { status: 409 },
       );
     }
 

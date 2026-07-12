@@ -11,8 +11,19 @@ import { ROUTES, signInWithNext } from '@/lib/routes';
  * Prereq: the default Customer Portal configuration must exist in Stripe
  * Dashboard → Settings → Billing → Customer portal. Otherwise Stripe
  * returns "No such default configuration" and this route 500s.
+ *
+ * Optional JSON body `{ returnPath }` sets where Stripe returns the person on
+ * finish (e.g. Settings passes `/app/settings?card_updated=1`). Only same-origin
+ * absolute paths are honoured; anything else falls back to the restore arc.
  */
-export async function POST() {
+function safeReturnPath(raw: unknown): string {
+  if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//')) {
+    return raw;
+  }
+  return '/app/vault/restore';
+}
+
+export async function POST(request?: Request) {
   if (!isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
     return NextResponse.json({ error: 'Stripe disabled' }, { status: 503 });
   }
@@ -45,8 +56,9 @@ export async function POST() {
     return NextResponse.json({ error: 'No Stripe customer found' }, { status: 404 });
   }
 
+  const body = request ? await request.json().catch(() => ({})) : {};
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3100';
-  const returnUrl = `${baseUrl}/app/vault/restore`;
+  const returnUrl = `${baseUrl}${safeReturnPath((body as { returnPath?: unknown }).returnPath)}`;
 
   try {
     const portalSession = await stripe.billingPortal.sessions.create({

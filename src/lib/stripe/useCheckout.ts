@@ -12,8 +12,12 @@ import type { BillingPlan } from "@/lib/vault";
  * the response:
  *   - ok + external Stripe URL (http/https) → full-page navigation;
  *   - ok + internal mock URL → SPA router push (keeps the client nav);
- *   - 401 carrying `{ redirect }` → router push to the sign-in redirect;
- *   - any other failure → console.error tagged with `label`, then no-op.
+ *   - 401 carrying `{ redirect }` → router push to the sign-in redirect.
+ *
+ * Returns whether the request was **handled** (navigating away or redirecting).
+ * A network failure or a non-redirect server error returns `false` so the
+ * caller can surface a warm, recoverable error instead of leaving the user on a
+ * dead spinner (Step 10 / Chapter 12: no dead ends, no silent failures).
  *
  * `label` only scopes the failure log (e.g. "seal" / "protect"); it has no
  * effect on the happy paths.
@@ -22,21 +26,29 @@ export function useCheckout(label: string) {
   const router = useRouter();
 
   return useCallback(
-    async (plan: BillingPlan) => {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
+    async (plan: BillingPlan): Promise<boolean> => {
+      let res: Response;
+      try {
+        res = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan }),
+        });
+      } catch (err) {
+        // Offline / connection dropped before a response — the caller shows the
+        // recoverable error rather than letting the rejection go unhandled.
+        console.error(`[${label}] checkout request errored`, err);
+        return false;
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data?.redirect) {
           router.push(data.redirect);
-          return;
+          return true;
         }
         console.error(`[${label}] checkout failed`, data);
-        return;
+        return false;
       }
 
       const { checkoutUrl } = (await res.json()) as { checkoutUrl: string };
@@ -48,6 +60,7 @@ export function useCheckout(label: string) {
       } else {
         router.push(checkoutUrl);
       }
+      return true;
     },
     [router, label],
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { track } from '@/lib/analytics/client';
 import {
   useSequenceTimeline,
@@ -41,6 +41,18 @@ export const DETAIL_CTA_DELAY_MS = 1200;
 export interface UseFirstBreathPhasesOptions {
   voiceProfileId: string;
   prefersReducedMotion: boolean;
+  /**
+   * Fired as the crystallize beat begins (t = CRYSTALLIZE_AT_MS). The consumer
+   * owns the audio engine, so the audio one-shots are surfaced as callbacks
+   * here rather than reaching into refs from inside the timeline. Never fires
+   * under reduced motion (the timeline is paused, so onEnter doesn't run).
+   */
+  onCrystallizeBeat?: () => void;
+  /**
+   * Fired as the reveal tone beat begins (t = PRESERVED_AT_MS + RING_FIRE_AT_MS),
+   * landing the bell on the stone's bloom + gold-ring peak.
+   */
+  onRevealBeat?: () => void;
 }
 
 export interface UseFirstBreathPhasesResult {
@@ -80,10 +92,21 @@ export interface UseFirstBreathPhasesResult {
 export function useFirstBreathPhases({
   voiceProfileId,
   prefersReducedMotion,
+  onCrystallizeBeat,
+  onRevealBeat,
 }: UseFirstBreathPhasesOptions): UseFirstBreathPhasesResult {
   const [userPhase, setUserPhase] = useState<FirstBreathPhase | null>(null);
   const [skipRevealed, setSkipRevealed] = useState<boolean>(false);
   const [detailRevealed, setDetailRevealed] = useState<boolean>(false);
+
+  // Beat callbacks live in refs so the timeline's onEnter closures always call
+  // the latest handler without adding them to the useMemo deps below — a new
+  // callback identity each render must not rebuild (and thereby restart) the
+  // timeline.
+  const onCrystallizeBeatRef = useRef(onCrystallizeBeat);
+  onCrystallizeBeatRef.current = onCrystallizeBeat;
+  const onRevealBeatRef = useRef(onRevealBeat);
+  onRevealBeatRef.current = onRevealBeat;
 
   const timelinePhases = useMemo<SequencePhase<TimelinePhase>[]>(
     () => [
@@ -92,8 +115,9 @@ export function useFirstBreathPhases({
         key: 'crystallize',
         duration: PRESERVED_AT_MS - CRYSTALLIZE_AT_MS,
         onEnter: () => {
-          // TODO: audio — harmonic swell. Wiring belongs in the consumer
-          // so it can read the audio ref; surface as a callback if needed.
+          // Crystallize harmonic swell — see firstBreathAudio.ts. Consumer owns
+          // the engine; we fire the beat via a ref so the timeline never restarts.
+          onCrystallizeBeatRef.current?.();
         },
       },
       { key: 'preserved', duration: RING_FIRE_AT_MS },
@@ -101,7 +125,8 @@ export function useFirstBreathPhases({
         key: 'revealTone',
         duration: TEXT_REVEAL_DELAY_MS - RING_FIRE_AT_MS,
         onEnter: () => {
-          // TODO: audio — low resonant bell; lands on bloom + ring peak.
+          // Low resonant bell — lands on the bloom + gold-ring peak.
+          onRevealBeatRef.current?.();
         },
       },
       {

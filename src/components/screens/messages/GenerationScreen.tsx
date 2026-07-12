@@ -29,6 +29,11 @@
 import { useEffect, useState } from 'react';
 import { BreathStone } from '@/components/breath-stone';
 import { useReducedMotion } from '@/lib/animation/useReducedMotion';
+import { useOnline } from '@/lib/system/useOnline';
+import {
+  OfflineActionNote,
+  OFFLINE_ACTION_COPY,
+} from '@/components/system/OfflineActionNote';
 import type { GenerationScreenProps } from './GenerationScreen.types';
 import { GENERATION_CSS } from './GenerationScreen.css';
 
@@ -52,17 +57,37 @@ const BEAT_3_AT_MS = 10000;
 const BEAT_FADE_MS = 400;
 
 const FAILED_COPY = {
-  title: 'Couldn’t quite land it.',
-  withNote: {
-    aside: 'Something slipped on our end.',
-    reassurance: 'Your note is kept.',
+  // Attempts 1–2: a single warm retry. "Something slipped on our end" keeps the
+  // blame off the user; "Your note is kept" is the reassure-what's-safe beat.
+  retry: {
+    title: 'Couldn’t quite land it.',
+    withNote: {
+      aside: 'Something slipped on our end.',
+      reassurance: 'Your note is kept.',
+    },
+    skip: {
+      aside: 'Something slipped on our end. Nothing is lost.',
+      reassurance: null,
+    },
+    primary: 'Try again',
+    secondary: 'Adjust your note',
   },
-  skip: {
-    aside: 'Something slipped on our end. Nothing is lost.',
-    reassurance: null,
+  // The 3-attempt ceiling (§12.4): stop looping, offer contact-as-care. Warm,
+  // owns the fault ("that’s on us"), keeps a quiet "Try once more" so it is
+  // never a dead end.
+  exhausted: {
+    title: 'Couldn’t quite land it.',
+    withNote: {
+      aside: 'This one’s proving stubborn, and that’s on us.',
+      reassurance: 'Your note is kept.',
+    },
+    skip: {
+      aside: 'This one’s proving stubborn, and that’s on us. Nothing is lost.',
+      reassurance: null,
+    },
+    primary: 'Reach us and we’ll shape it with you',
+    secondary: 'Try once more',
   },
-  primary: 'Try again',
-  secondary: 'Adjust your note',
 } as const;
 
 /** Working stone breathes large + cool; failed stone shrinks + warms. */
@@ -76,8 +101,14 @@ export function GenerationScreen({
   hasNote = false,
   onRetry,
   onAdjustNote,
+  retriesExhausted = false,
+  onContactSupport,
 }: GenerationScreenProps) {
   const reducedMotion = useReducedMotion();
+  // S10-B: retrying generation needs the network; offline gates only the retry
+  // path (the contact-support / adjust-note fallbacks work offline), so the
+  // failed state never dead-ends.
+  const online = useOnline();
 
   // The beat whose copy is shown. `fading` dims it to 0.3 mid-swap so the
   // text changes behind a brief cross-fade rather than a hard cut.
@@ -123,8 +154,15 @@ export function GenerationScreen({
   }, [status, reducedMotion]);
 
   if (status === 'failed') {
-    const copy = hasNote ? FAILED_COPY.withNote : FAILED_COPY.skip;
-    const showSecondary = hasNote && Boolean(onAdjustNote);
+    // Past the 3-attempt ceiling, swap the endless-retry primary for
+    // contact-as-care. Falls back to the retry treatment if no support handler
+    // was wired (so the screen never dead-ends on a missing callback).
+    const exhausted = retriesExhausted && Boolean(onContactSupport);
+    const level = exhausted ? FAILED_COPY.exhausted : FAILED_COPY.retry;
+    const copy = hasNote ? level.withNote : level.skip;
+    // Retry mode: an "Adjust your note" fallback on the note path.
+    // Exhausted mode: a quiet "Try once more" so help is offered, not forced.
+    const showSecondary = exhausted || (hasNote && Boolean(onAdjustNote));
     return (
       <div className="gen gen--failed">
         <style>{GENERATION_CSS}</style>
@@ -135,19 +173,36 @@ export function GenerationScreen({
             <BreathStone state="ready" size={STONE_FAILED} reducedMotion={reducedMotion} />
           </div>
           <div role="alert">
-            <h1 className="gen__failed-title">{FAILED_COPY.title}</h1>
+            <h1 className="gen__failed-title">{level.title}</h1>
             <p className="gen__failed-aside">{copy.aside}</p>
           </div>
           {copy.reassurance ? (
             <p className="gen__failed-reassurance">{copy.reassurance}</p>
           ) : null}
           <div className="gen__actions">
-            <button type="button" className="gen__btn" onClick={onRetry}>
-              {FAILED_COPY.primary}
+            <button
+              type="button"
+              className="gen__btn"
+              onClick={exhausted ? onContactSupport : onRetry}
+              // Primary is the network retry only when not exhausted.
+              disabled={!exhausted && !online}
+            >
+              {level.primary}
             </button>
+            {/* Reason sits directly under the CTA (prototype .cta-reason),
+                collapsed to zero height when online. */}
+            <OfflineActionNote blocked={!online}>
+              {OFFLINE_ACTION_COPY.generate}
+            </OfflineActionNote>
             {showSecondary ? (
-              <button type="button" className="gen__btn gen__btn--link" onClick={onAdjustNote}>
-                {FAILED_COPY.secondary}
+              <button
+                type="button"
+                className="gen__btn gen__btn--link"
+                onClick={exhausted ? onRetry : onAdjustNote}
+                // Secondary is the network retry only when exhausted.
+                disabled={exhausted && !online}
+              >
+                {level.secondary}
               </button>
             ) : null}
           </div>

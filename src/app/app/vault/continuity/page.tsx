@@ -1,23 +1,10 @@
 import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getSubscriptionStatus } from '@/lib/subscription/get-status';
-import { ContinuityActions } from './actions';
-import { ROUTES, signInWithNext } from '@/lib/routes';
+import { ROUTES } from '@/lib/routes';
 
-export default async function VaultContinuityPage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect(signInWithNext(ROUTES.vaultContinuity));
-
-  const sub = await getSubscriptionStatus(user.id);
-  if (sub.status === 'trial' || sub.status === 'active') {
-    redirect(ROUTES.record);
-  }
-  if (sub.status === 'lapsed' || sub.status === 'cancelled') {
-    redirect(ROUTES.vaultRestore);
-  }
-
-  return <ContinuityActions />;
+// Spine-wiring S4: the old vault subscribe arc (reveal→protect→continuity→seal→
+// sealed) is retired — Card Capture (S1) + Processing (S2) replaced it. This URL
+// is kept as a stable forward to Home rather than 404'd (DECISIONS lock: URLs
+// don't change during a redesign).
+export default function VaultContinuityPage() {
+  redirect(ROUTES.home);
 }

@@ -21,9 +21,12 @@ export const ROUTES = {
 
   record: "/app/record",
   recordComplete: "/app/record/complete",
-  /** Placeholder First-Breath exit; pending a real destination — FOLLOW_UPS #25. */
+  /** Retired (S4): was the First-Breath "coming soon" placeholder (FOLLOW_UPS
+   *  #25, resolved). The ceremony now exits to message creation. Kept as a
+   *  redirect → Home so the URL stays stable (DECISIONS lock). */
   recordCompleteStub: "/app/record/complete/stub",
   voiceCreate: "/app/voice/create",
+  voiceProcessing: "/app/voice/processing",
   shelf: "/app/shelf",
 
   // Canonical message-creation route (the Step 6 spine). The legacy
@@ -36,12 +39,17 @@ export const ROUTES = {
   /** C2 Waitlist — the "look ahead" signup. Routed from C3 and (later) C1. */
   messagesWaitlist: "/messages/waitlist",
 
-  vaultContinuity: "/app/vault/continuity",
-  vaultProtect: "/app/vault/protect",
+  vaultProtect: "/app/vault/protect", // now hosts Card Capture (S1)
   vaultRestore: "/app/vault/restore",
-  vaultReveal: "/app/vault/reveal",
+  vaultReveal: "/app/vault/reveal", // the post-payment payoff (S3)
+  // Retired (S4): the old subscribe arc — Card Capture (protect) + Processing
+  // replaced continuity/seal/sealed. Kept as redirects → Home (DECISIONS lock).
+  vaultContinuity: "/app/vault/continuity",
   vaultSeal: "/app/vault/seal",
   vaultSealed: "/app/vault/sealed",
+
+  /** Step 9 Settings & Trust — the control + reassurance surface (gear on Home B). */
+  settings: "/app/settings",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
@@ -54,16 +62,6 @@ export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
  */
 export function signInWithNext(next: string): string {
   return `${ROUTES.signIn}?next=${next}`;
-}
-
-/** `/app/vault/seal?plan=<plan>` */
-export function vaultSealWithPlan(plan: string): string {
-  return `${ROUTES.vaultSeal}?plan=${plan}`;
-}
-
-/** `/app/vault/continuity?plan=<plan>` */
-export function vaultContinuityWithPlan(plan: string): string {
-  return `${ROUTES.vaultContinuity}?plan=${plan}`;
 }
 
 /** `/messages/new/g/<generationId>` — A5/A6 deep-link within a creation flow. */
