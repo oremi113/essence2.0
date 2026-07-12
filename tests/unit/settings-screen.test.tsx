@@ -144,7 +144,11 @@ describe('email change flow', () => {
       expect(screen.getByText('Check your inbox')).toBeTruthy();
     });
     expect(onChangeEmail).toHaveBeenCalledWith('rosa.new@example.com');
-    expect(screen.getByText(/We sent a link to rosa\.new@example\.com/)).toBeTruthy();
+    // findByText (retrying) not getByText (synchronous): the confirmation copy
+    // and the "Check your inbox" heading are set together, but asserting the copy
+    // synchronously right after the heading's waitFor is flaky under full-suite
+    // load (FOLLOW_UPS #103). Retry until present.
+    expect(await screen.findByText(/We sent a link to rosa\.new@example\.com/)).toBeTruthy();
   });
 });
 
