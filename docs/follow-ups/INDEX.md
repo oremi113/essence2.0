@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 19 · 18 open · 1 decision · 0 resolved · 0 dropped
+Total: 20 · 19 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (18)
+## Open (19)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -24,6 +24,7 @@ Total: 19 · 18 open · 1 decision · 0 resolved · 0 dropped
 | P3 | No unit tests on `RecordScreen.reducer` + `useSequenceTimeline` *(triage 2026-07-10)* | 2026-07-10 | FU-96 | [`2026-07-10-no-unit-tests-on-recordscreen-reducer-or-usesequencetimeline.md`](./2026-07-10-no-unit-tests-on-recordscreen-reducer-or-usesequencetimeline.md) |
 | P3 | Single-clip playback retry guard resets itself every fetch → an undecodable clip bursts the rate-limited playback-url endpoint *(triage 2026-07-10)* | 2026-07-10 | FU-94 | [`2026-07-10-single-clip-playback-retry-guard-resets-itself-on.md`](./2026-07-10-single-clip-playback-retry-guard-resets-itself-on.md) |
 | P3 | TTS→upload→duration→status-write pipeline implemented twice (`audio.ts` vs `commit/route.ts`) → drift on a vendor-spend path *(triage 2026-07-10)* | 2026-07-10 | FU-97 | [`2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md`](./2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md) |
+| P3 | `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-app-main-missing-safe-area-inset.md`](./2026-07-12-app-main-missing-safe-area-inset.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
