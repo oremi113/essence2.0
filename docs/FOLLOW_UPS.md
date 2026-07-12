@@ -56,7 +56,7 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 40 | P4 | Button shadows keyed to a retired teal color | ✅ (needs visual verify) |
 | 41 | P4 | First Breath audio spec'd only in code TODOs | ✅ RESOLVED 2026-07-08 — procedural Web Audio engine (`src/lib/audio/firstBreathAudio.ts`) synthesises all three layers live; no asset files. Owner still needs to review by ear (headless verify can't) |
 | 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ RESOLVED 2026-06-18 (5fef4ea — record moved below the sign) |
-| 57 | P4 | Onboarding completion failure resets silently — no visible "couldn't save, try again" message *(new 2026-06-16)* | ⚠️ code landed (a595256 — retry-in-place error UI on Screen 12, the #42 sibling); visual verify pending |
+| 57 | P4 | Onboarding completion failure resets silently — no visible "couldn't save, try again" message *(new 2026-06-16)* | ✅ RESOLVED 2026-07-12 — code landed a595256; **visual verify done** (`/dev/onboarding` save-fail toggle, mobile + 4× throttle: both copy variants render above an enabled Begin, draft preserved, error clears on retry) |
 | 60 | P4 | Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action; stamp-only partial duplicate *(new 2026-06-19)* | ✅ RESOLVED 2026-07-12 (owner-approved URL removal) — route + `complete/` dir deleted |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
@@ -621,8 +621,10 @@ The screen emits no events (home-B viewed, create tapped, restore tapped, waitli
 
 ## Onboarding completion error surface (from FU-42 fix, 2026-06-16)
 
-### 57. [P4] ✅ RESOLVED (2026-06-17, a595256) — Onboarding completion failure resets the wizard silently — no visible message
-Closed by FU-42's second half (the retry-in-place error UI on Screen 12 that lands with #61): `OnboardingScreen.handleComplete`'s catch now maps the error to user-facing copy in a `role="alert"` region above the still-enabled Begin button, with the draft preserved. Original entry below for reference.
+### 57. [P4] ✅ RESOLVED (2026-06-17, a595256; visual verify 2026-07-12) — Onboarding completion failure resets the wizard silently — no visible message
+Closed by FU-42's second half (the retry-in-place error UI on Screen 12 that lands with #61): `OnboardingScreen.handleComplete`'s catch now maps the error to user-facing copy in a `role="alert"` region above the still-enabled Begin button, with the draft preserved.
+
+**Visual verification 2026-07-12** (the deferred in-browser step, `followups/chip-2026-07-12`): exercised via the `/dev/onboarding` "simulate save failure" toggle at a 390×844 mobile viewport under 4× CPU throttle. Confirmed for both copy variants — transient (*"Something kept us from saving just now. Your answers are safe — tap Begin to try again."*) and session-loss (*"Your session timed out. Please refresh and sign in again — your answers are saved on this device."*): the `.onboarding-ready-error` node carries `role="alert"`, renders above a still-**enabled** Begin button, the localStorage draft survives the failure (answers intact), and the error clears on the next attempt. The error fades in via the standard `onb-reveal` opacity animation (~0.6s at 1×; ~2.3s under 4× throttle) — consistent with the screen's motion grammar, not a defect. Original entry below for reference.
 
 `src/components/screens/OnboardingScreen.tsx:113-130` — FU-42 made `completeOnboarding` throw on a failed save (good: input is no longer lost, the draft is kept and `router.push` is skipped). But the screen's `handleComplete` catch only `console.error`s and resets `isSubmitting`. So on failure the user sees the "begin" button simply re-enable with no explanation — they don't know the save failed or that tapping again will retry.
 
