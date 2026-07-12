@@ -262,6 +262,11 @@ before "done"; 4× CPU on mobile sim is the motion bar.
   Kept `recordCompleteStub` in ROUTES (now a redirect shim) rather than removing it.
 - **Chunk S5 — Flip flags on for real + real price IDs (owner/ops).** Only after
   S1–S4 verified live. Analytics note per CLAUDE.md (monetization event moves).
+  Code hardening landed 2026-07-12 (`docs/session-s5-golive/`): the mock/`none`
+  transitional guards are now conditional on `VAULT_STRIPE_ENABLED`, so the flip
+  is a single reversible env lever (flag off = today's mock-walk behavior). The
+  remaining S5 work is owner ops (real price IDs, keys, prod webhook) + the
+  vendor-backed test-mode walk. #84 (the gate) is resolved.
 
 **Telemetry:** the monetization event relocates (Step 3 card capture is now the
 first paid ask, not the old seal). Drop a `docs/analytics/2026-07-10-*.md` note in
