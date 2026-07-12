@@ -14,10 +14,10 @@
  *
  * Save success routes to A7 (/messages/saved/[messageId]); reshape and
  * the back chevron route to A4 (/messages/new/g/[id]/reshape), which
- * writes a candidate back onto this row and returns here. Interim
- * navigation (FOLLOW_UPS #38): C3 (Vault Limit) isn't built, so a
- * vault-limit save and discard both land on Home. A lapsed subscription
- * routes to the existing restore gate.
+ * writes a candidate back onto this row and returns here. A vault-limit
+ * save routes to C3 (Vault Limit) at /messages/limit?from=save_race
+ * (FOLLOW_UPS #38, shipped Chunk 8); discard lands on Home. A lapsed
+ * subscription routes to the existing restore gate.
  */
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
