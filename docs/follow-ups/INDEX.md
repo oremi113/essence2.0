@@ -4,17 +4,15 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
+Total: 21 · 18 open · 1 decision · 2 resolved · 0 dropped
 
-## Open (20)
+## Open (18)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
 | P2 | Delete-account teardown erases audio *before* the DB/auth deletes → mid-teardown failure loses recordings under a "Nothing was lost" screen *(triage 2026-07-07)* | 2026-07-07 | FU-86 | [`2026-07-07-delete-account-teardown-erases-audio-before-the-row.md`](./2026-07-07-delete-account-teardown-erases-audio-before-the-row.md) |
 | P2 | Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed *(triage 2026-07-07/-10, merged)* | 2026-07-07 | FU-85 | [`2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md`](./2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md) |
 | P2 | Vault restore (past_due) opens the Stripe Portal via `window.open`-after-`await` → blocked on iOS Safari, silent dead-end *(triage 2026-07-07)* | 2026-07-07 | FU-87 | [`2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md`](./2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md) |
-| P2 | A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)* | 2026-07-10 | FU-93 | [`2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md`](./2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md) |
-| P2 | `retry_audio` renders paid ElevenLabs audio with NO cost cap, hourly gate, or ledger → unbounded vendor spend *(triage 2026-07-10)* | 2026-07-10 | FU-92 | [`2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md`](./2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
@@ -36,3 +34,10 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
+
+## Resolved (2)
+
+| P | Summary | Opened | Legacy | File |
+|---|---------|--------|--------|------|
+| P2 | A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)* | 2026-07-10 | FU-93 | [`2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md`](./2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md) |
+| P2 | `retry_audio` renders paid ElevenLabs audio with NO cost cap, hourly gate, or ledger → unbounded vendor spend *(triage 2026-07-10)* | 2026-07-10 | FU-92 | [`2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md`](./2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md) |
