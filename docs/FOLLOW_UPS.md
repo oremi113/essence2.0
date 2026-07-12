@@ -38,13 +38,13 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 44 | P3 | Checkout customer-id save unchecked → duplicate Stripe customers on retry *(new 2026-06-13)* | ✅ RESOLVED 2026-06-16 (stripe-hardening — write now checked + throws) |
 | 46 | P3 | init-upload storage_path write unchecked → breaks commit; + dead extension ternary *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (a92e915 — path write throws; dead ternary removed) |
 | 59 | P3 | Legacy message-creation API orphaned by M0 — `POST /api/messages` + status-poll `GET /api/messages/:id` unreachable; POST still spends ElevenLabs with no Step 6 cost cap *(new 2026-06-19)* | ✅ RESOLVED 2026-07-12 (owner-approved URL removal) — POST deleted 2026-06-30; the status-poll `GET /api/messages/[id]` now deleted too (`/api/messages/[id]/play` kept). Both halves gone |
-| 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ add error checks |
-| 67 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ comment fix |
+| 66 | P3 | Step 6 generate pipeline reports success without checking its `pending_generations` status writes (3 sites) → paid render "ready" but unsaved; A6 bounces the user *(new 2026-06-16)* | ✅ RESOLVED-in-code (root unchecked-write fix #70, folded with #61 batch; verified 2026-06-29) — success writes inline-checked (502/500); failure marks via `bestEffortWrite`. Struck 2026-07-12 |
+| 67 | P4 | Stale Step 6 doc-comments (C3 "isn't built", FU-37 "no duration column") now contradict shipped code *(new 2026-06-16)* | ✅ RESOLVED 2026-06-29 (refactor/fu-67-stale-step6-comments) — both comments now match shipped behavior. Struck 2026-07-12 |
 | 68 | P3 | Step 3 vault + shimmer palette not canonical — bronze/ember ramp + on-oat shimmer intensities owned by the design-architect thread *(Step 3 docs call this #65)* | ⏳ design-owned; values staged in `token-prep.md`, land in `@theme` at Pass 1 |
 | 69 | P2 | Notify (transactional email) infra is a Step 3 build prerequisite — park / confirm-timeout / post-seal-failure all hand into it *(Step 3 docs call this #66)* | ⏳ prerequisite; sequences ahead of the Frame 4 build |
 | 70 | P2 | Trial-ending reminder before the day-8 charge — ethical + chargeback protection for the 45–70 audience (Step 3 handoff §8) | ⏳ prerequisite; rides the notify infra (#69) |
 | 71 | P3 | Consented older-voice sample is a placeholder — CardCapture sample renders on `/mock/generic-elder.mp3` until the real clip exists (Step 3 handoff §8) | ⏳ asset dependency; swap `clipUrl` when delivered |
-| 72 | P3 | Processing renders discrete wait states; the live timed progression (normal→extended→notify-handoff on the wait clock, and pacing the shimmer climb to the fixed normal-wait window) is the deferred reducer (handoff NOTE-FOR-CODE-ARCHITECT #2). Pass 3 ships the activation map + exit; the clock that walks between them is not built. | ⏳ build with real generation polling; `src/components/screens/step3/useShimmerLoop.ts` CLIMB_DUR is a demo tween until then |
+| 72 | P3 | Processing renders discrete wait states; the live timed progression (normal→extended→notify-handoff on the wait clock, and pacing the shimmer climb to the fixed normal-wait window) is the deferred reducer (handoff NOTE-FOR-CODE-ARCHITECT #2). Pass 3 ships the activation map + exit; the clock that walks between them is not built. **Refined 2026-07-10 (triage):** when that clock lands, fix two latent `useShimmerLoop.ts` bugs too — see the §72 refinement in the Reconciled triage backlog (2026-07-12). | ⏳ build with real generation polling; `src/components/screens/step3/useShimmerLoop.ts` CLIMB_DUR is a demo tween until then |
 | 73 | P3 | The e2e suite (incl. the 4× CPU-throttle motion-perf gate, `tests/e2e/seal.spec.ts` + `processing.spec.ts`) is NOT run in CI — `ci.yml` runs lint/typecheck/unit/build only. The CLAUDE.md motion bar is therefore enforced only locally. The perf-ms assertion is also only meaningful against a **production** build (`next start`); `next dev` inflates the worst-frame tail. | ⏳ add a Chromium e2e job against a prod build (functional specs are CI-safe; treat the perf-ms assert as informational on shared runners or pin a representative runner) |
 | 74 | P3 | C3 Vault Limit port must reuse `src/lib/vault-render/`, not the prototype's inlined engine fork; and reconcile 2 shimmer tokens absent from `@theme` | ⏳ addressed by the C3 port (see §74) |
 | 77 | P2 | Checkout has no already-subscribed guard — a direct `POST /api/stripe/create-checkout-session` by a trial/active/past_due user mints a 2nd Stripe subscription → double billing *(stripe lifecycle audit 2026-07-08)* | ✅ RESOLVED 2026-07-09 (PR #92 — F2 live-subscription pre-check → 409 `already_subscribed`; best-effort until a DB unique index, see §81) |
@@ -59,6 +59,25 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 45 | P4 | Signed-URL routes log usage as "success" before the work that can fail *(new 2026-06-13)* | ✅ RESOLVED 2026-06-18 (5fef4ea — record moved below the sign) |
 | 57 | P4 | Onboarding completion failure resets silently — no visible "couldn't save, try again" message *(new 2026-06-16)* | ✅ RESOLVED 2026-07-12 — code landed a595256; **visual verify done** (`/dev/onboarding` save-fail toggle, mobile + 4× throttle: both copy variants render above an enabled Begin, draft preserved, error clears on retry) |
 | 60 | P4 | Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action; stamp-only partial duplicate *(new 2026-06-19)* | ✅ RESOLVED 2026-07-12 (owner-approved URL removal) — route + `complete/` dir deleted |
+| 85 | P2 | Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed *(triage 2026-07-07/-10, merged)* | 🔶 owner-paired (Stripe/auth teardown); one-line error check — fix before `ACCOUNT_DELETE_ENABLED` |
+| 86 | P2 | Delete-account teardown erases audio *before* the DB/auth deletes → mid-teardown failure loses recordings under a "Nothing was lost" screen *(triage 2026-07-07)* | 🔶 reorder (irreversible step last) — before `ACCOUNT_DELETE_ENABLED` |
+| 87 | P2 | Vault restore (past_due) opens the Stripe Portal via `window.open`-after-`await` → blocked on iOS Safari, silent dead-end *(triage 2026-07-07)* | ✅ agent-fixable (client); **live** |
+| 88 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | ✅ agent-fixable (one guard) |
+| 89 | P3 | `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl` → CTA can stick; `push(undefined)` returns `true` *(triage 2026-07-07)* | ✅ agent-fixable |
+| 90 | P3 | Account-teardown + vault-restore client flows have no test coverage *(triage 2026-07-07)* | ✅ agent-fixable (tests) |
+| 91 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | ✅ agent-fixable (ref latch) |
+| 92 | P2 | `retry_audio` renders paid ElevenLabs audio with NO cost cap, hourly gate, or ledger → unbounded vendor spend *(triage 2026-07-10)* | 🔶 owner-paired (cost-control); add cap + ledger like the control arm |
+| 93 | P2 | A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)* | ✅ agent-fixable (discard/supersede the failed row) |
+| 94 | P3 | Single-clip playback retry guard resets itself every fetch → an undecodable clip bursts the rate-limited playback-url endpoint *(triage 2026-07-10)* | ✅ agent-fixable |
+| 95 | P3 | Account-delete storage wipe caps each prefix at 1000 objects with no pagination → a heavy user's audio survives "erased" *(triage 2026-07-10)* | 🔶 delete-path; paginate the `list()` loop |
+| 96 | P3 | No unit tests on `RecordScreen.reducer` + `useSequenceTimeline` *(triage 2026-07-10)* | ✅ agent-fixable (reducer + fake-timer tests) |
+| 97 | P3 | TTS→upload→duration→status-write pipeline implemented twice (`audio.ts` vs `commit/route.ts`) → drift on a vendor-spend path *(triage 2026-07-10)* | ✅ agent-fixable (extract one helper) |
+| 98 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | ✅ agent-fixable (strip before `saveDraft`) |
+| 99 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | ✅ agent-fixable |
+| 100 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | ✅ agent-fixable (guard the emit) |
+| 101 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | ✅ agent-fixable (RTL once-fire tests) |
+| 102 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | ⏳ reconcile intent (analytics-owned) |
+| 103 | P3 | `settings-screen.test.tsx` "email change confirmation" flaky under full-suite load (FU-55 class) *(found 2026-07-12)* | ✅ agent-fixable (await findByText) |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
 **Next-up fixable queue:** *(empty of clean agent-fixable code work.)* The unchecked-write batch (#43/#45/#46) and #42's error-UI sibling (#57) land resolved with #61; #44 and the lapse dead-end (#23) land resolved with the stripe-hardening work folded into #61. #26 (CI drift-check) is **blocked on owner setup** — its `types-drift` job ships with #61 but needs a Supabase access token added as a GitHub Actions secret before it can run green. The remaining open items are decisions (#22, #25, #16, #28, #12), UI/visual work needing in-browser verification (#7, #8, #9, #56, #57), or owner-confirm deletions (#59, #60).
@@ -610,7 +629,8 @@ numbering collision — so the Home B set is renumbered here to keep both intact
 **Fix shape:** (1) set `?welcome=1` at the first-message→home handoff; (2) optional durable latch so it's once-per-lifetime, not once-per-param.
 **Pick up when:** the Step 6/Step 8 connection pass (after the message-creation flow lands its forward routing), or when First Breath's exit destination (FU-25) is decided.
 
-### 62. [P4] Home B settings affordance dead-links until Step 9
+### 62. [P4] ✅ RESOLVED 2026-07-12 — Home B settings affordance dead-linked until Step 9
+**Resolution:** Step 9 (Settings & Trust) shipped, and `HomeBPageClient`'s `onSettings` now routes to `ROUTES.settings` (`HomeBPageClient.tsx:68`) — the gear is live. Trigger fired and confirmed by the 2026-07-07 triage (discovery flags, fixer strikes); struck here. Original entry below.
 `HomeBPageClient`'s `onSettings` is an intentional no-op — the gear renders (the affordance lives on Home B per the handoff) but Step 9 (Settings & Trust, M3) isn't built, so there's no route yet. Wire `onSettings` to the settings route when Step 9 lands. **Pick up when:** Step 9 / M3.
 
 ### 63. [P3 · a11y] ✅ RESOLVED (2026-06-17, owner-approved) — Shared primary buttons failed WCAG AA (white text on `--color-mineral`)
@@ -660,7 +680,8 @@ This pass focused on the stable surfaces neither recent pass covered: the cost-c
 
 ## Analytics funnel (from feat/analytics-funnel, 2026-06-16)
 
-### 65. [P4] Analytics context helpers are duplicated between `step6.ts` and `context.ts`
+### 65. [P4] ✅ RESOLVED 2026-06-29 — Analytics context helpers were duplicated between `step6.ts` and `context.ts`
+**Resolution:** `step6.ts` now imports `getOrCreateSessionId`, `getPlatform`, `getDeviceType`, `generateId`, and the env/version reads from `@/lib/analytics/context` — its private copies are gone, so the session/platform/device envelope has a single definition shared across `step6.*` and `journey.*`. Pure refactor, both suites green. Struck 2026-07-12 (from followups/step6-doc-reconcile). Original entry below.
 *(Renumbered from FU-57 on the #59 merge — collided with main's FU-57.)*
 `src/lib/analytics/context.ts` (new) and `src/lib/analytics/step6.ts` each carry their own copies of the same client-context helpers — `getOrCreateSessionId`, `getPlatform`, `getDeviceType`, `generateId` (plus the env/version reads). `context.ts` was added so the new `journey.*` family attaches the same global-prop envelope as `step6.*` without editing `step6.ts`, which was off-limits during parallel M1 work (it's the already-instrumented Step 6 surface).
 
@@ -675,7 +696,8 @@ Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time: type
 ### FU-34 update — trigger FIRED (the new flow may be unreachable from app navigation)
 The Step 6 spine now renders on `/messages/new` (`src/app/messages/new/page.tsx` → `MessagesNewPageClient` → the A2→A7 orchestrator). But `/app/messages/new` still renders the **legacy** `NewMessageView` (`src/app/app/messages/new/page.tsx:27`), and **every app surface still routes to the legacy one** via `ROUTES.appMessagesNew`: `TabNav.tsx:13` (the "New Message" tab), `MemoryShelf.tsx:88` + `:171`, `src/app/app/vault/sealed/actions.tsx:11`, `src/app/app/record/page.tsx:65`, and `VoiceCreationView.tsx:244`. So the freshly-shipped message-creation flow may be **dark** — a real user clicking "New Message" lands on the old screen. **Verify against current `main`** (the table's FU-34 status notes M0 retired the legacy *component*; this is the nav-repoint half). Not agent-fixable: choosing which route is canonical (and whether the legacy `/app/messages/new` tree is deleted) is an owner decision; once chosen, repointing the callers is one route-constant change. Adjacent connection-pass items with triggers met: **#24** (`VoiceCreationView` success destination) and **#25** (`FirstBreathSequence` exit, `FirstBreathSequence.tsx:103`).
 
-### 66. [P3] Step 6 generate pipeline reports success without checking its `pending_generations` status writes
+### 66. [P3] ✅ RESOLVED 2026-06-29 — Step 6 generate pipeline reported success without checking its `pending_generations` status writes
+**Resolution:** the root unchecked-write fix (#70, folded with the #61 batch) makes all three success-path writes — plus the two candidate writes — destructure `{ error }` and return a retryable 502/500 before the client is told it succeeded; only the "failed" marks stay best-effort via `bestEffortWrite`. `src/lib/messages/audio.ts:97-119`, `.../generate/route.ts:317-342` + `:145-165`, `.../regenerate/route.ts:285-310`. Struck 2026-07-12 (three triage passes independently confirmed this resolved). Original entry below.
 The synchronous generate pipeline writes its terminal "succeeded" state to `pending_generations` without inspecting the returned `{ error }`, then reports success to the client regardless. Three concrete instances, all on the success path:
 - `src/lib/messages/audio.ts:87-91` — the audio-success write (`audio_status: "succeeded"`, `audio_path`, `audio_duration_ms`); `generateAndStoreAudio` then `return { ok: true }`.
 - `src/app/api/messages/generate/route.ts:301-305` — the text-success write (`generated_text`, `text_status: "succeeded"`); the route later returns `textStatus: "succeeded"`.
@@ -687,7 +709,8 @@ This is the same unchecked-Supabase-write pattern catalogued in #42–#46, in a 
 **Fix shape:** destructure `{ error }` on each success-path update; on error, log and return 500 (leave the row recoverable) rather than 200-ing a state that didn't persist. Mirror the existing checked writes in the same files. Agent-fixable; the ElevenLabs-spend angle makes it worth the owner knowing about.
 **Pick up when:** next time the Step 6 generate pipeline is touched, or paired with the #42–#46 unchecked-write batch — one class of fix.
 
-### 67. [P4] Stale Step 6 doc-comments now contradict the shipped code
+### 67. [P4] ✅ RESOLVED 2026-06-29 (refactor/fu-67-stale-step6-comments) — Stale Step 6 doc-comments contradicted the shipped code
+**Resolution:** both comments now describe shipped behavior — the `PreviewRefinePageClient` header no longer claims C3 "isn't built" (a vault-limit save routes to `/messages/limit`), and `speech-duration.ts` no longer claims "no duration column" (the pipeline measures real duration into `pending_generations.audio_duration_ms`). Pure comment change. Struck 2026-07-12. Original entry below.
 Two header/JSDoc comments in shipping Step 6 files describe a world the Chunk 8–10 work has since changed, so they now mislead a maintainer:
 - `src/app/messages/new/g/[generationId]/PreviewRefinePageClient.tsx:16-20` — claims *"C3 (Vault Limit) isn't built, so a vault-limit save and discard both land on Home."* C3 shipped (Chunk 8, #38 resolved) and the code routes a vault-limit save **to C3** (`:229`); only discard lands on Home.
 - `src/lib/messages/speech-duration.ts:4-9` — claims *"Nothing in the pipeline measures real audio duration yet… no duration column (FOLLOW_UPS #37)."* #37 is resolved: `audio_duration_ms` exists, `mp3-duration.ts` derives the real duration, `audio.ts:89` writes it. The wpm estimate is now only a pre-load fallback.
@@ -839,3 +862,353 @@ Surfaced in the PR #95 audit (2026-07-12). With real Stripe on (`VAULT_STRIPE_EN
 
 **Fix shape:** don't treat `none` at `success_url` landing as "unpaid." Either (a) verify the `session_id` server-side (retrieve the Checkout Session; a `paid`/`complete` session ⇒ let them through even if the sub row lags), or (b) add a short grace/poll for `none` immediately post-checkout before falling back to Card Capture. Related to §81 (same checkout-started/webhook-not-yet-written window, different symptom).
 **Pick up when:** S5 — the owner-run flag flip + vendor-backed walk. Gate the flip on this being handled.
+
+## Reconciled triage backlog (2026-07-12)
+
+Three triage passes (2026-06-30, -07-07, -07-10) and the settings-email flake were
+reconciled into one collision-free block on 2026-07-12. The passes had each assigned
+overlapping numbers (80–88) relative to different mains; those are renumbered here to
+unique IDs **85–103**, freed gaps (61, 63, 64, 76, 82, 83) deliberately left unused.
+Dedup: the two independent "delete-account teardown swallows the subscriptions read"
+findings (2026-07-07 #80, 2026-07-10 #81) are merged into **#85**. Dropped as already
+handled: the 2026-06-30 #66 duplicate (= main #66, struck below); the 2026-07-07 #86
+("Step 3 mounted only on /dev") — **resolved by the PR #95 spine**, which now mounts
+Card Capture as the production checkout (`ROUTES.vaultProtect` "now hosts Card Capture
+(S1)"); and the 2026-07-10 #72 restatement (folded into main §72 as the sub-note below).
+Source-pass provenance is noted per item.
+
+### 85. [P2 · owner-paired] Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed
+*(merged: triage 2026-07-07 #80 + triage 2026-07-10 #81 — same finding)*
+`src/app/app/settings/actions.ts:191` — `deleteAccountAction` step 1 reads the user's
+subscriptions as `const { data: subs } = await service.from('subscriptions').select(...)`,
+discarding `{ error }`. A Supabase `.select()` that errors returns `{ data: null, error }`
+(it does not throw, so the surrounding `try/catch` never sees it). On a transient read
+failure `subs` is null, `for (const sub of subs ?? [])` iterates zero times, **no Stripe
+subscription is cancelled**, and the teardown proceeds to wipe storage, delete every row,
+and delete the auth user anyway — returning `ok: true`.
+**Why it matters:** the step-1 comment (l.159-162) promises "cancel any live Stripe
+subscription so a deleted account is never billed … a hard failure aborts BEFORE any data
+loss." A swallowed read defeats exactly that: a momentary DB hiccup during deletion leaves
+a live subscription charging the user's card for an account that no longer exists — and
+because the `subscriptions` row is cascade-deleted with the auth user, the
+`stripe_subscription_id` is gone, so it can't be found and cancelled later. Money + trust +
+a stated safety invariant, on the irreversible delete path. Not live today
+(`ACCOUNT_DELETE_ENABLED` is OFF) — a landmine to close before the flag flips.
+**Fix shape:** destructure `{ error }` on the subscriptions select and abort into the "we
+couldn't finish closing your account" failure terminal *before* any data loss if it's
+non-null — the teardown's reads need the same fail-closed treatment as its writes. (The
+repo's `checkedWrite` lint guard covers *writes*, so this *read* slipped through.)
+**Pick up when:** before `ACCOUNT_DELETE_ENABLED` is enabled (part of that sign-off). Pairs
+with #86/#88 and FU-77/78 as billing-hardening. Owner-paired (Stripe/auth teardown).
+
+### 86. [P2] Delete-account teardown erases audio *before* the row/auth deletes → a mid-teardown failure loses recordings under a "Nothing was lost" screen
+*(triage 2026-07-07)*
+`src/app/app/settings/actions.ts:215-245`; copy at `SettingsScreen.tsx:462-465`. Teardown
+order is: Stripe cancel → **wipe audio + avatar storage (step 2, irreversible)** → row
+deletes (step 3) → auth-user delete (step 4). If any step-3 `checkedWrite` throws or step-4
+`auth.admin.deleteUser` errors, the action returns `ok: false` and the screen renders:
+*"Your account is still here … Nothing was lost, and everything is just as it was."* That is
+untrue once step 2 has run — the person's recordings and photo are already gone while the
+account still works. The header's "aborts BEFORE any data loss" only holds for a *Stripe*
+failure.
+**Why it matters:** the highest-stakes screen reassures the user nothing was lost at the exact
+moment their irreplaceable recordings *were* lost. Not live today (flag OFF).
+**Fix shape:** do the irreversible step last — delete rows + auth user first, storage last (a
+storage failure then just orphans objects for a later sweep), **or** soften the post-storage
+failure copy so it doesn't promise "nothing was lost." Reorder is the real fix.
+**Pick up when:** before `ACCOUNT_DELETE_ENABLED`; same batch as #85/#88.
+
+### 87. [P2] Vault restore (past_due) opens the Stripe Portal via `window.open` *after* an `await` → blocked on iOS Safari, silent dead-end
+*(triage 2026-07-07)*
+`src/app/app/vault/restore/actions.tsx:29,44` — the `update_card` branch (the recovery path
+for a past_due user whose card is failing) awaits the portal-session fetch, then calls
+`window.open(data.portalUrl, '_blank', …)`. Browsers that require a live user-gesture for
+`window.open` (notably iOS/Safari) treat an open that runs *after* an `await` as
+non-user-initiated and block it; the returned handle is ignored and line 45 just re-enables
+the button — `restoreFailed` is never set, so **no error is shown.**
+**Why it matters:** a past_due user on an iPhone taps "Update my card," the tab is blocked, and
+nothing happens and nothing explains why — the exact silent dead-end Step 10 Ch2 exists to
+eliminate, on the money-recovery path. This one is **live** (the restore screen is shipped).
+The `restart`/lapsed branch is fine — it uses `window.location.href`.
+**Fix shape:** open a placeholder tab synchronously in the click handler and set its `location`
+after the fetch, **or** navigate the current tab with `window.location.href`; and surface
+`restoreFailed` when the opened handle is `null`. Client-side fix.
+**Pick up when:** next Step 10 / vault-recovery touch, or before real past_due users appear.
+
+### 88. [P3] `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — the irreversible teardown is reachable while the feature "ships dark"
+*(triage 2026-07-07)*
+`src/app/app/settings/actions.ts:170` (whole action). The flag comment
+(`src/lib/feature-flags.ts:9-13`) says delete "ships dark: OFF until the teardown … is signed
+off." But `ACCOUNT_DELETE_ENABLED` is consulted only in `page.tsx:131` to *hide the button*;
+the server action performs no flag check. Next.js server actions are addressable POST
+endpoints, so the full irreversible teardown is invocable by an authenticated caller even
+while the feature is supposedly disabled.
+**Why it matters:** defense-in-depth on the single most destructive action in the app; the
+"dark" safety posture the flag advertises isn't enforced server-side.
+**Fix shape:** first line of `deleteAccountAction` →
+`if (!isFeatureEnabled('ACCOUNT_DELETE_ENABLED')) return { ok: false, error: … }`. Gate the
+destructive action, not just the button.
+**Pick up when:** before `ACCOUNT_DELETE_ENABLED` is enabled; same batch as #85/#86.
+
+### 89. [P3] `useCheckout` success path doesn't guard `res.json()` / a missing `checkoutUrl` → the CTA can stick disabled, and `push(undefined)` reports success
+*(triage 2026-07-07)*
+`src/lib/stripe/useCheckout.ts:54-63` — the error path defensively parses JSON
+(`.catch(() => ({}))`, l.45), but the success path does `const { checkoutUrl } = (await
+res.json())` unguarded. Callers await it with no try/catch (e.g. `vault/protect/actions.tsx:26`,
+`seal/actions.tsx`), so a throw leaves `setIsProcessing(false)` unreached → the CTA stays
+`disabled` forever with no error. And if the body is valid JSON but missing the field,
+`checkoutUrl` is `undefined` → the `^https?` test is false → `router.push(undefined)` no-ops →
+the function still `return true`, so the caller thinks navigation is underway and also stays stuck.
+**Why it matters:** both cases defeat the hook's own "no dead spinner" mandate. Requires a
+contract-breaking 200 (proxy interstitial, truncated body, field-name change), so it's
+robustness debt — but the `push(undefined)`-returns-`true` logic hole is real regardless.
+**Fix shape:** wrap the success parse in the same try/catch and validate
+`typeof checkoutUrl === 'string' && checkoutUrl` before navigating; return `false` on parse
+failure or missing URL. *Note:* the restore restart branch (`vault/restore/actions.tsx:52-71`)
+inlines this same fetch instead of reusing `useCheckout`, so the guard must be applied there
+too (or the duplication collapsed).
+**Pick up when:** next checkout/Step 10 touch. Agent-fixable.
+
+### 90. [P3] The account-teardown and vault-restore client flows — the app's highest-stakes money/destructive paths — have no test coverage
+*(triage 2026-07-07)*
+`src/app/app/settings/actions.ts` (`deleteAccountAction`) and
+`src/app/app/vault/restore/actions.tsx` (`handleRestore`) have no `*.test.*`. Nothing asserts
+that Stripe cancel precedes data deletion, that a failed subscriptions read aborts before
+deletion (#85), that a partial failure reports `ok:false`, that the FK-safe delete order holds,
+or — on restore — that portal-failure surfaces `restoreFailed`, that the 401→redirect fires,
+and that restart-checkout success/failure behave. Findings #85 and #87 would both have been
+caught by a basic failure-injection test here.
+**Why it matters:** the two flows that can leak money or destroy data have the least safety net;
+a future refactor can silently reintroduce #85/#87 with nothing red in CI.
+**Fix shape:** add teardown tests (sub-read error → abort; Stripe-cancel failure → abort before
+storage; row-delete failure → `ok:false`; happy-path ordering) and a `RestoreActions` test
+(portal success / portal failure→`restoreFailed` / 401→redirect / restart success+failure).
+**Pick up when:** with any fix to #85–#89 (land the test alongside the fix). Agent-fixable.
+
+### 91. [P4] Double-tap guards on the checkout + delete actions read render-state, not a ref → a fast double-tap can fire two `create-checkout-session` POSTs
+*(triage 2026-07-07)*
+The `if (isProcessing) return` / `if (isRestoring) return` / `if (deletePending) return` guards
+in `src/app/app/vault/protect/actions.tsx:23`, `seal/actions.tsx`, `restore/actions.tsx:21`, and
+`SettingsScreen.tsx` (delete confirm) all read a `useState` value captured at render time, so
+two handlers firing in the same tick both see the stale `false` and both proceed; the button's
+`disabled` prop is the only guard that actually holds (and only after a re-render). Same class
+as the email-sheet double-submit guard.
+**Why it matters:** low and bounded — a mobile double-tap can create two Stripe Checkout sessions
+(one abandoned) or two portal fetches; **not** a double-charge (only one checkout completes),
+and delete is further protected server-side. Real, but mitigated.
+**Fix shape:** flip a `useRef` latch synchronously at the top of each handler
+(`if (inFlight.current) return; inFlight.current = true`) instead of relying on the state read;
+do it alongside the email-sheet guard.
+**Pick up when:** any input-hardening sweep. Agent-fixable.
+
+### 92. [P2 · owner-paired] `retry_audio` renders paid ElevenLabs audio with no cost cap, hourly gate, or ledger entry
+*(triage 2026-07-10)*
+`src/app/api/messages/regenerate/route.ts:94-135` — the `mode: "retry_audio"` branch checks only
+that `generated_text` exists, resets `audio_status` to pending, and calls `generateAndStoreAudio`
+(a paid ElevenLabs render). Unlike the control arm 80 lines below (`regenerate_cap`, `hourly_max`,
+plus a `recordUsageEvent` ledger row at l.225), `retry_audio` has **none** — no attempt cap, no
+hourly backstop, no usage ledger, and no precondition that the prior audio actually failed (it
+resets status regardless).
+**Why it matters:** the endpoint is a plain authenticated `POST`. Any signed-in client can call
+`retry_audio` on one existing generation in a loop and rack up unbounded paid ElevenLabs renders —
+evading even the 20/hr `hourly_max` global backstop. The exact unmetered-ElevenLabs cost exposure
+the P1/P2 band exists for; a landmine (not firing in the one-tap human happy path) rather than an
+active leak.
+**Fix shape:** before the render, record a `started` usage event and check
+`countGenerationsThisHour(...) >= maxGenerationsPerHour` (reuse the control-arm gate), count
+`retry_audio` renders against a per-generation attempt cap, and require `audio_status !==
+'succeeded'` so a succeeded render can't be re-billed. Owner-paired (cost-control / vendor-spend).
+**Pick up when:** before launch, or the next Step 6 cost-control pass. Sibling of FU-22's lineage.
+
+### 93. [P2] A failed message generation permanently wedges creation — the orphaned pending row 429s every retry
+*(triage 2026-07-10)*
+`src/app/api/messages/generate/route.ts` (cold-start `:184`, insert `:237`, failure returns
+`:287/:323/:357`) + `MessagesNewPageClient.tsx:76-92` (the A5 "Try again"). Cold-start inserts the
+`pending_generations` row *before* text/audio run; if text or audio then fails, the route returns
+502 but the row stays **active** (`saved_message_id` + `superseded_at` both null) — exactly what
+`countActivePending` counts (`cost-controls.ts:102-111`). `superseded_at` is only set on an edit
+*success* (`:372`), and no sweep clears failed rows. The A5 retry re-POSTs a fresh cold-start
+`/generate`, which hits `countActivePending >= maxActivePendingPerUser (1)` → `pending_max` 429.
+**Why it matters:** one transient LLM/TTS failure on the core creation flow leaves an orphan active
+row that makes "Try again" fail with `pending_max` **forever** and blocks **every future message**
+(cap is one active flow per user). A user-visible dead-end on a shipping main flow.
+**Fix shape:** on a failed generation, discard/supersede the failed pending row (stamp
+`superseded_at` or delete it) so it stops counting; or route the A5 retry through `/regenerate`
+against the existing `generationId` instead of re-POSTing a cold-start.
+**Pick up when:** soon — shipping-path user lockout. Next Step 6 spine touch. Agent-fixable.
+
+### 94. [P3] Single-clip playback retry guard resets itself on every fetch → an undecodable clip bursts the rate-limited playback endpoint
+*(triage 2026-07-10)*
+`src/components/audio/RecordingUpload.tsx:263` — `loadPlaybackUrl` sets
+`playbackRetriedRef.current = false` on every successful fetch. But `handleAudioError` (`:277-286`)
+also calls `loadPlaybackUrl` on its one-retry path. So for a clip that persistently fails to
+*decode* (corrupt/truncated upload, unsupported codec — not an expired URL): audio errors →
+`handleAudioError` sets the ref true and calls `loadPlaybackUrl` → fetch succeeds → **ref reset to
+false** → new URL set → audio errors again → ref false again → retry … The sibling list-playback
+flow (`playClip`/`playbackRetryUsedRef`, `:288-307`) is correctly bounded, so the two have drifted.
+**Why it matters:** the "one retry" guard doesn't bound anything — an undecodable clip fires a rapid
+burst of `POST /api/audio/playback-url` until the rate limiter 429s. Self-throttles and spends only
+the user's budget, but it's console-spam, wasted requests, and a correctness drift from the sibling.
+**Fix shape:** stop resetting `playbackRetriedRef` inside `loadPlaybackUrl`; reset only when a new
+clip is selected or after a clean play — mirror `playClip`/`playbackRetryUsedRef`.
+**Pick up when:** next time the record/playback UI is touched. Agent-fixable.
+
+### 95. [P3 · delete-path] Account-delete storage wipe caps each prefix at 1000 objects with no pagination
+*(triage 2026-07-10)*
+`src/app/app/settings/actions.ts:263` (called from teardown at `:217`) — `listAllStorageObjects`
+does `service.storage.from(bucket).list(prefix, { limit: 1000 })` and recurses per sub-folder, but
+never paginates within a prefix (no `offset`/continuation loop). If any single prefix holds >1000
+objects, only the first 1000 are removed; the auth user is then deleted regardless.
+**Why it matters:** the delete terminal tells the user "your voice … [has] been erased" on a
+privacy-sensitive flow. A heavy long-term user could exceed 1000 objects under one
+`users/{userId}/…` prefix, leaving real recordings orphaned in storage after the account and its
+rows are gone — contradicting the erasure promise, with no row left to trace them by. Low frequency
+at MVP volumes, but a privacy/erasure correctness gap on an irreversible flow.
+**Fix shape:** loop `list` with an incrementing `offset` (or sort+cursor) until a short page returns,
+accumulating all paths before the `remove`.
+**Pick up when:** before launch (privacy/erasure), or the next settings/storage pass. Pairs with #85.
+
+### 96. [P3] No unit tests on `RecordScreen.reducer` or `useSequenceTimeline`
+*(triage 2026-07-10)*
+`src/components/screens/RecordScreen.reducer.ts` (`recordReducer` / `deriveInitialView`) and
+`src/lib/animation/useSequenceTimeline.ts` ship with no unit coverage. The reducer is a pure state
+machine driving the entire record flow's stage / celebration / working→ready branching; the timeline
+hook is a reusable timer primitive with non-trivial reset / skipTo / paused / strict-mode-guard
+behavior (touched only incidentally by one e2e spec).
+**Why it matters:** exactly the testable units the repo otherwise covers (cf.
+`tests/unit/preview-refine-reducer.test.ts`), on a shipping path. A regression in a transition or a
+timer-cleanup path would ship silently — the house "extract, then test" pattern was half-applied.
+**Fix shape:** add `tests/unit/record-reducer.test.ts` covering each transition + the celebration
+`next.kind` branches, and a fake-timer test for `useSequenceTimeline` (reset / skipTo / pause
+cleanup, StrictMode double-invoke guard).
+**Pick up when:** next time either file is touched, or a test-coverage pass. Agent-fixable.
+
+### 97. [P3] The TTS→upload→duration→status-write pipeline is implemented twice and will drift
+*(triage 2026-07-10)*
+`src/lib/messages/audio.ts:68-121` (`generateAndStoreAudio`) and
+`src/app/api/messages/commit/route.ts:76-128` (deferred-audio candidate-promotion) both implement
+the same core: render via ElevenLabs → upload to `pendingGenerationAudioPath` → derive duration via
+`mp3DurationMsFromByteLength` → write `audio_path` / `audio_status` / `audio_duration_ms`. The two
+copies already have subtly different success-mark error handling, so a future change to the storage
+path, duration calc, or upload options must be made in both or they silently diverge.
+**Why it matters:** duplication on a vendor-spend path drifts out of sync — a fix or cost-control
+tweak applied to one renderer and not the other reintroduces a bug on the other flow (how FU-27's
+per-category-voice-settings gap originally spread).
+**Fix shape:** extract the shared render → upload → duration core into one helper both callers reuse;
+keep each caller's distinct pre/post bookkeeping local.
+**Pick up when:** next Step 6 audio-pipeline touch, or an API-consolidation pass. Agent-fixable.
+
+### 98. [P4] Onboarding draft-save persists the expiring `avatarUrl` despite the module's "never persisted" contract
+*(triage 2026-07-10)*
+`src/components/screens/onboarding/state.ts:153` — the draft-persist effect calls `saveDraft({
+currentScreen, form })`, and `form` includes `avatarUrl` (a signed URL that expires after ~1 hour).
+The module's own contract (l.13-15: "avatarUrl is NEVER persisted …") and the load side (l.144 skips
+`avatarUrl` on hydration) both assume it is never written — but the write serializes the whole `form`,
+so the expiring URL *is* stored in `localStorage` on every field change.
+**Why it matters:** low impact (skipped on load, expires quickly, user's own avatar, that user's
+browser only) — but a documented-contract violation that leaves a stale expiring credential as dead
+data and will mislead the next reader who trusts the "never persisted" comment.
+**Fix shape:** strip `avatarUrl` before persisting, e.g.
+`saveDraft({ currentScreen, form: { ...form, avatarUrl: null } })`. One line.
+**Pick up when:** next onboarding-state touch, or any draft-persistence hardening. Agent-fixable.
+
+### 99. [P3] Memory Shelf playback controller — in-flight fetch race, swallowed resume failure, and a dead `retry()`
+*(triage 2026-06-30)*
+`src/components/screens/shelf/usePlaybackController.ts` — `play()` at `:87-138`, the resume toggle at
+`:90-98`, `retry()`/`lastAttemptedIdRef` at `:45-47,:107,:156-161`. Three issues in the single audio
+engine behind the Memory Shelf (reachable from TabNav, Home B, record, vault-limit, save-confirmation):
+- **Fetch race (the substantive one).** `play(messageId)` does `await fetch('/api/messages/{id}/play')`
+with no `AbortController` and no post-await check that `messageId` is still the active attempt. Tap A
+then quickly B: A's fetch is still in flight when `play(B)` runs, and when A resolves it sets
+`el.src = A.url` and `await el.play()` on the shared element, clobbering B. Controls say B while A plays.
+- **Swallowed resume failure.** The resume branch does `audioRef.current.play().catch(() => {})` then
+unconditionally `setIsPaused(false)` and returns `true` (`:92-93`). If resume rejects, the UI flips to
+"playing" with no audio and no error.
+- **Dead `retry()`.** A fully-implemented `retry()` exists but no production consumer calls it;
+`lastAttemptedIdRef` feeds only that dead method.
+**Why it matters:** a quick double-tap can play the wrong recording while controls show the other — on a
+surface whose whole job is calm playback. Each issue is single-user and self-recovers on the next tap
+(no data/money risk → P3). The engine — the most race-prone code on the surface — has **zero unit
+coverage** (`memory-shelf-screen.test.tsx` injects a stubbed controller).
+**Fix shape:** capture an `AbortController`/monotonic token per `play()`; abort the prior at the top,
+pass `signal` to `fetch`, and after the await bail if this call is no longer the active attempt; swallow
+`AbortError`. `await` the resume `play()` and restore `isPaused`/surface error on rejection. Wire
+`onRetryAudio` → `playback.retry()` or delete `retry()`+`lastAttemptedIdRef`. Add a `renderHook` test.
+**Pick up when:** next shelf-audio hardening pass; small and self-contained. Agent-fixable.
+
+### 100. [P4] Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel
+*(triage 2026-06-30)*
+`src/components/voice/VoiceCreationView.tsx:37-42` — the success effect fires when `viewState ===
+"success"` and passes `voice_profile_id: voiceProfileId`, where `voiceProfileId` (from `searchParams`)
+is `string | null`. No guard ties the success view to a non-null id. The analytics doc
+(`docs/analytics/2026-06-16-journey-funnel-events.md:124`) says `null` "shouldn't reach success" — but
+nothing enforces it, so a future refactor reaching `success` without the param (or a first-paint race)
+emits a `null`-id ready event that can't be joined back to `voice_profiles`.
+**Why it matters:** low blast radius today (success is only reachable with an id), but a malformed funnel
+row is silent and permanent once written, and the doc treats the invariant as load-bearing without code
+backing it.
+**Fix shape:** guard the emit — `if (viewState === "success" && voiceProfileId && !readyFired.current)`,
+or assert-and-skip when the id is absent.
+**Pick up when:** next time the voice-creation flow is touched. Agent-fixable.
+
+### 101. [P3] Journey funnel once-guards (3 sites) ship with zero test coverage
+*(triage 2026-06-30)*
+`src/components/analytics/JourneyBeacon.tsx:22-31`, `src/components/voice/VoiceCreationView.tsx:37-43`
+(the `readyFired` ref), `src/app/app/vault/sealed/actions.tsx` (the `subscription_started` once-guard).
+PR #59's funnel relies on a ref-based "fire exactly once" guard at three sites. The only test,
+`tests/unit/journey-analytics.test.ts`, covers `trackJourney`'s envelope/namespacing — **not one test
+exercises the once-guards themselves**, which are precisely the StrictMode-double-mount /
+effect-dependency-refire surface that breaks funnel counts.
+**Why it matters:** the funnel is how the business answers "do people pay and retain?" A future edit that
+drops a ref guard or adds a reactive dependency would silently double- or zero-count and pass CI green —
+a measurement regression invisible until the numbers are noticed wrong, by which point data is polluted.
+**Fix shape:** add RTL tests asserting each component fires its event exactly once across a StrictMode
+double-mount and across an irrelevant prop/state change.
+**Pick up when:** next analytics-hardening pass, or alongside any edit to these effects. Agent-fixable.
+
+### 102. [P4 · analytics-owned] `app_opened` doc claims it covers all onboarded returns; code fires it only in voice-ready Home B
+*(triage 2026-06-30)*
+`src/app/home/page.tsx:94` (beacon inside the Home B branch only, after the Home A early-return at
+`:67-79`) vs `docs/analytics/2026-06-16-journey-funnel-events.md:134`. The retention anchor
+`journey.app_opened` renders only inside the `voiceProfile.status === "ready"` (Home B) branch; an
+onboarded user who returns *before* their voice finishes processing hits the Home A stub and emits
+nothing. The doc says it "Fires: On render of `/home` for an authenticated, onboarded user" — overclaiming
+relative to the code. (The funnel diagram positions `app_opened` after voice-ready, so Home-B-only firing
+may be intended — making this a doc-precision / intent-reconciliation question, not a clear bug.)
+**Why it matters:** until reconciled, anyone reading the retention query (`:196-206`) can mis-trust it for
+the pre-voice-ready cohort — either the doc is wrong (fix one sentence) or Home A should fire it too.
+**Fix shape:** decide intended scope. If retention means voice-ready-completed users, tighten the doc
+wording at `:134`. If pre-voice-ready returns count, hoist `<JourneyBeacon event={appOpened} />` above the
+`voiceProfile.status` branch. Telemetry-impacting → drop a `docs/analytics/` note either way.
+**Pick up when:** before the first retention-funnel read is trusted, or whenever Home A gets its own brief.
+Analytics-owned (scope is a product/measurement choice).
+
+### 103. [P3] `settings-screen.test.tsx` "email change confirmation" is flaky under full-suite load
+*(found 2026-07-12 during the reconciliation CI run)*
+`tests/unit/settings-screen.test.tsx:135-147` ("shows the 'check your inbox' confirmation on a successful
+send") intermittently fails in CI with *"Unable to find … /We sent a link to rosa.new@example.com/"* on the
+assertion right after the `await waitFor` for the "Check your inbox" heading — while passing **3/3 in
+isolation** and **2/2 full-suite locally** on the same commit. The component sets `setEmailSentTo(value)`
+and `setEmailPhase('sent')` on adjacent lines (`SettingsScreen.tsx:361-362`, batched), so there's no real
+render race; the failure is a rare cross-test interaction under the parallel full suite. Same class as the
+already-resolved FU-55 (`useResource` flaky under full-suite load).
+**Why it matters:** a rare-but-real flake reds CI on unrelated PRs (it blocked PR #100's first run; a re-run
+went green), eroding trust in the gate and costing re-runs. Not a product regression.
+**Fix shape:** make the final assertion await-based (`await screen.findByText(/We sent a link to …/)`) so it
+is robust to render timing; if it recurs, investigate the specific other test leaking state/timers into the
+shared environment (the likely true root cause of the cross-test interaction).
+**Pick up when:** next test-hardening pass, or the next time this test reds a PR. Agent-fixable.
+
+### §72 refinement — two latent `useShimmerLoop` bugs to fix when the real Processing clock lands
+*(triage 2026-07-10; folds the dropped 2026-07-10 "#72" restatement — refines main §72, not a new item)*
+Inert until FU-72's real generation-polling clock exists (in `/dev/processing` every mock state mounts
+fresh on the "instant" path, so no transition runs). Recorded so whoever builds the clock fixes them
+in the same pass:
+- **Shimmer transitions snap instead of tween.** `src/components/screens/step3/useShimmerLoop.ts:143`
+writes `write(eng.base * mul)`, but the eased per-frame value is computed into local `base` at `:121`
+and `eng.base` only updates when the tween *finishes* (`:125/:134`). So the climb and the exit hold at
+their start value for the whole duration then jump to the end in one frame — the "eases active →
+neutral" handoff the Reveal builds from is a hard cut. Fix: `write(base * mul)`.
+- **Dead `: ACTIVE` branch.** `:175` `const from = prev > NEUTRAL ? prev : ACTIVE;` sits inside
+`if (!instant && prev > NEUTRAL)`, so the `: ACTIVE` arm is unreachable — `from` is always `prev`.
+Reads as a meaningful fallback that can never fire. Fix: `const from = prev;`.
