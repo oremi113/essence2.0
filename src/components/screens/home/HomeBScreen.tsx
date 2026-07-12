@@ -65,7 +65,6 @@ export function HomeBScreen({
   vaultState,
   messages,
   loadState,
-  listError,
   onRetry,
   firstArrival = false,
   maxSaved = DEFAULT_MAX_SAVED,
@@ -135,7 +134,7 @@ export function HomeBScreen({
         <div className="homeb__system homeb__system--error" role="alert">
           <div className="homeb__err-title">Your messages are safe</div>
           <div className="homeb__err-body">
-            {listError ?? 'This didn’t load just now. Try again in a moment.'}
+            This didn’t load just now. Try again in a moment.
           </div>
           <button type="button" className="homeb__retry" onClick={onRetry}>
             Try again

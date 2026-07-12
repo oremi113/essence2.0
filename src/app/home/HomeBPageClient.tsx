@@ -7,6 +7,7 @@
  * resolved server-side in page.tsx and passed in.
  */
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { HomeBScreen } from '@/components/screens/home/HomeBScreen';
 import type {
@@ -44,12 +45,17 @@ export function HomeBPageClient({
   const loadState: HomeBLoadState =
     status === 'error' ? 'error' : status === 'loading' ? 'loading' : 'ready';
 
+  // Keep the raw load error observable for debugging without surfacing it to the
+  // user — Home B shows fixed, on-voice copy instead (Copy Guide §8).
+  useEffect(() => {
+    if (error) console.error('[home-b] message preview failed to load:', error);
+  }, [error]);
+
   return (
     <HomeBScreen
       vaultState={vaultState}
       messages={messages}
       loadState={loadState}
-      listError={error}
       onRetry={refetch}
       firstArrival={firstArrival}
       maxSaved={maxSaved}

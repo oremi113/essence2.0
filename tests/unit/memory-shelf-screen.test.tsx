@@ -100,13 +100,12 @@ describe("MemoryShelf — load states", () => {
     expect(container.querySelector(".shelf-card")).toBeNull();
   });
 
-  it("error shows the message + retry, and retry bubbles out", () => {
+  it("error shows fixed on-voice copy (never a raw error) + retry, and retry bubbles out", () => {
     const onRetryList = vi.fn();
     render(
       <MemoryShelf
         messages={[]}
         loadState="error"
-        listError="Boom"
         onRetryList={onRetryList}
         playback={stubPlayback()}
         onCreateNew={vi.fn()}
@@ -114,7 +113,12 @@ describe("MemoryShelf — load states", () => {
         reducedMotionOverride
       />
     );
-    expect(screen.getByText("Boom")).toBeTruthy();
+    // Copy Guide §8: plain statement + reassure-what's-safe; never a raw error.
+    expect(
+      screen.getByText(
+        "We couldn't load your shelf just now. Your messages are safe."
+      )
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(onRetryList).toHaveBeenCalledTimes(1);
   });
