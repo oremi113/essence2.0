@@ -87,7 +87,7 @@ what's left, which is now the launch tail — and the QA + bug-fix chunk of that
 
 | # | Bucket | Was | Now | Focused hrs left |
 |---|---|---|---|---|
-| 1 | Step 10 — only S10-C First-Breath playback-error + consolidated copy pass left | 15–30 | S10-A/B ✅ | 4–10 |
+| 1 | Step 10 — only the consolidated error-copy pass (X) left; S10-C ✅ | 15–30 | S10-A/B/C ✅ | 2–4 |
 | 2 | C3 Vault Limit screen | 10–24 | ✅ done | 0 |
 | 3 | First Breath ceremony audio (owner ear-review owed, not coding) | 8–20 | ✅ built | 0 |
 | 4 | Full-journey integration & wiring — spine landed; seam/nav polish left | 20–40 | spine ✅ | 8–20 |
@@ -116,7 +116,7 @@ Track these to done. `[ ]` = open, grouped by the buckets above.
 
 **Finish the journey**
 - [x] Step 10 S10-A — generation-failure state (contact-as-care ceiling, PR #88)
-- [~] Step 10 S10-C — audio-can't-play state (Shelf ✅; First-Breath **now unblocked** — FU #41 landed, so the First-Breath playback-error state is buildable; not yet built)
+- [x] Step 10 S10-C — audio-can't-play state (Shelf ✅; **First-Breath ✅ 2026-07-12** — resolved as silent graceful degradation, not a retry state: FU #41 shipped procedural synth so there's nothing to retry, and fixed a real crash path (unguarded `new AudioContext()`). See `docs/session-s10c-first-breath/decision.md`)
 - [x] Step 10 S10-B — offline / connection-lost state — **built** (PR #89): `useOnline`/`useConnectivity` + app-wide `OfflineIndicator`
 - [ ] Step 10 X — consolidated error-copy pass across all surfaces (Ch2 + A5 + new)
 - [x] C3 Vault Limit screen — built (PR #87); 3-message cap **confirmed wired** server-side (`api/messages/save` 403 `vault_limit_reached` at `STEP6_MAX_SAVED_MESSAGES=3`), FU #38 resolved
