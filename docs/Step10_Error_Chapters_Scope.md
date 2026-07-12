@@ -18,7 +18,7 @@ two are largely built.** The real distribution:
 | Chapter (spec home) | True state | The actual gap | Design-gated? |
 |---|---|---|---|
 | **Generation-failure** (§12.4 `MASTER_SPEC:2004-2007`) | **~70% built** | Screen + prototype + telemetry already exist. Needs a copy pass + the undefined "alternative path after 3 attempts" + the post-seal notify clock | No (copy + 1 decision) |
-| **Playback** (§12.3 `:2000-2002`) | **Shelf done; First-Breath is the only gap** | Shelf fully handles audio-error + retry. First-Breath playback-error is unbuilt **and coupled to unwired First-Breath audio (FU #41)** | Partly (blocked) |
+| **Playback** (§12.3 `:2000-2002`) | **✅ DONE** | Shelf handles audio-error + retry. First-Breath **resolved 2026-07-12 as silent graceful degradation** (not a retry state) — FU #41 shipped procedural synth, not a file, so there's nothing to retry; see `docs/session-s10c-first-breath/decision.md` | No |
 | **Offline / connection-lost** (§12.8 `:2022-2025` + V1.6 `:135`) | **Greenfield** | No detection, no UI, no telemetry, no prototype, no adopted copy. The real lift, and it carries a DECISIONS-lock question | **Yes** |
 
 **So the work is front-loaded onto offline**, not spread evenly. A "finish
@@ -134,15 +134,20 @@ on the `<audio>` error listener + play catch, exposes `retry()`;
 `src/lib/audio/playback.ts` (`STORAGE_FAILED`, retryable).
 
 **The gaps:**
-1. **First-Breath playback-error is unbuilt** — `FirstBreathSequence.tsx:58-82`
-   audio refs are **placeholder scaffolding, no `onError`, no `.play()` catch**;
-   a failure is silent. **Coupled to FU #41** (First-Breath ceremony audio isn't
-   wired at all) — you can't meaningfully build a playback-error state for audio
-   that doesn't play yet. Sequence with the First-Breath audio item.
-2. **Waveform-fails-but-audio-ok split** (`:2002`) — nicety, unhandled; small.
+1. **First-Breath playback-error — ✅ RESOLVED 2026-07-12 as silent degradation.**
+   This scope assumed First Breath would play an audio *file* (mirror the Shelf:
+   `onError` + `.play()` catch + retry). FU #41 instead shipped a **procedural
+   Web Audio synth engine** — no file, no `<audio>`, no `.play()`, no content to
+   retry. So a visible error/retry state is the wrong shape: the audio is ambient
+   enhancement of a visual-primary ceremony, and an error UI would desecrate the
+   Elevated moment. Resolved as robust **silent graceful degradation** (guard the
+   unguarded `new AudioContext()` crash path + `resume()` rejections; ceremony
+   renders identically on failure). Full rationale: `docs/session-s10c-first-breath/decision.md`.
+2. **Waveform-fails-but-audio-ok split** (`:2002`) — N/A to First Breath (no
+   waveform); a Shelf-only nicety, still unhandled, small.
 
-**Effort:** first-breath onError/catch + waveform split ≈ **3–6h**, but
-**blocked/sequenced behind FU #41** (audio wiring).
+**Effort:** ✅ done (silent-degradation hardening + test), not the originally
+estimated file-playback-error build.
 
 ### 2C. Offline / connection-lost — §12.8 (`:2022-2025`) + V1.6 (`:135`)
 
@@ -218,7 +223,7 @@ Reframed to the real distribution (not "3 equal chapters"):
 |---|---|---|---|---|
 | **S10-A · Generation-failure finish** | Copy-align the existing A5 failed state; build the "alternative path" (decision §4.4). Screen/proto/telemetry already exist. | 4–8h | No | §4.4 decision |
 | **S10-B · Offline & connection-lost** | `useOnline` hook + shared connectivity treatment + resume-safety audit + telemetry + **prototype/design pass**. The real lift. | 10–18h | **Yes** | §4.2/4.3 decisions |
-| **S10-C · Playback completion** | First-Breath `onError`/catch + waveform-fail-audio-ok split. | 3–6h | No | **FU #41 (audio wiring)** |
+| **S10-C · Playback completion** | ✅ DONE 2026-07-12 — First-Breath resolved as silent graceful degradation (procedural synth, nothing to retry); crash-path + `resume()` hardening + test. (Waveform split N/A to First Breath.) | done | No | — |
 | **X · Step 10 error-copy pass** | One consolidated warm-voice pass across all error surfaces (Ch2 + A5 + new). | 2–4h | (copy) | surfaces exist |
 
 **Total ≈ 19–36h** (vs roadmap's 15–30h) — redistributed heavily toward
