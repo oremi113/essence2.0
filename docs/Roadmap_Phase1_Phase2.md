@@ -19,10 +19,14 @@ the assumptions are stated so you can adjust.
 
 **Where we are:** M0–M3 are **closed**. The full journey is wired end-to-end
 (the monetization spine landed) and the money path is now unblocked. What's left
-is the **launch tail** — real-device QA, legal/deploy, Stripe production, and the
-owner sign-offs — which is the *least* AI-compressible part of the plan. Coding
-is mostly behind us; calendar from here is bounded by owner availability and
-QA surprises, not build speed.
+is the **launch tail** — QA + bug-fix, legal/deploy, Stripe production, and the
+owner sign-offs. The QA + bug-fix half of that, long filed as the *least*
+AI-compressible work, is mostly an **agent sweep that can start today** and run
+in parallel — two scoped agents (`qa-scout` detector + `bug-fixer`) walk every
+flow on the mobile Playwright project at 4× CPU throttle; only the physical-feel
+pass on real phones is irreducible. Coding is mostly behind us; calendar from
+here is bounded by owner availability and the paperwork/hardware residue, not
+build speed.
 
 Pricing is current in `MASTER_SPEC.md` §V1.1 (Vault $12.99/mo · $119/yr ·
 7-day trial · 3 lifetime messages).
@@ -53,9 +57,15 @@ Pricing is current in `MASTER_SPEC.md` §V1.1 (Vault $12.99/mo · $119/yr ·
    IDs, drop the `?mock` bypass, then a **live vendor-backed Stripe E2E walk**.
 2. **Owner ear-review** of the First Breath ceremony audio (a headless agent
    can't judge the sound).
-3. **The launch tail** — real-device QA passes, legal (privacy/terms) + deploy
-   hardening, mobile-web polish, and launch-blocking debt triage. See the
-   recalibrated burn-down below.
+3. **Agent QA sweep — startable now, runs in parallel.** `qa-scout` (read-only)
+   drives every flow on the mobile Playwright project at 4× CPU throttle,
+   harvesting console/network/layout/motion defects into a triaged report;
+   `bug-fixer` root-causes and patches each, re-driving the flow to confirm.
+   Surfaces cross-flow bugs *continuously* rather than as an end-of-line pass.
+   Depends only on the journey being walkable — true since PR #95.
+4. **The launch tail** — the physical-feel pass on real phones, legal
+   (privacy/terms) + deploy hardening, mobile-web polish, and launch-blocking
+   debt triage. See the recalibrated burn-down below.
 
 *(Superseded audit snapshots from 2026-06 → 2026-07-08 are archived at the bottom
 of this doc.)*
@@ -72,7 +82,8 @@ the spine (PR #95), the FU #84 race fix, and the vault bronze-engine migration.
 That's the middle-to-back third of the plan, done at the compressed end of the
 AI-assisted estimate. So the **buildable screen/wiring work is largely spent** —
 the buckets below drop the finished ones to their small remainders and re-anchor
-what's left, which is now dominated by the non-compressible tail.
+what's left, which is now the launch tail — and the QA + bug-fix chunk of that
+(reframed below) is an agent sweep, not the hand labor it was originally priced as.
 
 | # | Bucket | Was | Now | Focused hrs left |
 |---|---|---|---|---|
@@ -82,20 +93,22 @@ what's left, which is now dominated by the non-compressible tail.
 | 4 | Full-journey integration & wiring — spine landed; seam/nav polish left | 20–40 | spine ✅ | 8–20 |
 | 5 | Stripe lifecycle — guards + #84 race ✅; live vendor E2E + real-voice cost left | 12–28 | guards ✅ | 6–16 |
 | 6 | Mobile-web polish (responsive, touch targets, optional PWA) | 10–24 | — | 10–24 |
-| 7 | **Real-device QA + bug-fix passes** (least AI-compressible) | 30–60 | — | 30–60 |
+| 7 | **QA + bug-fix** — agent sweep (`qa-scout` + `bug-fixer`, emulated device @ 4× throttle; detection + patches) runs **in parallel, startable now**; only the **physical-feel pass on real phones** is irreducible | 30–60 | de-serialized | 12–25 |
 | 8 | Launch prep: privacy/terms build, analytics→validation, deploy hardening + monitoring | 12–30 | — | 12–30 |
 | 9 | Launch-blocking debt triage (subset of the ~65 FOLLOW_UPS) | 10–25 | — | 10–25 |
 | 10 | Cross-app design/polish rounds (the audit texture, applied everywhere) | 15–35 | — | 15–35 |
-| | **Total** | ~140–315 | | **~95–220 focused hrs** |
+| | **Total** | ~140–315 | | **~77–185 focused hrs** |
 
 **Calendar at current engaged pace** (~15–25 productive AI-assisted hrs/active
 week, bursty ~2–3 engaged weeks/month): **~1.5–2.5 months, realistic middle ~2
 months** — down from the 2026-07-06 estimate of ~3–3.5 months, because the coding
 that estimate was pricing is now done. The remaining spread is almost entirely
-**owner-gated and non-compressible**: real-device QA surprises, legal content,
-Stripe production + tax setup, the ceremony ear-review, and the "is this
-launch-quality?" call per flow. Little of what's left is code an agent can
-sweep — it's judgment, hardware, and paperwork.
+**owner-gated more than QA-gated**: legal content, Stripe production + tax setup,
+the ceremony ear-review, the physical-feel pass on real phones, and the "is this
+launch-quality?" call per flow. The QA *detection + bug-fix* labor that used to
+anchor this list is now an agent sweep running in parallel from today, so
+cross-flow bugs surface early instead of piling up at the end. What's genuinely
+non-compressible is thinner than before: judgment, hardware feel, and paperwork.
 
 ## Launch punch-list (burn-down)
 
@@ -117,7 +130,8 @@ Track these to done. `[ ]` = open, grouped by the buckets above.
 - [~] Stripe lifecycle E2E — guard logic **built** (PR #92: trial-abuse, double-sub 409, lapse-vs-cancel) + checkout-landing race closed (FU #84); live vendor-backed E2E walk still owed (spine S5, flags still OFF)
 - [ ] Real-voice cost validation at expected volume
 - [ ] Mobile-web polish — responsive, touch targets, (optional) PWA/installable
-- [ ] Real-device QA matrix — walk the whole journey on real phones; bug-fix passes
+- [ ] Agent QA sweep — `qa-scout` drives every flow on the mobile Playwright project @ 4× throttle → triaged defect report; `bug-fixer` root-causes + patches each. Runs in parallel, startable now (journey walkable since PR #95)
+- [ ] Physical-feel pass — walk the journey on a real iPhone + a real mid-range Android; judge motion feel, iOS-Safari-only rendering, camera/mic permission flows. The irreducible residue
 - [ ] Launch-blocking FOLLOW_UPS triage — mark which of the ~65 block launch, fix those
 
 **Launch prep** *(owner-dependent items flagged)*
@@ -129,7 +143,9 @@ Track these to done. `[ ]` = open, grouped by the buckets above.
 
 *Estimates are planning ranges, not commitments — software estimation is
 unreliable (see notes below). Biggest single unknown: how many cross-flow bugs
-real-device QA surfaces once 1→10 is wired end-to-end.*
+QA surfaces once 1→10 is wired — de-risked by running the agent QA sweep early
+and continuously rather than as an end-of-line pass, so the count surfaces during
+parallel work, not at the finish line.*
 
 ## Estimating notes (read before trusting the numbers)
 - **"Coding hours"** = focused engineering by one experienced dev. AI-assisted
@@ -170,7 +186,7 @@ loading/error handling throughout. Polished, on-brand, production-deployed.
 |---|---|
 | Cross-step **integration + full-journey wiring + nav/state** | 20–40 |
 | **Tech debt:** #30 migration-history cleanup, #34 legacy-route consolidation, #28 audio bucket | 10–25 |
-| **Real-device QA** + bug-fix passes across the whole flow | 20–50 |
+| **QA + bug-fix** across the whole flow — agent sweep (`qa-scout` + `bug-fixer`, emulated @ 4× throttle) does detection + patching in parallel; physical-feel pass on real phones is the residue | 20–50 |
 
 ### Workstream D — Launch prep (web)
 | Item | Coding hrs |
@@ -257,7 +273,10 @@ parallelizes around it.
 - **Stripe hardening** — trial → active → lapse → restore E2E; real-voice cost
   validated at expected volume.
 - **Mobile-web polish** — responsive, touch targets, (optional) PWA/installable.
-- **Real-device QA** — walk the whole journey on real phones; bug-fix passes.
+- **QA** — the agent sweep (`qa-scout` + `bug-fixer`, emulated device @ 4× throttle)
+  runs continuously in parallel from today, *not gated on M4*; the M4 residue is
+  the **physical-feel pass** on real phones (motion feel, iOS-Safari quirks,
+  hardware permissions).
 - **Launch prep** (Eng + **owner**) — privacy policy + terms, analytics wired to
   the validation question, production deploy hardening + monitoring.
 - *Exit:* **launch** — a live, paying mobile web app.
