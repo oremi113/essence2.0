@@ -20,29 +20,57 @@ import { useCallback, useState } from 'react';
 import { GenerationScreen } from '@/components/screens/messages/GenerationScreen';
 import type { GenerationStatus } from '@/components/screens/messages/GenerationScreen.types';
 
-type VariantKey = 'working' | 'failed-note' | 'failed-skip';
+type VariantKey =
+  | 'working'
+  | 'failed-note'
+  | 'failed-skip'
+  | 'exhausted-note'
+  | 'exhausted-skip';
 
 const VARIANTS: Record<
   VariantKey,
-  { label: string; status: GenerationStatus; hasNote: boolean; hint: string }
+  {
+    label: string;
+    status: GenerationStatus;
+    hasNote: boolean;
+    retriesExhausted: boolean;
+    hint: string;
+  }
 > = {
   working: {
     label: 'Working',
     status: 'working',
     hasNote: true,
+    retriesExhausted: false,
     hint: 'Beats advance live: 1 “Shaping” → 2 “Listening” (5s) → 3 “In your voice” (10s).',
   },
   'failed-note': {
     label: 'Failed · note',
     status: 'failed',
     hasNote: true,
+    retriesExhausted: false,
     hint: 'Note path — reassurance + “Adjust your note” fallback.',
   },
   'failed-skip': {
     label: 'Failed · skip',
     status: 'failed',
     hasNote: false,
+    retriesExhausted: false,
     hint: 'Skip path — retry alone, no note to adjust.',
+  },
+  'exhausted-note': {
+    label: 'Exhausted · note',
+    status: 'failed',
+    hasNote: true,
+    retriesExhausted: true,
+    hint: '3-attempt ceiling — contact-as-care primary, quiet “Try once more”.',
+  },
+  'exhausted-skip': {
+    label: 'Exhausted · skip',
+    status: 'failed',
+    hasNote: false,
+    retriesExhausted: true,
+    hint: '3-attempt ceiling, skip path — contact-as-care + “Try once more”.',
   },
 };
 
@@ -83,6 +111,7 @@ export default function MessagesGenerationDevPage() {
           categoryLabel="Encouragement"
           status={v.status}
           hasNote={v.hasNote}
+          retriesExhausted={v.retriesExhausted}
           onRetry={() => {
             console.log('[dev/messages-generation] retry → re-runs /generate, back to working');
             alert('Mock retry — re-runs /generate (back to the working wait).');
@@ -92,6 +121,10 @@ export default function MessagesGenerationDevPage() {
           onAdjustNote={() => {
             console.log('[dev/messages-generation] adjust note → routes to A4 (note pre-filled)');
             alert('Mock — routes back to A4 with the note pre-filled.');
+          }}
+          onContactSupport={() => {
+            console.log('[dev/messages-generation] contact support → mailto (page-owned)');
+            alert('Mock — opens the support mailto (placeholder address, FOLLOW_UPS #75).');
           }}
         />
       </div>

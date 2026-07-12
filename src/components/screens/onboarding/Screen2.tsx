@@ -9,9 +9,24 @@ import { StepShell, StoneSlot } from './chrome';
 // Transient phrases pass across the conveyor before "Your voice." lands
 // as the conclusion. Order matters. To add/remove: edit this list; the
 // timing below re-derives automatically.
+// The transient phrases that pass across the (desktop) conveyor before the
+// stacked conclusion "Your voice." / "Their timeline." lands. Restored from the
+// animation-polish tuning (main had trimmed to 3). Edit freely \u2014 the timing
+// below re-derives from the count. NB: the conveyor is display:none on mobile
+// (main's decision \u2014 the body copy above carries the meaning), so this list only
+// affects the desktop flourish and the CTA delay there.
 const CONVEYOR_PHRASES: readonly string[] = [
-  'Love notes.',
+  'Birthday wishes.',
+  'Holiday greetings.',
+  'Just because moments.',
   '\u201CI\u2019m proud of you.\u201D',
+  'Love notes.',
+  'Daily affirmations.',
+  'Words of comfort.',
+  'Bedtime stories.',
+  'Life advice.',
+  'Letters for later.',
+  'Graduation messages.',
   'A goodbye, whenever it comes.',
 ];
 
@@ -19,7 +34,10 @@ const finalLandMs =
   ONBOARDING_TIMING.CONVEYOR_INTRO_DELAY_MS +
   CONVEYOR_PHRASES.length * ONBOARDING_TIMING.CONVEYOR_PHRASE_DURATION_MS +
   ONBOARDING_TIMING.CONVEYOR_FINAL_BEAT_MS;
-const ctaLandMs = finalLandMs + ONBOARDING_TIMING.CONVEYOR_CTA_BEAT_MS;
+// "Their timeline." lands a widened beat after "Your voice."; the CTA then waits
+// for that full conclusion.
+const tailLandMs = finalLandMs + ONBOARDING_TIMING.CONVEYOR_TAIL_BEAT_MS;
+const ctaLandMs = tailLandMs + ONBOARDING_TIMING.CONVEYOR_CTA_BEAT_MS;
 
 export function Screen2({ onNext }: { onNext: () => void }) {
   return (
@@ -61,6 +79,17 @@ export function Screen2({ onNext }: { onNext: () => void }) {
         >
           Your voice.
         </span>
+      </div>
+
+      {/* Stacked conclusion: "Their timeline." lands below "Your voice." a
+          widened beat later. Sibling of the conveyor (not a child) so it can
+          be positioned/suppressed on its own; hidden on mobile alongside it. */}
+      <div
+        className="onboarding-conveyor-tail"
+        aria-hidden="true"
+        style={{ animationDelay: `${tailLandMs}ms` }}
+      >
+        Their timeline.
       </div>
 
       <div

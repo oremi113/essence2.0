@@ -1,5 +1,6 @@
 import { Spectral, Inter } from "next/font/google";
 import "./globals.css";
+import { LiveOfflineIndicator } from "@/components/system/OfflineIndicator";
 
 // Self-hosted + preloaded. Each binding writes its own CSS variable so the
 // `var(--font-display)` / `var(--font-body)` tokens in globals.css and
@@ -30,7 +31,12 @@ export default function RootLayout({
       className={`${spectral.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {children}
+        {/* Step 10 · S10-B — app-wide connectivity indicator. Fixed overlay,
+            driven by the real navigator.onLine signal; hidden while online. */}
+        <LiveOfflineIndicator />
+      </body>
     </html>
   );
 }

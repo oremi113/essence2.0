@@ -65,6 +65,7 @@ export function MessageCreationFlow({
   savedCountBefore = 0,
   onExitFlow,
   onGenerate,
+  onContactSupport,
 }: MessageCreationFlowProps) {
   const [step, setStep] = useState<FlowStep>('recipient');
   const [staged, setStaged] = useState<StagedFlowState>({
@@ -73,6 +74,11 @@ export function MessageCreationFlow({
     note: null,
   });
   const [genStatus, setGenStatus] = useState<GenerationStatus>('working');
+  // Cumulative failed /generate attempts in this flow. At the spec's 3-attempt
+  // ceiling (§12.4) A5 swaps its retry for contact-as-care. Never reset within
+  // a flow — three failures earn the offer of help whether or not the note
+  // changed between them.
+  const [failCount, setFailCount] = useState(0);
 
   // The request in flight — kept for A5's "Try again" so retry re-sends
   // exactly what failed without re-deriving it from staged state.
@@ -106,7 +112,10 @@ export function MessageCreationFlow({
       lastRequest.current = request;
       setGenStatus('working');
       void onGenerate(request).then((result) => {
-        if (!result.ok) setGenStatus('failed');
+        if (!result.ok) {
+          setFailCount((n) => n + 1);
+          setGenStatus('failed');
+        }
       });
     },
     [onGenerate],
@@ -193,6 +202,8 @@ export function MessageCreationFlow({
       hasNote={Boolean(staged.note)}
       onRetry={handleRetry}
       onAdjustNote={() => setStep('note')}
+      retriesExhausted={failCount >= 3}
+      onContactSupport={onContactSupport}
     />
   );
 }

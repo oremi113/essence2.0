@@ -246,6 +246,9 @@ export const GENERATION_CSS = `
 }
 .gen__btn:not(:disabled):hover { background: var(--color-mineral-darker); }
 .gen__btn:not(:disabled):active { transform: scale(0.98); }
+/* Offline-gated (S10-B): reads clearly non-tappable, not a live button. */
+.gen__btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.gen__btn--link:disabled { opacity: 0.45; cursor: not-allowed; }
 .gen__btn:focus-visible {
   /* Literal ring, not var(--shadow-focus-ring): that token lives only in
      the prototypes' :root, not production @theme (reconciliation drift) —

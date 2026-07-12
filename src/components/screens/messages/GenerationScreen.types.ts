@@ -49,4 +49,19 @@ export interface GenerationScreenProps {
    * skip path (no secondary rendered).
    */
   onAdjustNote?: () => void;
+  /**
+   * After the spec's 3-attempt ceiling (MASTER_SPEC §12.4:2007 "after 3
+   * attempts, offer alternative path"), the failed state stops looping on
+   * "Try again" and offers **contact-as-care** instead: a warm support
+   * reach-out as the primary, with "Try once more" kept as a quiet secondary
+   * so it is never a hard dead end. Only takes effect when `onContactSupport`
+   * is also provided; ignored while working.
+   */
+  retriesExhausted?: boolean;
+  /**
+   * Exhausted primary — opens the support contact (a `mailto:`). Page-owned
+   * side effect, bubbled out per the three-layer rule (the screen never
+   * knows the address). Required-in-spirit when `retriesExhausted` is true.
+   */
+  onContactSupport?: () => void;
 }

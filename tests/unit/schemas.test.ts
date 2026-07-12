@@ -1,113 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import {
-  messageCreateSchema,
   audioInitUploadSchema,
   audioCommitSchema,
 } from '@/lib/api/schemas';
 
-describe('messageCreateSchema', () => {
-  const valid = {
-    voiceProfileId: 'vp_123',
-    promptText: 'A short memory.',
-  };
-
-  test('accepts a minimal valid body', () => {
-    const r = messageCreateSchema.safeParse(valid);
-    expect(r.success).toBe(true);
-    if (r.success) {
-      expect(r.data.voiceProfileId).toBe('vp_123');
-      expect(r.data.promptText).toBe('A short memory.');
-    }
-  });
-
-  test('accepts optional title and recipientId', () => {
-    const r = messageCreateSchema.safeParse({
-      ...valid,
-      title: 'A title',
-      recipientId: 'rcp_1',
-    });
-    expect(r.success).toBe(true);
-  });
-
-  test('tolerates extra unknown fields (loose mode)', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, unknown: 42 });
-    expect(r.success).toBe(true);
-  });
-
-  test('trims voiceProfileId whitespace', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, voiceProfileId: '  vp_trim  ' });
-    expect(r.success).toBe(true);
-    if (r.success) expect(r.data.voiceProfileId).toBe('vp_trim');
-  });
-
-  test('rejects missing voiceProfileId', () => {
-    const r = messageCreateSchema.safeParse({ promptText: valid.promptText });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe('voiceProfileId is required');
-    }
-  });
-
-  test('rejects empty voiceProfileId', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, voiceProfileId: '' });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe('voiceProfileId is required');
-    }
-  });
-
-  test('rejects whitespace-only voiceProfileId', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, voiceProfileId: '   ' });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe('voiceProfileId is required');
-    }
-  });
-
-  test('rejects non-string voiceProfileId', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, voiceProfileId: 123 });
-    expect(r.success).toBe(false);
-  });
-
-  test('rejects missing promptText', () => {
-    const r = messageCreateSchema.safeParse({ voiceProfileId: valid.voiceProfileId });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe('promptText is required');
-    }
-  });
-
-  test('rejects whitespace-only promptText', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, promptText: '   \n\t  ' });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe('promptText is required');
-    }
-  });
-
-  test('rejects promptText over 2000 characters', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, promptText: 'a'.repeat(2001) });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe('promptText must be 2000 characters or fewer');
-    }
-  });
-
-  test('accepts promptText at exactly 2000 characters', () => {
-    const r = messageCreateSchema.safeParse({ ...valid, promptText: 'a'.repeat(2000) });
-    expect(r.success).toBe(true);
-  });
-
-  test('rejects non-object body with "Invalid JSON body"', () => {
-    expect(messageCreateSchema.safeParse(null).success).toBe(false);
-    expect(messageCreateSchema.safeParse('string').success).toBe(false);
-    expect(messageCreateSchema.safeParse(42).success).toBe(false);
-    const r = messageCreateSchema.safeParse(null);
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe('Invalid JSON body');
-    }
-  });
-});
+// (Tests for `messageCreateSchema` were removed with the legacy
+// `POST /api/messages` create handler — FOLLOW_UPS #59.)
 
 describe('audioInitUploadSchema', () => {
   const valid = {

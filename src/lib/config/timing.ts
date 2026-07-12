@@ -2,9 +2,11 @@
  * Centralized timing constants for the voice-training / recording flow.
  *
  * Every value here was previously a magic number scattered across
- * RecordScreen, RecordingUpload, and VoiceCreationView. Pulling them
+ * RecordScreen, RecordingUpload, and the voice-creation flow. Pulling them
  * into one place makes the choreography legible at a glance and lets
- * us tune tempo without hunting through three files.
+ * us tune tempo without hunting through several files. The VOICE_PROFILE_*
+ * poll/give-up values are now consumed by the Processing wrapper
+ * (src/app/app/voice/processing) after the spine reorder.
  *
  * Convention: all values in milliseconds unless suffixed otherwise.
  * Names describe intent (POLL_INTERVAL, AUTO_ADVANCE_DELAY) rather

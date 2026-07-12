@@ -2,20 +2,22 @@
 
 import { useState } from 'react';
 import { VaultRevealScreen } from '@/components/screens/vault/VaultRevealScreen';
-import { VaultProtectScreen } from '@/components/screens/vault/VaultProtectScreen';
-import { VaultContinuityScreen } from '@/components/screens/vault/VaultContinuityScreen';
-import { VaultSealScreen } from '@/components/screens/vault/VaultSealScreen';
-import { VaultSealedScreen } from '@/components/screens/vault/VaultSealedScreen';
-import { SealAnimation } from '@/components/vault/SealAnimation';
-import type { BillingPlan } from '@/lib/vault';
+import { BronzeVault } from '@/components/vault/BronzeVault';
 
+// Dev sandbox for the surviving vault screen. The old subscribe arc
+// (protect/continuity/seal/sealed) was retired in spine-wiring S4 — Card Capture
+// (/dev/card-capture) + Processing (/dev/processing) replaced it. VaultRevealScreen
+// is temp-reused as the post-payment payoff (spine-wiring-spec §6.1) until the
+// relocated reveal lands. Both the Reveal and the standalone modes now render the
+// canonical bronze vault engine (BronzeVault → paintVaultFrame), not the retired
+// gray SealAnimation.
+//
 // Dev sandbox conventions:
 //   - Top-level at src/app/dev/, never inside src/app/app/dev/.
 //   - Inline style={{ }} is acceptable here — this is a debugging surface,
 //     not shipped UI. Production screen components still follow no-inline-
 //     styles and token-only rules.
 export default function VaultDevSandbox() {
-  const [plan, setPlan] = useState<BillingPlan>('annual');
   const [lastAction, setLastAction] = useState<string>('(none)');
 
   const log = (action: string) =>
@@ -34,61 +36,18 @@ export default function VaultDevSandbox() {
         }}
       >
         <h1 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-          Vault Flow — Dev Sandbox
+          Vault Reveal — Dev Sandbox
         </h1>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12 }}>
-          <div>
-            Plan: <strong>{plan}</strong>
-          </div>
-          <button
-            type="button"
-            onClick={() => setPlan(plan === 'annual' ? 'monthly' : 'annual')}
-            style={{ padding: '4px 8px', fontSize: 12 }}
-          >
-            toggle plan
-          </button>
-          <div>
-            Last action: <strong>{lastAction}</strong>
-          </div>
+        <div style={{ fontSize: 12 }}>
+          Last action: <strong>{lastAction}</strong>
         </div>
       </header>
 
-      <Section label="1. Vault Reveal — /app/vault/reveal">
-        <VaultRevealScreen onAdvance={() => log('advance → protect')} />
+      <Section label="Vault Reveal — /app/vault/reveal (post-payment payoff)">
+        <VaultRevealScreen onAdvance={() => log('advance → First Breath')} />
       </Section>
 
-      <Section label="2. Vault Protect — /app/vault/protect">
-        <VaultProtectScreen
-          plan={plan}
-          onPlanChange={(p) => {
-            setPlan(p);
-            log(`plan → ${p}`);
-          }}
-          onCheckoutInitiate={(p) => log(`checkout initiate → ${p}`)}
-          onDismiss={() => log('dismiss → continuity')}
-        />
-      </Section>
-
-      <Section label="3. Vault Continuity — /app/vault/continuity">
-        <VaultContinuityScreen onAdvance={() => log('advance → seal')} />
-      </Section>
-
-      <Section label="4. Vault Seal — /app/vault/seal">
-        <VaultSealScreen
-          billingPlan={plan}
-          onCheckoutInitiate={(p) => log(`SEAL checkout initiate → ${p}`)}
-          onDismiss={() => log('dismiss → home')}
-        />
-      </Section>
-
-      <Section label="5. Vault Sealed — /app/vault/sealed">
-        <VaultSealedScreen
-          onCreateMessage={() => log('create message → session 8')}
-          onGoHome={() => log('go home')}
-        />
-      </Section>
-
-      <Section label="SealAnimation — standalone (all three modes)">
+      <Section label="BronzeVault — standalone (all three modes)">
         <div
           style={{
             background: '#EDE3D0',
@@ -100,45 +59,24 @@ export default function VaultDevSandbox() {
           }}
         >
           <div style={{ textAlign: 'center' }}>
-            <SealAnimation mode="open" size={200} />
-            <div
-              style={{
-                fontFamily: 'monospace',
-                fontSize: 11,
-                color: '#6B6B6B',
-                marginTop: 8,
-              }}
-            >
+            <BronzeVault mode="open" size={200} />
+            <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#6B6B6B', marginTop: 8 }}>
               open
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <SealAnimation mode="sealed" size={200} />
-            <div
-              style={{
-                fontFamily: 'monospace',
-                fontSize: 11,
-                color: '#6B6B6B',
-                marginTop: 8,
-              }}
-            >
+            <BronzeVault mode="sealed" size={200} />
+            <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#6B6B6B', marginTop: 8 }}>
               sealed
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <SealAnimation
+            <BronzeVault
               mode="animate"
               size={200}
               onComplete={() => log('seal animation complete')}
             />
-            <div
-              style={{
-                fontFamily: 'monospace',
-                fontSize: 11,
-                color: '#6B6B6B',
-                marginTop: 8,
-              }}
-            >
+            <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#6B6B6B', marginTop: 8 }}>
               animate (replays on mount)
             </div>
           </div>

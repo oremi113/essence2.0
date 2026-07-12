@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<!--
+  NOTE FOR CODE ARCHITECT
+  =======================
+  ESSENCE · Step 9 · Settings & Trust   (the control + reassurance surface)
+  PASS 2 of 2 COMPLETE (this file). Static structure + full state matrix +
+  the motion layer below. Design source of truth: production SettingsScreen
+  mirrors this file's copy, layout, grouping, state expression, and motion.
+
+  ARCHITECTURE (layer 3 only)
+   - SettingsScreen receives data via props, never imports Supabase / never fetch:
+       { email, photoUrl|null, authMethod:'magic-link',
+         subscription:{ status, plan, trialEndsAt, renewsAt, paidThroughAt,
+                        priceMonthlyCents, priceAnnualCents,
+                        card:{ brand, last4 } },
+         notifications:{ trialReminders:bool, paymentNotices:bool } }
+   - Proposed route /app/settings (engineering owns the URL; Home B affordance
+     wires to it). /dev/settings renders this with mock data.
+
+  COPY LOCKS THIS SESSION (override the brief's literal candidates, approved)
+   - TRIAL states the end as a DATE FACT, never a countdown, never "N days left"
+     ("5 days left" is a banned urgency pattern, retired on Home B; copy guide
+     bans countdowns). Line: "Free trial · ends June 14" + "Your card won't be
+     charged until then."
+   - RESTORE verb is the bring-back family ("Bring it back" / "bring your vault
+     back"). "restore" survives only in the route /app/vault/restore.
+   - VAULT once-per-screen: the STATUS PILL is the single "Voice Vault" carrier
+     per state (matches Home B's normalized pill). The trust band and every
+     plan / cancel / delete line use "your voice" / "your messages".
+   - SIGN-IN row is display-only: magic-link auth means there is no password,
+     so the row names what the person recognizes ("Sign-in") and reassures
+     ("No password to remember") with NO action button. Do not add a "change"
+     or "email me a link" control unless it does something real (re-auth /
+     device check); a no-op control is worse than none.
+
+  TOKEN CORRECTIONS carried from Home B over the brief's Appendix A
+   - Primary CTA resting fill = --color-mineral-dark #656B73 (white text 5.38:1 AA).
+     #7A8088 was 3.98:1 and fails. Hover = --color-mineral-darker #565C63.
+   - --color-text-secondary-strong #5A5A5A for small reassurance copy on warm.
+   - Lapsed/paused pill warmth = #EBE3D6 / #DCD0BC (muted warm, never red).
+
+  RISKY CONTROLS (no loud red, ever)
+   - Cancel: single confirm, reassurance FIRST, primary action is to KEEP.
+   - Delete account (P1 owner-approved, simple self-serve; behind dev toggle):
+     double-confirm. Beat 1 states plainly what is erased + that it can't be
+     undone. Beat 2 is type-to-confirm friction (friction here is kindness).
+     Terminal "account is closed" is calm, then sign out. Engineering owns the
+     teardown (auth user + the user's rows + stored audio); this file designs
+     the confirmation EXPERIENCE only.
+   - Final destructive button uses --color-status-warning #8A5A1E (amber-umber,
+     weighted) outlined, never terracotta, never bright red.
+
+  MESSAGES ARE IMMUTABLE (DECISIONS lock): no per-message edit/delete here.
+  OUT OF SCOPE (spec-deferred): voice export/download, tier upgrade/switcher,
+  formal GDPR/CCPA tooling, multi-profile.
+
+  STATES on the dev rail:
+   trial · active (monthly) · active (annual) · past_due · lapsed · cancelled
+   loading · error · account-closed · delete-couldn't-finish (partial-failure)
+   cancel-confirm · remove-photo-confirm · change-email
+   delete (beat 1) · delete (beat 2)
+   (+ Delete-in-P1 toggle hides/shows the delete control & its beats)
+
+  MOTION (Pass 2, realized). Calm utility: motion informs, never performs.
+   - PAGE ARRIVAL: light, SECTION-level only (not per-row). Each child fades +
+     rises 8px on --ease-page, 550ms, 60ms section stagger. Plays once on load
+     and on loading->content resolve. Dev-rail state switches do NOT re-arrive.
+     This is the steady-state arrival, never Home B's heavy visit-1 ceremony.
+   - TOGGLES: 200ms bg + knob translate on --ease-essence.
+   - SHEETS: scrim fades 200ms; sheet slides up translateY(100%->0) 400ms
+     --ease-page on open, 280ms --ease-essence on close (asymmetric, set via the
+     transition on each target state). Backdrop tap closes.
+   - DELETE BEATS: one scrim, two beats crossfade IN PLACE (250ms) with the
+     scrim + sheet held, so the flow deepens rather than re-presents. Both beats
+     share one grid cell so the sheet never jumps height. Final destructive
+     button fades from 0.32 to full as DELETE is typed.
+   - SKELETON: 1.6s linear shimmer sweep on lines + band; resolve fades to
+     content which then runs the arrival.
+   - REDUCED MOTION: never adds .is-arriving; animation + transition killed, so
+     everything shows at its resting (final/closed) state instantly. Sheets
+     present without slide, skeleton static, delete flow still works.
+   - PROPS ANIMATED: transform + opacity + background-position only (no
+     layout-triggering props), to hold 60fps at 4x CPU throttle.
+   - Tokens declared in :root match Home B. Production reuses the COLOR/TYPE/
+     RADIUS/MOTION tokens verbatim. A small set of EFFECT-only values are
+     prototype-local and flagged inline (see PORT note 2): skeleton gradient
+     stops, scrim tint, sheet shadow + bespoke radius, btn-warn hover tint, and
+     #fff on the switch knob / confirm field / primary-button text.
+
+  ACCESSIBILITY (Pass-2 port audit, shipped in this file)
+   - Sheets are role="dialog" aria-modal="true", labelled by their heading
+     (delete relabels per beat). Opening moves focus into the sheet; Tab is
+     trapped; Esc closes; closing returns focus to the invoking control.
+   - Type-to-confirm: match is CASE-INSENSITIVE (kinder for 45-70 on mobile, no
+     caps-lock trap). The displayed word is lowercase "delete" so it does not
+     imply exact caps. OWNER/ARCHITECT CALL: flip to exact-string match if you
+     want maximum friction; this file leans kind.
+
+  PORT NOTES (for production SettingsScreen; these are engineering's to land)
+   1. Add to @theme FIRST, then port: --color-lapsed-surface #EBE3D6,
+      --color-lapsed-border #DCD0BC, --color-hairline rgba(28,26,24,0.08)
+      (or map hairline to --color-border). --color-bg-warm-1 is drifted: accept
+      @theme's #FBF6ED, do not re-hardcode this file's #F9F4ED. Trust band uses
+      --color-surface-honey (canonical #F2E8D6), NOT the removed drifted bg-gold.
+   2. Tokenize or keep flagged the prototype-local effect values listed above.
+   3. Three-layer: SettingsScreen is props-only (shape at lines 12-18), never
+      imports Supabase/fetch/redirect. page.tsx owns cancel/update-card/delete
+      server actions + router pushes; screen bubbles them via callback props.
+      Permanent /dev/settings with mock data (non-negotiable). Register the new
+      route /app/settings (new, not a rename).
+   4. Delete teardown ordering: render the closed terminal ONLY AFTER the
+      fallible multi-write succeeds; on failure show the delete-failed terminal
+      (built, on the rail). See the confirmDelete note in the script.
+   5. Account row surfaces:
+      - Email "Change" is a REAL sheet (magic-link identity change; confirm-by-
+        link, old email keeps working until confirmed). Wired here.
+      - Payment "Update" ROUTES OUT to Stripe's hosted card sheet / Element. Do
+        NOT hand-build a card form (PCI surface you don't need to own). This file
+        specs no card fields. On return, confirm inline with "Your card is
+        updated." Terminal: confirm the update surface before wiring.
+   6. Telemetry: notification toggles + cancel/delete/update/email-change events
+      are telemetry-impacting. Add docs/analytics/YYYY-MM-DD-settings.md in the
+      same PR (schema in docs/analytics/README.md).
+
+  REFUSED ON PURPOSE (belong to ceremonial screens, not this one): the breathing
+  stone, ember pulse, ground settle, CTA shimmer sweep, ambient glow, per-row
+  stagger, scroll-triggered reveals. If a gesture performs rather than informs,
+  it was cut.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+<title>ESSENCE · Settings & Trust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* ---- motion (Pass 2 tunes; tokens declared so production matches) ---- */
+    --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);
+    --ease-page: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-press: cubic-bezier(0.2, 0.0, 0.0, 1);
+    --duration-page: 700ms;
+    --duration-micro: 200ms;
+    --duration-small: 400ms;
+    --duration-medium: 800ms;
+
+    /* ---- color (canonical, sourced from Home B globals set) ---- */
+    --color-bg-neutral: #FBF8F4;
+    --color-bg-warm-1: #F9F4ED;   /* NOTE for port: @theme canonical is #FBF6ED. Accept the @theme value on port; do not re-hardcode this prototype value. (Manage card.) */
+    --color-surface-card: #F6F0E5;
+    --color-surface-warm: #EDE3D0;
+    --color-surface-honey: #F2E8D6;
+    /* removed on port-audit: --color-bg-gold / --color-bg-warm-2 / --color-bg-rich
+       were unused after the trust band moved to --color-surface-honey, and each
+       had drifted from @theme. The trust band now uses the canonical honey value
+       (#F2E8D6 exact), so a verbatim port can't darken the anchor. */
+
+    --color-mineral: #7A8088;          /* accents / dots / focus ring only */
+    --color-mineral-dark: #656B73;     /* primary CTA resting (AA) */
+    --color-mineral-darker: #565C63;   /* primary CTA hover */
+
+    --color-text-primary: #1C1A18;
+    --color-text-secondary: #6B6B6B;
+    --color-text-secondary-strong: #5A5A5A;  /* small reassurance on warm */
+    --color-text-tertiary: #ADA9A5;          /* large text only, never small */
+
+    --color-status-warning: #8A5A1E;   /* amber-umber, weighted (delete only) */
+    /* NOTE for port: the three tokens below + --color-hairline do NOT exist in
+       @theme yet. Per the Step 3 contract, add them to src/app/globals.css
+       @theme FIRST, then port. Ported verbatim against today's @theme they
+       resolve to nothing and the pill fills / borders / hairlines render blank. */
+    --color-lapsed-surface: #EBE3D6;   /* paused/lapsed/cancelled pill fill, never red */
+    --color-lapsed-border: #DCD0BC;    /* pill + switch + confirm-field + trust-band borders */
+
+    --color-border: rgba(0, 0, 0, 0.06);
+    --color-hairline: rgba(28, 26, 24, 0.08);   /* row top-borders (or map to --color-border on port) */
+
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --shadow-mineral: 0 4px 14px rgba(110, 80, 40, 0.20);
+
+    /* ---- type ---- */
+    --font-display: 'Spectral', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --text-title: 28px;
+    --text-body-lg: 18px;
+    --text-body: 16px;
+    --text-ui: 15px;
+    --text-small: 14px;   /* floor, do not go below */
+    --text-caption: 12px;
+
+    /* ---- radius ---- */
+    --radius-lg: 10px;
+    --radius-2xl: 16px;
+    --radius-pill: 20px;
+    --radius-full: 9999px;
+
+    /* ---- spacing ---- */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 32px;
+    --space-3xl: 40px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #2A2622;
+    font-family: var(--font-body);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ===== layout: device + dev rail side by side ===== */
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 28px;
+    padding: 40px 24px;
+    flex-wrap: wrap;
+  }
+
+  /* ===== dev rail ===== */
+  .devrail {
+    width: 220px;
+    background: #1C1A18;
+    border-radius: var(--radius-2xl);
+    padding: 18px 16px 22px;
+    color: #E8E2D8;
+    position: sticky;
+    top: 40px;
+    flex-shrink: 0;
+  }
+  .devrail h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #9A938A;
+    font-weight: 700;
+    margin: 16px 0 8px;
+  }
+  .devrail h4:first-child { margin-top: 0; }
+  .devrail .rail-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #2A2622;
+    color: #E8E2D8;
+    border: 1px solid #3A352F;
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 13px;
+    font-family: var(--font-body);
+    cursor: pointer;
+    margin-bottom: 6px;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .devrail .rail-btn:hover { background: #332E28; }
+  .devrail .rail-btn.active {
+    background: #4A453E;
+    border-color: #6B6259;
+    color: #fff;
+    font-weight: 600;
+  }
+  .devrail .rail-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: #2A2622;
+    border: 1px solid #3A352F;
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .devrail .rail-toggle button {
+    background: #4A453E;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--font-body);
+  }
+
+  /* ===== device frame (matches Home B) ===== */
+  .device {
+    position: relative;
+    width: 390px;
+    height: 844px;
+    background: #0A0A0A;
+    border-radius: 56px;
+    padding: 12px;
+    box-shadow: 0 0 0 2px #1C1A18, 0 30px 80px rgba(0,0,0,0.55);
+    flex-shrink: 0;
+  }
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--color-bg-neutral);
+    border-radius: 44px;
+    overflow: hidden;
+  }
+  .island {
+    position: absolute;
+    top: 11px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    background: #0A0A0A;
+    border-radius: var(--radius-full);
+    z-index: 60;
+  }
+  .status-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 54px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    font-size: 15px; font-weight: 600;
+    color: var(--color-text-primary);
+    z-index: 55;
+    pointer-events: none;
+  }
+  .status-bar .glyphs { display: flex; gap: 6px; align-items: center; }
+  .home-indicator {
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    background: rgba(28,26,24,0.30);
+    border-radius: var(--radius-full);
+    z-index: 60;
+  }
+
+  /* ===== scroll surface ===== */
+  .surface {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 54px 22px 44px;
+  }
+
+  /* ===== top bar (back + title) ===== */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    margin-bottom: 10px;
+  }
+  .back-btn {
+    width: 44px; height: 44px;
+    margin-left: -10px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-full);
+  }
+  .back-btn:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; }
+  .topbar .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--color-text-primary);
+  }
+
+  /* ===== trust band (the emotional anchor) ===== */
+  .trust-band {
+    background: var(--color-surface-honey);
+    border: 1px solid var(--color-lapsed-border);
+    border-radius: var(--radius-2xl);
+    padding: 22px 22px 20px;
+    margin-bottom: var(--space-xl);
+  }
+  .trust-band p {
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    line-height: 1.55;
+    color: var(--color-text-primary);
+  }
+  .trust-band p + p {
+    margin-top: 10px;
+    font-size: var(--text-small);
+    color: var(--color-text-secondary-strong);
+    font-family: var(--font-body);
+  }
+
+  /* ===== sections ===== */
+  .section { margin-bottom: var(--space-xl); }
+  .eyebrow {
+    font-size: var(--text-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--color-text-secondary);
+    margin: 0 4px 10px;
+  }
+  .card {
+    background: var(--color-surface-card);
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+  }
+
+  /* status pill (the single Voice Vault carrier) */
+  .plan-head { padding: 20px 18px 4px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 9px 16px;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-honey);
+    border: 1px solid transparent;
+    font-size: var(--text-body);
+    line-height: 1.4;
+    color: var(--color-text-primary);
+  }
+  .pill .dot {
+    width: 7px; height: 7px; border-radius: var(--radius-full);
+    background: var(--color-mineral); flex-shrink: 0;
+  }
+  .pill.is-protected { background: var(--color-surface-warm); }
+  .pill.is-paused {
+    background: var(--color-lapsed-surface);
+    border-color: var(--color-lapsed-border);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .pill.is-paused .pill-main { font-weight: 600; }
+  .pill.is-paused .pill-sub {
+    font-size: var(--text-small);
+    color: var(--color-text-secondary-strong);
+  }
+
+  .plan-body { padding: 14px 18px 18px; }
+  .plan-line {
+    font-size: var(--text-body);
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+  .plan-line.sub {
+    margin-top: 6px;
+    font-size: var(--text-small);
+    color: var(--color-text-secondary);
+  }
+  .plan-fixable {
+    margin-top: 4px;
+    font-size: var(--text-body);
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+
+  /* rows */
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-height: 56px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--color-hairline);
+  }
+  .row:first-child { border-top: none; }
+  .row .row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .row .row-label { font-size: var(--text-body); color: var(--color-text-primary); }
+  .row .row-value { font-size: var(--text-small); color: var(--color-text-secondary); }
+  .row .row-action {
+    flex-shrink: 0;
+    min-height: 44px;
+    display: flex; align-items: center;
+    background: none; border: none; cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--text-ui);
+    font-weight: 500;
+    color: var(--color-mineral-dark);
+    padding: 0 2px;
+  }
+  .row .row-action:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 2px; border-radius: 6px; }
+  .row-foot {
+    padding: 0 18px 14px;
+    margin-top: -4px;
+    font-size: var(--text-small);
+    color: var(--color-text-secondary-strong);
+  }
+
+  /* avatar (photo row) */
+  .avatar {
+    width: 40px; height: 40px; border-radius: var(--radius-full);
+    background: var(--color-surface-warm);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 18px;
+    color: var(--color-text-secondary-strong);
+    flex-shrink: 0;
+  }
+  .photo-row .row-main { flex-direction: row; align-items: center; gap: 12px; }
+
+  /* primary action button (update payment / bring it back) */
+  .action-stack { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .btn {
+    width: 100%;
+    min-height: 52px;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background var(--duration-micro) var(--ease-press),
+                transform var(--duration-micro) var(--ease-press);
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 3px; }
+  .btn-primary {
+    background: var(--color-mineral-dark);
+    color: #fff;
+    box-shadow: var(--shadow-mineral);
+  }
+  .btn-primary:hover { background: var(--color-mineral-darker); }
+  .btn-quiet {
+    background: transparent;
+    color: var(--color-text-secondary);
+    min-height: 44px;
+    font-weight: 500;
+    box-shadow: none;
+  }
+  .btn-quiet:hover { color: var(--color-text-primary); }
+
+  /* toggle switch */
+  .switch {
+    position: relative;
+    width: 48px; height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--color-surface-warm);
+    border: 1px solid var(--color-lapsed-border);
+    cursor: pointer; flex-shrink: 0;
+    padding: 0;
+    transition: background var(--duration-small) var(--ease-essence);
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 22px; height: 22px;
+    border-radius: var(--radius-full);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--duration-small) var(--ease-essence);
+  }
+  .switch[aria-checked="true"] { background: var(--color-mineral-dark); border-color: var(--color-mineral-dark); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+  .switch:focus-visible { outline: 2px solid var(--color-mineral); outline-offset: 3px; }
+
+  /* manage zone (quiet) */
+  .manage .card { background: var(--color-bg-warm-1); }
+  .manage .row-action.signout { color: var(--color-text-primary); font-weight: 500; }
+  .manage .row-action.delete { color: var(--color-text-secondary); font-weight: 500; }
+  .manage .delete-row .row-value { color: var(--color-text-secondary); }
+
+  /* ===== plan variants visibility ===== */
+  .plan-variant { display: none; }
+  .screen[data-sub="trial"]          .plan-variant[data-for="trial"],
+  .screen[data-sub="active-monthly"] .plan-variant[data-for="active-monthly"],
+  .screen[data-sub="active-annual"]  .plan-variant[data-for="active-annual"],
+  .screen[data-sub="past_due"]       .plan-variant[data-for="past_due"],
+  .screen[data-sub="lapsed"]         .plan-variant[data-for="lapsed"],
+  .screen[data-sub="cancelled"]      .plan-variant[data-for="cancelled"] { display: block; }
+
+  /* cancel link only where a live subscription exists */
+  .cancel-link { display: none; }
+  .screen[data-sub="trial"] .cancel-link,
+  .screen[data-sub="active-monthly"] .cancel-link,
+  .screen[data-sub="active-annual"] .cancel-link { display: flex; }
+
+  /* delete control gated by P1 toggle */
+  .screen[data-delete="off"] .delete-row { display: none; }
+
+  /* ===== system views (loading / error / closed) replace content ===== */
+  .view-content { display: block; }
+  .view-overlay {
+    display: none;
+    position: absolute; inset: 0;
+    background: var(--color-bg-neutral);
+    z-index: 40;
+    padding: 54px 22px 44px;
+    overflow-y: auto;
+  }
+  .screen[data-view="loading"] .view-content,
+  .screen[data-view="error"] .view-content,
+  .screen[data-view="closed"] .view-content,
+  .screen[data-view="delete-failed"] .view-content { display: none; }
+  .screen[data-view="loading"] .view-loading,
+  .screen[data-view="error"] .view-error,
+  .screen[data-view="closed"] .view-closed,
+  .screen[data-view="delete-failed"] .view-delete-failed { display: block; }
+
+  /* loading skeleton */
+  .sk {
+    background: var(--color-surface-card);
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    margin-bottom: var(--space-xl);
+  }
+  /* prototype-local: skeleton gradient stops are effect values @theme does not
+     define. On port, add as tokens (e.g. --sk-base / --sk-sheen) or keep flagged. */
+  .sk-line {
+    height: 14px; border-radius: 7px;
+    background: linear-gradient(90deg, #ECE5DA 25%, #F4EEE5 37%, #ECE5DA 63%);
+    background-size: 400% 100%;
+    margin: 0 0 10px;
+    animation: sk-sweep 1.6s linear infinite;
+  }
+  .sk-band {
+    height: 92px; border-radius: var(--radius-2xl);
+    background: linear-gradient(90deg, #F0E7D6 25%, #F6EEDF 37%, #F0E7D6 63%);
+    background-size: 400% 100%;
+    margin-bottom: var(--space-xl); opacity: 0.7;
+    animation: sk-sweep 1.6s linear infinite;
+  }
+  @keyframes sk-sweep {
+    0%   { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+  }
+  .sk-pad { padding: 18px; }
+
+  /* error + closed centered */
+  .centered {
+    height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 0 16px;
+  }
+  .centered h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--text-title);
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .centered p {
+    font-size: var(--text-body);
+    line-height: 1.55;
+    color: var(--color-text-secondary);
+    max-width: 280px;
+    margin-bottom: 26px;
+  }
+  .centered .btn { max-width: 260px; }
+  .centered .btn + .btn { margin-top: 10px; }
+
+  /* ===== bottom sheets (overlays) ===== */
+  .scrim {
+    position: absolute; inset: 0;
+    background: rgba(28,26,24,0.32);   /* prototype-local: scrim tint, @theme has no token */
+    z-index: 70;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--duration-micro) var(--ease-essence),
+                visibility 0s linear var(--duration-micro);
+  }
+  .screen[data-overlay="cancel"] .scrim[data-for="cancel"],
+  .screen[data-overlay="photo"]  .scrim[data-for="photo"],
+  .screen[data-overlay="email"]  .scrim[data-for="email"],
+  .screen[data-overlay="delete"] .scrim[data-for="delete"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--duration-micro) var(--ease-essence);
+  }
+
+  .sheet {
+    width: 100%;
+    background: var(--color-bg-neutral);
+    border-radius: 28px 28px 44px 44px;   /* prototype-local: bespoke sheet radius (top sheet, bottom matches device) */
+    padding: 26px 24px 30px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 -8px 28px rgba(0,0,0,0.18);   /* prototype-local: upward sheet shadow, @theme has no token */
+    transform: translateY(100%);
+    transition: transform 280ms var(--ease-essence);          /* close: faster */
+    will-change: transform;
+  }
+  .screen[data-overlay="cancel"] .scrim[data-for="cancel"] .sheet,
+  .screen[data-overlay="photo"]  .scrim[data-for="photo"] .sheet,
+  .screen[data-overlay="email"]  .scrim[data-for="email"] .sheet,
+  .screen[data-overlay="delete"] .scrim[data-for="delete"] .sheet {
+    transform: translateY(0);
+    transition: transform var(--duration-small) var(--ease-page);  /* open */
+  }
+
+  /* delete: two beats crossfade in place, scrim + sheet held */
+  .delete-stack { display: grid; }
+  .delete-stack > .beat {
+    grid-area: 1 / 1;
+    transition: opacity 250ms var(--ease-essence);
+  }
+  .delete-stack > .beat-2 { opacity: 0; pointer-events: none; }
+  .screen[data-delete-step="2"] .delete-stack > .beat-1 { opacity: 0; pointer-events: none; }
+  .screen[data-delete-step="2"] .delete-stack > .beat-2 { opacity: 1; pointer-events: auto; }
+  .sheet h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 23px;
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .sheet p {
+    font-size: var(--text-body);
+    line-height: 1.55;
+    color: var(--color-text-secondary);
+    margin-bottom: 10px;
+  }
+  .sheet p.reassure { color: var(--color-text-primary); }
+  .sheet .sheet-actions { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .btn-warn {
+    background: transparent;
+    color: var(--color-status-warning);
+    border: 1.5px solid var(--color-status-warning);
+    box-shadow: none;
+    transition: opacity var(--duration-micro) var(--ease-essence),
+                background var(--duration-micro) var(--ease-press);
+  }
+  .btn-warn:hover { background: rgba(138,90,30,0.06); }   /* prototype-local: warning-tint hover, derived from --color-status-warning */
+  .btn-warn[disabled] { opacity: 0.32; cursor: not-allowed; }
+
+  /* type-to-confirm field */
+  .confirm-field {
+    width: 100%;
+    min-height: 52px;
+    border: 1.5px solid var(--color-lapsed-border);
+    border-radius: var(--radius-lg);
+    padding: 0 16px;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--color-text-primary);
+    background: #fff;
+    margin: 6px 0 4px;
+    letter-spacing: 0.04em;
+  }
+  /* the sheet container is focused programmatically (tabindex -1) only to announce
+     the dialog title — it is not a tab-reachable target, so suppress its visible
+     ring. The real :focus-visible mineral rings stay on the buttons/inputs. */
+  .sheet:focus { outline: none; }
+  .confirm-field:focus { outline: none; border-color: var(--color-mineral); }
+  .confirm-hint { font-size: var(--text-small); color: var(--color-text-secondary); margin-bottom: 6px; }
+
+  /* ===== page arrival (light, section-level, signature ease-page) ===== */
+  /* default resting state is fully visible; arrival plays only when .is-arriving
+     is added (JS adds on load + on loading->content resolve, never on reduced
+     motion, never on dev-rail state switches). */
+  @keyframes arrive {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .view-content.is-arriving > .topbar,
+  .view-content.is-arriving > .trust-band,
+  .view-content.is-arriving > .section {
+    animation: arrive 550ms var(--ease-page) both;
+  }
+  .view-content.is-arriving > :nth-child(1) { animation-delay: 0ms; }
+  .view-content.is-arriving > :nth-child(2) { animation-delay: 60ms; }
+  .view-content.is-arriving > :nth-child(3) { animation-delay: 120ms; }
+  .view-content.is-arriving > :nth-child(4) { animation-delay: 170ms; }
+  .view-content.is-arriving > :nth-child(5) { animation-delay: 220ms; }
+  .view-content.is-arriving > :nth-child(6) { animation-delay: 270ms; }
+
+  /* reduced motion: pin to rest. No arrival, no sweep, no slide.
+     Resting states are all the final visible/closed states, so killing
+     animation + transition shows everything instantly and still lets the
+     attribute selectors flip overlays open/closed without movement. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .scrim { transition: none !important; }
+  }
+
+  /* narrow viewport: stack rail under device */
+  @media (max-width: 720px) {
+    .devrail { position: static; width: 390px; max-width: 100%; order: 2; }
+    .device { order: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ===================== DEVICE ===================== -->
+  <div class="device">
+    <div class="screen" id="screen" data-view="content" data-sub="trial" data-overlay="none" data-delete="on">
+      <div class="island"></div>
+      <div class="status-bar">
+        <span>9:41</span>
+        <span class="glyphs">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="1.5" width="3" height="10.5" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity="0.35"/></svg>
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><path d="M8.5 2.4c2 0 3.8.8 5.1 2.1l1.2-1.2A9 9 0 0 0 2.2 3.3l1.2 1.2A7 7 0 0 1 8.5 2.4Z"/><path d="M8.5 6c1 0 2 .4 2.7 1.1l1.2-1.2a6 6 0 0 0-7.8 0l1.2 1.2A3.8 3.8 0 0 1 8.5 6Z"/><circle cx="8.5" cy="9.6" r="1.6"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="1.5" height="4" rx="0.75" fill="currentColor" opacity="0.5"/></svg>
+        </span>
+      </div>
+
+      <!-- =============== MAIN CONTENT =============== -->
+      <div class="surface view-content">
+
+        <div class="topbar">
+          <button class="back-btn" aria-label="Back to home">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <span class="title">Settings</span>
+        </div>
+
+        <!-- TRUST BAND (anchor; carries no Vault proper noun) -->
+        <div class="trust-band">
+          <p>Your voice and your messages are yours. They stay safe here, and nothing happens to them without you.</p>
+          <p>Yours to manage, and yours alone.</p>
+        </div>
+
+        <!-- PLAN -->
+        <div class="section">
+          <div class="eyebrow">Your plan</div>
+          <div class="card">
+
+            <!-- TRIAL -->
+            <div class="plan-variant" data-for="trial">
+              <div class="plan-head">
+                <span class="pill"><span class="dot"></span>Voice Vault · Trial</span>
+              </div>
+              <div class="plan-body">
+                <div class="plan-line">Free trial · ends June 14</div>
+                <div class="plan-line sub">Your card won't be charged until then. After that it's $12.99 a month.</div>
+              </div>
+              <div class="row">
+                <div class="row-main"><span class="row-label">Payment method</span><span class="row-value">Visa ending 4242</span></div>
+                <button class="row-action">Update</button>
+              </div>
+              <div class="row cancel-link">
+                <div class="row-main"><span class="row-label">Cancel subscription</span></div>
+                <button class="row-action" onclick="openOverlay('cancel')">Cancel</button>
+              </div>
+              <div class="row-foot">Cancel during your trial and your card is never charged. Your messages stay safe.</div>
+            </div>
+
+            <!-- ACTIVE MONTHLY -->
+            <div class="plan-variant" data-for="active-monthly">
+              <div class="plan-head">
+                <span class="pill is-protected"><span class="dot"></span>Voice Vault · Protected</span>
+              </div>
+              <div class="plan-body">
+                <div class="plan-line">Renews July 14 · $12.99 a month</div>
+              </div>
+              <div class="row">
+                <div class="row-main"><span class="row-label">Payment method</span><span class="row-value">Visa ending 4242</span></div>
+                <button class="row-action">Update</button>
+              </div>
+              <div class="row cancel-link">
+                <div class="row-main"><span class="row-label">Cancel subscription</span></div>
+                <button class="row-action" onclick="openOverlay('cancel')">Cancel</button>
+              </div>
+              <div class="row-foot">If you ever cancel, your messages stay safe and you keep access through the date you've paid for.</div>
+            </div>
+
+            <!-- ACTIVE ANNUAL -->
+            <div class="plan-variant" data-for="active-annual">
+              <div class="plan-head">
+                <span class="pill is-protected"><span class="dot"></span>Voice Vault · Protected</span>
+              </div>
+              <div class="plan-body">
+                <div class="plan-line">Renews June 14, 2027 · $119 a year</div>
+                <div class="plan-line sub">That's about $10 a month to keep your voice safe.</div>
+              </div>
+              <div class="row">
+                <div class="row-main"><span class="row-label">Payment method</span><span class="row-value">Visa ending 4242</span></div>
+                <button class="row-action">Update</button>
+              </div>
+              <div class="row cancel-link">
+                <div class="row-main"><span class="row-label">Cancel subscription</span></div>
+                <button class="row-action" onclick="openOverlay('cancel')">Cancel</button>
+              </div>
+              <div class="row-foot">If you ever cancel, your messages stay safe and you keep access through the date you've paid for.</div>
+            </div>
+
+            <!-- PAST DUE -->
+            <div class="plan-variant" data-for="past_due">
+              <div class="plan-head">
+                <span class="pill is-protected"><span class="dot"></span>Voice Vault · Protected</span>
+              </div>
+              <div class="plan-body">
+                <div class="plan-fixable">We couldn't process your last payment. Update your card to keep your voice safe.</div>
+              </div>
+              <div class="row">
+                <div class="row-main"><span class="row-label">Payment method</span><span class="row-value">Visa ending 4242</span></div>
+              </div>
+              <div class="action-stack">
+                <button class="btn btn-primary">Update card</button>
+              </div>
+              <div class="row-foot">Your messages are safe either way. We'll keep trying gently in the background.</div>
+            </div>
+
+            <!-- LAPSED -->
+            <div class="plan-variant" data-for="lapsed">
+              <div class="plan-head">
+                <span class="pill is-paused">
+                  <span class="pill-main">Your messages are safe</span>
+                  <span class="pill-sub">Voice Vault · Paused</span>
+                </span>
+              </div>
+              <div class="plan-body">
+                <div class="plan-line">It's paused for now. You can bring it back whenever you're ready.</div>
+              </div>
+              <div class="action-stack">
+                <button class="btn btn-primary">Bring it back</button>
+              </div>
+              <div class="row-foot">Everything you've made is kept just as you left it.</div>
+            </div>
+
+            <!-- CANCELLED -->
+            <div class="plan-variant" data-for="cancelled">
+              <div class="plan-head">
+                <span class="pill is-paused">
+                  <span class="pill-main">Your messages are safe</span>
+                  <span class="pill-sub">Voice Vault · Open until July 14</span>
+                </span>
+              </div>
+              <div class="plan-body">
+                <div class="plan-line">You've cancelled. You'll keep access until July 14, and your messages stay safe after that.</div>
+              </div>
+              <div class="action-stack">
+                <button class="btn btn-primary">Bring it back</button>
+              </div>
+              <div class="row-foot">The door stays open. Come back whenever you're ready.</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div class="section">
+          <div class="eyebrow">Notifications</div>
+          <div class="card">
+            <div class="row">
+              <div class="row-main">
+                <span class="row-label">Trial and renewal reminders</span>
+                <span class="row-value">A gentle heads-up before anything is charged</span>
+              </div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="Trial and renewal reminders" onclick="toggleSwitch(this)"></button>
+            </div>
+            <div class="row">
+              <div class="row-main">
+                <span class="row-label">Payment notices</span>
+                <span class="row-value">Only if a payment needs your attention</span>
+              </div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="Payment notices" onclick="toggleSwitch(this)"></button>
+            </div>
+            <div class="row-foot">These are the only emails we send.</div>
+          </div>
+        </div>
+
+        <!-- ACCOUNT -->
+        <div class="section">
+          <div class="eyebrow">Account</div>
+          <div class="card">
+            <div class="row">
+              <div class="row-main"><span class="row-label">Email</span><span class="row-value">rosa.mendez@example.com</span></div>
+              <button class="row-action" onclick="openOverlay('email')">Change</button>
+            </div>
+            <div class="row">
+              <div class="row-main"><span class="row-label">Sign-in</span><span class="row-value">We email a secure link each time. No password to remember.</span></div>
+            </div>
+            <div class="row photo-row">
+              <div class="row-main">
+                <span class="avatar">R</span>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <span class="row-label">Photo</span>
+                  <span class="row-value">Shown on your home</span>
+                </div>
+              </div>
+              <button class="row-action" onclick="openOverlay('photo')">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MANAGE (quiet) -->
+        <div class="section manage">
+          <div class="card">
+            <div class="row">
+              <div class="row-main"><span class="row-label">Sign out</span></div>
+              <button class="row-action signout">Sign out</button>
+            </div>
+            <div class="row delete-row">
+              <div class="row-main">
+                <span class="row-label">Delete account</span>
+                <span class="row-value">Leave and erase everything</span>
+              </div>
+              <button class="row-action delete" onclick="openDelete(1)">Delete</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /view-content -->
+
+      <!-- =============== LOADING =============== -->
+      <div class="view-overlay view-loading">
+        <div class="topbar"><span class="title" style="color:var(--color-text-secondary)">Settings</span></div>
+        <div class="sk-band"></div>
+        <div class="sk"><div class="sk-pad">
+          <div class="sk-line" style="width:40%"></div>
+          <div class="sk-line" style="width:70%"></div>
+          <div class="sk-line" style="width:55%; margin-bottom:0"></div>
+        </div></div>
+        <div class="sk"><div class="sk-pad">
+          <div class="sk-line" style="width:60%"></div>
+          <div class="sk-line" style="width:48%; margin-bottom:0"></div>
+        </div></div>
+      </div>
+
+      <!-- =============== ERROR (Home B copy) =============== -->
+      <div class="view-overlay view-error">
+        <div class="centered">
+          <h2>Your messages are safe</h2>
+          <p>This didn't load just now. Try again in a moment.</p>
+          <button class="btn btn-primary">Try again</button>
+        </div>
+      </div>
+
+      <!-- =============== ACCOUNT CLOSED (terminal) =============== -->
+      <div class="view-overlay view-closed">
+        <div class="centered">
+          <h2>Your account is closed</h2>
+          <p>Your voice and your messages have been erased. Take good care.</p>
+          <button class="btn btn-quiet" style="max-width:240px">Return to sign in</button>
+        </div>
+      </div>
+
+      <!-- =============== DELETE COULDN'T FINISH (partial-failure terminal) =============== -->
+      <!-- Reached ONLY when the production teardown half-fails. Reassurance first:
+           the account is intact, not stranded in a corrupted in-between. -->
+      <div class="view-overlay view-delete-failed">
+        <div class="centered">
+          <h2>Your account is still here</h2>
+          <p>We couldn't finish closing it just now. Nothing was lost, and everything is just as it was. You can try again, or reach us and we'll take care of it.</p>
+          <button class="btn btn-primary" style="max-width:260px" onclick="openDelete(2)">Try again</button>
+          <button class="btn btn-quiet" style="max-width:240px" onclick="setView('content')">Not now</button>
+        </div>
+      </div>
+
+      <!-- =============== OVERLAYS / SHEETS =============== -->
+
+      <!-- cancel -->
+      <div class="scrim" data-for="cancel" onclick="scrimClose(event,'cancel')">
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-cancel-title" tabindex="-1">
+          <h3 id="sheet-cancel-title">Cancel your subscription?</h3>
+          <p class="reassure">Your messages stay safe. You'll keep access until July 14, and you can come back anytime.</p>
+          <div class="sheet-actions">
+            <button class="btn btn-primary" onclick="closeOverlay()">Keep my subscription</button>
+            <button class="btn btn-quiet" onclick="closeOverlay()">Cancel subscription</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- remove photo -->
+      <div class="scrim" data-for="photo" onclick="scrimClose(event,'photo')">
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-photo-title" tabindex="-1">
+          <h3 id="sheet-photo-title">Remove your photo?</h3>
+          <p>You can add one again later, whenever you like.</p>
+          <div class="sheet-actions">
+            <button class="btn btn-primary" onclick="closeOverlay()">Keep photo</button>
+            <button class="btn btn-quiet" onclick="closeOverlay()">Remove photo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- change email (real surface: changes login identity under magic-link, so confirm-by-link) -->
+      <div class="scrim" data-for="email" onclick="scrimClose(event,'email')">
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-email-title" tabindex="-1">
+          <h3 id="sheet-email-title">Change your email</h3>
+          <p>Enter the new address you'd like to use. We'll send a link there to confirm it's yours. Until you tap that link, your current email keeps working.</p>
+          <input class="confirm-field" type="email" placeholder="you@example.com" aria-label="New email address" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" />
+          <div class="sheet-actions">
+            <button class="btn btn-primary" onclick="closeOverlay()">Send the link</button>
+            <button class="btn btn-quiet" onclick="closeOverlay()">Not now</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- delete: one scrim, two beats crossfade in place (scrim + sheet held) -->
+      <div class="scrim" data-for="delete" onclick="scrimClose(event,'delete')">
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-delete1-title" tabindex="-1">
+          <div class="delete-stack">
+            <!-- beat 1 -->
+            <div class="beat beat-1">
+              <h3 id="sheet-delete1-title">Delete your account?</h3>
+              <p class="reassure">This erases your account, your voice, and all of your messages.</p>
+              <p>It can't be undone. Nothing is kept, and nothing can be brought back.</p>
+              <div class="sheet-actions">
+                <button class="btn btn-primary" onclick="closeOverlay()">Keep my account</button>
+                <button class="btn btn-quiet" onclick="deleteStep(2)">Continue</button>
+              </div>
+            </div>
+            <!-- beat 2 (type-to-confirm; match is case-insensitive, so the word is shown lowercase, not as exact caps) -->
+            <div class="beat beat-2">
+              <h3 id="sheet-delete2-title">One last step</h3>
+              <p>To confirm, type the word <strong>delete</strong> below. This erases everything and can't be undone.</p>
+              <input class="confirm-field" type="text" placeholder="delete" aria-label="Type delete to confirm" oninput="checkDelete(this)" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" />
+              <div class="confirm-hint">You're in control. You can close this and nothing happens.</div>
+              <div class="sheet-actions">
+                <button class="btn btn-quiet" onclick="closeOverlay()">Keep my account</button>
+                <button class="btn btn-warn" id="delete-final" disabled onclick="confirmDelete()">Delete everything</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-indicator"></div>
+    </div><!-- /screen -->
+  </div><!-- /device -->
+
+  <!-- ===================== DEV RAIL ===================== -->
+  <div class="devrail">
+    <h4>Subscription</h4>
+    <button class="rail-btn active" data-sub="trial" onclick="setSub('trial',this)">Trial</button>
+    <button class="rail-btn" data-sub="active-monthly" onclick="setSub('active-monthly',this)">Active · monthly</button>
+    <button class="rail-btn" data-sub="active-annual" onclick="setSub('active-annual',this)">Active · annual</button>
+    <button class="rail-btn" data-sub="past_due" onclick="setSub('past_due',this)">Past due</button>
+    <button class="rail-btn" data-sub="lapsed" onclick="setSub('lapsed',this)">Lapsed</button>
+    <button class="rail-btn" data-sub="cancelled" onclick="setSub('cancelled',this)">Cancelled</button>
+
+    <h4>System</h4>
+    <button class="rail-btn" data-view="content" onclick="setView('content',this)">Content</button>
+    <button class="rail-btn" data-view="loading" onclick="setView('loading',this)">Loading</button>
+    <button class="rail-btn" data-view="error" onclick="setView('error',this)">Error</button>
+    <button class="rail-btn" data-view="closed" onclick="setView('closed',this)">Account closed</button>
+    <button class="rail-btn" data-view="delete-failed" onclick="setView('delete-failed',this)">Delete couldn't finish</button>
+    <button class="rail-btn" onclick="playResolve()">▸ Play resolve</button>
+    <button class="rail-btn" onclick="replayArrival()">▸ Replay arrival</button>
+
+    <h4>Confirm sheets</h4>
+    <button class="rail-btn" onclick="openOverlay('cancel')">Cancel subscription</button>
+    <button class="rail-btn" onclick="openOverlay('photo')">Remove photo</button>
+    <button class="rail-btn" onclick="openDelete(1)">Delete · beat 1</button>
+    <button class="rail-btn" onclick="openDelete(2)">Delete · beat 2</button>
+
+    <h4>Delete in P1</h4>
+    <div class="rail-toggle">
+      <span id="del-label">On</span>
+      <button onclick="toggleDelete()">Flip</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var screenEl = document.getElementById('screen');
+  var contentEl = document.querySelector('.view-content');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* play the light section stagger once */
+  function runArrival() {
+    if (reduceMotion) return;
+    contentEl.classList.remove('is-arriving');
+    void contentEl.offsetWidth;          /* restart the animation */
+    contentEl.classList.add('is-arriving');
+  }
+  function replayArrival() {
+    setView('content');
+    runArrival();
+  }
+
+  function setSub(sub, btn) {
+    screenEl.setAttribute('data-sub', sub);
+    setView('content');                  /* state switches do NOT re-arrive */
+    document.querySelectorAll('.devrail .rail-btn[data-sub]').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+  }
+
+  function setView(view, btn) {
+    screenEl.setAttribute('data-view', view);
+    closeOverlay();
+    document.querySelectorAll('.devrail .rail-btn[data-view]').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+  }
+
+  /* loading -> content resolve demo: skeleton, then content arrives */
+  function playResolve() {
+    setView('loading');
+    document.querySelectorAll('.devrail .rail-btn[data-view]').forEach(function(b){ b.classList.remove('active'); });
+    setTimeout(function() {
+      screenEl.setAttribute('data-view', 'content');
+      runArrival();
+    }, reduceMotion ? 0 : 950);
+  }
+
+  /* ---- overlays (dialog semantics: focus move + trap + Esc + return focus) ---- */
+  var lastFocused = null;
+
+  function focusables(scope) {
+    if (!scope) return [];
+    return Array.prototype.slice.call(scope.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+  }
+  function activeScrim() {
+    var o = screenEl.getAttribute('data-overlay');
+    return (o && o !== 'none') ? document.querySelector('.scrim[data-for="' + o + '"]') : null;
+  }
+  function activeScope() {
+    var o = screenEl.getAttribute('data-overlay');
+    if (o === 'delete') {
+      var step = screenEl.getAttribute('data-delete-step') || '1';
+      return document.querySelector('.scrim[data-for="delete"] .beat-' + step);
+    }
+    var s = activeScrim();
+    return s ? s.querySelector('.sheet') : null;
+  }
+  function moveFocusIntoSheet() {
+    var scrim = activeScrim();
+    if (!scrim) return;
+    var sheet = scrim.querySelector('.sheet');
+    /* delete beat 2 focuses its field (handled in deleteStep); otherwise focus the
+       sheet container so the dialog title is announced, then the user tabs. */
+    if (sheet) { try { sheet.focus({ preventScroll: true }); } catch (e) { sheet.focus(); } }
+  }
+
+  function openOverlay(name) {
+    lastFocused = document.activeElement;
+    screenEl.setAttribute('data-overlay', name);
+    setTimeout(moveFocusIntoSheet, 60);
+  }
+  function closeOverlay() {
+    var wasOpen = screenEl.getAttribute('data-overlay') !== 'none';
+    screenEl.setAttribute('data-overlay', 'none');
+    if (wasOpen && lastFocused && lastFocused.focus) {
+      try { lastFocused.focus({ preventScroll: true }); } catch (e) { lastFocused.focus(); }
+    }
+    lastFocused = null;
+  }
+  function scrimClose(e, name) {
+    if (e.target.classList.contains('scrim')) closeOverlay();
+  }
+
+  /* keyboard: Esc closes, Tab is trapped within the active sheet/beat */
+  document.addEventListener('keydown', function (e) {
+    var scrim = activeScrim();
+    if (!scrim) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); return; }
+    if (e.key === 'Tab') {
+      var f = focusables(activeScope());
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (f.indexOf(document.activeElement) === -1) {
+        /* focus is on the sheet container (tabindex -1), not a real focusable:
+           the very first Tab/shift-Tab must enter the trap, not escape behind it */
+        e.preventDefault(); (e.shiftKey ? last : first).focus();
+      }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  /* delete: single scrim, two beats crossfade. step 1 opens; step 2 swaps in place. */
+  function openDelete(step) {
+    lastFocused = document.activeElement;
+    resetDelete();
+    deleteStep(step);
+    screenEl.setAttribute('data-overlay', 'delete');
+    if (step !== 2) setTimeout(moveFocusIntoSheet, 60);
+  }
+  function deleteStep(step) {
+    screenEl.setAttribute('data-delete-step', String(step));
+    var sheet = document.querySelector('.scrim[data-for="delete"] .sheet');
+    if (sheet) sheet.setAttribute('aria-labelledby', 'sheet-delete' + step + '-title');
+    if (step === 2) {
+      resetDelete();
+      var field = document.querySelector('.scrim[data-for="delete"] .confirm-field');
+      if (field) setTimeout(function () { try { field.focus({ preventScroll: true }); } catch (e) { field.focus(); } }, 60);
+    }
+  }
+  function resetDelete() {
+    var f = document.getElementById('delete-final');
+    var field = document.querySelector('.scrim[data-for="delete"] .confirm-field');
+    if (f) f.disabled = true;
+    if (field) field.value = '';
+  }
+
+  function toggleSwitch(el) {
+    var on = el.getAttribute('aria-checked') === 'true';
+    el.setAttribute('aria-checked', on ? 'false' : 'true');
+  }
+
+  /* match is case-insensitive (kinder for the 45-70 audience: no caps-lock trap on
+     mobile). The displayed word is lowercase to match what is actually accepted. */
+  function checkDelete(input) {
+    var f = document.getElementById('delete-final');
+    f.disabled = input.value.trim().toLowerCase() !== 'delete';
+  }
+  /* NOTE FOR CODE ARCHITECT (production):
+     confirmDelete() must branch on the teardown result, never assume success.
+     The teardown is a fallible multi-write (auth user + user rows + stored audio)
+     via checkedWrite/bestEffortWrite (src/lib/supabase/checked-write.ts), never a
+     bare awaited write whose {error} is discarded (success-reported-before-
+     fallible-work, FOLLOW_UPS #43/#45/#66).
+       - all writes succeed  -> setView('closed'), then sign out
+       - any write fails     -> setView('delete-failed')   (the failure terminal)
+     Never render 'closed' over a partial teardown. Service-role teardown is
+     server-only; audio is path-only. The failure body's "reach us" path needs a
+     real support destination (email or in-app); owner to confirm.
+     Prototype demo below jumps to 'closed'; "Try again" on the failure view
+     reopens confirm beat 2 so the loop is walkable on the rail. Swap for the
+     real retry call in production. */
+  function confirmDelete() {
+    closeOverlay();
+    screenEl.setAttribute('data-delete-step', '1');
+    setView('closed');
+  }
+
+  function toggleDelete() {
+    var cur = screenEl.getAttribute('data-delete');
+    var next = cur === 'on' ? 'off' : 'on';
+    screenEl.setAttribute('data-delete', next);
+    if (next === 'off') closeOverlay();
+    document.getElementById('del-label').textContent = next === 'on' ? 'On' : 'Off';
+  }
+
+  /* delete starts at beat 1, and the screen arrives on first load */
+  screenEl.setAttribute('data-delete-step', '1');
+  window.addEventListener('load', runArrival);
+</script>
+</body>
+</html>

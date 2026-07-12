@@ -105,9 +105,11 @@ export default async function RecordPage({
     .eq("voice_profile_id", voiceProfile.id)
     .eq("status", "uploaded");
 
-  // Already ready — skip training
+  // Already ready — skip training. Spine-wiring S2b: forward to Card Capture, not
+  // the (now-neutralized) voice-create route; its guard routes a paid user onward
+  // and asks an unpaid one to commit.
   if (voiceProfile.status === "ready") {
-    redirect(ROUTES.voiceCreate);
+    redirect(ROUTES.vaultProtect);
   }
 
   const data: RecordScreenData = {
