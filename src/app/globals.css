@@ -2991,17 +2991,37 @@
 
   /* ─── TAB NAV (post-onboarding /app pages) ────────────────── */
   .tab-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    /* Pull left by the link tap-padding so the first tab's text still
+       lines up with the content edge — same optical-alignment trick as
+       .screen-header__back's negative margin. */
+    margin-inline: -8px;
     margin-bottom: 16px;
+    /* Keep the bar clear of the status bar / notch on inset devices;
+       resolves to 0 where no inset is reported. */
+    padding-top: env(safe-area-inset-top, 0px);
     font-size: 14px;
   }
 
   .tab-nav__item {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
   }
 
   .tab-nav__sep {
-    margin: 0 8px;
+    margin: 0 2px;
     color: #ccc;
+  }
+
+  /* Each tab is a ≥44px tap target with horizontal breathing room so
+     the links clear the finger mis-tap threshold on a real phone. */
+  .tab-nav__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 8px;
   }
 
   .tab-nav__link--current {
