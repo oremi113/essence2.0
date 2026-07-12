@@ -68,7 +68,6 @@ export default function HomeBDevPage() {
         vaultState={cfg.vaultState}
         messages={messages}
         loadState={cfg.loadState}
-        listError={state === "error" ? null : undefined}
         onRetry={() => console.log("[dev/home-b] retry preview fetch")}
         firstArrival={cfg.firstArrival}
         onCreate={() => console.log("[dev/home-b] create → /messages/new")}

@@ -15,7 +15,6 @@ export type ShelfLoadState = "loading" | "error" | "ready";
 export interface MemoryShelfProps {
   messages: ShelfMessage[];
   loadState: ShelfLoadState;
-  listError?: string | null;
   onRetryList: () => void;
   /** The audio engine (real `usePlaybackController`, or a dev mock). Injected
    *  so this screen never fetches — keeps it pure + dev-renderable. */
@@ -41,7 +40,6 @@ const EMPTY_SET: ReadonlySet<string> = new Set();
 export function MemoryShelf({
   messages,
   loadState,
-  listError,
   onRetryList,
   playback,
   unavailableIds = EMPTY_SET,
@@ -181,7 +179,7 @@ export function MemoryShelf({
         {header}
         <div className="shelf-list-error">
           <p className="shelf-list-error__body">
-            {listError ?? "We couldn't load your shelf just now."}
+            {"We couldn't load your shelf just now. Your messages are safe."}
           </p>
           <button
             type="button"

@@ -135,7 +135,6 @@ describe("HomeBScreen — first arrival + system states", () => {
         vaultState="trial"
         messages={[]}
         loadState="error"
-        listError={null}
         onRetry={onRetry}
         onCreate={vi.fn()}
         onRestore={vi.fn()}
