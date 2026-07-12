@@ -87,7 +87,7 @@ what's left, which is now the launch tail — and the QA + bug-fix chunk of that
 
 | # | Bucket | Was | Now | Focused hrs left |
 |---|---|---|---|---|
-| 1 | Step 10 — only the consolidated error-copy pass (X) left; S10-C ✅ | 15–30 | S10-A/B/C ✅ | 2–4 |
+| 1 | Step 10 — ✅ DONE (S10-A/B/C + error-copy pass X all landed) | 15–30 | ✅ done | 0 |
 | 2 | C3 Vault Limit screen | 10–24 | ✅ done | 0 |
 | 3 | First Breath ceremony audio (owner ear-review owed, not coding) | 8–20 | ✅ built | 0 |
 | 4 | Full-journey integration & wiring — spine landed; seam/nav polish left | 20–40 | spine ✅ | 8–20 |
@@ -118,7 +118,7 @@ Track these to done. `[ ]` = open, grouped by the buckets above.
 - [x] Step 10 S10-A — generation-failure state (contact-as-care ceiling, PR #88)
 - [x] Step 10 S10-C — audio-can't-play state (Shelf ✅; **First-Breath ✅ 2026-07-12** — resolved as silent graceful degradation, not a retry state: FU #41 shipped procedural synth so there's nothing to retry, and fixed a real crash path (unguarded `new AudioContext()`). See `docs/session-s10c-first-breath/decision.md`)
 - [x] Step 10 S10-B — offline / connection-lost state — **built** (PR #89): `useOnline`/`useConnectivity` + app-wide `OfflineIndicator`
-- [ ] Step 10 X — consolidated error-copy pass across all surfaces (Ch2 + A5 + new)
+- [x] Step 10 X — consolidated error-copy pass ✅ 2026-07-12 (PR #110). Audit found the money/ceremony surfaces already on-voice (Card Capture decline, generation failure, offline notes, Settings, Screen 12); the real fix was a raw-error leak — `listError` piped `useResource`'s raw error to the UI on Shelf + Home B. **Bucket 1 (Step 10) now fully closed.**
 - [x] C3 Vault Limit screen — built (PR #87); 3-message cap **confirmed wired** server-side (`api/messages/save` 403 `vault_limit_reached` at `STEP6_MAX_SAVED_MESSAGES=3`), FU #38 resolved
 - [x] First Breath ceremony audio — **built** (PR #91, FU #41): procedural Web Audio engine (`src/lib/audio/firstBreathAudio.ts`), no asset files. *Owner ear-review still owed — a headless agent can't judge the actual sound.*
 - [x] Remove dead `record/complete/stub`; confirm Card Capture is the only checkout path — **done (PR #95)**: old arc retired; stub → stable redirect (URL-lock kept)
