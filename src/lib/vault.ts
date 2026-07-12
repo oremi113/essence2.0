@@ -1,9 +1,10 @@
 /**
  * Session 7a — Vault Reveal flow types and constants.
  *
- * Canonical source of truth for pricing, plan toggle, bullets, and the
- * analytics event names tied to the four-screen flow. 7b replaces the
- * `stripePriceId` placeholders when real Stripe products land.
+ * Canonical source of truth for the DISPLAY pricing, plan toggle, bullets, and
+ * the analytics event names tied to the four-screen flow. The Stripe price IDs
+ * used for checkout live in env (`STRIPE_PRICE_ID_VAULT_{MONTHLY,ANNUAL}`, read
+ * in `create-checkout-session.ts`), not here.
  */
 
 export type BillingPlan = 'monthly' | 'annual';
@@ -22,7 +23,6 @@ export interface PlanPricing {
     period: string;
     altText: string;
     priceCents: number;
-    stripePriceId: string;
   };
   annual: {
     displayPrice: string;
@@ -30,7 +30,6 @@ export interface PlanPricing {
     altText: string;
     priceCents: number;
     savingsLabel: string;
-    stripePriceId: string;
   };
 }
 
@@ -40,7 +39,6 @@ export const VAULT_PRICING: PlanPricing = {
     period: 'per month',
     altText: 'or $119 per year',
     priceCents: 1299,
-    stripePriceId: 'PLACEHOLDER_MONTHLY',
   },
   annual: {
     displayPrice: '$119',
@@ -48,7 +46,6 @@ export const VAULT_PRICING: PlanPricing = {
     altText: 'or $12.99 per month',
     priceCents: 11900,
     savingsLabel: 'Save 24%',
-    stripePriceId: 'PLACEHOLDER_ANNUAL',
   },
 };
 

@@ -39,7 +39,7 @@ export const PERSONAL_NOTE_CSS = `
   background: transparent; border: 0;
   padding: var(--space-sm); margin: calc(-1 * var(--space-sm));
   color: var(--color-text-secondary); cursor: pointer;
-  display: flex; min-height: 44px; align-items: center;
+  display: flex; min-height: 44px; min-width: 44px; align-items: center;
   border-radius: var(--radius-md);
   transition: color var(--duration-micro) var(--ease-essence);
 }

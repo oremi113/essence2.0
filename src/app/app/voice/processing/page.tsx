@@ -22,8 +22,9 @@ import { ROUTES, signInWithNext } from '@/lib/routes';
 //
 // `?mock=true`: the mock checkout (VAULT_STRIPE_ENABLED off) writes no
 // subscription, so a real trial doesn't exist yet — the mock stands in for
-// "paid." Bypass the paid-guard for the mock path only. Removed when real Stripe
-// lands (S5), where the webhook writes the trial before this page is reached.
+// "paid." The bypass is honoured ONLY while real Stripe is off (see `isMock`
+// below); flipping VAULT_STRIPE_ENABLED on (S5) makes `?mock=true` inert, so the
+// paid guard always runs and a crafted `?mock=true` can't skip the paywall.
 //
 // `?session_id=...` (real Stripe): the checkout `success_url` carries the
 // Checkout Session id. Stripe redirects here the instant checkout completes —
@@ -38,7 +39,9 @@ export default async function VoiceProcessingPage({
   searchParams: Promise<{ mock?: string; session_id?: string }>;
 }) {
   const { mock, session_id: sessionId } = await searchParams;
-  const isMock = mock === 'true';
+  // The mock bypass is live-Stripe-gated: inert once VAULT_STRIPE_ENABLED is on,
+  // so the real paid guard below can never be skipped with a crafted `?mock=true`.
+  const isMock = mock === 'true' && !isFeatureEnabled('VAULT_STRIPE_ENABLED');
 
   const supabase = await createSupabaseServerClient();
   const {
