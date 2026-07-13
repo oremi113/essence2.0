@@ -17,6 +17,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { ErrorCode } from "@/lib/errors";
+import { bestEffortWrite } from "@/lib/supabase/checked-write";
 
 /**
  * Minimal shape needed to decide whether a loaded pending_generations row is
@@ -50,6 +51,47 @@ export function pendingNotFoundResponse(
   return NextResponse.json(
     { error: message, code: ErrorCode.VALIDATION_ERROR, retryable: false },
     { status: 404 },
+  );
+}
+
+/**
+ * Retire a pending_generations row that ended in terminal failure, releasing the
+ * per-user active-pending slot it claimed at insert.
+ *
+ * The cold-start `/generate` path inserts the row *before* text/audio run and
+ * counts it toward `maxActivePendingPerUser` (one active flow per user). When a
+ * generation then fails, the row is neither saved nor superseded, so
+ * `countActivePending` keeps counting it as an in-flight flow — the failed
+ * attempt permanently occupies the user's single slot and every retry
+ * (a fresh cold-start) 429s with `pending_max` forever (FOLLOW_UPS #93).
+ *
+ * Stamping `superseded_at` is exactly the "no longer an active, mutable
+ * generation" flag every reader already honours — `isActivePending`,
+ * `countActivePending`, and the g/[id] view guard all treat a superseded row as
+ * retired — so a failed attempt correctly stops counting and can't be reopened.
+ * `fields` folds a terminal status (e.g. `text_status: "failed"`) into the same
+ * write so the row also records *why* it was retired.
+ *
+ * Best-effort: a terminal failure is already being returned to the client, and a
+ * failed cleanup write must not mask it. Server-only.
+ */
+export async function retireFailedPendingGeneration(
+  supabase: SupabaseClient,
+  args: {
+    generationId: string;
+    userId: string;
+    requestId?: string;
+    fields?: Record<string, unknown>;
+  },
+): Promise<boolean> {
+  const { generationId, userId, requestId, fields } = args;
+  return bestEffortWrite(
+    supabase
+      .from("pending_generations")
+      .update({ superseded_at: new Date().toISOString(), ...fields })
+      .eq("generation_id", generationId)
+      .eq("user_id", userId),
+    { op: "step6_retire_failed_pending", requestId, userId, meta: { generationId } },
   );
 }
 
