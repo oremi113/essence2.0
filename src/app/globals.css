@@ -1936,10 +1936,12 @@
 
   .privacy-modal__close {
     position: absolute;
-    top: 18px;
-    right: 18px;
-    width: 36px;
-    height: 36px;
+    /* 44×44 hit area (touch-target floor); offset so the 18px glyph stays
+       visually anchored where the old 36px control sat (14 + 22 = 36px in). */
+    top: 14px;
+    right: 14px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1948,7 +1950,6 @@
     color: var(--color-text-secondary);
     cursor: pointer;
     border-radius: 50%;
-    min-height: auto;
     transition: color 200ms ease, background-color 200ms ease;
   }
 
@@ -2996,6 +2997,15 @@
 
   .tab-nav__item {
     display: inline;
+  }
+
+  /* Inline-flex so the global 44px touch-target floor (button, a rule
+     above) actually engages — min-height is inert on default-inline
+     anchors, which collapses the hit area to the ~17px text line. */
+  .tab-nav__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 
   .tab-nav__sep {
