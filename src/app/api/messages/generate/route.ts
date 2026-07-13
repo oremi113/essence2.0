@@ -26,7 +26,7 @@ import { normalizeRelationship, getCategoryVoiceSettings, type MessageCategory }
 import { selectVariantByIndex, getTemplateById, generateMessageText } from "@/lib/messages/generation";
 import { generateAndStoreAudio } from "@/lib/messages/audio";
 import { bestEffortWrite } from "@/lib/supabase/checked-write";
-import { isActivePending, pendingNotFoundResponse } from "@/lib/messages/route-helpers";
+import { isActivePending, pendingNotFoundResponse, retireFailedPendingGeneration } from "@/lib/messages/route-helpers";
 import {
   STEP6_LIMITS,
   STEP6_GENERATE_ACTION,
@@ -285,15 +285,15 @@ export const POST = defineRoute(
     });
 
     if (!textResult.ok) {
-      // Best-effort: text already failed; this flip just records it.
-      await bestEffortWrite(
-        supabase
-          .from("pending_generations")
-          .update({ text_status: "failed" })
-          .eq("generation_id", generationId)
-          .eq("user_id", user.id),
-        { op: "step6_text_status_failed_mark", requestId, userId: user.id, meta: { generationId } },
-      );
+      // Record the failure AND retire the row so the just-claimed active-pending
+      // slot is released — otherwise this dead attempt counts as an in-flight
+      // flow forever and the A5 retry (a fresh cold-start) 429s (FOLLOW_UPS #93).
+      await retireFailedPendingGeneration(supabase, {
+        generationId,
+        userId: user.id,
+        requestId,
+        fields: { text_status: "failed" },
+      });
       logEvent({
         event: "step6_text_failed",
         requestId,
@@ -328,6 +328,15 @@ export const POST = defineRoute(
       // text-failure branch above uses; audio never ran, so audioStatus stays
       // "pending".
       logError({ event: "step6_text_mark_failed", requestId, userId: user.id, error: textMarkError, meta: { generationId } });
+      // Retire the row: the succeed-mark write failed, so text_status is still
+      // "pending", but the attempt is dead. Release the active-pending slot it
+      // holds (FOLLOW_UPS #93) and record the terminal status.
+      await retireFailedPendingGeneration(supabase, {
+        generationId,
+        userId: user.id,
+        requestId,
+        fields: { text_status: "failed" },
+      });
       return NextResponse.json(
         {
           generationId,
@@ -355,6 +364,14 @@ export const POST = defineRoute(
     });
 
     if (!audioOutcome.ok) {
+      // generateAndStoreAudio already flipped audio_status to "failed"; retire
+      // the row so its active-pending slot is released and the next attempt (a
+      // fresh cold-start) isn't 429'd by pending_max (FOLLOW_UPS #93).
+      await retireFailedPendingGeneration(supabase, {
+        generationId,
+        userId: user.id,
+        requestId,
+      });
       return NextResponse.json(
         {
           generationId,

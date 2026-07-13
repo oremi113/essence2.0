@@ -23,6 +23,37 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-13 — scheduled
+- Outcome: Fixed — a message that failed to generate used to lock a user out of
+  making *any* message (their "Try again" and every future attempt just bounced);
+  now a failed attempt is cleared away so they can start again immediately.
+- Item: FU-93 — A failed message generation permanently wedges creation (the
+  orphaned pending row 429s every retry via `pending_max`, forever).
+- Root cause: symptom — after one message-generation failure, "Try again" (and
+  every later message) fails silently with a rate-limit block that never clears.
+  Cause — the create endpoint reserves the user's single "one message in progress"
+  slot by writing a row *before* the AI text/voice steps run; when a step failed it
+  returned the error but never released that slot, so the dead attempt kept
+  occupying the only slot the user has, and the retry (which starts a brand-new
+  attempt) was blocked by the slot still being full. Why this addresses the cause —
+  each of the three failure exits now retires the failed row (marks it "no longer
+  active", the same flag the counter already respects), so the slot is freed the
+  instant a generation fails and the next attempt goes through. It is a real fix,
+  not a workaround: it removes the stuck row at the source rather than loosening the
+  limit or masking the error.
+- Branch / commit: refactor/fu-93-failed-generation-wedges-creation @ 66e982f
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (389/389; +3 new for the retire helper).
+- Discovered: none untracked. Re-scanned the queue: the remaining top P2s are
+  owner-paired or need a decision/environment I can't provide this run — the
+  delete-account teardown batch (FU-85/86/88, Stripe+auth teardown, flag-OFF,
+  owner-paired), `retry_audio` cost-cap (FU-92, cost-policy, owner-paired), and the
+  vault-restore iOS-Safari popup (FU-87, needs a real-browser check this env can't
+  do). FU-93 was the top *cleanly* agent-fixable item. No new marker debt found in
+  `src/`.
+- Merged: <stamped later when the owner merges>
+
+---
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
