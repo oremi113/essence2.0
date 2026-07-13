@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 24 · 23 open · 1 decision · 0 resolved · 0 dropped
+Total: 25 · 24 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (23)
+## Open (24)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -19,6 +19,7 @@ Total: 24 · 23 open · 1 decision · 0 resolved · 0 dropped
 | P2 | "We will never use your recordings to train AI models" is unsubstantiated by code — nothing configures ElevenLabs for zero-retention/no-training; depends entirely on the account tier + DPA *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-never-train-promise-unverified-against-elevenlabs-terms.md`](./2026-07-12-never-train-promise-unverified-against-elevenlabs-terms.md) |
 | P2 | No affirmative consent gate before ESSENCE creates a synthetic voice clone — only a passive "I understand" on a privacy screen; no "I consent to processing my voice to create a synthetic voice" checkbox *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-no-affirmative-consent-gate-before-voice-cloning.md`](./2026-07-12-no-affirmative-consent-gate-before-voice-cloning.md) |
 | P2 | Onboarding copy promises "end-to-end encryption" / "not even our team can access" but audio is stored as plaintext and a service-role key can read any user's recordings *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md`](./2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md) |
+| P2 | Production DB backups now enabled (Supabase Pro, 2026-07-12, 7-day) — BUT Supabase Storage (the actual voice audio) is NOT included in DB backups, so the crown-jewel recordings remain unprotected against logical delete/corruption on a "preserve forever" product *(surfaced 2026-07-12 during vendor checks)* | 2026-07-12 | — | [`2026-07-12-production-supabase-free-tier-has-no-backups.md`](./2026-07-12-production-supabase-free-tier-has-no-backups.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |

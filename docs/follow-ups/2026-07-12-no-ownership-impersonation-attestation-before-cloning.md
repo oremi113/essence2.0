@@ -46,3 +46,9 @@ scaffold that landed today — `assertVoiceConsent()` requires BOTH `consentToCl
 `ownershipAttested` when `VOICE_CONSENT_REQUIRED` is on. So the server enforcement exists (flag-OFF,
 inert); what remains for this item is counsel's exact attestation wording + the checkbox in the capture
 UI. Tracked jointly with `2026-07-12-no-affirmative-consent-gate-before-voice-cloning`.
+
+**Update 2026-07-12 (ElevenLabs terms read live): this is a CONTRACTUAL obligation, not just good
+practice.** ElevenLabs' [Terms of Use](https://elevenlabs.io/terms-of-use) §4 require the customer to
+upload only "the voice you are **authorized to share**" and bar providing Input "for which you do not
+have all the rights necessary." So ESSENCE is contractually required to obtain the voice owner's consent —
+the attestation gate is how we meet that. Raises the priority of finishing the consent scaffold.

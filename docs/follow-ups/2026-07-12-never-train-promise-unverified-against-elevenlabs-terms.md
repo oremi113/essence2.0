@@ -42,6 +42,20 @@ ElevenLabs contract. Same vendor-verification bucket as the deletion-purge quest
 
 **Update 2026-07-12 (same day): copy softened interim.** The `PrivacyPromiseModal.tsx` proof line
 "Not ours. Not anyone else's." → "Not to build a product. Not to sell you anything." — this drops the
-unverified third-party absolute while keeping the commitment. The stronger "not anyone else's" claim can
-be restored once the ElevenLabs DPA confirms it (step 1 below). A ready-to-send ElevenLabs email is in
-`docs/legal/2026-07-12-vendor-terms-confirmation-checklist.md`. Kept **open** pending that confirmation.
+unverified third-party absolute while keeping the commitment.
+
+**Update 2026-07-12 (ElevenLabs terms read live):** the vendor picture is now concrete (see the rewritten
+`docs/legal/2026-07-12-vendor-terms-confirmation-checklist.md` §"three findings"). ElevenLabs' published
+[Privacy Policy](https://elevenlabs.io/privacy-policy) states they **train on inputs BY DEFAULT** on
+non-Enterprise tiers, with a **prospective-only opt-out** in account Settings → "Data use". So the promise
+is **false unless ESSENCE opts out**, and even then only for audio sent after the opt-out. **The fix is a
+self-serve dashboard toggle, not a legal email** (profile icon → Terms and privacy → Data use → "Improve
+the models for everyone" OFF). A binding contractual training-off term is Enterprise-only (Sales).
+
+**✅ Update 2026-07-12: opt-out DONE (Starter tier, pre-launch).** The owner flipped the Data-use toggle
+off. Because it's prospective-only and no real users exist yet, essentially all production audio is
+covered → the "never use your recordings to train AI models" commitment is now substantively TRUE. Kept
+**open** for one narrow reason only: counsel to (a) bless whether to restore the stronger "not anyone
+else's" proof wording (now defensible — ESSENCE opted out + ElevenLabs bars its LLM subprocessors from
+training), and (b) confirm no separate opt-out is needed if the account later moves to a higher tier
+(the choice is account-level, not plan-gated, so it should persist).

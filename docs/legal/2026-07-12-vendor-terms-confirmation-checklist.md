@@ -1,98 +1,81 @@
 # ESSENCE — Vendor Terms Confirmation Checklist
 
-**Derived from:** `docs/legal/2026-07-12-legal-questionnaire-code-findings.md` (Appendix — "Vendor facts to confirm") · **Date:** 2026-07-12
+**Derived from:** `docs/legal/2026-07-12-legal-questionnaire-code-findings.md` + a live read of ElevenLabs' published policies (2026-07-12) · **Date:** 2026-07-12
 
-**What this is:** A plain-English, do-it-yourself list for the owner. Each item is a question to ask a vendor (or a setting to check in a dashboard), why it matters, and where to find the answer. These are questions **to ask** — none of the answers are known yet. Get the important ones **in writing** (an email reply or a signed document), because they back promises we make to users.
+**What changed (read this first):** The earlier version of this doc told you to email ElevenLabs four legal questions. That was the wrong instinct — front-line vendor support does not write substantive legal answers, and it turns out **most answers are already in ElevenLabs' published documents** (Privacy Policy, Terms, DPA). So this rewrite splits the work into three honest buckets:
 
-**Work top to bottom.** ElevenLabs is first because it is the one vendor that receives the actual raw voice recordings and stores the AI voice clone — it backs almost every privacy promise we make.
+1. **DO NOW (self-serve, free, high-impact)** — settings you flip and facts you confirm yourself, today.
+2. **LAWYER READS (published docs)** — the real answers, already in writing on their site.
+3. **SALES / SIGNED AGREEMENT only** — the few things that genuinely require a commercial conversation.
 
----
+And it flags the hard truths this research surfaced that **change what we can promise users** — those feed the copy + follow-ups, not just this list.
 
-## Priority 1 — ElevenLabs (receives raw recordings + hosts the voice clone)
-
-ElevenLabs is where the raw voice recordings are sent and where the cloned voice lives. Four answers here decide whether three of our headline promises are true. **Send the email draft below** to get 1–4 in writing.
-
-| ✅ | # | Ask them (exact question) | Why it matters / promise it backs | Where to find the answer |
-|----|---|---------------------------|-----------------------------------|--------------------------|
-| ☐ | 1 | "Do you use customer inputs — uploaded audio, generated audio, or text — to train or improve your models, ours or anyone's? Please confirm in writing." | Backs the promise: **"We will never use your recordings to train AI models, ours or anyone else's."** Our code does nothing to opt out of training — so this promise is only true if ElevenLabs says so contractually. | Their reply email + the Data Processing Agreement / enterprise terms. Ask for it in writing; a marketing-page claim is not enough. |
-| ☐ | 2 | "What is your data-retention period for uploaded voice samples and for the cloned voice? Is a zero-retention, enterprise, or DPA tier available — what does it cost and require?" | Determines how long our users' raw recordings and clones physically survive on ElevenLabs' side. Backs **"permanently gone from our servers within 48 hours"** — that can't be true if ElevenLabs retains data longer. | Their sales/support reply; the enterprise/DPA tier terms. |
-| ☐ | 3 | "When we call `DELETE /v1/voices/{voice_id}`, does that actually purge the cloned voice AND the training samples from your systems — including backups and logs — and on what timeline?" | Backs **"permanently gone from our servers within 48 hours."** (Note for us: our app does **not** currently call this delete at all — see findings §1.5/§8.2 — so this needs both a code fix and this vendor confirmation.) | Their reply email + API documentation for the delete endpoint. |
-| ☐ | 4 | "Is a signed Data Processing Agreement (DPA) available? Do you act as a data processor / subprocessor for our users' data? Please send the DPA to sign." | A DPA is the document that legally binds items 1–3. Our privacy policy will need to name ElevenLabs as a subprocessor. | Request the DPA directly; larger vendors have a standard one on request or on a "legal/trust" page. |
-
-### Ready-to-send email — ElevenLabs support/sales
-
-Send to their support or sales/enterprise contact. Replace the bracketed bits before sending.
-
-```
-Subject: Data handling, retention, and DPA questions — [ESSENCE / your account email]
-
-Hello,
-
-We build a consumer product (ESSENCE) that uses your API to create and
-play back a personalized voice for our users. Because we make specific
-privacy promises to those users, I need to confirm a few points about how
-you handle the audio and voices we send you. Written answers would be
-greatly appreciated, as we may reference them in our privacy policy.
-
-1. Training: Do you use customer inputs — uploaded audio, generated
-   audio, or text — to train or improve your models (yours or any third
-   party's)? Can you confirm in writing that our audio is not used for
-   model training, and tell me whether that requires a specific account
-   tier?
-
-2. Retention: What is your data-retention period for (a) uploaded voice
-   samples and (b) the resulting cloned voice? Do you offer a
-   zero-retention, enterprise, or DPA-backed tier — and if so, what does
-   it cost and require?
-
-3. Deletion: When we call DELETE /v1/voices/{voice_id}, does that
-   permanently purge both the cloned voice and its training samples from
-   your systems, including backups and logs? On what timeline does that
-   deletion complete?
-
-4. DPA: Do you offer a signed Data Processing Agreement, and do you act as
-   a data processor/subprocessor for the end-user data we send? If so,
-   please send the DPA so we can review and sign it.
-
-Thank you — I'm happy to hop on a call if that's easier.
-
-Best regards,
-[Your name]
-[ESSENCE] · [account email] · [website]
-```
+> **Confidence note:** ElevenLabs' policies were read live on 2026-07-12 and are dated (Privacy Policy 20 May 2026, ToS 31 Mar 2026, DPA 8 Apr 2026). Terms change — counsel should re-open the source URLs at drafting time. A few items (Trust Center cert list, IVC/PVC verification specifics) were only partially machine-readable and are marked *medium confidence*.
 
 ---
 
-## Priority 2 — Supabase (database + plaintext audio storage)
+## The three findings that change our promises
 
-Supabase stores the recordings and the database. These are mostly **dashboard checks you can do yourself** rather than emails.
+Before the checklist, the load-bearing facts — because two of them mean a promise is **not currently true**:
 
-| ✅ | # | Check / confirm | Why it matters / promise it backs | Where to find it |
-|----|---|-----------------|-----------------------------------|------------------|
-| ☐ | 5 | Confirm the **automatic backup / Point-in-Time-Recovery (PITR) retention window** on our current project tier (e.g. 7 days, 28 days). | Deleted recordings survive in backups for this long — directly bears on **"permanently gone within 48 hours."** If backups keep data 7+ days, "48 hours" is not accurate for backups. | Supabase Dashboard → your project → **Database → Backups** (and **Settings → Add-ons / PITR** if PITR is enabled). |
-| ☐ | 6 | Confirm the storage buckets **`essence-audio`** and **`profile-photos`** are set to **PRIVATE** (not public). | If either bucket is public, anyone with a URL could reach raw recordings or photos — a serious privacy breach. Bucket privacy is set in the dashboard, not in our code, so it must be eyeballed in the live project. | Supabase Dashboard → **Storage** → click each bucket → confirm it is **not** marked "Public." |
-| ☐ | 7 | Confirm the **at-rest encryption posture** (Supabase encrypts data at rest by default). | Supports "encrypted at rest" in the policy. **Important caveat to state plainly:** this is disk-level encryption by the vendor, **NOT** end-to-end encryption — Supabase (and our server) can still read the plaintext. So we cannot claim "not even our team can access them." | Supabase security/compliance documentation and their SOC 2 report (Dashboard → **Settings → Compliance**, or their trust/security page). |
+1. **ElevenLabs trains on inputs BY DEFAULT** on non-Enterprise tiers, with a **prospective-only opt-out** (profile icon → Terms and privacy → Data use → "Improve the models for everyone" toggle). Source: [Privacy Policy](https://elevenlabs.io/privacy-policy) — "We may process your Personal Data to research, develop, train and/or otherwise improve our AI models… You may opt out… the opt-out will only apply with respect to Personal Data provided… following the submission of the opt-out." → the promise is false *unless* we opt out. **✅ STATUS: opted out 2026-07-12, pre-launch** — so it's now prospectively true for essentially all real user audio. The stronger "not anyone else's" wording can be restored with counsel's blessing (ElevenLabs also contractually bars its LLM subprocessors from training on customer content — see §10).
 
----
+2. **Nothing makes the cloned voice "zero retention."** Zero Retention Mode is **Enterprise-only** *and* explicitly **excludes Instant & Professional Voice Cloning**. Source: [Zero Retention Mode docs](https://elevenlabs.io/docs/eleven-api/resources/zero-retention-mode). Retention cap is **"not longer than 3 years after your last interaction"** ([Privacy Policy](https://elevenlabs.io/privacy-policy)), and there is **no published backup-purge SLA** for a deleted voice. → **"permanently gone from our servers" is only true for OUR systems** (Supabase + our `DELETE /v1/voices` call, now in code). Vendor-side, the honest statement is "we instruct ElevenLabs to delete it, and their policy caps retention at 3 years" — not an immediate/absolute purge. This is why we dropped the "within 48 hours" wording.
 
-## Priority 3 — Vercel (hosting)
-
-| ✅ | # | Check / confirm | Why it matters / promise it backs | Where to find it |
-|----|---|-----------------|-----------------------------------|------------------|
-| ☐ | 8 | Confirm **HTTPS is enforced** and **HSTS is enabled** at the platform/domain level. | Backs "encrypted in transit." Our repo has **no** security-header config, so this relies entirely on Vercel's platform default — worth confirming it is on for our domain. | Vercel Dashboard → your project → **Settings → Domains** (HTTPS/SSL status). For HSTS, check Vercel's docs or test the live site with a header-checking tool (e.g. an SSL/HSTS scanner) against our domain. |
+3. **ElevenLabs contractually requires US to hold the voice owner's consent.** Source: [Terms of Use](https://elevenlabs.io/terms-of-use) §4 — users may upload "audio recordings of your voice **or the voice you are authorized to share**," and "You may not provide Input… for which you do not have all the rights necessary." → **Our consent + ownership-attestation gate (the `VOICE_CONSENT_REQUIRED` scaffold) is not optional polish — it's how we meet a contractual obligation to ElevenLabs.** Prioritize finishing it.
 
 ---
 
-## Priority 4 — Stripe (payments)
+## Bucket 1 — DO NOW (self-serve, free, you can do these today)
 
-| ✅ | # | Confirm / decide | Why it matters / promise it backs | Where to find it |
-|----|---|------------------|-----------------------------------|------------------|
-| ☐ | 9 | Note that **Stripe customer, payment, and invoice records are intentionally retained after account deletion** (for tax/financial-record reasons). Confirm this posture is acceptable and is reflected in the privacy policy. | When a user deletes their ESSENCE account, we cancel their subscription but do **not** delete their Stripe payment history (findings §8.4). This is normal and legally expected — but our privacy policy must **disclose** that financial records outlive account deletion, so a user isn't surprised. | Stripe Dashboard → **Customers** (records persist there). Confirm the retention wording with counsel and make sure the privacy policy says transaction records are kept for legal/tax purposes. |
+| ✅ | # | Action | Why it matters | Where |
+|----|---|--------|----------------|-------|
+| ✅ | 1 | **Opt out of model training** — **DONE 2026-07-12** (Starter tier, pre-launch). | Makes "never train" true going forward. Prospective-only, but done before any real users exist, so ~all production audio is covered. Highest-value action on this page. | ElevenLabs → **profile icon (top-right) → "Terms and privacy" → "Data use"** → toggle **"Improve the models for everyone" OFF** → "Update your choice." *(NOT the left-sidebar Settings.)* |
+| ☐ | 2 | **Confirm which ElevenLabs tier ESSENCE is on** (free / Creator / Pro / Scale / Enterprise). | Everything else — whether training-off is contractual, whether ZRM/BAA are even available — depends on tier. | ElevenLabs dashboard → **Subscription/Billing**. |
+| ☐ | 3 | **Confirm our code now deletes the voice on account deletion.** | Backs "permanently gone (our side)." ✅ Already shipped: `deleteVoice()` is wired into account teardown (commit `bb0a0e0`). Just verify it stays wired. | Code: `src/lib/elevenlabs.ts` + `src/app/app/settings/actions.ts`. |
+| ☐ | 4 | **Supabase: confirm buckets `essence-audio` + `profile-photos` are PRIVATE.** | If public, anyone with a URL reaches raw recordings/photos. Set in the dashboard, not our code. | Supabase → **Storage** → each bucket → confirm not "Public." |
+| ⚠️ | 5 | **Supabase backups — 2026-07-12: upgraded to Pro → DB backups on (7-day, PITR available). BUT Storage/audio NOT included in backups.** | DB metadata now protected. **The actual voice audio (`essence-audio` bucket) is still unbacked** — Supabase says "Storage objects are not included… restoring does not restore deleted objects." The crown-jewel durability gap stays open; needs a separate audio-export/replication strategy. See the P2 launch-gate follow-up (`2026-07-12-production-supabase-free-tier-has-no-backups`). Deletion-copy note: DB metadata lingers in backups up to 7 days; audio is deleted immediately with no backup copy. | Supabase → **Database → Backups** (note the "Storage objects are not included" banner). |
+| ☐ | 6 | **Vercel: confirm HTTPS enforced + HSTS on** for the domain. | Backs "encrypted in transit." We have no header config in-repo, so it relies on Vercel's default. | Vercel → **Settings → Domains**; or run an SSL/HSTS scanner against the live domain. |
 
 ---
 
-## After you have the answers
+## Bucket 2 — LAWYER READS (already published — no email needed)
 
-- Save every written reply (especially ElevenLabs 1–4 and the signed DPA) in one place — counsel will reference them.
-- Where a vendor answer **contradicts** a current promise (most likely the "48 hours" and "never train" claims), flag it back so the copy or the code gets fixed before launch. See the "Copy that currently contradicts the code" section of the findings doc.
-- Items 5, 6, and 8 you can complete yourself today in the dashboards — do those first while you wait on ElevenLabs' email reply.
+Hand these URLs to counsel. They need to read them anyway to write our privacy policy (this is the standard "subprocessor analysis"). Everything here is in writing today.
+
+| ✅ | # | Document + what to extract | Backs / informs | URL |
+|----|---|----------------------------|-----------------|-----|
+| ☐ | 7 | **Privacy Policy** — training-by-default + opt-out mechanics; the **3-year** voice-data retention cap; biometric-data handling; CCPA/GDPR rights; the enterprise carve-out (business-customer data is governed by the DPA, not this policy). | "Never train" (conditional on opt-out), "permanently gone" (3-yr cap), our own privacy-rights section. | https://elevenlabs.io/privacy-policy |
+| ☐ | 8 | **Terms of Use** — the **customer-carries-consent** obligation (§4); output ownership (paid = commercial use); the perpetual/irrevocable license we grant, with the "won't commercialize your voice standalone without permission" limit. *(Note: there's a separate EEA version — read the one matching our entity's governing law.)* | Our consent/attestation gate; our own Terms' voice-ownership language. | https://elevenlabs.io/terms-of-use |
+| ☐ | 9 | **DPA** — it's **published and incorporated by reference** (no countersignature process described). Confirms ElevenLabs acts as **processor**; subprocessor list + **30-day** change notice; SCCs/UK/Brazil transfer terms; EU-US Data Privacy Framework certification. Counsel decides if we need to formally "accept" it for our tier. | Naming ElevenLabs as a subprocessor in our policy; international-transfer coverage. | https://elevenlabs.io/dpa · subprocessors: https://compliance.elevenlabs.io |
+| ☐ | 10 | **Zero Retention Mode docs** — confirm for counsel that ZRM is **Enterprise-only** and **excludes voice cloning**, so it does *not* help our clone-retention story. Also: ElevenLabs states its third-party-LLM subprocessors are contractually barred from training on customer content regardless of ZRM (useful for the "not anyone else's" sub-claim, re: LLM vendors — not ElevenLabs' own training). | Why we can't promise vendor-side zero-retention; scoping the "not anyone else's" claim. | https://elevenlabs.io/docs/eleven-api/resources/zero-retention-mode |
+
+---
+
+## Bucket 3 — SALES / SIGNED AGREEMENT only (do only if the promise requires it)
+
+These genuinely need a commercial conversation — approach as a prospective **Enterprise** buyer, short and specific, not as a support questionnaire. **Only pursue the ones whose promise you actually want to make.**
+
+| ✅ | # | Item | When you need it | How |
+|----|---|------|------------------|-----|
+| ☐ | 11 | **Contractual "training off by default"** (vs. the self-serve opt-out) | If counsel wants training-off as a *binding contract term*, not a toggle we could lose. | ElevenLabs **Sales → Enterprise**; it lives in the negotiated DPA/order form. |
+| ☐ | 12 | **Written deletion/backup-purge SLA** — confirmation that a deleted voice + its training samples are purged from backups, and on what timeline | If we want to state a concrete deletion timeframe for the *vendor* side (not just "their policy caps at 3 years"). **Not in any public doc.** | Sales / security addendum. Until you have this in writing, don't put a vendor-side deletion *deadline* in user copy. |
+| ☐ | 13 | **SOC 2 Type II report** | If counsel/security review wants the actual report. | Request-gated to "entitled" customers under NDA (per the DPA). Ask Sales. |
+| ☐ | 14 | **BAA (HIPAA)** | Only if ESSENCE is ever treated as handling PHI — likely **not** relevant to us. | Enterprise-tier only. Skip unless counsel says otherwise. |
+
+---
+
+## Still unverified — flag for counsel
+
+1. **Does deleting a voice purge the training samples from ElevenLabs' backups, and on what timeline?** Not in published docs (item 12). Our copy already avoids a vendor-side deadline because of this.
+2. **Trust Center certification list** (SOC 2 Type II / ISO 27001 / PCI DSS L1 / DPF) — corroborated by search + ElevenLabs' own announcements but the Trust Center is a JS app the researcher couldn't read directly. Confirm by logging in at https://compliance.elevenlabs.io.
+3. **Instant vs Professional Voice Cloning verification specifics** — IVC is a self-attestation checkbox; PVC adds a "voice CAPTCHA." Sourced from search snippets (the canonical Help Center article blocked automated fetch) — *medium confidence*; verify if it matters to our flow.
+
+---
+
+## Bottom line for the owner
+
+- **The one thing to do today:** ✅ **DONE** — opted out of ElevenLabs training on 2026-07-12, pre-launch (item 1). That's the difference between our "never train" promise being true or false, and it's now true for essentially all real user audio.
+- **Most "legal questions" are already answered in their published docs** (Bucket 2) — hand those URLs to your lawyer instead of waiting on a support reply.
+- **Two of our promises had to be softened** because of vendor reality (training-by-default; no zero-retention for clones + no backup-purge SLA) — that's already reflected in the trimmed copy and the follow-ups. Opting out (item 1) + a Sales DPA (items 11–12) are the paths to earning the stronger wording back, if you want it.
+- **Finish the consent gate** — it's a contractual obligation to ElevenLabs, not optional.

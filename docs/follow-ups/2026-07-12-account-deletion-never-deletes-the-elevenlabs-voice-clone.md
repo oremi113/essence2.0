@@ -58,3 +58,14 @@ actually purges the clone + samples (incl. their backups) on `DELETE` and on wha
 `2026-07-12-never-train-promise-unverified-against-elevenlabs-terms` and the vendor checklist
 (`docs/legal/2026-07-12-vendor-terms-confirmation-checklist.md`). Kept **open** until that confirmation +
 the copy is reconciled with the real Supabase backup window.
+
+**Update 2026-07-12 (ElevenLabs terms read live):** vendor-side "permanently gone" has a hard ceiling we
+can't remove in code. ElevenLabs' Zero Retention Mode is **Enterprise-only AND explicitly excludes voice
+cloning** ([ZRM docs](https://elevenlabs.io/docs/eleven-api/resources/zero-retention-mode)), so the clone
+model is always retained; the only stated bound is the Privacy Policy's **"not longer than 3 years after
+your last interaction"** cap, and there is **no published backup-purge SLA** for a `DELETE`d voice. So the
+`deleteVoice()` call removes the *addressable* clone immediately, but ESSENCE cannot truthfully promise a
+vendor-side deletion *deadline* — which is exactly why the "within 48 hours" wording was dropped. To state
+a concrete vendor-side purge timeline we'd need it in writing via Sales/DPA (checklist items 12). Honest
+copy = "permanently gone from our systems; we instruct ElevenLabs to delete it (their policy caps
+retention at 3 years)."
