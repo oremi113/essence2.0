@@ -23,6 +23,62 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-14 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged **8** new per-file backlog items; no code touched.
+- Health on `main` (93d0bbd): typecheck ✅ · lint ✅ · test:unit 386/386 ✅.
+- Scanned: full existing backlog (FOLLOW_UPS.md 1–84 + the 21 per-file items) for dedup;
+  marker-debt grep over `src/` (zero TODO/FIXME/HACK; every `eslint-disable` is documented
+  or conventional — house rule holding); deep reads of the Stripe/subscription subsystem,
+  the audio-upload + voice-profile pipeline, the messages API (save/commit/regenerate/generate),
+  the rate-limiter, and the onboarding/profile/settings layer. Doc-drift spot-check on
+  `STORAGE_PATHS.md` (bucket contract still matches, FU-28 unchanged).
+- Excluded as work-in-progress: the active fix branches `refactor/fu-93-failed-generation-wedges-creation`
+  and `fix/step6-cost-control-wedge` (Step 6 message-generation cost/wedge — FU-92/93), the Step 10
+  error-copy / first-breath-audio streams (`feat/step10-*`, `feat/s10c-*`), and the shimmer-loop
+  latent bugs already recorded under the §72 refinement — none re-logged.
+- Discovered (new per-file FOLLOW_UPS entries, most-severe first):
+  - [P2] `2026-07-14-voice-create-stale-threshold-shorter-than-max-duration` — the voice-create
+    "timed out" threshold (3 min) is shorter than the route's own 5-min run budget, so a
+    slow-but-successful **paid** voice can be marked failed while the client is still told "ready"
+    (ElevenLabs billed, voice ID dropped, row reads failed). Reopens the FU-43/#66 class via a
+    mismatched constant.
+  - [P3] `2026-07-14-messages-save-can-promote-a-superseded-generation` — `/save` never checks
+    `superseded_at` (commit + regenerate both do via `isActivePending`), so a stale client can save
+    a superseded draft as a permanent, immutable message.
+  - [P3] `2026-07-14-get-subscription-status-reports-none-on-db-read-error` — a DB read error collapses
+    into `status: 'none'`, so a paying user can be treated as unpaid during a transient blip.
+  - [P3] `2026-07-14-failed-voice-create-attempts-count-against-daily-cap` — the daily voice-creation
+    cap counts events by action and ignores outcome, so rejected attempts (that never call ElevenLabs)
+    can self-lock a fumbling user out for 24h.
+  - [P3] `2026-07-14-saved-message-cap-is-check-then-insert-not-race-safe` — the vault cap is a
+    count-then-insert labeled "race-safe"; concurrent saves of different generations can exceed it
+    (FU-81 atomicity class, vault-limit path).
+  - [P3] `2026-07-14-onboarding-completion-and-avatar-writes-ignore-zero-row-updates` — the completion
+    + avatar-pointer writes check only for `error`, not zero rows; on a missing profile row the save is
+    a silent no-op and the user's details/photo are lost (the branch FU-42's fix left open).
+  - [P3 · owner-paired] `2026-07-14-billing-period-desyncs-after-a-customer-portal-plan-switch` —
+    `billing_period` is trusted from checkout-time Stripe metadata that Stripe never rewrites on a
+    Portal plan switch; the fix lives in webhook logic (never-touch) → flagged, owner-led.
+  - [P4] `2026-07-14-messages-save-orphans-the-copied-audio-on-insert-failure` — only the unique-violation
+    branch cleans up the copied audio object; any other insert error orphans it in storage.
+- Triggers that came true: none newly actionable this run. FU-42's sibling gap (onboarding zero-row
+  write) is surfaced above rather than as a trigger promotion.
+- Deduped-out (found but already covered, not re-logged): a non-atomic delete-account teardown with a
+  misleading "Nothing was lost" screen (= FU-86); a `DELETE /api/me` storage wipe capped at 1000
+  objects/folder (= FU-95).
+- Capacity note: **7 more lower-priority items** were found and deliberately **not** logged this run
+  (8-entry cap): a webhook terminal-guard fail-open (belt-and-suspenders vs FU-79/81); an init-upload
+  re-init storage orphan (P4); a Settings "remove photo → no way to re-add" dead-end (likely a FU-12
+  decision, not clean debt); a `ui_flags` last-write-wins clobber (P4); a dead/misleading `/settings`
+  match in `middleware.ts` (owner-paired cosmetic); the init-upload signed-URL limiter asymmetry (low
+  practical impact — uploads are serialized by the sequential-prompt gate); and an in-memory dedup
+  that can 429 an honest retry (minor). Re-surface next run if the top-8 drain.
+- Branch / commit: `triage/2026-07-14` @ <this commit>
+- Checks: n/a for the app (docs-only change); CI re-runs lint/typecheck/test/build on the PR.
+- Merged: <stamped later when the owner merges>
+
+---
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
