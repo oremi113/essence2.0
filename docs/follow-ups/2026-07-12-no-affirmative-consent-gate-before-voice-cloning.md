@@ -49,3 +49,15 @@ so the form actually sends the two flags; (3) decide durable audit-grade storage
 (a `usage_events` consent event is migration-free; a dedicated column/table is stronger) — today the
 guard only enforces presence; (4) flip `VOICE_CONSENT_REQUIRED=true`. Do NOT flip before (2) or every
 voice creation 422s.
+
+**✅ Update 2026-07-14: gate built, wired, flag flipped (local), owner-approved.** The capture UI now
+exists — two required checkboxes on `VoiceProfileCreateForm.tsx` (the sole `/api/voice-profiles` create
+surface, rendered by the record page) that collect + send `consentToClone` + `ownershipAttested`;
+client-side submit is blocked until both are checked, server enforces via `assertVoiceConsent`.
+`VOICE_CONSENT_REQUIRED=true` set in `.env.local`. Verified: 4 component tests
+(`tests/unit/voice-profile-create-form.test.tsx`, renders + blocks + sends flags) + a browser screenshot
+of the blocked state. **Remaining (small):** (a) set `VOICE_CONSENT_REQUIRED=true` in **Vercel production
+env** (local flag ≠ prod); (b) final attorney pass on the exact checkbox wording — a cheap string swap,
+the mechanism is done. Consider moving from "enforce presence" to a durable audit record (a
+`usage_events` consent event or a column) if legal wants proof-of-consent per user. Effectively resolved
+pending the prod-env flip + wording sign-off.

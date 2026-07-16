@@ -54,8 +54,17 @@ hardware failure) but has **no point-in-time restore for logical deletes**, so a
 delete or bad code path loses audio irrecoverably.
 
 **Remaining fix (the real durability gate):** design a **separate audio-durability strategy** before
-promising "forever" — e.g. periodic export/replication of the `essence-audio` bucket to a second store,
-S3 object versioning if exposed, or a scheduled backup job. This is a design decision, not a plan toggle.
-Two-edged reminder: the audio-not-in-backups fact *helps* the deletion promise (deleted audio is truly
-gone), so any audio-backup scheme must itself honor account-deletion (purge the user's audio from the
-secondary store too). The DB-backup half is **resolved**; the audio half stays **open** as the launch gate.
+promising "forever." Recommended MVP-vs-scale path (efficient now, swappable later):
+- **MVP (now, cheap — ~an hour, near-zero cost at low volume):** a scheduled job (Vercel Cron → an
+  authenticated route, or a Supabase Edge Function) that nightly copies new/changed objects from
+  `essence-audio` to a **second, separate store** — a different Supabase project bucket or Cloudflare R2
+  (cheap egress). Gives a recoverable second copy covering the catastrophic cases (bucket lost/corrupted,
+  mass accidental delete). Skip PITR-grade per-object recovery for MVP.
+- **At scale (later):** graduate to managed cross-region bucket replication + object versioning +
+  lifecycle rules + a defined RPO/RTO. The nightly job swaps out without app-code changes.
+- Deletion reconciliation (load-bearing): the secondary store **must also honor account deletion** —
+  purge the user's audio there when they delete, or the "permanently gone" promise breaks. Wire it into
+  `deleteAccountAction` alongside the primary-bucket wipe.
+
+This is a design decision + a store/credentials choice (owner input needed: R2 vs second Supabase
+project). The DB-backup half is **resolved**; the audio half stays **open** as the launch gate.
