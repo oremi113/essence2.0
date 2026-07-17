@@ -23,6 +23,69 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-17 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged **8** new per-file backlog items; no app code touched.
+- Health on `main` (93d0bbd): typecheck ✅ · lint ✅ · test:unit 386/386 ✅ (run after a full
+  `npm ci` — the container starts without dependencies, so the first check pass silently no-op'd;
+  re-run against installed deps to report honestly).
+- Scanned: the full existing backlog for dedup (FOLLOW_UPS.md 1–84 + the 21 per-file items on `main`,
+  **plus the 8 still-unmerged items on `triage/2026-07-14`** and that run's explicitly-deferred list);
+  marker-debt grep over `src/` (zero TODO/FIXME/HACK; every `eslint-disable` is documented/conventional);
+  doc-drift spot-check (API_CONTRACTS.md describes an older route surface + a bucket name that disagrees
+  with STORAGE_PATHS.md — judged a known early-stub doc, not logged as fresh debt); deep reads of four
+  under-scanned clusters not covered by the 2026-07-14 pass: the audio/upload + message-audio helpers,
+  the voice-profiles / voice-training pipeline, the infra/api layer (rate-limiter, defineRoute, analytics,
+  /api/me), and the Stripe-portal / profile helpers.
+- Excluded as work-in-progress (not logged): the active branches `fix/step6-cost-control-wedge` and
+  `refactor/fu-93-*` (Step 6 generate/regenerate cost + wedge), `feat/step10-error-copy-pass`
+  (Shelf / Home B), `feat/first-breath-audio` + `feat/s10c-*` (First Breath audio), `feat/legal-pages`
+  (legal + offline), and `feat/s5-stripe-golive` (reveal/processing guards).
+- Discovered (new per-file FOLLOW_UPS entries, all P3, most-money/security-relevant first):
+  - `2026-07-17-db-rate-limiter-count-then-insert-bypasses-spend-caps` — the daily voice/message spend
+    caps are count-then-insert, so concurrent requests all pass at once (cost-axis is P2-adjacent;
+    scored P3 because the overshoot is bounded). Distinct site from the FU-81 / 2026-07-14 saved-message
+    atomicity items.
+  - `2026-07-17-loadreadyvoiceprofile-swallows-db-error-wedges-paid-flow` — a transient DB read error
+    returns a terminal non-retryable "voice not ready" and hard-blocks regenerate/commit (the sibling
+    `countActivePending` deliberately fails open; this one doesn't).
+  - `2026-07-17-envint-treats-zero-as-invalid-defeats-cost-cap-killswitch` — `envInt` (duplicated in
+    cost-controls.ts + rate-limit.ts) rejects `0`, so setting any cap to 0 to hard-stop spend silently
+    reverts to the default.
+  - `2026-07-17-portal-session-returnpath-backslash-open-redirect` — the same-origin guard rejects
+    `//host` but not `/\host`; an attacker-supplied returnPath yields an off-site Stripe return_url.
+  - `2026-07-17-elevenlabs-client-abort-orphans-billed-voice-no-reconcile` — the 60s client timeout
+    records a definitive failure with no vendor reconciliation, so a voice ElevenLabs already billed is
+    orphaned and the retry mints a second (distinct mechanism from the 2026-07-14 stale-window item).
+  - `2026-07-17-getorcreatevoiceprofile-race-creates-duplicate-profiles` — check-then-insert with no
+    unique constraint on `voice_profiles.user_id`; concurrent calls create two "Default" profiles and
+    clips can attach to the wrong one. **Owner-paired** (clean fix is a migration).
+  - `2026-07-17-no-tests-on-voice-spend-gating-backoff-download-clips` — the retry/backoff cap and the
+    clip-download spend gate that govern billed ElevenLabs attempts have zero unit coverage.
+  - `2026-07-17-audio-commit-downloads-whole-clip-just-to-read-its-size` — `audio/commit` downloads the
+    entire uploaded object into memory only to read `blob.size` (egress waste + OOM risk per commit).
+- Triggers that came true: none newly actionable this run.
+- Deduped-out (found but already covered, NOT re-logged): Agent B's top "stale-processing 180s <
+  maxDuration 300s → orphaned paid voice" finding is an **exact duplicate** of the P2
+  `2026-07-14-voice-create-stale-threshold-shorter-than-max-duration` (same file/lines/mechanism — the
+  agent's "recording vs request duration" distinction was wrong); the `/api/me` storage wipe 1000-object
+  cap = FU-95; the delete-account error-swallowing sits in the already-4-deep teardown cluster
+  (FU-85/86/88/95) and is non-prod-gated.
+- Capacity note: **8 more lower-priority items** were found and deliberately **not** logged this run
+  (8-entry cap): [P3] the rate-limiter classifies 429s by substring-matching user-facing copy and drops
+  `checkSignedUrlLimit`'s `retryAfterMs`; [P4] `/api/analytics` accepts unbounded client `meta` with no
+  body-size check; [P4] `getOrCreateProfile` vs `ensureProfile` duplicate get-or-create, only one
+  race-safe; [P4·owner-paired] `reconcileCheckoutSession` reports "reconciled" even when the webhook
+  handler wrote nothing; [P4] `download-clips` conflates a transient DB error with "no clips"; [P4] the
+  `{userName}` resolver fallback substitutes the literal "I'm here" into a name slot; [P4] an
+  empty-string blob MIME is uploaded to ElevenLabs as `.mp3`; [P3·owner-paired] `/api/me` DELETE
+  swallows each delete's error (teardown-cluster adjacent). Re-surface next run if the top 8 drain.
+- Branch / commit: `triage/2026-07-17` @ <this commit>
+- Checks: n/a for the app (docs-only change); CI re-runs lint/typecheck/test/build + the followups-index
+  check on the PR.
+- Merged: <stamped later when the owner merges>
+
+---
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
