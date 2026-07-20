@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 47 · 33 open · 1 decision · 13 resolved · 0 dropped
+Total: 47 · 32 open · 1 decision · 14 resolved · 0 dropped
 
-## Open (33)
+## Open (32)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -22,7 +22,6 @@ Total: 47 · 33 open · 1 decision · 13 resolved · 0 dropped
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
 | P3 | Account-teardown + vault-restore client flows have no test coverage *(triage 2026-07-07)* | 2026-07-07 | FU-90 | [`2026-07-07-the-account-teardown-and-vault-restore-client-flows.md`](./2026-07-07-the-account-teardown-and-vault-restore-client-flows.md) |
-| P3 | `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl` → CTA can stick; `push(undefined)` returns `true` *(triage 2026-07-07)* | 2026-07-07 | FU-89 | [`2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md`](./2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md) |
 | P3 | Account-delete storage wipe caps each prefix at 1000 objects with no pagination → a heavy user's audio survives "erased" *(triage 2026-07-10)* | 2026-07-10 | FU-95 | [`2026-07-10-account-delete-storage-wipe-caps-each-prefix-at.md`](./2026-07-10-account-delete-storage-wipe-caps-each-prefix-at.md) |
 | P3 | No unit tests on `RecordScreen.reducer` + `useSequenceTimeline` *(triage 2026-07-10)* | 2026-07-10 | FU-96 | [`2026-07-10-no-unit-tests-on-recordscreen-reducer-or-usesequencetimeline.md`](./2026-07-10-no-unit-tests-on-recordscreen-reducer-or-usesequencetimeline.md) |
 | P3 | Single-clip playback retry guard resets itself every fetch → an undecodable clip bursts the rate-limited playback-url endpoint *(triage 2026-07-10)* | 2026-07-10 | FU-94 | [`2026-07-10-single-clip-playback-retry-guard-resets-itself-on.md`](./2026-07-10-single-clip-playback-retry-guard-resets-itself-on.md) |
@@ -50,7 +49,7 @@ Total: 47 · 33 open · 1 decision · 13 resolved · 0 dropped
 |---|---------|--------|--------|------|
 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
 
-## Resolved (13)
+## Resolved (14)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -65,5 +64,6 @@ Total: 47 · 33 open · 1 decision · 13 resolved · 0 dropped
 | P2 | First Playback's word-by-word reveal is driven by a hand-timed cadence table scaled to the audio's total length, not by real per-word timings — so words drift within the line even though the line now ends on time *(found with a real voice clone, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-word-reveal-should-use-real-tts-timestamps.md`](./2026-09-10-word-reveal-should-use-real-tts-timestamps.md) |
 | P2 | The Breath Stone canvas shows a visible rectangular 'box' on every dark screen — its radial mask defaults to farthest-corner, so it softens only the four corners and stays fully opaque along all four edges *(found by the owner on an iPhone, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges.md`](./2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges.md) |
 | P2 | The `detail → playback` match cut hands over the ceremony stone's CANVAS rect, but the canvas only fills 56% of its own box with the sphere — so the hero object jumps 108px → 195px in a single frame at the ceremony's most ceremonial moment *(found capturing the cut at 4× throttle, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md`](./2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md) |
+| P3 | `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl` → CTA can stick; `push(undefined)` returns `true` *(triage 2026-07-07)* | 2026-07-07 | FU-89 | [`2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md`](./2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md) |
 | P3 | RESOLVED 2026-09-15 — A First Playback sample render that keeps failing AFTER the paid vendor call re-bills on every retry — `sample_status: 'failed'` is re-claimable with no attempt ceiling, so a storage outage charges the user once per attempt *(observed in live testing, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-voice-sample-retry-has-no-billing-cap.md`](./2026-09-10-voice-sample-retry-has-no-billing-cap.md) |
 | P3 | The `detail` phase's glimmer band runs in a 220px disc around a 112px stone, so a drifting crescent of light is painted up to ~56px OUTSIDE the stone's silhouette on the dark ground — a sheen-sweep, which the design system forbids twice over *(found capturing the cut at 4× throttle, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-detail-glimmer-disc-is-sized-to-the-canvas-box.md`](./2026-09-15-detail-glimmer-disc-is-sized-to-the-canvas-box.md) |
