@@ -51,7 +51,22 @@ export function useCheckout(label: string) {
         return false;
       }
 
-      const { checkoutUrl } = (await res.json()) as { checkoutUrl: string };
+      // A 200 must still carry a usable checkoutUrl. Parse defensively, mirroring
+      // the error path above: an ok response with a broken body — non-JSON (a
+      // proxy interstitial or truncated stream), or valid JSON missing/renaming
+      // the field — is not a success. Without this guard the two failure modes
+      // both defeat the hook's "no dead spinner, return false so the caller
+      // recovers" contract: an unguarded `await res.json()` throw escapes the
+      // hook so the caller's CTA never leaves its spinner, and an absent field
+      // makes `checkoutUrl` undefined → `router.push(undefined)` a silent no-op
+      // that still returns true, so the caller believes navigation is underway.
+      const data = await res.json().catch(() => ({}));
+      const checkoutUrl: unknown = data?.checkoutUrl;
+
+      if (typeof checkoutUrl !== "string" || !checkoutUrl) {
+        console.error(`[${label}] checkout succeeded without a URL`, data);
+        return false;
+      }
 
       // External Stripe URL: full page navigation. Internal mock path:
       // router.push keeps the SPA nav.
