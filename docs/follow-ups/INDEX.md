@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
+Total: 21 · 19 open · 1 decision · 1 resolved · 0 dropped
 
-## Open (20)
+## Open (19)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -19,7 +19,6 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
 | P3 | Account-teardown + vault-restore client flows have no test coverage *(triage 2026-07-07)* | 2026-07-07 | FU-90 | [`2026-07-07-the-account-teardown-and-vault-restore-client-flows.md`](./2026-07-07-the-account-teardown-and-vault-restore-client-flows.md) |
-| P3 | `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl` → CTA can stick; `push(undefined)` returns `true` *(triage 2026-07-07)* | 2026-07-07 | FU-89 | [`2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md`](./2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md) |
 | P3 | Account-delete storage wipe caps each prefix at 1000 objects with no pagination → a heavy user's audio survives "erased" *(triage 2026-07-10)* | 2026-07-10 | FU-95 | [`2026-07-10-account-delete-storage-wipe-caps-each-prefix-at.md`](./2026-07-10-account-delete-storage-wipe-caps-each-prefix-at.md) |
 | P3 | No unit tests on `RecordScreen.reducer` + `useSequenceTimeline` *(triage 2026-07-10)* | 2026-07-10 | FU-96 | [`2026-07-10-no-unit-tests-on-recordscreen-reducer-or-usesequencetimeline.md`](./2026-07-10-no-unit-tests-on-recordscreen-reducer-or-usesequencetimeline.md) |
 | P3 | Single-clip playback retry guard resets itself every fetch → an undecodable clip bursts the rate-limited playback-url endpoint *(triage 2026-07-10)* | 2026-07-10 | FU-94 | [`2026-07-10-single-clip-playback-retry-guard-resets-itself-on.md`](./2026-07-10-single-clip-playback-retry-guard-resets-itself-on.md) |
@@ -36,3 +35,9 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
+
+## Resolved (1)
+
+| P | Summary | Opened | Legacy | File |
+|---|---------|--------|--------|------|
+| P3 | `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl` → CTA can stick; `push(undefined)` returns `true` *(triage 2026-07-07)* | 2026-07-07 | FU-89 | [`2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md`](./2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md) |
