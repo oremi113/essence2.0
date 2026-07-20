@@ -23,6 +23,44 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-20 — scheduled
+- Outcome: Fixed — the checkout button could get stuck spinning (or silently
+  pretend it was taking you to payment) if the payment-start request came back
+  malformed; it now recovers cleanly and shows the "try again" error instead.
+- Item: FU-89 — `useCheckout` success path doesn't guard `res.json()` / a
+  missing `checkoutUrl`.
+- Root cause: symptom — on a 200 response whose body is either not valid JSON
+  (a proxy interstitial / truncated stream) or valid JSON missing the
+  `checkoutUrl` field, the checkout CTA in Card Capture either stuck disabled
+  forever on its spinner, or reported success while navigating nowhere. Cause —
+  the hook's *error* path parsed the body defensively (`.catch(() => ({}))`) but
+  the *success* path did `const { checkoutUrl } = await res.json()` unguarded
+  and returned `true` without checking `checkoutUrl` was a usable string: a
+  thrown `res.json()` escaped the hook (the awaiting caller never reached
+  `setCheckoutUi('error')`), and a `undefined` field made
+  `router.push(undefined)` a no-op that still returned `true`. Why this addresses
+  the cause — the success path now mirrors the error path: parse defensively and
+  validate `typeof checkoutUrl === 'string' && checkoutUrl`, logging the
+  label-tagged failure and returning `false` on a broken 200, so the failure
+  flows through the hook's own documented "return false so the caller recovers"
+  contract rather than being swallowed or misreported. Not a band-aid — no error
+  is muted, no type widened, no test weakened.
+- Branch / commit: refactor/fu-89-checkout-url-guard @ b538594
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ 389/389 (386 prior + 3 new in
+  `tests/unit/useCheckout.test.tsx`).
+- Scanned / discovered: read the whole backlog + per-file index; ran the health
+  checks on `main` (fresh `npm ci`): typecheck ✅ · lint ✅ · unit 389/389 ✅.
+  Higher-ranked open items were all blocked for an agent this run — FU-93 and
+  FU-92 already have open PRs (#113, #112); FU-85/FU-86 (account-teardown
+  hardening) are `owner_paired` and belong to the pre-`ACCOUNT_DELETE_ENABLED`
+  sign-off batch; FU-87 is an iOS-Safari popup behaviour needing in-browser
+  verification this environment can't do. FU-89 was the top clean,
+  agent-fixable, here-verifiable item. No new marker debt or untracked
+  discoveries logged (per §5, new-item discovery is the triage agent's job on
+  its own branch). Noted only in-item: the FU-89 restore-branch cross-reference
+  was already guarded and needed no change.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
