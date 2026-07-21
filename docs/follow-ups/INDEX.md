@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
+Total: 27 · 26 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (20)
+## Open (26)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -26,10 +26,16 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P3 | TTS→upload→duration→status-write pipeline implemented twice (`audio.ts` vs `commit/route.ts`) → drift on a vendor-spend path *(triage 2026-07-10)* | 2026-07-10 | FU-97 | [`2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md`](./2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md) |
 | P3 | `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-app-main-missing-safe-area-inset.md`](./2026-07-12-app-main-missing-safe-area-inset.md) |
 | P3 | The icon-only "Back" chevron is defined 5× across the app (step3 + three message screens + a header class) → consolidate into one shared component so touch-target / style fixes can't drift out of sync again *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-consolidate-duplicated-back-chevron-affordance.md`](./2026-07-12-consolidate-duplicated-back-chevron-affordance.md) |
+| P3 | The daily message-generation cost backstop counts `usage_events` action `message_generate`, but the pipeline only ever writes `step6_generate` → the 20/day cap silently never fires *(triage 2026-07-21)* | 2026-07-21 | — | [`2026-07-21-daily-message-generation-cost-cap-counts-wrong-action.md`](./2026-07-21-daily-message-generation-cost-cap-counts-wrong-action.md) |
+| P3 | `getOrCreateVoiceProfile` reads `limit(1)` with no `.order()` and no `archived` filter → on the paid Processing/Card-Capture spine it can pick an arbitrary/archived profile, diverging from the two sibling readers *(triage 2026-07-21)* | 2026-07-21 | — | [`2026-07-21-get-or-create-voice-profile-nondeterministic-select.md`](./2026-07-21-get-or-create-voice-profile-nondeterministic-select.md) |
+| P3 | Memory Shelf's first-ever-save ceremony is seeded from a mount-time `useState` that reads `messages` before the client fetch resolves (always `[]`) → the ceremony is dead on the real save path, though it works in `/dev/shelf` *(triage 2026-07-21)* | 2026-07-21 | — | [`2026-07-21-memory-shelf-first-save-ceremony-never-fires.md`](./2026-07-21-memory-shelf-first-save-ceremony-never-fires.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
 | P4 | Migrate the remaining `FOLLOW_UPS.md` monolith (items 1-84 + resolved history) into the per-file `docs/follow-ups/` layout | 2026-07-12 | — | [`2026-07-12-migrate-legacy-followups-to-per-file.md`](./2026-07-12-migrate-legacy-followups-to-per-file.md) |
+| P4 | The "one active in-flight generation per user" cap is a read-then-insert with no DB constraint → a narrow cross-instance race can create two active pending rows → two concurrent paid renders + a path around the saved-message quota *(triage 2026-07-21)* | 2026-07-21 | — | [`2026-07-21-active-pending-cap-nonatomic-toctou.md`](./2026-07-21-active-pending-cap-nonatomic-toctou.md) |
+| P4 | Auth middleware awaits `supabase.auth.getUser()` with no try/catch → a transient Supabase-auth blip throws and hard-500s every matched route instead of degrading *(triage 2026-07-21)* | 2026-07-21 | — | [`2026-07-21-auth-middleware-getuser-no-error-boundary.md`](./2026-07-21-auth-middleware-getuser-no-error-boundary.md) |
+| P4 | Settings `removePhotoAction` deletes the storage object *before* clearing the DB pointer → a partial failure leaves the profile pointing at a deleted avatar (broken image) under a false "your photo is unchanged" message *(triage 2026-07-21)* | 2026-07-21 | — | [`2026-07-21-settings-remove-photo-deletes-storage-before-db-pointer.md`](./2026-07-21-settings-remove-photo-deletes-storage-before-db-pointer.md) |
 
 ## Decision (owner call) (1)
 

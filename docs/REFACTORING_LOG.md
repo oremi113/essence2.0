@@ -23,6 +23,52 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-21 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 6 new backlog items as per-file follow-ups; no code touched.
+- Branch: `triage/2026-07-21` (off latest `origin/main` @ 93d0bbd).
+- Health checks on `main` @ 93d0bbd: typecheck ✅ · lint ✅ · test:unit **386/386** ✅.
+- Scanned: the diff since the last triage (2026-07-12) — Step 10 error-copy, first-breath audio
+  degrade (S10-C), the nav/safe-area fixes, and the S5 stripe-gating hardening — all read clean and
+  well-reasoned (no debt). Marker-debt grep over `src/`: no new untracked TODO/FIXME/HACK; every
+  `eslint-disable` is documented/conventional. No active `feat/*`/`refactor/*`/`triage/*` branch on the
+  remote, so recent spine + Step 10 + S5 work is landed, not WIP. Deep-read four subsystems (via three
+  read-only sub-scouts, every finding re-verified by hand): Step 6 generation/cost-control pipeline;
+  Step 3 post-payment spine + auth/middleware; onboarding/settings/shelf/analytics. Spot-checked
+  API_CONTRACTS vs the actual route map (no drift; the FU-59/60 deleted routes aren't documented) and the
+  two signed-URL play routes (their shared tail is already extracted in `playback.ts` — not debt).
+- Triggers came true (resolved-in-code by the spine; annotated in the FOLLOW_UPS priority table for the
+  fixer to verify + strike — discovery does not strike):
+  - FU-25 (First Breath exit destination) — decided + wired by spine S3: `FirstBreathSequence.tsx:139` →
+    `messagesNew`; stub route is now an intentional Home forward.
+  - FU-24 (VoiceCreationView success skips First Breath) — MOOT: `VoiceCreationView` deleted in spine S4;
+    `/app/voice/create` is a clean forward to `vaultProtect`.
+- Discovered (new per-file follow-ups in `docs/follow-ups/`, dated 2026-07-21):
+  - [P3] daily-message-generation-cost-cap-counts-wrong-action — the 20/day generation backstop counts
+    `usage_events` action `message_generate`, but the pipeline only writes `step6_generate`, so the cap
+    never fires (hourly cap still bounds spend — dead guardrail, not an open leak).
+  - [P3] get-or-create-voice-profile-nondeterministic-select — `getOrCreateVoiceProfile` reads `limit(1)`
+    with no `.order()`/`archived` filter on the paid Processing + Card-Capture spine; a multi-profile user
+    can be `/start`'d + polled on the wrong profile (latent — single-profile users unaffected).
+  - [P3] memory-shelf-first-save-ceremony-never-fires — the first-save ceremony is seeded from a mount-time
+    `useState` that reads the not-yet-fetched (empty) list, so it's dead on the real save path (works only
+    in `/dev/shelf`, which feeds messages synchronously).
+  - [P4] settings-remove-photo-deletes-storage-before-db-pointer — storage delete precedes the DB pointer
+    clear; a partial failure leaves a broken avatar under a false "your photo is unchanged" message.
+  - [P4] auth-middleware-getuser-no-error-boundary — `getUser()` awaited with no try/catch; a transient
+    auth blip hard-500s every matched route instead of degrading.
+  - [P4] active-pending-cap-nonatomic-toctou — the "one active generation per user" cap is a read-then-insert
+    with no DB constraint (fails open); a narrow cross-instance race can double a paid render. Owner-paired
+    (fix needs a migration; pairs with FU-81).
+- Not separately logged (dedup): `/api/messages/commit` lacks a usage-ledger/hourly gate — same theme as
+  FU-92 (`retry_audio` no cost cap) and gated behind the OFF `DEFERRED_AUDIO_ENABLED` flag; folded as a note
+  here rather than a new entry. Everything else the scouts surfaced was already logged (FU-99/95/85/86/88/98/
+  100/101/102) or intentional flag-OFF/stub WIP.
+- Checks: n/a for a fix (docs-only). The health checks above ran green; CI re-runs lint/typecheck/test/build
+  on the PR.
+- Merged: <stamped later when the owner merges>
+
+---
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
