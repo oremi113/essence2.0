@@ -23,6 +23,53 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-24 — discovery
+- Outcome: Scan-only (read-only triage) — logged **7 new backlog items** on `triage/2026-07-24`.
+  No application code touched; docs only.
+- Health on `main` (93d0bbd): typecheck ✅ · lint ✅ · test:unit 386/386 ✅. No marker debt in
+  `src/` (`TODO`/`FIXME`/`HACK` — none; every `eslint-disable` is documented/tracked).
+- Scanned: read-only deep pass on the subsystems the recent passes hadn't re-covered —
+  voice-profile creation lifecycle (`voice-profiles/[id]/start`), message persistence routes
+  (`commit`/`save`/`discard`/`play`), audio/upload, rate-limit / guards / subscription, the
+  non-webhook Stripe routes, the Stripe webhook status mapping (flag-only), the analytics/journey
+  pipeline, and auth middleware. Cross-checked every finding against `docs/FOLLOW_UPS.md` (open +
+  resolved) and all 21 per-file items, skipped active WIP (the `feat/*` branches ahead of `main`:
+  step6 cost-control, legal pages, first-breath audio, S5 stripe go-live, step10 error copy).
+- Discovered (all in `docs/follow-ups/`, 2026-07-24-*):
+  1. **[P2]** Voice-creation staleness timeout (3 min) < the route's own 5-min work budget → a slow
+     ElevenLabs creation can be killed mid-run while it still bills, orphaning the paid voice and
+     forcing a second paid creation. `voice-profiles/[id]/start/route.ts:29,32`.
+  2. **[P3]** Voice-creation limits count non-billing failures — validation rejects burn the 5/day
+     cap (24 h lockout); transient infra failures burn the permanent 3-attempt cap (permanent brick).
+     `start/route.ts:122,178` + `rate-limit.ts` + `backoff.ts:33`.
+  3. **[P3]** Audio-render cost cap is a non-atomic read-then-absolute-set → racing `/commit` calls
+     over-spend past the cap. `messages/commit/route.ts:66,114`.
+  4. **[P3]** `/messages/save` vault-limit "security gate" fails open on an unchecked count-query
+     error. `messages/save/route.ts:104`.
+  5. **[P3 · owner-paired]** Stripe webhook `deriveStatus` maps `incomplete`/`default` → terminal
+     `lapsed` → future lockout/double-charge landmine (low-risk today under trial-only creation).
+     `stripe/webhook/handlers.ts:164,177`. Never-touch: flagged only.
+  6. **[P3]** Headline conversion event `subscription_started` fires nowhere — the spine deleted its
+     only emit site (`/app/vault/sealed`) without rewiring it. `analytics/journey.ts:44`.
+  7. **[P3]** `app_env` stamps preview/staging deploys as `production`, defeating the funnel's
+     test-traffic filter; `preview` enum never emitted. `analytics/context.ts:22`.
+- Triggers that came true / stale entries noticed (recommend the owner/fixer strike — not struck
+  here to avoid colliding on the fixer's resolution lane):
+  - **FU-24** (VoiceCreationView success routing) is now obsolete — `VoiceCreationView` was deleted
+    in the S4 spine cleanup; `/app/voice/create` just redirects to Card Capture.
+  - **FU-25** (First Breath exits to a stub) is resolved-in-fact — `FirstBreathSequence.tsx:139`
+    now routes to `ROUTES.messagesNew`; the stub is a documented stable forward and the code comment
+    itself says "#25 resolved."
+  - **FU-22** (voice-creation payment gate): its "pick up when the reorder lands" trigger came true
+    (spine S2b reordered creation-after-payment), but flipping `VOICE_CREATION_REQUIRES_PAYMENT` is
+    staged on the active `feat/s5-stripe-golive` branch — WIP, not debt.
+- Considered and deliberately NOT logged (anti-noise): `countRecentEvents` fail-open (the *documented,
+  deliberate* rate-limit fail-open a prior pass already cleared — FOLLOW_UPS.md "caps are sound"
+  note); `/api/health` returning 200 on DB error (defensible JSON-body health design, no probe keys
+  on HTTP status); `generations/[id]/play` replaying a superseded own-generation (P4, own-data only).
+- Branch / commit: triage/2026-07-24 @ <stamped on push>
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
