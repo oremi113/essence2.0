@@ -23,6 +23,44 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-27 — scheduled
+- Outcome: Fixed — closing your account used to erase your recordings first and
+  only then delete the account; if that later step failed, the app told you
+  "nothing was lost" even though your recordings were already gone. It now erases
+  the recordings last, after the account is fully closed, so that reassurance is
+  only ever shown while your recordings are still safe.
+- Item: FU-86 [P2] — Delete-account teardown erases audio *before* the row/auth
+  deletes → a mid-teardown failure loses recordings under a "Nothing was lost"
+  screen.
+- Root cause: symptom — the account-deletion "we couldn't finish, nothing was
+  lost" failure screen could render *after* the person's audio + photo were
+  already permanently deleted. Cause — `deleteAccountAction` ordered the steps
+  Stripe-cancel → **wipe storage (irreversible)** → delete rows → delete auth
+  user, and a failure in either of the last two steps returned `{ ok: false }`,
+  driving that reassuring terminal even though the irreversible wipe had already
+  run. The "aborts BEFORE any data loss" guarantee only ever held for a *Stripe*
+  failure. Why this change addresses the cause (not the symptom) — the fix moves
+  the single irreversible step (the storage wipe) to *last*, so every failure
+  that can still return `{ ok: false }` now happens while the recordings are
+  untouched; and once the account is provably gone (auth user deleted) a storage
+  failure is logged as an orphan for a later sweep rather than flipping the result
+  to failure (which would falsely claim "nothing was lost" over a closed account).
+  This is a genuine root-cause reorder, not a copy patch. Two orthogonal
+  landmines in the same function are left open by design (no scope creep): FU-85
+  (a swallowed `subscriptions` read, `owner_paired`) and FU-88 (no server-side
+  `ACCOUNT_DELETE_ENABLED` gate) — both should close before the delete flag flips.
+- Branch / commit: refactor/fu-86-teardown-order @ 7956a31
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (390/390; +4 new in
+  tests/unit/settings-delete-account.test.ts, each verified red against the
+  pre-fix ordering). Non-visual change (server action); no browser verification
+  needed. The flow is flag-gated OFF (`ACCOUNT_DELETE_ENABLED`), so not live.
+- Discovered: none new. Re-scored the open backlog: the delete-teardown cluster
+  (FU-85/86/88/90/95) remains the top P2 concentration; FU-99 (Memory Shelf
+  playback race) overlaps the active `feat/step10-error-copy-pass` branch
+  (shelf/home files) and was skipped for proximity; FU-89 and FU-93 already have
+  open `refactor/*` branches.
+- Merged: <stamped later when the owner merges, with date>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
