@@ -23,6 +23,57 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-28 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 6 new backlog items; no code touched.
+- Scanned: existing backlog (`FOLLOW_UPS.md` archive + all 21 per-file items on
+  `main`, plus the still-unmerged `triage/2026-07-14/-17/-21/-24` items — ~30
+  prior findings — to dedupe against); health checks on `main` (typecheck ✅ ·
+  lint ✅ · test:unit 386/386 ✅); marker-debt grep over `src/` (only documented
+  `eslint-disable`s, no untracked TODOs); recent-diff review (no-op — `main` has
+  not advanced since 2026-07-12, so the last four runs already mined this exact
+  tree). Deep reads of the under-covered subsystems the prior runs skipped:
+  onboarding wizard/reducer, First Breath ceremony + Web-Audio engine, the
+  record state machine + sequence timeline, `useResource`, analytics/journey
+  emit sites, the offline/system surface, the vault-render canvas engine, and
+  the lower-traffic API routes (health, playback-url, discard, waitlist, me,
+  analytics, training-clips, the `defineRoute` factory).
+- Discovered (new per-file follow-ups, all verified against the code):
+  - [P2] `2026-07-28-record-upload-error-dead-ends-the-ceremony` — a failed clip
+    upload strands the user on the record prompt; "try again" copy has no working
+    control (mic blocked on `hasError`; the real retry is in an `aria-hidden`,
+    1px-clipped engine; no auto-advance on error).
+  - [P3] `2026-07-28-health-endpoint-returns-200-when-db-check-fails` — `/api/health`
+    always answers 200, so a status-keyed uptime/readiness probe reads a DB-down
+    instance as healthy (latent landmine).
+  - [P3] `2026-07-28-first-breath-sequence-completed-never-fires-under-reduced-motion`
+    — `sequence_started` fires on mount but `sequence_completed` only on the
+    animation's `revealed` phase, which the paused reduced-motion timeline never
+    reaches → phantom 100% funnel drop-off for that cohort.
+  - [P3] `2026-07-28-record-reducer-has-no-failed-terminal-branch` — the working
+    screen ignores a `failed` voice status and the 8s fallback declares "ready",
+    routing a failed voice to the paywall (reachability-caveated landmine).
+  - [P4] `2026-07-28-playback-url-unguarded-request-json-500s-on-bad-body` — a
+    malformed body 500s instead of 400 (route hand-rolls `request.json()` with no
+    schema, unlike its siblings).
+  - [P4] `2026-07-28-vault-object-canvas-not-repainted-on-resize` — the vault
+    canvas has no `ResizeObserver`, so an orientation/DPR change on a held sealed
+    vault renders it blurry until the next phase flip.
+- Reviewed-and-cleared (checked, no entry warranted): `useResource` abort/reset
+  lifecycle; `useSequenceTimeline` ref-mirroring + Strict-Mode guard;
+  `firstBreathAudio` gesture-listener cleanup + null degradation; the onboarding
+  double-upload race (input `disabled={inFlight}` closes it); `useOnline`/offline
+  reconnect reconciliation; `SealVaultCanvas` clock continuity; the analytics
+  allowlist vs. emit sites; `defineRoute`'s outer try/catch (gives the graceful
+  degradation the middleware `getUser` — FU-91 — lacks); `messages/discard`
+  audio-before-row delete (documented best-effort). All DEDUP-listed prior items
+  were present as described and excluded.
+- Triggers came true: none new — `main` is unchanged since 2026-07-12 and the
+  prior four runs already handled promotions; no legacy `FOLLOW_UPS.md` item
+  changed priority this run.
+- Branch / commit: `triage/2026-07-28` @ &lt;this commit&gt;
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the branch).
+- Merged: &lt;stamped later when the owner merges&gt;
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
