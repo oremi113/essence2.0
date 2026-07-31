@@ -17,9 +17,9 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 |---|---|---|---|
 | 22 | P2 | Voice creation payment gating — ElevenLabs cost exposure | ⏳ decision RESOLVED (gate=yes, Step 3 lock); guard pre-built flag-OFF; wiring coupled to M2 Step 3 |
 | 34 | P2 | Two parallel message-creation routes; one is legacy | ⚠️ M0 retired the legacy *component*, but the 2026-06-16 triage found app nav still points at `/app/messages/new` → new spine may be unreachable; verify the repoint (see Discovery 2026-06-16) |
-| 25 | P2 | First Breath exits to a stub screen — destination undecided | ❌ decision (design choice) |
+| 25 | P2 | First Breath exits to a stub screen — destination undecided | ✅ RESOLVED-IN-CODE (triage 2026-07-31 flag): stub retired, exits to `messagesNew` (spine S3) — fixer verify + strike |
 | 23 | P2 | Lapsed subscribers dead-end on the restore screen | ✅ RESOLVED 2026-06-16 (stripe-hardening — confirmations answered, CTA branch built) |
-| 24 | P2 | Voice-creation success skips the First Breath ceremony | ⚠️ one-line fix, but hold: overlaps active Step 6 flow work |
+| 24 | P2 | Voice-creation success skips the First Breath ceremony | ✅ OBSOLETE (triage 2026-07-31 flag): `VoiceCreationView.tsx` deleted in spine S4 — no surface left; fixer verify + strike |
 | 42 | P2 | Onboarding completion swallows a failed save → user's profile silently lost *(new 2026-06-13)* | ✅ RESOLVED 2026-06-17 (error check + throw shipped; retry-in-place error UI now landed — the deferred sibling) |
 | 75 | P2 | `SUPPORT_EMAIL` is a placeholder (`support@essence.example`) — Step 10 contact-as-care CTAs mailto a dead address *(new 2026-07-07)* | ✅ RESOLVED 2026-07-12 — swapped to `help@essencevault.app` (live Cloudflare Email Routing → monitored inbox, delivery-verified). Launch-blocker cleared |
 | 5 | P3 | Cancelling an upload reads as a failure internally | ✅ RESOLVED 2026-06-11 (35d7372 — distinct `cancelled` status + AbortError detection; unit-tested) |
@@ -67,6 +67,13 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 60 | P4 | Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action; stamp-only partial duplicate *(new 2026-06-19)* | ✅ RESOLVED 2026-07-12 (owner-approved URL removal) — route + `complete/` dir deleted |
 | 85–102 | — | **Moved to `docs/follow-ups/`** — the 2026-06-30/-07-07/-10 triage items are now per-file follow-ups (see [`docs/follow-ups/INDEX.md`](follow-ups/INDEX.md)). File new items there, not here. | 📁 per-file |
 | 103 | P3 | `settings-screen.test.tsx` "email change confirmation" flaky under full-suite load (FU-55 class) *(found 2026-07-12)* | ✅ RESOLVED 2026-07-12 (PR #103 — assertion now retry-based `findByText`) |
+| 104 | P2 | Stripe `incomplete` derived to terminal `lapsed` → returning subscriber stranded + double-charged *(new 2026-07-31)* | ⚠️ owner-paired (Stripe webhook, never-touch) — gate on S5 go-live |
+| 105 | P2 | First-save "your first message is here" ceremony never fires in prod (frozen shut at mount) *(new 2026-07-31)* | ⚠️ agent-fixable but UI → needs in-browser verify |
+| 106 | P3 | Voice-creation entitlement omits `past_due` vs page guards admit it → 402 "start your free trial" *(new 2026-07-31)* | ⚠️ owner-paired; pair with `VOICE_CREATION_REQUIRES_PAYMENT` flip (#22) |
+| 107 | P3 | Stripe `success_url`/`return_url` default to `localhost:3100` when `NEXT_PUBLIC_APP_URL` unset *(new 2026-07-31)* | ⚠️ owner-paired; S5 go-live env checklist |
+| 108 | P3 | `breath_stone_sequence_completed` never emitted under reduced-motion → funnel under-counts a11y segment *(new 2026-07-31)* | ✅ agent-fixable (+ analytics note) |
+| 109 | P3 | `BronzeVault` reveal canvas never repaints on size/DPR/zoom change (migration dropped resize handler) *(new 2026-07-31)* | ✅ agent-fixable |
+| 76 | P3 | Legal pages (`/privacy`, `/terms`) not linked from Settings ⏫ **TRIGGER FIRED 2026-07-31** — Step 9 Settings has merged; pages still URL-only *(promoted this run)* | ⚠️ launch/platform-review gate — add legal rows to `SettingsScreen` |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
 
 **Next-up fixable queue:** *(empty of clean agent-fixable code work.)* The unchecked-write batch (#43/#45/#46) and #42's error-UI sibling (#57) land resolved with #61; #44 and the lapse dead-end (#23) land resolved with the stripe-hardening work folded into #61. #26 (CI drift-check) is **blocked on owner setup** — its `types-drift` job ships with #61 but needs a Supabase access token added as a GitHub Actions secret before it can run green. The remaining open items are decisions (#22, #25, #16, #28, #12), UI/visual work needing in-browser verification (#7, #8, #9, #56, #57), or owner-confirm deletions (#59, #60).
@@ -270,6 +277,10 @@ After Smart Retries exhausts its attempts, Stripe fires `customer.subscription.d
 These two entries capture the orphaned-First-Breath gap discovered while scoping Session 8. The polling infra, success state, First Breath screen, and guards all exist — what's undecided is routing. Both are explicit "connection pass" work, deliberately deferred so Sessions 8/9/10 can build surfaces in isolation.
 
 ### 24. [P2 · hold: overlaps active Step 6 work] `VoiceCreationView` success state routes to message-creation instead of First Breath
+> ✅ **APPEARS OBSOLETE (triage 2026-07-31 — flagged for the fixer to verify + strike).** The file this
+> entry is about, `src/components/voice/VoiceCreationView.tsx`, no longer exists — it was retired in the
+> spine S4 dead-code pass (`c76287f`); only `VoiceProfileCreateForm.tsx` remains in `src/components/voice/`.
+> There is no `VoiceCreationView` success branch left to reroute. Discovery does not strike; confirm and strike.
 **Still open (specifics updated 2026-06-19):** on `status === 'ready'` the success CTA pushes to `ROUTES.messagesNew` (`src/components/voice/VoiceCreationView.tsx:244`), still skipping the ceremonial First Breath Stone at `/app/record/complete`. Note the target is no longer the literal `/app/messages/new` from the original entry — M0 made `/messages/new` canonical (see #34) and this caller was repointed to `ROUTES.messagesNew` with it. The First Breath bypass is unchanged; only the destination route string moved.
 
 **Affected file:** `src/components/voice/VoiceCreationView.tsx:244` — the `onClick={() => router.push(ROUTES.messagesNew)}` in the success branch.
@@ -281,6 +292,11 @@ These two entries capture the orphaned-First-Breath gap discovered while scoping
 **Pick up when:** connection pass after Sessions 8/9/10 land the surfaces. Grep-verify that nothing else routes to `/app/messages/new` directly from the voice-creation flow at that time.
 
 ### 25. [P2 · decision] `FirstBreathSequence` exits to `/app/record/complete/stub` — decide final destination
+> ✅ **APPEARS RESOLVED-IN-CODE (triage 2026-07-31 — flagged for the fixer to verify + strike).**
+> `src/components/screens/FirstBreathSequence.tsx:139` now does `router.push(ROUTES.messagesNew)` with a
+> comment explicitly retiring the old `recordCompleteStub` placeholder (spine S3 wiring, `e345dfb`:
+> "First Breath hands off to first message creation"). The stub + inline TODO are gone and the
+> destination was decided (first message creation). Discovery does not strike; confirm and strike.
 `src/components/screens/FirstBreathSequence.tsx:100` — the CTA handler pushes to `/app/record/complete/stub` with an inline TODO (`// TODO: replace with router.push('/app/checkout') when Session 7 is complete`). Session 7 is complete (7a/7b/7c shipped), but the stub hasn't been replaced because the destination is still a design decision.
 
 **Candidates:**
@@ -758,6 +774,12 @@ The approved C3 design prototype (`prototypes/essence-c3-vault-limit.html` / del
 **Sub-note — gen-fail telemetry gap (P3, related):** `step6.generation_failed` is *catalogued* (`analytics/2026-06-01-step6-events.md:94`) but **not wired** anywhere in the flow (grep-confirmed), so neither the failure nor the exhausted/contact-as-care surface is instrumented. S10-A deliberately left this out of scope (no client `trackStep6('generation_failed', …)` call yet); wire it — plus a "support contacted" signal — with the base gen-fail telemetry, and drop the `docs/analytics/` note then.
 
 ### 76. [P3] Legal pages (`/privacy`, `/terms`) aren't linked from Settings yet
+> ⏫ **TRIGGER FIRED (triage 2026-07-31), promoted.** Step 9 Settings has merged to `main`
+> (`src/app/app/settings/page.tsx` + `src/components/screens/settings/SettingsScreen.tsx` are live),
+> but grep confirms nothing in `src/` navigates to `ROUTES.privacy` / `ROUTES.terms` — the pages
+> remain URL-only. The "Pick up when: immediately after PR #83 (Step 9 Settings) merges" condition
+> below is now met. This is a platform-review / launch gate. **Owner action still open** on the
+> placeholder legal copy (see the copy note at the end of this entry).
 The Privacy Policy and Terms pages shipped greenfield (task C, 2026-07-08): `src/app/{privacy,terms}/`, screens in `src/components/screens/legal/`, dev pages `/dev/{privacy,terms}`, routes registered as `ROUTES.privacy` / `ROUTES.terms`. They are reachable by URL and cross-link to each other, but **nothing in the app navigates to them** — the intended entry point is Settings, which lives on the unmerged `step9/settings-trust` branch (PR #83) and has no legal-links row.
 
 **Why it matters:** app stores and platform review expect Privacy + Terms to be reachable from within the product (typically Settings/About), not URL-only. Until Settings lands and links them, a real user can't find these pages.
@@ -901,3 +923,73 @@ neutral" handoff the Reveal builds from is a hard cut. Fix: `write(base * mul)`.
 - **Dead `: ACTIVE` branch.** `:175` `const from = prev > NEUTRAL ? prev : ACTIVE;` sits inside
 `if (!instant && prev > NEUTRAL)`, so the `: ACTIVE` arm is unreachable — `from` is always `prev`.
 Reads as a meaningful fallback that can never fire. Fix: `const from = prev;`.
+
+## Discovery pass (triage 2026-07-31)
+
+Read-only discovery run per `docs/DISCOVERY_AGENT.md`. Health at scan time on `main`
+(93d0bbd): typecheck ✅ · lint ✅ · unit tests 386/386 ✅. No active `feat/*`, `refactor/*`,
+or `triage/*` branch exists — `main` is the only branch, so nothing was excluded as
+work-in-progress; everything shipped is fair game. Deep-read the freshest / least-triaged
+subsystems: the S5 Stripe go-live gating + webhook handlers, the voice-creation entitlement
+path, the vault-render engine migration (807ad88), the Step 10 error-copy + First Breath
+audio-degradation + nav work, and the offline primitives. Marker-debt grep over `src/` found
+no new untracked TODO/FIXME/disable (all existing disables are documented/known). Six new
+entries below (2 P2, 4 P3), all verified in code. Anti-noise: dropped the `BronzeVault` seal-
+timing + cubic-bezier "duplications" (both are deliberately-documented mirrors with a source-
+of-truth note — a conscious tradeoff, not accidental drift) and the speculative sealed/animate
+mode. **1 lower-value item found and not logged:** `OfflineActionNote`
+(`src/components/system/OfflineActionNote.tsx:63-66`) caps its collapse box at a fixed
+`max-height: 72px; overflow: hidden`, which could clip the last line of the offline note if the
+(still-provisional) Step 10 copy wraps to 4 lines on a 320px-class device — deferred as
+P4/low-confidence; re-measure at 320px once the copy is finalized.
+
+**Triggers that came true (reconciliations, not new items — flagged for the fixer to verify + strike):**
+- **#76 (legal pages not linked from Settings) — TRIGGER FIRED, promote.** Step 9 Settings has
+  merged to `main` (`src/app/app/settings/page.tsx` + `SettingsScreen` are live), but grep confirms
+  nothing anywhere in `src/` navigates to `/privacy` or `/terms` — they remain URL-only. #76's
+  "Pick up when: immediately after PR #83 (Step 9 Settings) merges" condition is now met. App-store /
+  platform review expects both reachable in-product. See the promotion note on #76.
+- **#24 (VoiceCreationView success → First Breath) — appears OBSOLETE.** `src/components/voice/VoiceCreationView.tsx`
+  no longer exists (retired in the spine S4 dead-code pass, `c76287f`); only `VoiceProfileCreateForm.tsx`
+  remains. The routing concern the entry describes has no surface left. See the note on #24.
+- **#25 (FirstBreathSequence exits to a stub) — appears RESOLVED-IN-CODE.** `FirstBreathSequence.tsx:139`
+  now `router.push(ROUTES.messagesNew)` with a comment retiring the old `recordCompleteStub` (spine S3,
+  `e345dfb`) — the stub + TODO are gone and the destination was decided (first message). See the note on #25.
+
+### 104. [P2 · owner-paired] Stripe `incomplete` status is derived to terminal `lapsed`, which the out-of-order guard then locks in — a returning paid subscriber can be stranded `lapsed` and double-charged *(triage 2026-07-31)*
+**Files:** `src/app/api/stripe/webhook/handlers.ts:177-179` (`deriveStatus` maps `incomplete`→`lapsed`), `:164` (`TERMINAL_STATUSES` includes `lapsed`), `:205-210` (`upsertSubscription` skips any write once the existing row is terminal).
+**Why it matters:** When a *returning* customer (no free trial — charged immediately) subscribes and their card needs an extra verification step (SCA/3DS), Stripe first reports the subscription as `incomplete` for a short window before it flips to `active`. Our webhook files `incomplete` as the *permanent* state `lapsed`. Because `lapsed` is treated as final (`TERMINAL_STATUSES`), the follow-up `active` update is then ignored **forever** by the out-of-order guard at `:205`. The person has paid, but the app now reads them as lapsed: `getSubscriptionStatus` returns `lapsed`, processing/reveal bounce them to `/restore`, and `/start` 402s. Worse, the duplicate-checkout guard (`create-checkout-session.ts`) treats only `{trial, active, past_due}` as "already subscribed" — a `lapsed` row passes it — so if they try again they get billed a **second** time. The file's own comment (`:160-163`) asserts "lapsed/cancelled are written only by `handleSubscriptionDeleted`," an invariant `deriveStatus` silently violates.
+**Why it isn't biting today:** real Stripe is behind `VAULT_STRIPE_ENABLED` (OFF), and first-time users get a free trial (`trialing`→`trial`), which side-steps the `incomplete` path — so trial-based test walks never surface it.
+**Fix shape (owner-paired — Stripe webhook is never-touch):** distinguish transient `incomplete` from truly-terminal `incomplete_expired`. Only `incomplete_expired`/`canceled` are terminal; a bare `incomplete` should map to a non-terminal transient (or not persist as terminal) so the `active` follow-up can heal the row. The agent flags this; it does not fix it.
+**Pick up when:** before flipping `VAULT_STRIPE_ENABLED` on for real cards (S5 go-live) — gate the flip on this.
+
+### 105. [P2] The "your first message is here" first-save ceremony never fires in production — it's frozen shut at mount before the message list loads *(triage 2026-07-31)*
+**Files:** `src/components/screens/shelf/MemoryShelf.tsx:64-66` (`useState(justSaved && messages.length === 1)`), driven by `src/app/app/shelf/ShelfPageClient.tsx:29-39` (`useResource(..., { initialData: [] })`).
+**Why it matters:** After a user saves their first message they're routed to the shelf (`/app/shelf?saved=1`), where a one-time ceremony ("your first message is here") is meant to play. But the shelf fetches its message list on the *client*, so at first render the list is empty; the ceremony's open flag is computed once at that moment — `messages.length === 1` is `false` because it's still `0` — and a `useState` initializer runs exactly once, so `ceremonyOpen` is frozen `false`. When the real message arrives a moment later, nothing re-opens it (the only other writers of `setCeremonyOpen` both *close* it). The ceremonial first-save moment — a designed centerpiece of this product — silently never plays for real users. It *does* play on `/dev/shelf` (which passes the message in at mount) and in unit tests, so it looks fine in isolation: a classic green-in-dev, dead-in-prod bug. Scored P2 because for a ceremony-centric product this is a user-visible failure in a main flow, not mere polish; demote if the owner disagrees.
+**Fix shape:** drive `ceremonyOpen` from an effect that fires once when `justSaved && messages.length === 1` first becomes true (guarded by a "shown once" ref so dismissing it doesn't reopen it), rather than a mount-time `useState` initializer. Agent-fixable, but UI/motion → **needs in-browser visual verification** against the real save→shelf flow, not just `/dev/shelf`.
+**Pick up when:** the next shelf/ceremony touch — or immediately if the first-save moment is treated as launch-critical (it reads as one).
+
+### 106. [P3 · owner-paired] Voice-creation entitlement omits `past_due`, but the processing/reveal page guards admit it — a still-paying (dunning) user is let onto the screen and then 402'd with "Start your free trial" *(triage 2026-07-31)*
+**Files:** `src/lib/voice-creation/entitlement.ts:12-13` (`VOICE_CREATION_ALLOWED_STATUSES = {trial, active}`, 402 copy at `:36`) vs `src/app/app/voice/processing/page.tsx:52-66` (only `none`→paywall, `lapsed`/`cancelled`→restore; `past_due` falls through and proceeds to render the actions that call `/start`).
+**Why it matters:** A subscriber whose card is failing (Stripe `past_due`, still inside the retry window, still entitled) who returns to finish or retry a not-yet-`ready` voice is *allowed onto* the processing screen by the page guard, then the `/start` call rejects them with a 402 whose message reads "Start your free trial to create your voice" — wrong and disorienting for someone who already paid. The two layers disagree on whether `past_due` is entitled.
+**Why P3 not P2:** gated behind `VOICE_CREATION_REQUIRES_PAYMENT` (currently OFF) and only reachable when the voice isn't `ready` **and** the user is mid-dunning — narrow — but it's a real latent page-guard/entitlement mismatch on a paid path.
+**Fix shape (owner-paired — subscription semantics):** decide `past_due`'s entitlement once and apply it in both places — either add `past_due` to `VOICE_CREATION_ALLOWED_STATUSES` (grace during dunning, matching the page guards) or bounce `past_due` at the page rather than letting it reach `/start`.
+**Pick up when:** paired with flipping `VOICE_CREATION_REQUIRES_PAYMENT` on (see #22) — resolve the two together.
+
+### 107. [P3 · owner-paired] Stripe checkout `success_url` / portal `return_url` silently fall back to `http://localhost:3100` when `NEXT_PUBLIC_APP_URL` is unset — a just-paid user could land on a dead localhost page at go-live *(triage 2026-07-31)*
+**Files:** `src/lib/stripe/create-checkout-session.ts:187` (`process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3100'`) feeding `success_url` at `:205`; same pattern at `src/app/api/stripe/portal-session/route.ts:60` (`return_url`).
+**Why it matters:** These redirect URLs are only exercised once real Stripe is on (S5 go-live). If the production environment is missing or mistypes `NEXT_PUBLIC_APP_URL`, checkout still charges the card and the webhook still records the subscription, but Stripe redirects the customer's browser to `localhost` — a dead page — and the `session_id` is lost, so the reconcile-on-landing safety net (#84) never runs either. The silent localhost fallback *hides* the misconfiguration instead of failing loudly.
+**Fix shape (owner-paired — money path / env):** when `VAULT_STRIPE_ENABLED` is on, assert `NEXT_PUBLIC_APP_URL` is present (throw at the checkout gate, or a startup env check) rather than defaulting to localhost; keep the localhost default only for the flag-off/dev path.
+**Pick up when:** fold into the S5 go-live environment checklist.
+
+### 108. [P3 · telemetry] `breath_stone_sequence_completed` is never emitted for reduced-motion users — the First Breath completion funnel systematically under-counts the accessibility segment *(triage 2026-07-31)*
+**Files:** `src/components/screens/FirstBreathSequence.phases.ts:135-136` (`sequence_completed` fires only in the `revealed` timeline `onEnter`) + `src/lib/animation/useSequenceTimeline.ts:90` (`if (paused) return;` skips all `onEnter`); the timeline is created `paused: prefersReducedMotion` (`phases.ts:145`), and `sequence_started` fires unconditionally on mount (`FirstBreathSequence.tsx`, `:168`).
+**Why it matters:** Under `prefers-reduced-motion` the First Breath timeline is created paused and parks on the first beat, so no `onEnter` ever runs — including the `revealed` beat that emits `breath_stone_sequence_completed`. But `breath_stone_sequence_started` fires on mount and `breath_stone_cta_tapped` still fires on the tap. So every reduced-motion user logs a *start* and a *cta_tap* but never a *completed* — the ceremony funnel shows a phantom drop-off and under-reports completion for exactly the accessibility segment. Telemetry accuracy only; no user-facing effect.
+**Fix shape:** emit `breath_stone_sequence_completed` on the reduced-motion path too (e.g. from an effect when reduced motion resolves the sequence to its ready state), not solely from the paused timeline's `revealed` `onEnter`. Telemetry-impacting → drop a `docs/analytics/2026-*.md` note in the same change.
+**Pick up when:** before anyone reads First Breath completion metrics; pair with the analytics note.
+
+### 109. [P3] Vault reveal canvas (`BronzeVault`) never repaints on a size/DPR/zoom change — the migration to the canonical engine dropped the resize handler its sibling keeps *(triage 2026-07-31)*
+**Files:** `src/components/vault/BronzeVault.tsx:143` (paint effect deps `[mode, reducedMotion]`, `size` omitted) + `:145-152` (no resize/DPR listener), vs the sibling `src/components/screens/messages/VaultLimitScreen.tsx:65-73`, which attaches a `window.resize` handler so the backing store tracks the box × DPR.
+**Why it matters:** `paintVaultFrame` sizes the canvas backing store from the CSS box × device-pixel-ratio *at paint time*, but `BronzeVault` only paints when `mode`/`reducedMotion` change. If the `size` prop changes, or the device-pixel-ratio changes after mount (a user changing browser zoom while on the page — plausible for the 45–70 audience), the backing store stays at its old resolution and the browser stretches the old bitmap, blurring the vault on the app's core monetized object. Latent today because every live caller passes a constant `size={320}` and the *initial* paint at any zoom is correct; the trigger is a post-mount DPR/size change. The vault-engine migration (807ad88) introduced the inconsistency — the newest sibling handles it, this canonical wrapper doesn't.
+**Fix shape:** add `size` to the paint effect's deps and attach a `resize` listener that re-invokes `paintVaultFrame` (mirror `VaultLimitScreen`).
+**Pick up when:** before any responsive/animated-size vault usage, or if reveal-screen crispness after zoom is reported.

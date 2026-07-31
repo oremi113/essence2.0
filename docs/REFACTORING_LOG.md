@@ -23,6 +23,51 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-07-31 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged **6 new backlog items** (2 P2, 4 P3) + 3 trigger
+  reconciliations; no code touched.
+- Health at scan on `main` (93d0bbd): typecheck ✅ · lint ✅ · unit tests **386/386** ✅.
+  (Deps were absent in the fresh container; ran `npm ci` first so the checks were real.)
+- Branch: `triage/2026-07-31` off latest `main`. No `feat/*`/`refactor/*`/`triage/*` branch exists —
+  `main` is the only branch, so nothing was excluded as work-in-progress. Marker-debt grep over `src/`:
+  no new untracked TODO/FIXME/disable (all existing disables documented/known).
+- Scanned (deep reads of the freshest / least-triaged subsystems): the S5 Stripe go-live gating +
+  webhook handlers; the voice-creation entitlement path; the vault-render engine migration (807ad88);
+  the Step 10 error-copy + First Breath audio-degradation + nav work; and the offline primitives.
+- Discovered (new FOLLOW_UPS entries — full detail in `docs/FOLLOW_UPS.md`):
+  - **FU-104 [P2 · owner-paired]** Stripe `incomplete` status derived to terminal `lapsed`; the
+    out-of-order guard then locks in the bad state → a returning paid subscriber can be stranded
+    `lapsed` and double-charged. Behind `VAULT_STRIPE_ENABLED` (OFF) — gate the S5 flip on this.
+  - **FU-105 [P2]** The first-save "your first message is here" ceremony never fires in production —
+    a mount-time `useState` initializer reads the client-fetched message list while it's still empty,
+    freezing the ceremony shut; green on `/dev/shelf`, dead in the real save→shelf flow.
+  - **FU-106 [P3 · owner-paired]** Voice-creation entitlement set omits `past_due` while the
+    page guards admit it → a dunning (still-paying) user is let onto the screen then 402'd with
+    "Start your free trial." Behind `VOICE_CREATION_REQUIRES_PAYMENT` (OFF).
+  - **FU-107 [P3 · owner-paired]** Stripe `success_url`/portal `return_url` silently default to
+    `http://localhost:3100` when `NEXT_PUBLIC_APP_URL` is unset → a just-paid user could land on a
+    dead localhost page at go-live (and lose the `session_id`, so the FU-84 reconcile never runs).
+  - **FU-108 [P3 · telemetry]** `breath_stone_sequence_completed` is never emitted for
+    reduced-motion users (paused timeline skips `onEnter`), so the First Breath completion funnel
+    under-counts the accessibility segment.
+  - **FU-109 [P3]** `BronzeVault` reveal canvas never repaints on a size/DPR/zoom change — the
+    engine migration dropped the `window.resize` handler its sibling `VaultLimitScreen` keeps.
+- Triggers that came true (reconciliations — flagged for the fixer to verify + strike, not struck here):
+  - **FU-76** legal pages not linked from Settings — Step 9 Settings has merged but `/privacy` +
+    `/terms` remain URL-only; **promoted** (platform-review / launch gate).
+  - **FU-24** `VoiceCreationView` success routing — the component was deleted in spine S4; **obsolete**.
+  - **FU-25** `FirstBreathSequence` stub exit — now `router.push(ROUTES.messagesNew)`; **resolved-in-code**.
+- Not logged (below the bar, recorded for honesty): 1 lower-value item — `OfflineActionNote`'s fixed
+  `max-height: 72px; overflow: hidden` could clip the offline note if the still-provisional Step 10 copy
+  wraps to 4 lines on a 320px device (P4/low-confidence; re-measure when the copy is final). Also dropped
+  the `BronzeVault` seal-timing + cubic-bezier "duplications" (deliberately-documented mirrors, a
+  conscious tradeoff, not accidental drift) and the speculative sealed/animate vault mode.
+- Coordination (§5): only `docs/FOLLOW_UPS.md` (bulk appends + priority-queue table) and this log were
+  edited. No fixer resolution strikes were altered; the three trigger reconciliations are left for the
+  fixer to verify + strike.
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
