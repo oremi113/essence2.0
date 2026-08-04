@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
+Total: 26 · 25 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (20)
+## Open (25)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -15,6 +15,7 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P2 | Vault restore (past_due) opens the Stripe Portal via `window.open`-after-`await` → blocked on iOS Safari, silent dead-end *(triage 2026-07-07)* | 2026-07-07 | FU-87 | [`2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md`](./2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md) |
 | P2 | A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)* | 2026-07-10 | FU-93 | [`2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md`](./2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md) |
 | P2 | `retry_audio` renders paid ElevenLabs audio with NO cost cap, hourly gate, or ledger → unbounded vendor spend *(triage 2026-07-10)* | 2026-07-10 | FU-92 | [`2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md`](./2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md) |
+| P2 | No Privacy Policy or Terms pages exist on `main` at all — FOLLOW_UPS §76 wrongly records them as "shipped, just unlinked"; they were never merged, so a launch-blocking gap is masked as a one-line linking task *(triage 2026-08-04)* | 2026-08-04 | FU-76 | [`2026-08-04-privacy-terms-pages-absent-on-main.md`](./2026-08-04-privacy-terms-pages-absent-on-main.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
@@ -26,10 +27,14 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P3 | TTS→upload→duration→status-write pipeline implemented twice (`audio.ts` vs `commit/route.ts`) → drift on a vendor-spend path *(triage 2026-07-10)* | 2026-07-10 | FU-97 | [`2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md`](./2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md) |
 | P3 | `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-app-main-missing-safe-area-inset.md`](./2026-07-12-app-main-missing-safe-area-inset.md) |
 | P3 | The icon-only "Back" chevron is defined 5× across the app (step3 + three message screens + a header class) → consolidate into one shared component so touch-target / style fixes can't drift out of sync again *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-consolidate-duplicated-back-chevron-affordance.md`](./2026-07-12-consolidate-duplicated-back-chevron-affordance.md) |
+| P3 | The post-payment Processing screen shows fake "we're creating your voice" progress for the full timeout when `/start` rejects permanently (not-enough-clips, daily cap, retry-not-allowed) — its response is thrown away, so an instantly-known error degrades only to the generic support tail *(triage 2026-08-04)* | 2026-08-04 | — | [`2026-08-04-processing-poll-masks-permanent-start-rejection.md`](./2026-08-04-processing-poll-masks-permanent-start-rejection.md) |
+| P3 | The first-ever-save celebration overlay on the Memory Shelf ("Your first message is here / This is where your voice lives") never appears for real users — a one-shot `useState` reads the list before it has loaded, so the latch is stuck false forever *(triage 2026-08-04)* | 2026-08-04 | — | [`2026-08-04-shelf-first-save-ceremony-never-fires.md`](./2026-08-04-shelf-first-save-ceremony-never-fires.md) |
+| P3 | `getOrCreateVoiceProfile` reads an arbitrary voice-profile row (`.limit(1)` with no `.order()`) while every other guard reads the newest — for a user with more than one profile the processing→reveal→record-complete chain can desync *(triage 2026-08-04)* | 2026-08-04 | — | [`2026-08-04-voice-profile-lookup-missing-order.md`](./2026-08-04-voice-profile-lookup-missing-order.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
 | P4 | Migrate the remaining `FOLLOW_UPS.md` monolith (items 1-84 + resolved history) into the per-file `docs/follow-ups/` layout | 2026-07-12 | — | [`2026-07-12-migrate-legacy-followups-to-per-file.md`](./2026-07-12-migrate-legacy-followups-to-per-file.md) |
+| P4 | `BronzeVault`'s reduced-motion `animate` path paints the vault once and ignores the "no layout yet" result — unlike every other paint path, it never retries — so a reduced-motion user can get a permanently blank vault while the ceremony advances. Latent: `mode="animate"` isn't wired to any production screen yet *(triage 2026-08-04)* | 2026-08-04 | — | [`2026-08-04-bronzevault-reduced-motion-skips-layout-retry.md`](./2026-08-04-bronzevault-reduced-motion-skips-layout-retry.md) |
 
 ## Decision (owner call) (1)
 

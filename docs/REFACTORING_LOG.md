@@ -23,6 +23,69 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-04 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 5 new backlog items; no code touched.
+  Branch `triage/2026-08-04` off latest `main` (`93d0bbd`).
+- Health at scan time on `main`: typecheck ✅ · lint ✅ · unit tests **386/386** ✅.
+  No marker debt in `src/` (no untracked TODO/FIXME/HACK; every `eslint-disable`
+  is documented/tracked).
+- Context: `main` has been quiet since 2026-07-12 (the payment-spine S1–S5 landing)
+  and there is **no active `feat/*` branch** — nothing was excluded as
+  work-in-progress this run. The big event since the last discovery pass is the
+  spine landing, whose "pick up when the spine lands" triggers this run audited.
+- Scanned: full `docs/FOLLOW_UPS.md` (904 lines) + all 21 per-file follow-ups for
+  dedup; the newest/least-triaged shipping surfaces read deeply — the spine
+  processing/polling page + `/start` idempotency, the reveal→First-Breath→First-Message
+  guards, `reconcile-checkout-session` (money path), the canonical bronze-vault
+  engine migration (`807ad88`) + every consumer, and the Step 10 / Memory-Shelf /
+  message-playback surfaces.
+- Discovered (new per-file follow-ups; INDEX rebuilt to 26 items):
+  - **[P2] `2026-08-04-privacy-terms-pages-absent-on-main`** — supersedes §76. The
+    Privacy/Terms pages the backlog records as "shipped, just unlinked" are **not on
+    `main` at all** (no git history, no source, no routes). A launch-blocking gap was
+    masked as a 10-minute linking task.
+  - **[P3] `2026-08-04-processing-poll-masks-permanent-start-rejection`** — the
+    post-payment Processing screen throws away the `/start` response, so a permanent
+    rejection (not-enough-clips 400 / daily-cap 500 / retry-not-allowed 429) shows
+    fake "creating your voice" progress for the full timeout. Folds a related
+    First-Breath-guard admit-set gap.
+  - **[P3] `2026-08-04-shelf-first-save-ceremony-never-fires`** — the first-save
+    celebration overlay is dead in production (one-shot `useState` reads the list
+    before `useResource` loads it); only fires in `/dev/shelf`.
+  - **[P3] `2026-08-04-voice-profile-lookup-missing-order`** — `getOrCreateVoiceProfile`
+    reads an arbitrary row (`.limit(1)`, no `.order()`) while every sibling guard reads
+    the newest → latent processing→reveal desync for multi-profile users.
+  - **[P4] `2026-08-04-bronzevault-reduced-motion-skips-layout-retry`** — the reduced-motion
+    `animate` path skips the layout-retry every other paint path has → blank vault for a
+    reduced-motion user. Latent (`mode="animate"` not wired to production yet).
+- Triggers that came true (promotions — reported to the owner, not re-logged):
+  - **§25 RESOLVED by the spine** — `FirstBreathSequence.tsx:139` now routes to
+    `messagesNew` (the stub is retired, kept as a stable forward-to-Home). Fixer to
+    verify + strike.
+  - **§24 MOOT** — `VoiceCreationView.tsx` was deleted by the spine; the First-Breath
+    ceremony now sits in the reveal→complete→first-message path. Fixer to verify + strike.
+  - **§69 (Step 9 settings delete-failure "reach us" terminal) now cleanly fixable** —
+    its blocker (a real support address, §75) landed; wiring `supportMailto()` into the
+    failed terminal is now a one-line page-layer change.
+  - **FU-88 (per-file) confirmed live** — Step 9 Settings shipped and wired the delete
+    action, but `ACCOUNT_DELETE_ENABLED` gates only the UI (`settings/page.tsx:131`);
+    the irreversible `deleteAccountAction` (`settings/actions.ts:170`) has **no** flag
+    check, so the teardown is reachable while "dark." Its trigger (Settings live) fired.
+  - **§22 (voice-payment gate) now an owner flag-flip, not code-blocked** — the
+    card-capture-before-processing reorder it was coupled to landed (spine S2b); flipping
+    `VAULT_STRIPE_ENABLED` + `VOICE_CREATION_REQUIRES_PAYMENT` at S5 go-live is the
+    remaining owner step.
+- Reviewed and cleared (no entry warranted): `/start` is genuinely idempotent (ready/
+  non-stale-processing/queued all return without re-invoking ElevenLabs; dedup guard +
+  monotonic lock) — a Processing-page refresh cannot double-spend; `reconcile-checkout-session`
+  is correctly awaited, gates on `status`, verifies `metadata.user_id`, and fails closed;
+  the `VoiceCreationView` deletion left no dangling refs; the First-Breath degrade-to-silence
+  audio change (`974c5d4`) is leak-safe; the Step 6 save/discard/play routes, `commit` cost
+  cap, offline gating, and `SealVaultCanvas`/`paintVaultFrame` engine internals are sound.
+- Branch / commit: `triage/2026-08-04` @ &lt;this commit&gt;.
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: &lt;stamped later when the owner merges&gt;.
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
