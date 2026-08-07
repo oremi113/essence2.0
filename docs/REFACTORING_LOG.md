@@ -23,6 +23,57 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-07 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 6 new per-file backlog items; no app code touched.
+- Scanned: `main` unchanged since 2026-07-12 (last commit `93d0bbd`), no active `feat/*`
+  or `refactor/*` branch, so nothing excluded as work-in-progress. Health checks on
+  `main` (typecheck ✅ · lint ✅ · test:unit **386/386** ✅). Marker-debt grep over `src/`:
+  no untracked TODO/FIXME/HACK/@ts-ignore — only documented `eslint-disable`s. Deep reads
+  (3 parallel read-only auditors, each dedup-primed against the full open backlog): the
+  Stripe/subscription/webhook layer; the ElevenLabs vendor-spend / voice-creation /
+  message-generation routes; and core lib + entitlement + the record/first-breath/step3
+  UI state machines. Every candidate finding was re-verified by hand against the source
+  before logging.
+- Discovered (new `docs/follow-ups/` files, verified + deduped):
+  - [P2] `2026-08-07-webhook-derivestatus-emits-terminal-lapsed-from-created-updated` —
+    `deriveStatus` maps `incomplete`/unknown → terminal `lapsed` from the created/updated
+    path; the terminal-guard then permanently strands a no-trial win-back subscriber
+    (paid + active in Stripe, `lapsed` in our DB → vault lockout + duplicate-sub exposure).
+    Owner-paired (Stripe webhook, never-touch).
+  - [P2] `2026-08-07-voice-start-staleness-window-shorter-than-maxduration` — `STALE_PROCESSING_MS`
+    (3 min) < route `maxDuration` (5 min): a live `/start` gets reaped to `failed`, its paid
+    ElevenLabs clone orphaned, and the handler still returns "ready" on the `applied===false`
+    branch. Money-leak + desync. Owner-paired (vendor-spend).
+  - [P2] `2026-08-07-recordscreen-deriveinitialview-strands-finished-user-on-final-prompt` —
+    no terminal branch for "all clips recorded but not yet processing"; after the
+    creation-after-payment reorder, reloading `/app/record` drops a finished user back onto
+    the final goodbye prompt to re-record. Core-flow user-visible bug.
+  - [P3] `2026-08-07-getsubscriptionstatus-collapses-read-error-to-none` — the canonical
+    entitlement reader can't tell a DB read *error* from an empty result; a transient blip
+    downgrades a paying user to unpaid across every gate.
+  - [P3] `2026-08-07-commit-render-outside-usage-ledger-and-hourly-cap` — `/api/messages/commit`
+    spends a paid ElevenLabs render with no `usage_events` ledger row and outside the hourly
+    cap (generate/regenerate both meter it). Vendor-spend accounting gap. Owner-paired.
+  - [P3] `2026-08-07-first-breath-completed-event-never-fires-under-reduced-motion` —
+    the `completed` event only fires from the paused timeline's `onEnter`, so every
+    reduced-motion user counts in `started` but never `completed`, biasing the ceremony's
+    completion funnel.
+- Triggers came true (housekeeping, NOT re-logged — recommend the fixer verify + strike):
+  the spine (PR #95, S3/S4) resolved-in-code **FU-24** (`VoiceCreationView` deleted),
+  **FU-25** (First Breath now exits to `messagesNew`; stub retired to a Home forward), and
+  completed **FU-34** (`/app/messages/new` is a permanent redirect). Noted under the
+  priority-queue table.
+- Not logged (below the senior-engineer bar / dedup): saved-message quota TOCTOU (adversarial,
+  +1 product-limit overage only); vault-canvas one-frame-retry blank (low reachability, latent
+  debt); daily-cap asserted before the idempotent `ready` short-circuit (re-poll 429s a no-op);
+  `/discard` vs `/save` delete race (contradictory concurrent intent); `processingView` has no
+  unit coverage (test-gap, pile with FU-96/101). **5 more lower-priority items found, not logged
+  this run.**
+- Branch / commit: `triage/2026-08-07` @ <this commit>
+- Checks: n/a for the docs edits (docs-only); the `main` health checks above are the scan
+  baseline. CI re-runs lint/typecheck/test/build on the PR.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
