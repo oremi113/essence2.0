@@ -188,10 +188,22 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
   try {
     // 1. Stripe — cancel any subscription that still exists.
     if (isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
-      const { data: subs } = await service
+      // Fail-closed on the READ, not just the writes. A Supabase `.select()`
+      // that errors resolves as `{ data: null, error }` (it does not throw), so
+      // the surrounding try/catch never sees it. Discarding that error would let
+      // a transient DB hiccup silently yield `subs === null`, skip every
+      // cancellation below, and still tear the account down — leaving a live
+      // subscription billing a card for an account that no longer exists (its
+      // `stripe_subscription_id` cascade-deleted out of reach). Abort here, while
+      // nothing irreversible has happened, exactly as the checked writes do.
+      const { data: subs, error: subsError } = await service
         .from('subscriptions')
         .select('stripe_subscription_id, status')
         .eq('user_id', userId);
+      if (subsError) {
+        logError({ event: 'settings.delete_account.subscriptions_read', requestId, userId, error: subsError });
+        return { ok: false, error: 'We couldn’t finish closing your account just now.' };
+      }
       for (const sub of subs ?? []) {
         const stillLive = sub.status !== 'lapsed' && sub.status !== 'cancelled';
         if (sub.stripe_subscription_id && stillLive) {
