@@ -23,6 +23,42 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-10 — scheduled
+- Outcome: Fixed — closing an account used to be able to leave a paid
+  subscription still charging the card if the database hiccupped mid-teardown;
+  now a read failure stops the whole close-out before anything is deleted, so a
+  live subscription can never be stranded billing a deleted account.
+- Item: FU-85 — Delete-account teardown swallows the `subscriptions` read → a
+  closed account can keep being billed.
+- Root cause: symptom — `deleteAccountAction`'s step 1 reads the user's
+  subscriptions to cancel them, but a momentary DB read failure would silently
+  skip every cancellation and let the teardown delete rows + the auth user
+  anyway, returning success. Cause — the read destructured only `{ data: subs }`
+  and threw away `{ error }`; a Supabase `.select()` that errors resolves as
+  `{ data: null, error }` instead of throwing, so the surrounding try/catch never
+  caught it and `subs === null` made the cancel loop a no-op. Why this addresses
+  the cause — the read now captures `{ error: subsError }` and, if non-null,
+  aborts into the "we couldn't finish closing your account" failure terminal
+  *before* any irreversible step, giving the read the same fail-closed treatment
+  the writes already get via `checkedWrite`. The stranded-billing path is removed
+  at its source, not patched downstream. Genuine root-cause fix, not a workaround.
+- Branch / commit: refactor/fu-85-subscriptions-read-check @ 9e6e877
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (388/388; +2 new — read-error
+  aborts with no cancel/row-delete/auth-delete/wipe, healthy read still tears
+  down. The new test fails against the pre-fix code, confirming it guards the fix.)
+- Scanned / discovered: ran the §3 scan. Health green on `main` (93d0bbd):
+  typecheck ✅ · lint ✅ · test:unit 386/386 ✅. No new untracked marker debt in
+  `src/`. Re-scored the open queue: the top P2s FU-86 (teardown storage order) and
+  FU-93 (failed-generation wedge) already have open `refactor/*` branches
+  ("done pending review" — skipped); FU-92 (`retry_audio` cost cap) is a
+  cost-control/owner-decision item, not a clean code fix. FU-85 was the top
+  fixable item — agent-fixable, no open branch/PR, and it does not touch any file
+  changed on the most recent feature branch (`feat/step10-error-copy-pass`, which
+  is Home B / Memory Shelf only). It shares `settings/actions.ts` with FU-86's
+  open branch but in a disjoint region (step-1 read vs steps 2–4 ordering), so the
+  branches don't collide. No new discoveries.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
