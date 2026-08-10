@@ -4,14 +4,13 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 47 · 34 open · 1 decision · 12 resolved · 0 dropped
+Total: 47 · 33 open · 1 decision · 13 resolved · 0 dropped
 
-## Open (34)
+## Open (33)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
 | P1 | MASTER_SPEC Step 5 (First Playback) has never existed in code — the user never hears their own voice before being asked to write their first message *(found in beta, 2026-09-08)* | 2026-09-08 | — | [`2026-09-08-first-playback-beat-was-never-built.md`](./2026-09-08-first-playback-beat-was-never-built.md) |
-| P2 | Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed *(triage 2026-07-07/-10, merged)* | 2026-07-07 | FU-85 | [`2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md`](./2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md) |
 | P2 | Copy promises the voice is "permanently gone from our servers within 48 hours" but account teardown never deletes the ElevenLabs clone — it becomes an un-addressable orphan *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone.md`](./2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone.md) |
 | P2 | "We will never use your recordings to train AI models" is unsubstantiated by code — nothing configures ElevenLabs for zero-retention/no-training; depends entirely on the account tier + DPA *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-never-train-promise-unverified-against-elevenlabs-terms.md`](./2026-07-12-never-train-promise-unverified-against-elevenlabs-terms.md) |
 | P2 | No affirmative consent gate before ESSENCE creates a synthetic voice clone — only a passive "I understand" on a privacy screen; no "I consent to processing my voice to create a synthetic voice" checkbox *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-no-affirmative-consent-gate-before-voice-cloning.md`](./2026-07-12-no-affirmative-consent-gate-before-voice-cloning.md) |
@@ -51,12 +50,13 @@ Total: 47 · 34 open · 1 decision · 12 resolved · 0 dropped
 |---|---------|--------|--------|------|
 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
 
-## Resolved (12)
+## Resolved (13)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
 | P1 | RESOLVED 2026-09-15 — Step 5's sample rendered only in the branch where a BRAND-NEW voice was just created, so every profile that already existed could never get one: a permanently silent First Playback for exactly the people already in the beta *(found preparing the row 41 device test)* | 2026-09-15 | — | [`2026-09-15-existing-voice-profiles-can-never-get-a-sample.md`](./2026-09-15-existing-voice-profiles-can-never-get-a-sample.md) |
 | P2 | Delete-account teardown erases audio *before* the DB/auth deletes → mid-teardown failure loses recordings under a "Nothing was lost" screen *(triage 2026-07-07)* | 2026-07-07 | FU-86 | [`2026-07-07-delete-account-teardown-erases-audio-before-the-row.md`](./2026-07-07-delete-account-teardown-erases-audio-before-the-row.md) |
+| P2 | Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed *(triage 2026-07-07/-10, merged)* | 2026-07-07 | FU-85 | [`2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md`](./2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md) |
 | P2 | RESOLVED 2026-09-21 — Vault restore (past_due) opened the Stripe Portal via `window.open`-after-`await`, blocked on iOS Safari as a silent dead-end; now a top-level navigation like the restart branch *(triage 2026-07-07)* | 2026-07-07 | FU-87 | [`2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md`](./2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md) |
 | P2 | A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)* | 2026-07-10 | FU-93 | [`2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md`](./2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md) |
 | P2 | `retry_audio` renders paid ElevenLabs audio with NO cost cap, hourly gate, or ledger → unbounded vendor spend *(triage 2026-07-10)* | 2026-07-10 | FU-92 | [`2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md`](./2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md) |
