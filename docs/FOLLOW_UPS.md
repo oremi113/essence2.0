@@ -67,7 +67,19 @@ Re-scored every run. "Decision" = blocked on an owner choice, not code.
 | 60 | P4 | Dead `POST /api/onboarding/complete` route — superseded by the `completeOnboarding` server action; stamp-only partial duplicate *(new 2026-06-19)* | ✅ RESOLVED 2026-07-12 (owner-approved URL removal) — route + `complete/` dir deleted |
 | 85–102 | — | **Moved to `docs/follow-ups/`** — the 2026-06-30/-07-07/-10 triage items are now per-file follow-ups (see [`docs/follow-ups/INDEX.md`](follow-ups/INDEX.md)). File new items there, not here. | 📁 per-file |
 | 103 | P3 | `settings-screen.test.tsx` "email change confirmation" flaky under full-suite load (FU-55 class) *(found 2026-07-12)* | ✅ RESOLVED 2026-07-12 (PR #103 — assertion now retry-based `findByText`) |
+| 104 | P2 | Stripe webhook maps `incomplete`/unmapped statuses to the *terminal* `lapsed`; the terminal guard then permanently blocks the later `active` write → paid-but-locked-out + double-bill on restart *(triage 2026-08-11)* | ⚠️ owner-paired (Stripe webhook = never-touch) |
+| 105 | P3 | Voice `/start` stale-window (180s) < request `maxDuration` (300s) → a still-running billed request gets marked `failed` by a concurrent retry; original returns "ready" over a `failed` row with no `vendor_voice_id` → orphaned paid voice + 2nd billed voice *(triage 2026-08-11)* | ✅ agent-fixable |
+| 106 | P3 | Voice-creation daily cost cap fails **open** on DB error (only server ceiling on billed ElevenLabs voice-clone; subscription gate flag-OFF per #22) → a `usage_events` incident uncaps all users at once *(triage 2026-08-11)* | ✅ agent-fixable |
+| 107 | P3 | `messages/save` orphans the copied permanent-audio object on any non-`23505` insert failure (the `23505` branch cleans up; the generic branch doesn't); fresh `randomUUID` per retry → each failed-retry drops another dead copy *(triage 2026-08-11)* | ✅ agent-fixable |
+| 108 | P3 | Stripe webhook: a stale/duplicate `invoice.payment_failed` can drag a recovered `active` row back to `past_due` → false dunning banner on a healthy subscriber until the next `subscription.updated` *(triage 2026-08-11)* | ⚠️ owner-paired (Stripe webhook = never-touch) |
+| 109 | P3 | First Breath `breath_stone_sequence_completed` never fires for reduced-motion users (timeline is paused, never reaches the emitting phase) while `_started` fires for all → funnel reads ~100% abandonment for the accessibility segment *(triage 2026-08-11)* | ✅ agent-fixable |
+| 110 | P3 | `messages/commit` renders paid ElevenLabs audio but writes no `usage_events` ledger row and has no hourly gate (only the per-generation render cap) → committed re-record spend is invisible to the hourly cost fence + analytics *(triage 2026-08-11)* | ✅ agent-fixable |
+| 111 | P3 | Onboarding Screen 10 Back control isn't gated by an in-flight photo upload → tapping Back mid-upload persists the avatar server-side but skips `onSuccess`, so in-session `avatarUrl` stays null (Screen 9 / re-entry show no photo; self-heals on reload) *(triage 2026-08-11)* | ✅ agent-fixable |
 | 10, 11, 15, 17, 18, 32, 33, 35 | P4 | Cosmetic / observation-driven / library-adoption deferrals | ⏳ wait for their trigger |
+
+**Triggers came true (2026-08-11 triage — flagged for the fixer/owner to verify + strike; discovery never strikes):**
+- **#25** (First Breath exits to `/app/record/complete/stub`) — the spine S3 wiring replaced the stub: `FirstBreathSequence.tsx:139` now `router.push(ROUTES.messagesNew)` and the code comment says the stub is "orphaned and retired in S4." The destination decision is effectively made (→ first message). *Residual:* the `ROUTES.recordCompleteStub` constant (`src/lib/routes.ts:27`) and the `src/app/app/record/complete/stub/page.tsx` page still exist but nothing routes to them — orphaned dead code (P4, URL-path-adjacent → owner-paired). Not logged as a full entry (cap reached); note it alongside striking #25.
+- **#24** (`VoiceCreationView` success routes to message-creation instead of First Breath) — the referenced component `src/components/voice/VoiceCreationView.tsx` **no longer exists** (deleted in spine S4; `/app/voice/create` is now a clean `redirect(ROUTES.vaultProtect)`). The routing concern is moot — #24 is resolvable-by-deletion.
 
 **Next-up fixable queue:** *(empty of clean agent-fixable code work.)* The unchecked-write batch (#43/#45/#46) and #42's error-UI sibling (#57) land resolved with #61; #44 and the lapse dead-end (#23) land resolved with the stripe-hardening work folded into #61. #26 (CI drift-check) is **blocked on owner setup** — its `types-drift` job ships with #61 but needs a Supabase access token added as a GitHub Actions secret before it can run green. The remaining open items are decisions (#22, #25, #16, #28, #12), UI/visual work needing in-browser verification (#7, #8, #9, #56, #57), or owner-confirm deletions (#59, #60).
 
@@ -901,3 +913,197 @@ neutral" handoff the Reveal builds from is a hard cut. Fix: `write(base * mul)`.
 - **Dead `: ACTIVE` branch.** `:175` `const from = prev > NEUTRAL ? prev : ACTIVE;` sits inside
 `if (!instant && prev > NEUTRAL)`, so the `: ACTIVE` arm is unreachable — `from` is always `prev`.
 Reads as a meaningful fallback that can never fire. Fix: `const from = prev;`.
+
+## Triage 2026-08-11 (scheduled discovery pass)
+
+Deep read of the Stripe/subscription webhook, the voice-creation / ElevenLabs
+cost paths, the Step 6 message routes, and onboarding/first-breath telemetry, on
+`main` @ 93d0bbd (health green: typecheck ✅ · lint ✅ · unit 386/386 ✅). No
+active `feat/*` branch was ahead of `main` this run, so nothing was excluded as
+work-in-progress. Eight new items below; each is verified against source. Two
+touch Stripe webhook logic and are **owner-paired** (flag-only — the agent never
+edits webhook code).
+
+### 104. [P2 · owner-paired] Stripe webhook writes a transient `incomplete` subscription as the *terminal* `lapsed`, then the terminal guard permanently blocks the real `active` write
+`src/app/api/stripe/webhook/handlers.ts:177-181` (`deriveStatus` maps `incomplete`,
+`incomplete_expired`, **and the `default` branch** → `'lapsed'`) collides with
+`handlers.ts:164` (`TERMINAL_STATUSES = {lapsed, cancelled}`) and `handlers.ts:205-210`
+(`upsertSubscription` returns early — **skips the write** — when the existing row is
+terminal). The file's own comment at `:160-163` states the invariant the guard relies
+on — *"'lapsed' and 'cancelled' are written only by `handleSubscriptionDeleted`"* — but
+`deriveStatus` violates it directly.
+
+**Why it matters:** A customer who successfully pays but whose card needs one extra
+confirmation step (3-D Secure / SCA — common on EU/UK cards) can be permanently marked
+"lapsed" in our database even though Stripe shows them active and paying. The app then
+denies them access, and every later "they're actually active" signal from Stripe is
+ignored — and the restore screen sends them back through checkout, minting a **second**
+subscription (real double billing).
+
+**Failure scenario (in-order delivery is enough — no reordering needed):** A returning
+subscriber restarts (`create-checkout-session.ts:137` `grantTrial = false` → immediate
+charge, no trial). Stripe creates the subscription `incomplete` and fires
+`customer.subscription.created` → `handleSubscriptionChange` → `upsertSubscription` writes
+`status='lapsed'` (terminal). The card confirms → `customer.subscription.updated` (active)
+→ `upsertSubscription` sees the row is terminal and returns early, **dropping** the active
+write. `checkout.session.completed` and the FU-84 landing-reconcile hit the same guard and
+no-op. Row stuck `lapsed` forever: user charged, no access; `restore-mode.ts` sees `lapsed`
+→ "restart" → checkout, and the duplicate-subscription guard only blocks `trial/active/past_due`
+(`create-checkout-session.ts:152`), so `lapsed` falls through → **2nd subscription**.
+
+**Fix shape (owner conversation — Stripe webhook = never-touch):** `incomplete` is *not*
+terminal — it is the initial state that resolves to `active` or `incomplete_expired`. Map
+`incomplete` to a non-terminal status (or don't persist it), keep only genuinely-terminal
+Stripe statuses (`canceled`, `incomplete_expired`) → terminal, and make `deriveStatus`'s
+`default` non-terminal so an unmapped status (e.g. a paused subscription) can't get frozen
+either. Blast radius is low **today** (restart volume ≈ 0 pre-launch) — it's a landmine that
+bakes in the moment the restart flow gets real usage; the consequence is P1-class (charge +
+lockout + double-bill), hence flagged high.
+
+**Pick up when:** before public launch, or the first real restart/SCA payment surfaces — an
+owner-paired webhook change, verified against Stripe test-mode SCA + restart.
+
+### 105. [P3] Voice `/start` stale-window (180s) is shorter than the request's own `maxDuration` (300s) → an in-flight billed request can be torn down, then reported "ready" over a `failed` row
+`src/app/api/voice-profiles/[id]/start/route.ts:29` (`maxDuration = 300`) vs `:32`
+(`STALE_PROCESSING_MS = 180_000`); stale-recovery marks the row `failed` at `:78-95`; the
+success path assumes a zero-row persist is a "benign concurrent finisher already persisted
+ready" at `:331-343` and unconditionally returns `{ status: "ready" }` at `:356`; the persist
+guard is `.eq("status","processing")` at `src/lib/voice-training/persistVoiceReady.ts:45`.
+
+**Why it matters:** A voice-clone request that is *still legitimately running* (downloading
+clips + calling ElevenLabs) can be declared "stale" and marked failed by a concurrent retry.
+The original request then finishes, pays ElevenLabs, but its DB write is guarded on
+`status='processing'` — now `failed` — so it saves nothing yet still tells the client "ready."
+The paid vendor voice is orphaned (no `vendor_voice_id` stored) and the user's retry creates
+and bills a **second** voice.
+
+**Failure scenario:** Request A → `processing` at T0, downloads ~30 clips from degraded storage
+(>120s) then calls ElevenLabs (+~60s). At T>180s the user retries → Request B sees `processing`,
+`elapsed > STALE_PROCESSING_MS`, marks the row `failed` (`:82`). A's ElevenLabs call then
+succeeds and bills; `persistVoiceReady` matches 0 rows (`applied=false`); A logs the "benign
+finisher" note and returns `ready` while the row is `failed` with no `vendor_voice_id`.
+
+**Fix shape:** Set `STALE_PROCESSING_MS >= maxDuration` (a request can't be "stale" while it
+could still be running); and/or when `persistVoiceReady` returns `applied:false` *after a
+successful, billed creation*, reconcile explicitly (re-fetch; if the row is `failed`, adopt the
+fresh `vendor_voice_id`) instead of assuming a ready-finisher and returning `ready`.
+
+**Pick up when:** next touch of the voice-processing path, or the first orphaned-voice / "created
+but not saved" report. Agent-fixable (non-visual).
+
+### 106. [P3] The voice-creation daily cost cap fails **open** on a DB error — the only server ceiling on billed ElevenLabs voice-clone spend
+`src/lib/rate-limit.ts:97-102` — `countRecentEvents` returns `0` on any query error, and
+`checkVoiceCreationLimit` (`:184-201`) treats `0` as under-cap, so a read failure → **allowed**.
+`recordUsageEvent` (`:133-136`) also swallows insert errors, so a failed ledger write means a
+*billed* attempt is never counted. Guards the paid call at
+`src/app/api/voice-profiles/[id]/start/route.ts`.
+
+**Why it matters:** With the subscription gate flag-OFF (FU-22) and the in-memory dedup explicitly
+non-authoritative, the 5/day cap is the *only* server-side brake on billed ElevenLabs voice-clone
+creation. It is soft on both DB failure modes, so a `usage_events` read/write incident lifts the
+brake for **every user at once** — an aggregate vendor-cost spike arriving exactly during a DB
+incident. (The fail-open was inherited from a generic helper written for message caps —
+"so users aren't locked out" — and silently applies to the money path.)
+
+**Fix shape:** For the cost-guarding caps (`checkVoiceCreationLimit`, arguably `checkSignedUrlLimit`),
+fail *closed* — or degrade to a conservative fallback cap — on `countRecentEvents` error, and
+distinguish "no events" from "couldn't read events." Leave the UX caps (message limits) failing open.
+
+**Pick up when:** cost-hardening pass, or before launch when ElevenLabs spend is live. Agent-fixable.
+
+### 107. [P3] `messages/save` orphans the copied permanent-audio object on any non-`23505` insert failure — and each retry mints a fresh orphan
+`src/app/api/messages/save/route.ts:135-185` — the flow copies audio to a permanent path
+(`:135-137`) then inserts the `messages` row (`:146-164`). The unique-violation branch
+(`:169-178`) cleans up its orphan via `service.storage…remove([permanentPath])`, but the
+generic-failure fall-through (`:180-184`) returns a 500 **without** removing the copy. `messageId =
+randomUUID()` is regenerated every call (`:132`), so a retry copies to a *new* path — the previous
+copy is orphaned.
+
+**Why it matters:** Any non-collision insert failure (transient DB error, a check/FK constraint, an
+RLS hiccup) leaves a permanent audio file in storage with no row pointing at it, and every "Save"
+retry drops another dead copy — slow, silent storage-cost creep. No user-facing harm today.
+
+**Fix shape:** In the non-`23505` branch, mirror the existing cleanup —
+`await service.storage.from(AUDIO_BUCKET).remove([permanentPath]).catch(() => {})` — before returning
+the 500.
+
+**Pick up when:** next touch of the save path, or a storage-cost audit. Agent-fixable (has a clear
+test seam — mock a non-23505 insert error and assert the remove call).
+
+### 108. [P3 · owner-paired] Stripe webhook: a stale/duplicate `invoice.payment_failed` can drag a recovered `active` subscription back to `past_due`
+`src/app/api/stripe/webhook/handlers.ts:138` — `handlePaymentFailed` guards its update with
+`.in('status', ['trial','active','past_due'])`. The comment protects terminal states but leaves
+`active` overwritable.
+
+**Why it matters:** A customer who already fixed their card and is fully active could suddenly see
+the "your payment failed" dunning banner again for no reason, because a delayed/duplicate webhook
+from the earlier failure lands after they've recovered. It self-heals only on the next
+`subscription.updated` (possibly a full billing period away).
+
+**Failure scenario (needs out-of-order delivery, which Stripe does not guarantee against):** invoice
+fails → row `past_due`; user updates card, retry succeeds → `subscription.updated` (active) → row
+`active`; a duplicate/delayed `invoice.payment_failed` for the *original* failure arrives, matches the
+now-`active` row, and overwrites `status='past_due'`.
+
+**Fix shape (owner conversation — Stripe webhook = never-touch):** don't let a stale failure reverse a
+recovery — only apply `past_due` when the row isn't already `active`, or key the update to the specific
+invoice/period so an older failed-invoice event can't override a newer success.
+
+**Pick up when:** before launch, or first false-dunning report. Owner-paired webhook change.
+
+### 109. [P3] First Breath `breath_stone_sequence_completed` never fires for reduced-motion users → the funnel undercounts the accessibility segment
+`src/components/screens/FirstBreathSequence.phases.ts:132-138` — the completion event is emitted only
+from the `revealed` phase's `onEnter`. `:143-146` — the timeline is created with
+`paused: prefersReducedMotion`, so under reduced motion it never advances into `revealed`. The start
+event fires for everyone at mount (`:167-174`, with `reducedMotion: true`).
+
+**Why it matters:** Users with `prefers-reduced-motion: reduce` complete the ceremony normally
+(`preservedReady`/`ctaVisible` are true immediately, so they tap "See My Stone" → "Continue"), but only
+`sequence_started` is logged — `sequence_completed` never is. The started→completed funnel systematically
+reads ~100% abandonment for the entire accessibility segment, quietly corrupting a shipping funnel metric.
+
+**Fix shape:** In the reduced-motion branch, emit `breath_stone_sequence_completed` once when the hook
+jumps straight to preserved-ready (a guarded effect keyed on `prefersReducedMotion`), so completion is
+recorded on the same terms as the animated path.
+
+**Pick up when:** whoever next touches First Breath telemetry, or the funnel analysis that notices the RM
+segment dropping out. Agent-fixable; a telemetry-note under `docs/analytics/` should accompany the fix.
+
+### 110. [P3] `messages/commit` spends a paid ElevenLabs render but writes nothing to the `usage_events` ledger and has no hourly gate
+`src/app/api/messages/commit/route.ts:76-125` — `/commit` (the one Deferred-Audio action that pays for a
+render) calls `generateSpeech` (`:76`) but never calls `recordUsageEvent` or `countGenerationsThisHour`.
+It has only the per-generation `audio_render_count` cap (`:66`). `/generate` and `/regenerate` both log a
+`step6_generate` ledger row that feeds the hourly cost fence; `/commit` does not.
+
+**Why it matters:** Committed re-record spend is invisible to the "20 generations/hour" cost fence and to
+any ledger-based cost analytics. Real paid ElevenLabs volume can run ~4× the nominal hourly number
+(each generation allows up to 3 commits), and none of the commit spend appears in usage analytics — a
+cost-observability gap on a live vendor-spend path. This is bounded (the per-generation render cap still
+applies), so it's a visibility/telemetry gap, not an uncapped leak.
+
+**Fix shape:** Add a `recordUsageEvent(service, { action: STEP6_GENERATE_ACTION, outcome: "started", … })`
+on the successful-commit path (and decide whether commits should also count toward `countGenerationsThisHour`).
+Same *class* as FU-92 (retry_audio) but a **distinct route** — decide whether to fold or ticket separately.
+
+**Pick up when:** cost-instrumentation pass, or when reconciling ledger spend against the ElevenLabs bill.
+Agent-fixable; drop a `docs/analytics/` note with the fix.
+
+### 111. [P3] Onboarding Screen 10 Back control isn't disabled during a photo upload → a mid-upload back-out desyncs the wizard's avatar state
+`src/components/screens/OnboardingScreen.tsx:165` — `<BackButton … disabled={isSubmitting} />`, where
+`isSubmitting` is only the Screen 12 completion flag, so the global Back stays live during a Screen 10
+upload (only Screen 10's own file input + Continue CTA are gated by `inFlight`). Combined with
+`src/components/screens/onboarding/usePhotoUpload.ts:130` (`if (!mountedRef.current) return;` *before*
+`onSuccess`) and the `key={currentScreen}` remount wrapper (`OnboardingScreen.tsx:171`).
+
+**Why it matters:** If the user taps Back while a photo upload is in flight, Screen 10 unmounts after the
+server action commits `avatar_storage_path` but before the client records it — so `onSuccess`/`setAvatarUrl`
+never runs and in-session `form.avatarUrl` stays null. The Screen 9 review card and any re-entry to Screen
+10 then show *no* photo even though one is saved, inviting a confused re-upload. No permanent data loss (the
+avatar re-hydrates as a signed URL on the next full page load) — the harm is in-session only.
+
+**Fix shape:** Suppress/disable the Back control while a Screen 10 upload is in flight (surface `inFlight` up
+to the orchestrator, or block navigation during upload) so the uploader can't be unmounted between the server
+commit and the `onSuccess` callback.
+
+**Pick up when:** next onboarding-polish or Screen 10 touch. Agent-fixable, but the fix is UI-behavioral —
+verify in-browser (mid-upload Back at 4× throttle) per the house visual-verification bar.
