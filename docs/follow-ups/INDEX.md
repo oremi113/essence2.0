@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
+Total: 27 · 26 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (20)
+## Open (26)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -15,6 +15,8 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P2 | Vault restore (past_due) opens the Stripe Portal via `window.open`-after-`await` → blocked on iOS Safari, silent dead-end *(triage 2026-07-07)* | 2026-07-07 | FU-87 | [`2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md`](./2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md) |
 | P2 | A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)* | 2026-07-10 | FU-93 | [`2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md`](./2026-07-10-a-failed-message-generation-permanently-wedges-creation-the.md) |
 | P2 | `retry_audio` renders paid ElevenLabs audio with NO cost cap, hourly gate, or ledger → unbounded vendor spend *(triage 2026-07-10)* | 2026-07-10 | FU-92 | [`2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md`](./2026-07-10-retry-audio-renders-paid-elevenlabs-audio-with-no.md) |
+| P2 | The daily message-generation cost cap counts a stale action key (`message_generate`) that nothing writes anymore → the 20/day ElevenLabs+LLM backstop never trips *(triage 2026-08-18)* | 2026-08-18 | — | [`2026-08-18-daily-generation-cost-cap-is-silently-dead.md`](./2026-08-18-daily-generation-cost-cap-is-silently-dead.md) |
+| P2 | A transient Stripe `incomplete` status is mapped to the *terminal* `lapsed`, which the terminal guard then freezes — a customer whose first charge later succeeds is permanently stuck `lapsed` *(triage 2026-08-18)* | 2026-08-18 | — | [`2026-08-18-stripe-incomplete-status-maps-to-terminal-lapsed.md`](./2026-08-18-stripe-incomplete-status-maps-to-terminal-lapsed.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
@@ -26,10 +28,14 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P3 | TTS→upload→duration→status-write pipeline implemented twice (`audio.ts` vs `commit/route.ts`) → drift on a vendor-spend path *(triage 2026-07-10)* | 2026-07-10 | FU-97 | [`2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md`](./2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md) |
 | P3 | `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-app-main-missing-safe-area-inset.md`](./2026-07-12-app-main-missing-safe-area-inset.md) |
 | P3 | The icon-only "Back" chevron is defined 5× across the app (step3 + three message screens + a header class) → consolidate into one shared component so touch-target / style fixes can't drift out of sync again *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-consolidate-duplicated-back-chevron-affordance.md`](./2026-07-12-consolidate-duplicated-back-chevron-affordance.md) |
+| P3 | The "race-safe security gate" for the Vault 3-message cap drops the count-query `error`, so a transient DB hiccup lets a user save past the plan limit *(triage 2026-08-18)* | 2026-08-18 | — | [`2026-08-18-save-route-vault-quota-gate-fails-open-on-count-error.md`](./2026-08-18-save-route-vault-quota-gate-fails-open-on-count-error.md) |
+| P3 | If `customer.subscription.deleted` arrives before the row exists, the death is only logged (not recorded), so a later out-of-order create/update inserts a *live* row for a subscription Stripe has already deleted *(triage 2026-08-18)* | 2026-08-18 | — | [`2026-08-18-subscription-deleted-before-row-lets-a-later-event-resurrect.md`](./2026-08-18-subscription-deleted-before-row-lets-a-later-event-resurrect.md) |
+| P3 | A subscription-status DB read *error* is collapsed into `status: 'none'` (identical to "never subscribed"), so a transient Supabase blip bounces a paying user to the paywall and 403s their save *(triage 2026-08-18)* | 2026-08-18 | — | [`2026-08-18-subscription-read-error-collapses-to-status-none.md`](./2026-08-18-subscription-read-error-collapses-to-status-none.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
 | P4 | Migrate the remaining `FOLLOW_UPS.md` monolith (items 1-84 + resolved history) into the per-file `docs/follow-ups/` layout | 2026-07-12 | — | [`2026-07-12-migrate-legacy-followups-to-per-file.md`](./2026-07-12-migrate-legacy-followups-to-per-file.md) |
+| P4 | The bronze-vault migration's `BronzeVault` wrapper re-hardcodes the canonical seal timing, adds a 3rd copy of the cubic-bezier sampler, and ships `animate`/`sealed` machinery only the dev sandbox exercises — all untested *(triage 2026-08-18)* | 2026-08-18 | — | [`2026-08-18-bronzevault-migration-reduplicated-seal-timing-and-bezier.md`](./2026-08-18-bronzevault-migration-reduplicated-seal-timing-and-bezier.md) |
 
 ## Decision (owner call) (1)
 

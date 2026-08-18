@@ -23,6 +23,55 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-18 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 6 new backlog items; no code touched. Branch
+  `triage/2026-08-18` off latest `main` (93d0bbd).
+- Scanned: health checks on `main` (typecheck ✅ · lint ✅ · test:unit 386/386 ✅ after a
+  clean `npm ci` — deps were absent in the fresh container); marker-debt grep over `src/`
+  (all `eslint-disable`/stub sites are documented or deliberate — e.g. `guards.ts`
+  `assertPlanAllows` MVP hook — no new untracked TODO/FIXME); doc/contract cross-check
+  (`DECISIONS.md`, `STORAGE_PATHS.md`, `API_CONTRACTS.md`); and deep reads of three
+  subsystems via parallel read-only audit agents: (1) message/audio API routes + cost
+  controls, (2) Stripe/subscription lifecycle, (3) the most-recently-changed code (Step 10
+  error-copy, first-breath S10-C silent degradation, the bronze-vault migration, nav
+  tap-targets, OfflineIndicator hydration fix). Every candidate was re-verified against the
+  code before logging.
+- Work-in-progress excluded: no active `feat/*`/`refactor/*` branches exist (all recent
+  work settled on `main` 2026-07-12), so nothing was mid-construction. The Step 10
+  error-handling and first-breath degradation paths were read and found genuinely sound —
+  not flagged.
+- Discovered (new per-file follow-ups, dated 2026-08-18):
+  - [P2] `daily-generation-cost-cap-is-silently-dead` — the daily ElevenLabs+LLM backstop
+    counts a stale `usage_events` action key (`message_generate`) that no route writes
+    anymore (all write `step6_generate`), so it never trips; only the hourly cap still
+    bounds spend. In scope / agent-fixable.
+  - [P2, owner-paired] `stripe-incomplete-status-maps-to-terminal-lapsed` — a transient
+    Stripe `incomplete` is mapped to terminal `lapsed`; the terminal guard then freezes a
+    customer whose first charge later succeeds. Webhook logic → owner decision.
+  - [P3] `save-route-vault-quota-gate-fails-open-on-count-error` — the Vault 3-message
+    "security gate" drops the count-query error; a DB hiccup lets a save exceed the cap.
+  - [P3] `subscription-read-error-collapses-to-status-none` — a status read *error*
+    collapses to `none`, paywalling / 403-ing a paying user on a transient blip.
+  - [P3, owner-paired] `subscription-deleted-before-row-lets-a-later-event-resurrect` — an
+    out-of-order `subscription.deleted` that matches no row is only logged; a later
+    create/update then resurrects a dead subscription as live. Webhook/schema → owner.
+  - [P4] `bronzevault-migration-reduplicated-seal-timing-and-bezier` — the vault-engine
+    migration re-hardcoded canonical `SEAL_TIMING`, added a 3rd bezier-sampler copy, and
+    ships `animate`/`sealed` modes only `/dev/vault` exercises, untested.
+- More found, NOT logged (below the senior-engineer bar / the 8-cap, noted for honesty):
+  a non-monotonic `last_failed_attempt_count` write in the payment-failed handler (P4,
+  cosmetic dunning-banner regression); `audio/playback-url` parsing its body unguarded
+  (P4, wrong-status-code robustness); the deferred-audio text path bypassing the ledger
+  (flag `DEFERRED_AUDIO_ENABLED` off by default + bounded per-message → treated as not-yet
+  -shipped, not debt); and `API_CONTRACTS.md` naming drift (route/bucket names) that the
+  code already documents inline as a deliberate deviation — no ticket.
+- Triggers came true: none — no open "Pick up when" condition became newly actionable this
+  run (no new feature landed on the areas the older items are waiting on).
+- Branch / commit: `triage/2026-08-18` @ <this commit>
+- Checks: n/a for the docs change itself (docs-only); CI re-runs lint/typecheck/test/build
+  on the branch.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
