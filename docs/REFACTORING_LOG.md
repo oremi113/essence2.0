@@ -23,6 +23,44 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-24 — scheduled
+- Outcome: Fixed — one transient failure while a message was being made used to
+  jam creation permanently ("Try again" kept failing and no new message could be
+  started); now a failed attempt is cleared away so the next try works.
+- Item: FU-93 — A failed message generation permanently wedges creation (the
+  orphaned active pending row 429s every retry via `pending_max`, forever).
+- Root cause: symptom — after one LLM/TTS hiccup, the A5 "Try again" returns
+  `pending_max` (429) forever and every future message is blocked. Cause —
+  `POST /api/messages/generate` inserts the `pending_generations` row *before*
+  the text/audio render; on a failure it returns 502 but leaves that row
+  **active** (`saved_message_id` + `superseded_at` both null), which
+  `countActivePending` counts as the user's one allowed in-flight flow. Nothing
+  ever clears failed rows, and the client always retries with a *fresh*
+  cold-start POST, so the dead row occupies the single slot permanently. Why this
+  addresses the cause — each cold-start failure exit now calls a new
+  `discardFailedGeneration` helper that stamps `superseded_at` on the orphaned
+  row, so it stops counting as active — exactly the terminal state a successful
+  save/supersede reaches. The `/regenerate` `retry_audio` recovery path and the
+  shared `generateAndStoreAudio` helper are deliberately left untouched (their
+  rows are recoverable in-place at A6), so only genuinely-orphaned cold-start
+  rows are discarded and no recoverable flow is destroyed. This is a genuine
+  root-cause fix, not a workaround: it clears the state that causes the 429
+  rather than suppressing the 429.
+- Branch / commit: refactor/fu-93-orphan-pending-wedge @ b22acff (docs strike +
+  log in the follow-up commit on the same branch)
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (388/388; +2 new tests for
+  `discardFailedGeneration` in `tests/unit/messages-route-helpers.test.ts`).
+- Scanned / discovered: re-ran the §3 scan. Health on `main` (93d0bbd) green
+  before changes (typecheck ✅ · lint ✅ · unit 386/386 ✅). Walked the per-file
+  backlog top-down: FU-86/FU-85 (delete-account teardown, same function) are the
+  owner-paired "before ACCOUNT_DELETE_ENABLED" sign-off batch with no test
+  coverage (FU-90) — not a clean solo grab; FU-87 (vault-restore `window.open`
+  on iOS Safari) needs in-browser verification this environment can't do; FU-92
+  (retry_audio cost cap) is owner-paired vendor-spend. FU-93 was the top
+  genuinely agent-fixable, self-contained item. Re-scored all open items — no
+  priority changes this run. No new marker debt or untracked discoveries.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
