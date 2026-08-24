@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { isActivePending } from "@/lib/messages/route-helpers";
+import { describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { isActivePending, discardFailedGeneration } from "@/lib/messages/route-helpers";
 
 /**
  * Unit coverage for the pure active-pending guard shared by the Step 6
@@ -35,5 +36,96 @@ describe("isActivePending", () => {
     expect(isActivePending(row)).toBe(true);
     // narrows: the extra fields remain accessible after the guard
     if (isActivePending(row)) expect(row.generation_id).toBe("g1");
+  });
+});
+
+/**
+ * Unit coverage for the failed-cold-start discard used by POST /generate. This
+ * is the fix for the wedge where one transient LLM/TTS failure leaves an active
+ * pending row that 429s (`pending_max`) every future cold-start forever — see
+ * the follow-up `2026-07-10-a-failed-message-generation-permanently-wedges-creation-the`.
+ * The behaviour that matters: it supersedes exactly the target row (so
+ * `countActivePending` stops counting it) and never throws (best-effort — it
+ * must not mask the generation failure already being returned).
+ */
+describe("discardFailedGeneration", () => {
+  function makeSupabaseMock(result: { error: unknown }) {
+    const calls: {
+      table?: string;
+      update?: Record<string, unknown>;
+      eq: Array<[string, unknown]>;
+      is: Array<[string, unknown]>;
+    } = { eq: [], is: [] };
+
+    const builder = {
+      eq(col: string, val: unknown) {
+        calls.eq.push([col, val]);
+        return builder;
+      },
+      is(col: string, val: unknown) {
+        calls.is.push([col, val]);
+        return builder;
+      },
+      // Awaited by bestEffortWrite as `const { error } = await builder`.
+      then(resolve: (v: { error: unknown }) => void) {
+        resolve(result);
+      },
+    };
+
+    const supabase = {
+      from(table: string) {
+        calls.table = table;
+        return {
+          update(payload: Record<string, unknown>) {
+            calls.update = payload;
+            return builder;
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    return { supabase, calls };
+  }
+
+  it("supersedes exactly the target row (generation + user, saved-null guard)", async () => {
+    const { supabase, calls } = makeSupabaseMock({ error: null });
+
+    await discardFailedGeneration(supabase, {
+      generationId: "gen-1",
+      userId: "user-1",
+      requestId: "req-1",
+      stage: "audio",
+    });
+
+    expect(calls.table).toBe("pending_generations");
+    // Stamps superseded_at with an ISO timestamp — the column countActivePending
+    // reads to decide a row is no longer an active in-flight flow.
+    expect(typeof calls.update?.superseded_at).toBe("string");
+    expect(new Date(calls.update?.superseded_at as string).toISOString()).toBe(
+      calls.update?.superseded_at,
+    );
+    // Scoped to the owning user's specific generation…
+    expect(calls.eq).toEqual([
+      ["generation_id", "gen-1"],
+      ["user_id", "user-1"],
+    ]);
+    // …and never clobbers a row a concurrent request has already saved.
+    expect(calls.is).toEqual([["saved_message_id", null]]);
+  });
+
+  it("is best-effort: a failed supersede is swallowed, not thrown", async () => {
+    const { supabase } = makeSupabaseMock({ error: { message: "db down" } });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      discardFailedGeneration(supabase, {
+        generationId: "gen-2",
+        userId: "user-2",
+        requestId: "req-2",
+        stage: "text",
+      }),
+    ).resolves.toBeUndefined();
+
+    vi.restoreAllMocks();
   });
 });

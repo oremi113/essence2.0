@@ -26,7 +26,7 @@ import { normalizeRelationship, getCategoryVoiceSettings, type MessageCategory }
 import { selectVariantByIndex, getTemplateById, generateMessageText } from "@/lib/messages/generation";
 import { generateAndStoreAudio } from "@/lib/messages/audio";
 import { bestEffortWrite } from "@/lib/supabase/checked-write";
-import { isActivePending, pendingNotFoundResponse } from "@/lib/messages/route-helpers";
+import { isActivePending, pendingNotFoundResponse, discardFailedGeneration } from "@/lib/messages/route-helpers";
 import {
   STEP6_LIMITS,
   STEP6_GENERATE_ACTION,
@@ -294,6 +294,9 @@ export const POST = defineRoute(
           .eq("user_id", user.id),
         { op: "step6_text_status_failed_mark", requestId, userId: user.id, meta: { generationId } },
       );
+      // Supersede the dead row so it stops counting as the user's one active
+      // flow — otherwise the A5 cold-start retry 429s on pending_max forever.
+      await discardFailedGeneration(supabase, { generationId, userId: user.id, requestId, stage: "text" });
       logEvent({
         event: "step6_text_failed",
         requestId,
@@ -328,6 +331,9 @@ export const POST = defineRoute(
       // text-failure branch above uses; audio never ran, so audioStatus stays
       // "pending".
       logError({ event: "step6_text_mark_failed", requestId, userId: user.id, error: textMarkError, meta: { generationId } });
+      // Same wedge fix as the text-failure branch: discard the dead row so it
+      // stops occupying the one-active-flow slot the cold-start retry needs.
+      await discardFailedGeneration(supabase, { generationId, userId: user.id, requestId, stage: "text_mark" });
       return NextResponse.json(
         {
           generationId,
@@ -355,6 +361,11 @@ export const POST = defineRoute(
     });
 
     if (!audioOutcome.ok) {
+      // `generateAndStoreAudio` left the row active (recoverable via the
+      // /regenerate retry_audio path). But the cold-start client never returns
+      // to this generationId — it retries with a fresh cold-start POST — so here
+      // the still-active row is pure wedge: discard it so pending_max stays free.
+      await discardFailedGeneration(supabase, { generationId, userId: user.id, requestId, stage: "audio" });
       return NextResponse.json(
         {
           generationId,
