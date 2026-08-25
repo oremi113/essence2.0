@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
+Total: 25 · 24 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (20)
+## Open (24)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -26,6 +26,10 @@ Total: 21 · 20 open · 1 decision · 0 resolved · 0 dropped
 | P3 | TTS→upload→duration→status-write pipeline implemented twice (`audio.ts` vs `commit/route.ts`) → drift on a vendor-spend path *(triage 2026-07-10)* | 2026-07-10 | FU-97 | [`2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md`](./2026-07-10-the-tts-upload-duration-status-write-pipeline-is.md) |
 | P3 | `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-app-main-missing-safe-area-inset.md`](./2026-07-12-app-main-missing-safe-area-inset.md) |
 | P3 | The icon-only "Back" chevron is defined 5× across the app (step3 + three message screens + a header class) → consolidate into one shared component so touch-target / style fixes can't drift out of sync again *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-consolidate-duplicated-back-chevron-affordance.md`](./2026-07-12-consolidate-duplicated-back-chevron-affordance.md) |
+| P3 | Deferred-Audio `/commit` renders paid ElevenLabs audio with only the per-message cap — no hourly gate, no usage_events ledger row *(triage 2026-08-25)* | 2026-08-25 | — | [`2026-08-25-commit-render-bypasses-hourly-cap-and-ledger.md`](./2026-08-25-commit-render-bypasses-hourly-cap-and-ledger.md) |
+| P3 | First-Breath audio: a throw *after* `new AudioContext()` leaks the open context (never closed), accelerating the exhaustion S10-C was written to prevent *(triage 2026-08-25)* | 2026-08-25 | — | [`2026-08-25-first-breath-audiocontext-leaks-on-partial-construction.md`](./2026-08-25-first-breath-audiocontext-leaks-on-partial-construction.md) |
+| P3 | `breath_stone_sequence_completed` never fires for reduced-motion users → the First-Breath funnel counts every RM user as started-but-abandoned *(triage 2026-08-25)* | 2026-08-25 | — | [`2026-08-25-first-breath-completed-event-never-fires-reduced-motion.md`](./2026-08-25-first-breath-completed-event-never-fires-reduced-motion.md) |
+| P3 | `/save` vault quota is a count-then-insert TOCTOU, not the "race-safe security gate" it claims — concurrent saves can exceed the 3-message cap *(triage 2026-08-25)* | 2026-08-25 | — | [`2026-08-25-save-vault-quota-count-then-insert-toctou.md`](./2026-08-25-save-vault-quota-count-then-insert-toctou.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |

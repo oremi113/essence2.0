@@ -23,6 +23,51 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-25 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 4 new backlog items + refined 1 existing;
+  no application code touched (only `docs/follow-ups/` + `docs/FOLLOW_UPS.md` +
+  this log). Branch `triage/2026-08-25`.
+- Scanned: health checks on `main` @ 93d0bbd after `npm ci` (typecheck ✅ · lint ✅ ·
+  unit 386/386 ✅); marker-debt grep over `src/` (all `eslint-disable` / no TODO
+  untracked — every marker already covered by FU-32 and the conventional img/deps
+  sites); auth `middleware.ts` (clean; one vestigial `pathname === "/settings"`
+  condition — the real route is `/app/settings`, already covered by the `/app`
+  prefix — not ticket-worthy). Deep reads via three parallel read-only agents:
+  (1) Step 10 error-copy + S10-C first-breath + connectivity + nav; (2) full
+  Stripe / subscription / webhook subsystem incl. the S5 flag-gating (068eae1);
+  (3) message-generation / audio / voice-creation + the cost-control layer. No
+  active `feat/*` branch existed, so nothing was excluded as work-in-progress.
+- Discovered (new per-file follow-ups, all P3, conservative):
+  - `2026-08-25-commit-render-bypasses-hourly-cap-and-ledger` — Deferred-Audio
+    `/commit` paid ElevenLabs render skips the hourly cap + usage_events ledger
+    (flag-OFF today → landmine; escalate to P2 when `DEFERRED_AUDIO_ENABLED` flips).
+    Folds in the `maxAudioRenders` docstring contradiction + deferred-text LLM
+    ledger gap.
+  - `2026-08-25-save-vault-quota-count-then-insert-toctou` — `/save` 3-message
+    Vault cap is a count-then-insert TOCTOU with no DB constraint, despite the
+    "race-safe security gate" docstring; concurrent saves can exceed the cap by one.
+  - `2026-08-25-first-breath-audiocontext-leaks-on-partial-construction` — S10-C
+    guard leaks the open `AudioContext` when a graph call after `new Ctor()` throws
+    (no `ctx.close()`), accelerating the very exhaustion S10-C defends against.
+  - `2026-08-25-first-breath-completed-event-never-fires-reduced-motion` —
+    `breath_stone_sequence_completed` lives in a paused-timeline phase, so every
+    reduced-motion user is counted as started-but-abandoned in the funnel.
+- Refined (existing): FU-76 — the Privacy/Terms legal pages it assumed "shipped
+  greenfield" are ABSENT from `main` (no `src/app/{privacy,terms}`, no legal
+  screens, no `ROUTES.privacy/terms`); the greenfield branch was never merged. So
+  the gap is "pages don't exist," not "pages exist but aren't linked." Step 9
+  Settings (the intended host) has since merged.
+- Reviewed-and-cleared (no entry warranted): the Stripe subsystem is well-hardened
+  — S5 flag-gating consistent (no inversion/bypass), all webhook money-path writes
+  checked + throw, error paths 500 not 200, the payment entitlement gate is wired,
+  no redirect loops. Step 10 error-copy pass is correct (raw errors no longer
+  surfaced; `listError` fully removed). Connectivity primitives clean up listeners
+  + timers. Settings writes go through `checkedWrite`.
+- No trigger promotions beyond the FU-76 refinement.
+- Branch / commit: `triage/2026-08-25` @ <this commit>.
+- Checks: n/a to app code (docs-only). CI re-runs lint/typecheck/test/build on the PR.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
