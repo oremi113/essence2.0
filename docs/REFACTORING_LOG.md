@@ -23,6 +23,28 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-28 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 8 new backlog items; no code touched. Branch `triage/2026-08-28` off `main` @ 93d0bbd.
+- Health checks on `main` (93d0bbd): typecheck ✅ · lint ✅ · test:unit 386/386 ✅. No failure → nothing auto-≥P2 from health.
+- Marker-debt grep over `src/`: no new untracked debt — every `eslint-disable` is a documented/conventional site (Next `<img>`, exhaustive-deps play-once, `react-hooks/refs` in `useSequenceTimeline`), and there are zero raw `TODO`/`FIXME`/`HACK` in `src/`.
+- WIP exclusion: no `feat/*` or `refactor/*` branches exist remotely (only `main`), so WIP was judged from recent commits — the spine wiring (S1–S5), Step 3 Card Capture, Step 10 error-copy pass, nav tap-targets, and S5 Stripe go-live all landed on `main` (not half-built branches), so shipped code was fair game; the known-unbuilt Step 10 offline gating (FU-80) and the stubbed real-processing clock (FU-72) were treated as WIP and not flagged.
+- Format note: followed the **current** per-file house convention (`docs/follow-ups/<date>-<slug>.md` + regenerated `INDEX.md` via `npm run followups:build`), not the legacy `FOLLOW_UPS.md` monolith — the repo README and CI (`followups:check`) mandate per-file since Move 2 (2026-07-12). The legacy `FOLLOW_UPS.md` archive was left untouched.
+- Discovered (8 new — 1×P2, 5×P3, 2×P4), verified in code before logging:
+  - [P2, owner-paired] `2026-08-28-auth-callback-open-redirect-protocol-relative-next` — `next.startsWith("/")` admits `//evil.com` → open redirect on the auth callback (+ sign-in sink). Repo already has the correct guard in `portal-session/route.ts:20`.
+  - [P3] `2026-08-28-regenerate-failure-strands-prior-saveable-take` — shipping regenerate arm resets `audio_status` in place; a failed re-render leaves the prior good take unsaveable behind another paid render.
+  - [P3] `2026-08-28-get-subscription-status-folds-read-error-into-none` — a transient subscriptions read error is reported as `'none'` → paying user bounced to paywall (recurring swallowed-error class).
+  - [P3] `2026-08-28-record-resume-strands-finished-user-on-final-prompt` — `deriveInitialView` lacks an all-25-clips terminal case → a finished user is dropped back on the final prompt on refresh.
+  - [P3] `2026-08-28-daily-message-generation-cap-dead-action-key-mismatch` — the daily cost cap counts `"message_generate"` but the pipeline records `"step6_generate"` → daily ceiling never fires (only the 20/hr cap is live).
+  - [P3, owner-paired] `2026-08-28-paid-message-renders-not-subscription-gated` — only `/save` checks subscription; generate/regenerate/commit spend ElevenLabs with no entitlement gate → a lapsed user can burn renders they can't save.
+  - [P4] `2026-08-28-generation-offline-note-misplaced-in-exhausted-state` — the failed-state offline note is pinned under the wrong (enabled) button in exhausted mode and hardcodes "Your note is kept" on the skip path.
+  - [P4] `2026-08-28-save-orphans-copied-audio-on-non-unique-insert-failure` — `/save` only removes the copied audio object on `23505`; any other insert failure orphans it, retry mints a new path → slow storage leak.
+- 2 more lower-priority items found, not logged this run (cap = 8): a stale `onboarding_completed` funnel comment in `OnboardingPageClient.tsx:44-47` still warning of FU-42's since-fixed over-count (P4 doc-drift); and the app-wide offline subsystem (`useOnline` / `deriveOfflineStatus` / `OfflineActionNote`) shipping with zero unit tests (P3, adjacent to several existing no-coverage items).
+- Skipped as WIP (not logged): RecordScreen's 8s `working→ready` fallback (`RecordScreen.tsx:100-106`) overriding real processing state — its own comment ("or stubbed") marks it stub-era scaffolding tied to the unbuilt real-processing poll (FU-72).
+- Triggers came true / observations for the fixer (NOT struck here — fixer's lane per §5): FU-24 and FU-25 (First Breath routing) are resolved in code — `VoiceCreationView.tsx` was removed in the spine S4 dead-code retirement (c76287f), `FirstBreathSequence.tsx:139` now hands off to `messagesNew`, and `/app/record/complete/stub` now redirects to Home per the DECISIONS URL-stability lock. That same removal means FU-101's `VoiceCreationView.tsx:37-43` reference is now stale (the `readyFired` once-guard site is gone; the live analog is `src/app/app/voice/create/page.tsx`). FU-73 (e2e/motion-perf not in CI) is unchanged — `ci.yml` still runs lint/followups-check/typecheck/unit/build + types-drift only.
+- Branch / commit: `triage/2026-08-28` @ <this commit>.
+- Checks: n/a for the discovery edit itself (docs-only); CI re-runs lint/followups-check/typecheck/unit/build on the branch.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
