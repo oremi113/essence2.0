@@ -24,8 +24,6 @@ export interface HomeBScreenProps {
   messages: ShelfMessage[];
   /** Drives the loading skeleton / error overlay around the preview. */
   loadState: HomeBLoadState;
-  /** Message shown in the error overlay when `loadState === 'error'`. */
-  listError?: string | null;
   /** Retry the preview fetch (error overlay's "Try again"). */
   onRetry: () => void;
   /**

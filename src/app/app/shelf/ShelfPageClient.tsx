@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MemoryShelf, type ShelfLoadState } from "@/components/screens/shelf/MemoryShelf";
 import { usePlaybackController } from "@/components/screens/shelf/usePlaybackController";
@@ -42,6 +42,12 @@ export function ShelfPageClient({ justSaved = false }: { justSaved?: boolean }) 
   const loadState: ShelfLoadState =
     status === "error" ? "error" : status === "loading" ? "loading" : "ready";
 
+  // Keep the raw load error observable for debugging without surfacing it to the
+  // user — the shelf shows fixed, on-voice copy instead (Copy Guide §8).
+  useEffect(() => {
+    if (error) console.error("[shelf] message list failed to load:", error);
+  }, [error]);
+
   const handleAudioUnavailable = useCallback((id: string) => {
     setUnavailableIds((prev) => {
       const next = new Set(prev);
@@ -66,7 +72,6 @@ export function ShelfPageClient({ justSaved = false }: { justSaved?: boolean }) 
     <MemoryShelf
       messages={messages}
       loadState={loadState}
-      listError={error}
       onRetryList={refetch}
       playback={playback}
       unavailableIds={unavailableIds}

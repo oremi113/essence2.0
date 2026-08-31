@@ -292,6 +292,7 @@
     align-items: center;
     gap: 6px;
     min-height: 44px;
+    min-width: 44px;
     padding: 0;
     background: none;
     border: none;
@@ -2991,12 +2992,23 @@
 
   /* ─── TAB NAV (post-onboarding /app pages) ────────────────── */
   .tab-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    /* Pull left by the link tap-padding so the first tab's text still
+       lines up with the content edge — same optical-alignment trick as
+       .screen-header__back's negative margin. */
+    margin-inline: -8px;
     margin-bottom: 16px;
+    /* Keep the bar clear of the status bar / notch on inset devices;
+       resolves to 0 where no inset is reported. */
+    padding-top: env(safe-area-inset-top, 0px);
     font-size: 14px;
   }
 
   .tab-nav__item {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
   }
 
   /* Inline-flex so the global 44px touch-target floor (button, a rule
@@ -3009,8 +3021,17 @@
   }
 
   .tab-nav__sep {
-    margin: 0 8px;
+    margin: 0 2px;
     color: #ccc;
+  }
+
+  /* Each tab is a ≥44px tap target with horizontal breathing room so
+     the links clear the finger mis-tap threshold on a real phone. */
+  .tab-nav__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 8px;
   }
 
   .tab-nav__link--current {
@@ -4257,7 +4278,7 @@
   .step3-backbar__btn {
     background: transparent; border: 0; padding: var(--space-sm);
     margin: calc(-1 * var(--space-sm)); color: var(--color-text-secondary);
-    cursor: pointer; display: flex; min-height: 44px; align-items: center;
+    cursor: pointer; display: flex; min-height: 44px; min-width: 44px; align-items: center;
     border-radius: var(--radius-md);
   }
   .step3-backbar__btn:hover { color: var(--color-text-primary); }

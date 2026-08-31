@@ -34,4 +34,26 @@ describe('createFirstBreathAudio', () => {
     expect(window.AudioContext).toBeUndefined();
     expect(createFirstBreathAudio()).toBeNull();
   });
+
+  it('returns null (does NOT throw) when the AudioContext constructor throws', () => {
+    // The browser caps concurrent AudioContexts (~6); once the cap is hit,
+    // `new AudioContext()` throws. That throw must degrade to silence, never
+    // propagate into the ceremony's mount effect and break the sacred beat.
+    // (S10-C: silent graceful degradation.)
+    class ThrowingAudioContext {
+      constructor() {
+        throw new DOMException('Failed to construct AudioContext', 'NotSupportedError');
+      }
+    }
+    const original = window.AudioContext;
+    // @ts-expect-error — installing a throwing stub for the test
+    window.AudioContext = ThrowingAudioContext;
+    try {
+      expect(() => createFirstBreathAudio()).not.toThrow();
+      expect(createFirstBreathAudio()).toBeNull();
+    } finally {
+      // Restore (was undefined under jsdom) so other tests see the real env.
+      window.AudioContext = original;
+    }
+  });
 });

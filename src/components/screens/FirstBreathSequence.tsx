@@ -69,20 +69,46 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
 
   useEffect(() => {
     if (prefersReducedMotion) return;
-    const engine = createFirstBreathAudio();
+    // The audio enhances a visual-primary ceremony; a failure to create or start
+    // it must degrade to silence, never interrupt the sacred beat. createFirstBreath
+    // Audio already returns null on failure, but guard start() too so nothing can
+    // throw into this mount effect. (S10-C: silent graceful degradation.)
+    let engine: FirstBreathAudioEngine | null = null;
+    try {
+      engine = createFirstBreathAudio();
+      engine?.start();
+    } catch {
+      // start() failed after the engine was created — dispose the half-built
+      // graph so we don't leak an AudioContext, then run silent.
+      try {
+        engine?.dispose();
+      } catch {
+        /* already unwinding — nothing to clean up */
+      }
+      engine = null;
+    }
     audioRef.current = engine;
-    engine?.start();
     return () => {
       audioRef.current = null;
       engine?.dispose();
     };
   }, [prefersReducedMotion]);
 
+  // Beat one-shots are fire-and-forget enhancements — a mid-ceremony failure
+  // must not break the timed beat that triggers it, so swallow silently.
   const handleCrystallizeBeat = useCallback(() => {
-    audioRef.current?.playCrystallize();
+    try {
+      audioRef.current?.playCrystallize();
+    } catch {
+      /* silent — see S10-C degradation note above */
+    }
   }, []);
   const handleRevealBeat = useCallback(() => {
-    audioRef.current?.playReveal();
+    try {
+      audioRef.current?.playReveal();
+    } catch {
+      /* silent — see S10-C degradation note above */
+    }
   }, []);
 
   const {

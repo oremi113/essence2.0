@@ -285,25 +285,44 @@ export function createFirstBreathAudio(
   const Ctor = window.AudioContext ?? (window as WebkitWindow).webkitAudioContext;
   if (!Ctor) return null;
 
-  const ctx = new Ctor();
+  // Building the graph can throw — `new AudioContext()` fails on hardware audio
+  // init errors and, more commonly, when the browser's concurrent-context cap
+  // (~6) is reached by repeated navigation through the app. The ceremony is
+  // visual-primary and the audio is enhancement, so any construction failure
+  // degrades to silence (null → callers no-op) rather than throwing into the
+  // ceremony's mount effect and breaking the sacred beat. (S10-C.)
+  const built = ((): {
+    ctx: AudioContext;
+    masterGain: GainNode;
+    reverb: ConvolverNode;
+  } | null => {
+    try {
+      const ctx = new Ctor();
 
-  // sources → masterGain → highpass(38Hz) → destination
-  const masterGain = ctx.createGain();
-  masterGain.gain.value = 1;
-  const highpass = ctx.createBiquadFilter();
-  highpass.type = 'highpass';
-  highpass.frequency.value = MASTER_HIGHPASS_HZ;
-  masterGain.connect(highpass);
-  highpass.connect(ctx.destination);
+      // sources → masterGain → highpass(38Hz) → destination
+      const masterGain = ctx.createGain();
+      masterGain.gain.value = 1;
+      const highpass = ctx.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.value = MASTER_HIGHPASS_HZ;
+      masterGain.connect(highpass);
+      highpass.connect(ctx.destination);
 
-  // Long, smooth reverb tail (generated impulse — decaying noise) with a wet
-  // level the config controls.
-  const reverb = ctx.createConvolver();
-  reverb.buffer = makeImpulseResponse(ctx, config.reverbSeconds, 3.2);
-  const reverbWet = ctx.createGain();
-  reverbWet.gain.value = config.reverbWet;
-  reverb.connect(reverbWet);
-  reverbWet.connect(masterGain);
+      // Long, smooth reverb tail (generated impulse — decaying noise) with a wet
+      // level the config controls.
+      const reverb = ctx.createConvolver();
+      reverb.buffer = makeImpulseResponse(ctx, config.reverbSeconds, 3.2);
+      const reverbWet = ctx.createGain();
+      reverbWet.gain.value = config.reverbWet;
+      reverb.connect(reverbWet);
+      reverbWet.connect(masterGain);
+      return { ctx, masterGain, reverb };
+    } catch {
+      return null;
+    }
+  })();
+  if (!built) return null;
+  const { ctx, masterGain, reverb } = built;
 
   // Track every oscillator so dispose() can stop the graph cleanly.
   const oscillators: OscillatorNode[] = [];
@@ -397,10 +416,16 @@ export function createFirstBreathAudio(
   }
 
   function onGesture() {
-    void ctx.resume().then(() => {
-      if (disposed) return;
-      fadeAmbientIn();
-    });
+    // resume() can reject (iOS can refuse outside a trusted gesture window);
+    // swallow it — a silent bed is the correct degradation, not an unhandled
+    // rejection.
+    void ctx
+      .resume()
+      .then(() => {
+        if (disposed) return;
+        fadeAmbientIn();
+      })
+      .catch(() => {});
     removeGestureListeners();
   }
 
@@ -500,13 +525,16 @@ export function createFirstBreathAudio(
   function start() {
     if (disposed || ambientGain) return; // idempotent
     buildAmbient();
-    void ctx.resume().then(() => {
-      if (disposed) return;
-      if (ctx.state === 'running') {
-        fadeAmbientIn();
-        removeGestureListeners();
-      }
-    });
+    void ctx
+      .resume()
+      .then(() => {
+        if (disposed) return;
+        if (ctx.state === 'running') {
+          fadeAmbientIn();
+          removeGestureListeners();
+        }
+      })
+      .catch(() => {});
     // In case resume() above was a no-op (iOS pre-gesture), unlock on first tap.
     if (ctx.state !== 'running') armGestureUnlock();
   }

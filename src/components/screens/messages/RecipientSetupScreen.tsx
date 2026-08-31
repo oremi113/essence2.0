@@ -152,7 +152,7 @@ export function RecipientSetupScreen({
           type="button"
           onClick={handleBack}
           aria-label={mode === 'addingNew' ? 'Back to your people' : 'Back'}
-          className="p-2 -m-2 min-h-[44px] flex items-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="p-2 -m-2 min-h-[44px] min-w-[44px] flex items-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ChevronLeftIcon size={22} />
         </button>
