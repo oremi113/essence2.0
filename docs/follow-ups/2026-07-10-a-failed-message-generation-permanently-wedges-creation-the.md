@@ -2,13 +2,26 @@
 id: 2026-07-10-a-failed-message-generation-permanently-wedges-creation-the
 legacy_id: 93
 priority: P2
-status: open
+status: resolved
 opened: 2026-07-10
-resolved:
+resolved: 2026-08-31
 summary: A failed message generation permanently wedges creation — the orphaned active pending row 429s every retry via `pending_max`, forever *(triage 2026-07-10)*
 ---
 
 # A failed message generation permanently wedges creation — the orphaned pending row 429s every retry
+
+**— ✅ RESOLVED 2026-08-31 (refactor/fu-93-orphaned-pending-row)** — root-cause fix, not a
+band-aid. New `src/lib/messages/retireFailedGeneration.ts` stamps `superseded_at` on the
+just-created pending row in all three cold-start failure branches of
+`src/app/api/messages/generate/route.ts` (text-failed, text-mark-failed, audio-failed), so the
+failed row stops counting in `countActivePending` and the A5 "Try again" (a fresh cold-start
+`/generate`) no longer 429s on `pending_max`. Scoped by `generation_id` + `user_id` +
+`.is('saved_message_id', null)` (never retires a saved row) and best-effort (an error-path
+cleanup must not throw over the failure it follows). Unit-tested in
+`tests/unit/retire-failed-generation.test.ts` (4 cases). typecheck + lint + unit (390/390) green.
+*Residual, inherent not deferred:* if the text-mark write AND its retire write both fail in the
+same transient blip, the row stays active — a far narrower window than the original (every
+failure wedged), and self-heals on any later successful supersede. Original entry below.
 
 *(triage 2026-07-10)*
 `src/app/api/messages/generate/route.ts` (cold-start `:184`, insert `:237`, failure returns
