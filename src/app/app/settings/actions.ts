@@ -223,10 +223,24 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
     //    data loss, so a hard failure aborts while the account is still intact
     //    and we never orphan a clone we can no longer address (its id lives on
     //    the voice_profiles row deleted in step 4).
-    const { data: voiceRows } = await service
+    const { data: voiceRows, error: voiceReadErr } = await service
       .from('voice_profiles')
       .select('vendor_voice_id')
       .eq('user_id', userId);
+    // A failed read must NOT be treated as "no voices to delete" — proceeding
+    // would delete the local vendor_voice_id pointer (step 4) and orphan the
+    // clone we just failed to see, breaking the "permanently gone" promise this
+    // step exists to keep. Abort before any local data loss, same as a hard
+    // vendor-delete failure below.
+    if (voiceReadErr) {
+      logError({
+        event: 'settings.delete_account.voice_read',
+        requestId,
+        userId,
+        error: voiceReadErr,
+      });
+      return { ok: false, error: 'We couldn’t finish closing your account just now.' };
+    }
     for (const row of voiceRows ?? []) {
       if (!row.vendor_voice_id) continue;
       const result = await deleteVoice(row.vendor_voice_id);
