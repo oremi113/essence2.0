@@ -23,6 +23,44 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-08-31 — scheduled
+- Outcome: Fixed — one failed message generation used to lock a user out of
+  creating any message; now a failed attempt cleans up after itself so "Try
+  again" works.
+- Item: FU-93 — A failed message generation permanently wedges creation (the
+  orphaned active pending row 429s every retry via `pending_max`, forever).
+- Root cause: symptom — after a single transient text/audio failure on the core
+  message-creation flow, the A5 "Try again" (and every future message) returns a
+  `pending_max` rate-limit error forever. Cause — `POST /api/messages/generate`
+  inserts the `pending_generations` row *before* running the LLM text and
+  ElevenLabs audio; on failure it returned 502 but left the row **active**
+  (`saved_message_id` + `superseded_at` both null), which is exactly what
+  `countActivePending` counts against the one-active-flow-per-user cap. Nothing
+  retired a failed row (`superseded_at` was only stamped on an edit-note
+  success). Why this addresses the cause — a new `retireFailedGeneration` helper
+  stamps `superseded_at` on the just-created row in all three cold-start failure
+  branches (text-failed, text-mark-failed, audio-failed), so the failed row
+  stops counting and the next cold-start passes the cap. The A5 retry always
+  re-POSTs a fresh cold-start `/generate` (verified in `MessagesNewPageClient.tsx`),
+  never the failed row's id, so retiring it is safe. Scoped by
+  `generation_id` + `user_id` + `.is('saved_message_id', null)` (can never retire
+  a saved row or another user's row) and best-effort (an error-path cleanup must
+  not throw over the failure it follows). Residual, inherent not deferred: if the
+  text-mark write and its retire write both fail in the same transient blip the
+  row stays active — a far narrower window than the original (every failure
+  wedged), self-healing on any later successful supersede.
+- Branch / commit: refactor/fu-93-orphaned-pending-row @ f55f16b
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (390/390, incl. 4 new in
+  `tests/unit/retire-failed-generation.test.ts`).
+- Discovered: none new. Scan re-scored the per-file queue (`docs/follow-ups/`,
+  now 19 open · 1 decision · 1 resolved); no untracked marker debt in `src/`.
+  Ahead of FU-93 in the queue but skipped this run: FU-86 (delete-account
+  teardown order) embeds a genuine product choice (reorder vs. soften the copy)
+  on the irreversible auth + Stripe teardown path → owner decision; FU-85 and
+  FU-92 are `owner_paired`; FU-87 (vault-restore iOS popup) is a browser-gesture
+  fix this headless environment cannot verify.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
