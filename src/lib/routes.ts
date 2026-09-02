@@ -50,6 +50,13 @@ export const ROUTES = {
 
   /** Step 9 Settings & Trust — the control + reassurance surface (gear on Home B). */
   settings: "/app/settings",
+
+  // Legal — public, unauthenticated pages (not in middleware's protected set).
+  // Content is generated from docs/legal/*.md by scripts/legal-build.mjs.
+  terms: "/terms",
+  privacy: "/privacy",
+  acceptableUse: "/acceptable-use",
+  betaTerms: "/beta-terms",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
