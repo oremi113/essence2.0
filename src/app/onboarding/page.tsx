@@ -12,6 +12,7 @@ import {
 import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen.types';
 import { OnboardingPageClient } from './OnboardingPageClient';
 import { persistOnboardingCompletion } from '@/lib/onboarding/completeOnboarding';
+import { ageInYears, MINIMUM_AGE } from '@/lib/onboarding/age';
 import { ROUTES, signInWithNext } from '@/lib/routes';
 
 /**
@@ -120,6 +121,17 @@ export default async function OnboardingPage() {
     const birthYear = /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)
       ? parseInt(dateOfBirth.slice(0, 4), 10)
       : null;
+
+    // Age gate — ESSENCE is 18+. ToS §4 and Privacy §11 assert this; enforce it
+    // authoritatively here (server action) so a minor is stopped before any
+    // profile/voice is created. Uses the full DOB, not just birth_year.
+    const age = ageInYears(dateOfBirth);
+    if (age === null) {
+      throw new Error('Please enter a valid date of birth.');
+    }
+    if (age < MINIMUM_AGE) {
+      throw new Error('You must be 18 or older to use ESSENCE.');
+    }
 
     const displayName = [cleanedFirst, cleanedLast].filter(Boolean).join(' ');
 
