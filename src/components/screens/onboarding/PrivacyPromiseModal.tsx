@@ -53,14 +53,16 @@ export function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
           </h2>
 
           <div className="privacy-modal__body">
-            {/* Copy trimmed 2026-07-12 to match implementation (no client-side/E2E
-                encryption; deletion timing depends on the confirmed vendor backup
-                window) — pending counsel sign-off. See
-                docs/follow-ups/2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md
-                and 2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone.md */}
+            {/* Copy is the canonical truth-pass from
+                docs/legal/ESSENCE_Compliance_Implementation_Pack.md Part 2 —
+                every claim below is true against the code (see the
+                2026-07-12 legal-questionnaire findings). Do not restore
+                "end-to-end encryption", "not even our team can access", or an
+                unqualified "48 hours" purge; none of those are true. */}
             <p className="privacy-modal__intro">
-              Your recordings are encrypted in transit and at rest, and tied to
-              your account alone. Our team doesn&rsquo;t listen to them.
+              Your recordings are encrypted in transit and at rest, and only
+              your account can reach them. We don&rsquo;t listen to them, and
+              nothing in ESSENCE plays your voice to anyone but you.
             </p>
 
             <ul className="privacy-modal__promises">
@@ -77,13 +79,17 @@ export function PrivacyPromiseModal({ onClose }: { onClose: () => void }) {
                   We will <span className="privacy-modal__emphasis">never</span> use your recordings to train AI models.
                 </p>
                 <p className="privacy-modal__proof">
-                  Not to build a product. Not to sell you anything.
+                  We turned model training off at our voice provider before ESSENCE opened.
                 </p>
               </li>
               <li className="privacy-modal__promise">
                 <p className="privacy-modal__commitment">
                   If you delete your account, your voice and recordings are{' '}
                   <span className="privacy-modal__emphasis">permanently gone</span>.
+                </p>
+                <p className="privacy-modal__proof">
+                  We erase them right away and tell our voice provider to delete
+                  your voice model. Routine backups clear within about a week.
                 </p>
               </li>
             </ul>
