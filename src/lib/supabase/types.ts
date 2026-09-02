@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       legacy_waitlist: {
@@ -576,6 +581,50 @@ export type Database = {
           },
         ]
       }
+      voice_consent_records: {
+        Row: {
+          accepted_at: string
+          consent_text_version: string
+          consent_to_clone: boolean
+          id: string
+          ip_address: unknown
+          ownership_attestation: boolean
+          user_agent: string | null
+          user_id: string
+          voice_profile_id: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          consent_text_version: string
+          consent_to_clone: boolean
+          id?: string
+          ip_address?: unknown
+          ownership_attestation: boolean
+          user_agent?: string | null
+          user_id: string
+          voice_profile_id?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          consent_text_version?: string
+          consent_to_clone?: boolean
+          id?: string
+          ip_address?: unknown
+          ownership_attestation?: boolean
+          user_agent?: string | null
+          user_id?: string
+          voice_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_consent_records_voice_profile_id_fkey"
+            columns: ["voice_profile_id"]
+            isOneToOne: false
+            referencedRelation: "voice_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       voice_profiles: {
         Row: {
           attempt_count: number
@@ -887,4 +936,3 @@ export const Constants = {
     },
   },
 } as const
-

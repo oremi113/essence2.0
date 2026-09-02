@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { VoiceProfileCreateForm } from "@/components/voice/VoiceProfileCreateForm";
+import { CONSENT_TEXT_VERSION } from "@/lib/voice-creation/consent-copy";
 
 function fillRequiredFields() {
   fireEvent.change(screen.getByPlaceholderText("How should we address you?"), {
@@ -30,29 +31,36 @@ describe("VoiceProfileCreateForm — consent gate", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders both consent affirmations as checkboxes", () => {
+  it("renders both consent affirmations as checkboxes (own-voice-only)", () => {
     render(<VoiceProfileCreateForm onCreated={vi.fn()} />);
     expect(screen.getByText(/I consent to ESSENCE and its service providers/)).toBeTruthy();
-    expect(screen.getByText(/This voice is my own, or I have authorization/)).toBeTruthy();
+    expect(screen.getByText(/This is my own voice\. I am not recording/)).toBeTruthy();
+    // Guards the fix: the old "authorization from the person / their estate"
+    // path contradicted the own-voice-only rule in the ToS/AUP and is gone.
+    expect(screen.queryByText(/authorization from the person/i)).toBeNull();
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 
-  it("blocks submit and does NOT call the API when the boxes are unchecked", () => {
+  it("keeps submit disabled until both boxes are checked", () => {
     render(<VoiceProfileCreateForm onCreated={vi.fn()} />);
     fillRequiredFields();
-    fireEvent.click(screen.getByRole("button", { name: "Start Voice Training" }));
-
-    expect(screen.getByRole("alert").textContent).toMatch(/confirm both boxes/i);
+    const submit = screen.getByRole("button", {
+      name: "Start Voice Training",
+    }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+    fireEvent.click(submit);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("still blocks when only one box is checked", () => {
+  it("stays disabled when only one box is checked", () => {
     render(<VoiceProfileCreateForm onCreated={vi.fn()} />);
     fillRequiredFields();
     fireEvent.click(screen.getAllByRole("checkbox")[0]); // consent only
-    fireEvent.click(screen.getByRole("button", { name: "Start Voice Training" }));
-
-    expect(screen.getByRole("alert").textContent).toMatch(/confirm both boxes/i);
+    const submit = screen.getByRole("button", {
+      name: "Start Voice Training",
+    }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+    fireEvent.click(submit);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -71,6 +79,7 @@ describe("VoiceProfileCreateForm — consent gate", () => {
     const body = JSON.parse(init.body);
     expect(body.consentToClone).toBe(true);
     expect(body.ownershipAttested).toBe(true);
+    expect(body.consentTextVersion).toBe(CONSENT_TEXT_VERSION);
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("vp_123"));
   });
 });

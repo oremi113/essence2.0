@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import {
+  CONSENT_TEXT_VERSION,
+  CONSENT_TO_CLONE_LABEL,
+  CONSENT_TO_CLONE_HELP,
+  OWNERSHIP_ATTESTATION_LABEL,
+  OWNERSHIP_ATTESTATION_HELP,
+} from "@/lib/voice-creation/consent-copy";
 
 /**
  * Relationship options shown in the dropdown.
@@ -86,6 +93,7 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
           birthYear: yearNum,
           consentToClone,
           ownershipAttested,
+          consentTextVersion: CONSENT_TEXT_VERSION,
         }),
       });
 
@@ -152,7 +160,7 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
           }}
         >
           <option value="" disabled>
-            Select\u2026
+            Select…
           </option>
           {RELATIONSHIP_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -227,8 +235,10 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
             style={{ marginTop: 2, flexShrink: 0 }}
           />
           <span>
-            I consent to ESSENCE and its service providers processing my voice
-            recordings to create and operate my personalized synthetic voice.
+            {CONSENT_TO_CLONE_LABEL}
+            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#777" }}>
+              {CONSENT_TO_CLONE_HELP}
+            </span>
           </span>
         </label>
         <label
@@ -241,8 +251,10 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
             style={{ marginTop: 2, flexShrink: 0 }}
           />
           <span>
-            This voice is my own, or I have authorization from the person it
-            belongs to (or their estate) to create it.
+            {OWNERSHIP_ATTESTATION_LABEL}
+            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#777" }}>
+              {OWNERSHIP_ATTESTATION_HELP}
+            </span>
           </span>
         </label>
       </div>
@@ -258,7 +270,7 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || !consentToClone || !ownershipAttested}
         style={{
           padding: "10px 24px",
           borderRadius: 6,
@@ -268,7 +280,7 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
           fontSize: 15,
           fontWeight: 500,
           cursor: submitting ? "wait" : "pointer",
-          opacity: submitting ? 0.6 : 1,
+          opacity: submitting || !consentToClone || !ownershipAttested ? 0.6 : 1,
         }}
       >
         {submitting ? "Creating\u2026" : "Start Voice Training"}
