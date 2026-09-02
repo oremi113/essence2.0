@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 import { VALID_RELATIONSHIPS } from "@/lib/voice-training/types";
 import { logError } from "@/lib/logger";
 import { defineRoute } from "@/lib/api/defineRoute";
+import { assertVoiceConsent } from "@/lib/voice-creation/consent";
 
 const MAX_TEXT_LEN = 200;
 const MIN_BIRTH_YEAR = 1900;
@@ -25,6 +26,15 @@ export const POST = defineRoute(
     const supabase = await createSupabaseServerClient();
 
     const body = await request.json().catch(() => ({}));
+
+    // --- Consent gate (inert until VOICE_CONSENT_REQUIRED is flipped on) ---
+    // No-op today; when enabled, requires the affirmative clone-consent +
+    // ownership attestation the create form will carry. Throws CONSENT_REQUIRED
+    // (422), translated to a response by defineRoute's handleRouteError.
+    assertVoiceConsent({
+      consentToClone: body?.consentToClone,
+      ownershipAttested: body?.ownershipAttested,
+    });
 
     // --- Validate displayName ---
     const rawName = body?.displayName;

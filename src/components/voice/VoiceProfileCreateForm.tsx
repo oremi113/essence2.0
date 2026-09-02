@@ -35,6 +35,15 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
     prefill?.birthYear?.toString() ?? ""
   );
 
+  // Consent + ownership attestation — required before we create a voice clone.
+  // ElevenLabs' ToS contractually require us to hold the voice owner's consent,
+  // and voice is biometric data (BIPA/GDPR). The server enforces these when
+  // VOICE_CONSENT_REQUIRED is on (src/lib/voice-creation/consent.ts); the form
+  // always collects + sends them. Wording is defensible working copy — a final
+  // attorney string-swap is cheap; see the consent follow-up.
+  const [consentToClone, setConsentToClone] = useState(false);
+  const [ownershipAttested, setOwnershipAttested] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +69,10 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
       setError("Please enter a valid birth year (1900\u20132025).");
       return;
     }
+    if (!consentToClone || !ownershipAttested) {
+      setError("Please confirm both boxes below to create your voice.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -71,6 +84,8 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
           relationship,
           city: city.trim(),
           birthYear: yearNum,
+          consentToClone,
+          ownershipAttested,
         }),
       });
 
@@ -191,6 +206,46 @@ export function VoiceProfileCreateForm({ prefill, onCreated }: Props) {
           }}
         />
       </label>
+
+      {/* Consent + ownership attestation (required). Server-enforced when
+          VOICE_CONSENT_REQUIRED is on; final legal wording is a counsel string-swap. */}
+      <div
+        style={{
+          marginBottom: 20,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
+        <label
+          style={{ display: "flex", gap: 8, fontSize: 13, color: "#333", lineHeight: 1.4 }}
+        >
+          <input
+            type="checkbox"
+            checked={consentToClone}
+            onChange={(e) => setConsentToClone(e.target.checked)}
+            style={{ marginTop: 2, flexShrink: 0 }}
+          />
+          <span>
+            I consent to ESSENCE and its service providers processing my voice
+            recordings to create and operate my personalized synthetic voice.
+          </span>
+        </label>
+        <label
+          style={{ display: "flex", gap: 8, fontSize: 13, color: "#333", lineHeight: 1.4 }}
+        >
+          <input
+            type="checkbox"
+            checked={ownershipAttested}
+            onChange={(e) => setOwnershipAttested(e.target.checked)}
+            style={{ marginTop: 2, flexShrink: 0 }}
+          />
+          <span>
+            This voice is my own, or I have authorization from the person it
+            belongs to (or their estate) to create it.
+          </span>
+        </label>
+      </div>
 
       {error && (
         <p

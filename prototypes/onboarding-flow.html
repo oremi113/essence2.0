@@ -1598,7 +1598,8 @@ button, a, [role="button"] { min-height: 44px; }
         <p>We <span class="onboarding-body__never">never</span> sell your recordings.</p>
         <p>We <span class="onboarding-body__never">never</span> use them to train other products.</p>
         <p>We <span class="onboarding-body__never">never</span> share them without your permission.</p>
-        <p class="onboarding-body__muted">Protected with end-to-end encryption.</p>
+        <!-- copy trimmed 2026-07-13 to match production (legal accuracy); see docs/follow-ups/2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md -->
+        <p class="onboarding-body__muted">Encrypted in transit and at rest.</p>
       </div>
       <button type="button" class="onboarding-secondary-link js-open-privacy">
         Read our privacy promise
@@ -1992,9 +1993,8 @@ button, a, [role="button"] { min-height: 44px; }
         <h2 id="privacy-title" class="privacy-modal__title">Your voice belongs to you. Full stop.</h2>
         <div class="privacy-modal__body">
           <p class="privacy-modal__intro">
-            Your recordings are encrypted the moment they leave your device.
-            They exist only for you and the people you choose. Not even our
-            team can access them.
+            Your recordings are encrypted in transit and at rest, and tied to
+            your account alone. Our team doesn&rsquo;t listen to them.
           </p>
           <ul class="privacy-modal__promises">
             <li class="privacy-modal__promise">
@@ -2010,14 +2010,13 @@ button, a, [role="button"] { min-height: 44px; }
                 We will <span class="privacy-modal__emphasis">never</span> use your recordings to train AI models.
               </p>
               <p class="privacy-modal__proof">
-                Not ours. Not anyone else&rsquo;s.
+                Not to build a product. Not to sell you anything.
               </p>
             </li>
             <li class="privacy-modal__promise">
               <p class="privacy-modal__commitment">
-                If you delete your account, your voice is
-                <span class="privacy-modal__emphasis">permanently gone</span>
-                from our servers within 48 hours.
+                If you delete your account, your voice and recordings are
+                <span class="privacy-modal__emphasis">permanently gone</span>.
               </p>
             </li>
           </ul>

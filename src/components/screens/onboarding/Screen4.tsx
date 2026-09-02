@@ -32,8 +32,11 @@ export function Screen4({
           We <span className="onboarding-body__never">never</span> share them
           without your permission.
         </p>
+        {/* Copy trimmed 2026-07-12 to match implementation (no client-side/E2E
+            encryption exists) — pending counsel sign-off. See
+            docs/follow-ups/2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md */}
         <p className="onboarding-body__muted">
-          Protected with end-to-end encryption.
+          Encrypted in transit and at rest.
         </p>
       </div>
 
