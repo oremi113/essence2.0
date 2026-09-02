@@ -901,3 +901,31 @@ neutral" handoff the Reveal builds from is a hard cut. Fix: `write(base * mul)`.
 - **Dead `: ACTIVE` branch.** `:175` `const from = prev > NEUTRAL ? prev : ACTIVE;` sits inside
 `if (!instant && prev > NEUTRAL)`, so the `: ACTIVE` arm is unreachable — `from` is always `prev`.
 Reads as a meaningful fallback that can never fire. Fix: `const from = prev;`.
+
+### 104. [P2] Storage buckets are provisioned by hand, so a rebuilt project has no upload caps
+*(found 2026-09-01 during the Supabase privacy-hardening pass)*
+`supabase/migrations/20260901120000_privacy_hardening.sql` §7 sets `file_size_limit` and
+`allowed_mime_types` on `essence-audio` (25 MB, `audio/*`) and `profile-photos`
+(5 MB, jpeg/png/webp) via `update storage.buckets … where id = …`. Those are UPDATEs against rows that
+only exist because someone created the buckets in the dashboard — the convention this repo has had since
+`supabase/migrations/20260418_add_avatar_storage.sql:8` ("Bucket creation lives in the Supabase
+Dashboard"). In a fresh environment (local stack, CI, a rebuilt project) the buckets do not exist, both
+statements match **zero rows**, and the environment silently comes up with no size or MIME ceiling.
+Bucket *creation* and *deletion* also cannot move into SQL: `storage.buckets` carries a
+`protect_buckets_delete` trigger (`storage.protect_delete()`) that rejects direct DELETE with
+*"Direct deletion from storage tables is not allowed. Use the Storage API instead."* — this is what
+rolled back the first push of the hardening migration on 2026-09-01.
+**Why it matters:** the caps are the only enforcement that survives a route-guard regression, because
+`/api/audio/init-upload:127` hands the browser a signed upload URL and the client then chooses its own
+`Content-Type` and byte count. An environment without them accepts arbitrary bytes and arbitrary types
+into a bucket whose contents are later served back through signed URLs. It also means prod and local
+disagree about upload limits, so an oversize-upload bug cannot reproduce locally.
+**Fix shape:** a small idempotent provisioning script (`scripts/provision-buckets.mjs`, sibling to
+`scripts/dev-login.mjs`) that reads the desired bucket set from one shared constant and PUT/POSTs it
+through the Storage API (`/storage/v1/bucket`) with the service-role key — create-if-missing, then update
+limits to match. Source the sizes/types from `src/lib/profile/avatar-shared.ts` and
+`src/lib/audio/storage-paths.ts` rather than restating them, so the bucket ceiling and the app-level check
+cannot drift. Wire it into the same place the local stack gets seeded, and delete §7 from the migration
+once the script is the single source of truth.
+**Pick up when:** next time a fresh environment is stood up (CI storage tests, a second project, local
+stack work), or before any change to accepted upload types. Agent-fixable.
