@@ -170,7 +170,7 @@ function SignInForm() {
         {step === "email" ? (
           <form onSubmit={sendCode}>
             <h1 style={title}>Sign in</h1>
-            <p style={sub}>Enter your email and we&rsquo;ll send you a 6-digit code.</p>
+            <p style={sub}>Enter your email and we&rsquo;ll send you a code.</p>
             <input
               style={input}
               type="email"
@@ -191,7 +191,7 @@ function SignInForm() {
           <form onSubmit={verifyCode}>
             <h1 style={title}>Check your email</h1>
             <p style={sub}>
-              We sent a 6-digit code to <strong>{email}</strong>. Enter it below.
+              We sent a code to <strong>{email}</strong>. Enter it below.
             </p>
             <input
               style={{ ...input, textAlign: "center", letterSpacing: "0.3em", fontSize: 22 }}
@@ -199,12 +199,14 @@ function SignInForm() {
               inputMode="numeric"
               autoComplete="one-time-code"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="000000"
-              maxLength={6}
+              // Length-agnostic: this project's OTP is 8 digits, but accept any
+              // 6–10 so a config change to the OTP length never breaks sign-in.
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="Enter your code"
+              maxLength={10}
               required
               autoFocus
-              aria-label="6-digit code"
+              aria-label="Sign-in code"
             />
             {error && <p style={{ color: "#b00020", fontSize: 14, margin: "0 0 12px" }} role="alert">{error}</p>}
             <button style={button} type="submit" disabled={loading || code.length < 6}>
