@@ -81,6 +81,7 @@ export default function OnboardingDevPage() {
     dateOfBirth: null,
     city: null,
     state: null,
+    country: null,
     avatarUrl: null,
     isCompleted: false,
   };

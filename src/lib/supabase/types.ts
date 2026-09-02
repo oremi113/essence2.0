@@ -287,6 +287,7 @@ export type Database = {
           avatar_storage_path: string | null
           birth_year: number | null
           city: string | null
+          country: string | null
           created_at: string
           date_of_birth: string | null
           display_name: string | null
@@ -298,6 +299,8 @@ export type Database = {
           state: string | null
           stripe_customer_id: string | null
           suspended_reason: string | null
+          terms_accepted_at: string | null
+          terms_version_accepted: string | null
           three_shaped_ceremony_seen_at: string | null
           timezone: string | null
           ui_flags: Json
@@ -309,6 +312,7 @@ export type Database = {
           avatar_storage_path?: string | null
           birth_year?: number | null
           city?: string | null
+          country?: string | null
           created_at?: string
           date_of_birth?: string | null
           display_name?: string | null
@@ -320,6 +324,8 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           suspended_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version_accepted?: string | null
           three_shaped_ceremony_seen_at?: string | null
           timezone?: string | null
           ui_flags?: Json
@@ -331,6 +337,7 @@ export type Database = {
           avatar_storage_path?: string | null
           birth_year?: number | null
           city?: string | null
+          country?: string | null
           created_at?: string
           date_of_birth?: string | null
           display_name?: string | null
@@ -342,6 +349,8 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           suspended_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version_accepted?: string | null
           three_shaped_ceremony_seen_at?: string | null
           timezone?: string | null
           ui_flags?: Json

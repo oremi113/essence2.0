@@ -15,10 +15,17 @@
  *     page.tsx.
  */
 import { useCallback, useEffect, useReducer, useState } from 'react';
+import { DEFAULT_COUNTRY } from '@/lib/countries';
 
 // ─── Reducer types ────────────────────────────────────────────────
 
-export type ProfileFormField = 'firstName' | 'lastName' | 'dob' | 'city' | 'stateCode';
+export type ProfileFormField =
+  | 'firstName'
+  | 'lastName'
+  | 'dob'
+  | 'city'
+  | 'stateCode'
+  | 'country';
 
 export interface ProfileFormState {
   firstName: string;
@@ -26,12 +33,17 @@ export interface ProfileFormState {
   dob: string;
   city: string;
   stateCode: string;
+  /** ISO 3166-1 alpha-2 country code (privacy-regime signal). */
+  country: string;
+  /** True once the user affirmatively accepts the legal documents (Screen 4). */
+  termsAccepted: boolean;
   /** Signed URL for the uploaded avatar, or null if none. */
   avatarUrl: string | null;
 }
 
 type ProfileFormAction =
   | { type: 'set-field'; field: ProfileFormField; value: string }
+  | { type: 'set-terms-accepted'; value: boolean }
   | { type: 'set-avatar'; url: string | null };
 
 function profileFormReducer(
@@ -41,6 +53,8 @@ function profileFormReducer(
   switch (action.type) {
     case 'set-field':
       return { ...state, [action.field]: action.value };
+    case 'set-terms-accepted':
+      return { ...state, termsAccepted: action.value };
     case 'set-avatar':
       return { ...state, avatarUrl: action.url };
   }
@@ -48,7 +62,9 @@ function profileFormReducer(
 
 // ─── Draft persistence (localStorage) ─────────────────────────────
 
-const DRAFT_STORAGE_KEY = 'essence-onboarding-draft-v1';
+// v2: added `country` + `termsAccepted`. The bump makes old v1 drafts ignored
+// rather than deserialized into the wrong shape.
+const DRAFT_STORAGE_KEY = 'essence-onboarding-draft-v2';
 
 interface OnboardingDraft {
   currentScreen: number;
@@ -100,6 +116,7 @@ export interface UseOnboardingFormSeed {
   dateOfBirth: string | null;
   city: string | null;
   state: string | null;
+  country: string | null;
   avatarUrl: string | null;
 }
 
@@ -109,6 +126,7 @@ export interface UseOnboardingFormResult {
   setCurrentScreen: (n: number | ((prev: number) => number)) => void;
   setField: (field: ProfileFormField, value: string) => void;
   setAvatarUrl: (url: string | null) => void;
+  setTermsAccepted: (value: boolean) => void;
 }
 
 /**
@@ -126,6 +144,8 @@ export function useOnboardingForm(seed: UseOnboardingFormSeed): UseOnboardingFor
     dob: seed.dateOfBirth ?? '',
     city: seed.city ?? '',
     stateCode: seed.state ?? '',
+    country: seed.country ?? DEFAULT_COUNTRY,
+    termsAccepted: false,
     avatarUrl: seed.avatarUrl,
   });
 
@@ -141,9 +161,12 @@ export function useOnboardingForm(seed: UseOnboardingFormSeed): UseOnboardingFor
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentScreen(draft.currentScreen);
       (Object.keys(draft.form) as (keyof ProfileFormState)[]).forEach((key) => {
-        if (key === 'avatarUrl') return;
+        if (key === 'avatarUrl' || key === 'termsAccepted') return;
         dispatch({ type: 'set-field', field: key, value: draft.form[key] as string });
       });
+      if (typeof draft.form.termsAccepted === 'boolean') {
+        dispatch({ type: 'set-terms-accepted', value: draft.form.termsAccepted });
+      }
     }
     setDraftHydrated(true);
   }, []);
@@ -163,6 +186,17 @@ export function useOnboardingForm(seed: UseOnboardingFormSeed): UseOnboardingFor
     (url: string | null) => dispatch({ type: 'set-avatar', url }),
     []
   );
+  const setTermsAccepted = useCallback(
+    (value: boolean) => dispatch({ type: 'set-terms-accepted', value }),
+    []
+  );
 
-  return { form, currentScreen, setCurrentScreen, setField, setAvatarUrl };
+  return {
+    form,
+    currentScreen,
+    setCurrentScreen,
+    setField,
+    setAvatarUrl,
+    setTermsAccepted,
+  };
 }
