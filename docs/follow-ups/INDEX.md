@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 30 · 29 open · 1 decision · 0 resolved · 0 dropped
+Total: 31 · 30 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (29)
+## Open (30)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -34,6 +34,7 @@ Total: 30 · 29 open · 1 decision · 0 resolved · 0 dropped
 | P3 | The icon-only "Back" chevron is defined 5× across the app (step3 + three message screens + a header class) → consolidate into one shared component so touch-target / style fixes can't drift out of sync again *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-consolidate-duplicated-back-chevron-affordance.md`](./2026-07-12-consolidate-duplicated-back-chevron-affordance.md) |
 | P3 | Nothing requires the user to attest the voice is their own / that they aren't impersonating another living or deceased person; no ToS, no ownership certification, no technical voice-identity check *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-no-ownership-impersonation-attestation-before-cloning.md`](./2026-07-12-no-ownership-impersonation-attestation-before-cloning.md) |
 | P3 | Record screen animation is a frame-rate outlier under CPU throttle — 42fps @4×, 26fps @6× vs ~120 on idle screens — the one screen that visibly misses the motion bar *(qa-scout full-sweep 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-record-animation-frame-pressure-under-cpu-throttle.md`](./2026-07-12-record-animation-frame-pressure-under-cpu-throttle.md) |
+| P3 | gen:types --linked emits an __InternalSupabase PostgrestVersion header that the CI local generator (postgres-meta image) no longer emits, so any types.ts regenerated via --linked fails the types-drift check even when the schema matches | 2026-09-01 | — | [`2026-09-01-types-gen-linked-vs-local-internalsupabase-drift.md`](./2026-09-01-types-gen-linked-vs-local-internalsupabase-drift.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
