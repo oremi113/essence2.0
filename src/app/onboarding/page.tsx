@@ -76,12 +76,21 @@ export default async function OnboardingPage() {
 
   // Resume case: if the user uploaded a photo on a prior session, mint a
   // fresh signed URL so the photo screen and review card render it.
-  const serviceClient = createSupabaseServiceClient();
-  const avatarUrl = await getAvatarSignedUrl(
-    serviceClient,
-    profile?.avatar_storage_bucket ?? null,
-    profile?.avatar_storage_path ?? null
-  );
+  // Defensive: the avatar preview is a nicety, not load-bearing — a missing
+  // service-role key or a storage hiccup must NOT hard-crash onboarding into the
+  // error boundary (this was the prod symptom when SUPABASE_SERVICE_ROLE_KEY was
+  // absent from the Vercel env). Degrade to no preview instead.
+  let avatarUrl: string | null = null;
+  try {
+    const serviceClient = createSupabaseServiceClient();
+    avatarUrl = await getAvatarSignedUrl(
+      serviceClient,
+      profile?.avatar_storage_bucket ?? null,
+      profile?.avatar_storage_path ?? null
+    );
+  } catch (err) {
+    console.error('[onboarding] avatar preview unavailable:', err);
+  }
 
   const data: OnboardingScreenData = {
     firstName: profile?.first_name ?? fallbackFirst,
