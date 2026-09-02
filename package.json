@@ -12,6 +12,8 @@
     "check:types": "node scripts/gen-types.mjs --check",
     "followups:build": "node scripts/followups.mjs --build",
     "followups:check": "node scripts/followups.mjs --check",
+    "legal:build": "node scripts/legal-build.mjs --build",
+    "legal:check": "node scripts/legal-build.mjs --check",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -40,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jsdom": "^29.0.2",
+    "marked": "^18.0.11",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.4"

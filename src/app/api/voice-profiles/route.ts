@@ -10,6 +10,8 @@
  * user_id is always derived from the authenticated session, never from the request body.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { checkedWrite } from "@/lib/supabase/checked-write";
 import { NextResponse } from "next/server";
 import { VALID_RELATIONSHIPS } from "@/lib/voice-training/types";
 import { logError } from "@/lib/logger";
@@ -143,6 +145,30 @@ export const POST = defineRoute(
         { status: 500 }
       );
     }
+
+    // --- Record durable consent evidence (Compliance Pack Part 1) ---
+    // voice_consent_records is RLS own-select with no client insert policy, so
+    // the write goes through the service client (bypasses RLS). checkedWrite
+    // throws on failure, so a lost consent record surfaces loudly rather than
+    // leaving a clone with no evidence behind it. Captures the exact strings
+    // version the user affirmed plus request metadata.
+    const service = createSupabaseServiceClient();
+    await checkedWrite(
+      service.from("voice_consent_records").insert({
+        user_id: user.id,
+        voice_profile_id: row.id,
+        consent_to_clone: body?.consentToClone === true,
+        ownership_attestation: body?.ownershipAttested === true,
+        consent_text_version:
+          typeof body?.consentTextVersion === "string"
+            ? body.consentTextVersion
+            : "unknown",
+        user_agent: request.headers.get("user-agent"),
+        ip_address:
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      }),
+      { op: "voice_profiles.record_consent", requestId, userId: user.id },
+    );
 
     return NextResponse.json({
       voiceProfileId: row.id,

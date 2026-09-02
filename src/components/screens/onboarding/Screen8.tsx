@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { PrimaryButton } from '@/components/ui';
 import { US_STATES } from '@/lib/us-states';
+import { COUNTRIES } from '@/lib/countries';
 import { ONBOARDING_TIMING } from '@/lib/config/onboarding-timing';
 import { StepShell, StoneSlot } from './chrome';
 import type { ProfileFormField, ProfileFormState } from './state';
@@ -77,7 +78,7 @@ export function Screen8({
     return () => clearTimeout(t);
   }, []);
 
-  const { firstName, lastName, dob, city, stateCode } = form;
+  const { firstName, lastName, dob, city, stateCode, country } = form;
 
   // Local mirrors of the three date parts. Seeded from form.dob so that
   // returning to Screen 8 via Screen 9's "Change" link shows the values
@@ -328,6 +329,25 @@ export function Screen8({
               {errors.stateCode}
             </p>
           </div>
+        </div>
+
+        <div className="onboarding-field">
+          <label className="onboarding-field__label" htmlFor="onb-country">
+            Country
+          </label>
+          <select
+            id="onb-country"
+            className="onboarding-input onboarding-input--select"
+            value={country}
+            onChange={(e) => onChange('country', e.target.value)}
+            autoComplete="country"
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

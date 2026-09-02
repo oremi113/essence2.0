@@ -12,6 +12,8 @@ import {
 import type { OnboardingScreenData } from '@/components/screens/OnboardingScreen.types';
 import { OnboardingPageClient } from './OnboardingPageClient';
 import { persistOnboardingCompletion } from '@/lib/onboarding/completeOnboarding';
+import { ageInYears, MINIMUM_AGE } from '@/lib/onboarding/age';
+import { TERMS_VERSION } from '@/lib/legal/terms-version';
 import { ROUTES, signInWithNext } from '@/lib/routes';
 
 /**
@@ -53,7 +55,7 @@ export default async function OnboardingPage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'first_name, last_name, display_name, date_of_birth, city, state, avatar_storage_bucket, avatar_storage_path, onboarding_completed_at'
+      'first_name, last_name, display_name, date_of_birth, city, state, country, avatar_storage_bucket, avatar_storage_path, onboarding_completed_at'
     )
     .eq('user_id', user.id)
     .maybeSingle();
@@ -87,6 +89,7 @@ export default async function OnboardingPage() {
     dateOfBirth: profile?.date_of_birth ?? null,
     city: profile?.city ?? null,
     state: profile?.state ?? null,
+    country: profile?.country ?? null,
     avatarUrl,
     isCompleted: false,
   };
@@ -100,7 +103,9 @@ export default async function OnboardingPage() {
     lastName: string,
     dateOfBirth: string,
     city: string,
-    stateCode: string
+    stateCode: string,
+    country: string,
+    termsAccepted: boolean
   ) {
     'use server';
     const supabase = await createSupabaseServerClient();
@@ -121,6 +126,23 @@ export default async function OnboardingPage() {
       ? parseInt(dateOfBirth.slice(0, 4), 10)
       : null;
 
+    // Age gate — ESSENCE is 18+. ToS §4 and Privacy §11 assert this; enforce it
+    // authoritatively here (server action) so a minor is stopped before any
+    // profile/voice is created. Uses the full DOB, not just birth_year.
+    const age = ageInYears(dateOfBirth);
+    if (age === null) {
+      throw new Error('Please enter a valid date of birth.');
+    }
+    if (age < MINIMUM_AGE) {
+      throw new Error('You must be 18 or older to use ESSENCE.');
+    }
+
+    // Legal assent is required — the wizard gates Screen 4 on it, but enforce
+    // it server-side too so completion can't be reached without acceptance.
+    if (termsAccepted !== true) {
+      throw new Error('Please accept the terms to continue.');
+    }
+
     const displayName = [cleanedFirst, cleanedLast].filter(Boolean).join(' ');
 
     // Throws on a failed write so the wizard keeps the user on the final
@@ -133,6 +155,9 @@ export default async function OnboardingPage() {
       birth_year: birthYear,
       city: cleanedCity,
       state: stateCode,
+      country,
+      terms_version_accepted: TERMS_VERSION,
+      terms_accepted_at: new Date().toISOString(),
     });
   }
 

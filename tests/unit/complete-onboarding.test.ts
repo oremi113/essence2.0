@@ -21,6 +21,9 @@ const FIELDS: OnboardingCompletionFields = {
   birth_year: 1980,
   city: "Miami",
   state: "FL",
+  country: "US",
+  terms_version_accepted: "2026-09-01-v1",
+  terms_accepted_at: "2026-09-01T00:00:00.000Z",
 };
 
 function fakeClient(result: { error: { message: string } | null }) {

@@ -182,6 +182,14 @@ export function RecipientSetupScreen({
             {promptQuestion}
           </h1>
 
+          {/* Delivery-truth framing (Compliance Pack Part 2.5): naming a person
+              here must never imply ESSENCE will reach them. Framed as privacy,
+              not a missing feature. */}
+          <p className="font-[family-name:var(--font-body)] text-[14px] leading-[1.5] text-[var(--color-text-secondary)] mt-3 max-w-[300px] text-balance">
+            The people you name stay private labels in your vault. ESSENCE never
+            contacts them, and never sends your message anywhere.
+          </p>
+
           {/* Mode-dependent content */}
           <div className="w-full mt-8 text-left flex flex-col gap-8">
             {isFormMode ? (

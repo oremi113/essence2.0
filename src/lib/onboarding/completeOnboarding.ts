@@ -28,6 +28,12 @@ export interface OnboardingCompletionFields {
   birth_year: number | null;
   city: string;
   state: string;
+  /** ISO 3166-1 alpha-2 country code (privacy-regime signal). */
+  country: string;
+  /** Version of the legal docs the user accepted (see TERMS_VERSION). */
+  terms_version_accepted: string;
+  /** ISO timestamp when the user accepted the legal docs. */
+  terms_accepted_at: string;
 }
 
 /**

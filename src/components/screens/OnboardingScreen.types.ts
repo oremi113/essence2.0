@@ -15,6 +15,8 @@ export interface OnboardingScreenData {
   city: string | null;
   /** 2-letter US state code (e.g. "CA"), or null. */
   state: string | null;
+  /** ISO 3166-1 alpha-2 country code (privacy-regime signal), or null. */
+  country: string | null;
   /** Short-lived signed URL for the user's avatar, or null if no photo
    *  has been uploaded yet. Refreshed on every page load. */
   avatarUrl: string | null;
@@ -34,7 +36,9 @@ export type OnCompleteOnboarding = (
   lastName: string,
   dateOfBirth: string,
   city: string,
-  state: string
+  state: string,
+  country: string,
+  termsAccepted: boolean
 ) => Promise<void>;
 
 /**

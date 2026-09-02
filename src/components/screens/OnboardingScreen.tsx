@@ -63,15 +63,22 @@ export function OnboardingScreen({
   onComplete,
   onUploadAvatar,
 }: OnboardingScreenProps) {
-  const { form, currentScreen, setCurrentScreen, setField, setAvatarUrl } =
-    useOnboardingForm({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      dateOfBirth: data.dateOfBirth,
-      city: data.city,
-      state: data.state,
-      avatarUrl: data.avatarUrl,
-    });
+  const {
+    form,
+    currentScreen,
+    setCurrentScreen,
+    setField,
+    setAvatarUrl,
+    setTermsAccepted,
+  } = useOnboardingForm({
+    firstName: data.firstName,
+    lastName: data.lastName,
+    dateOfBirth: data.dateOfBirth,
+    city: data.city,
+    state: data.state,
+    country: data.country,
+    avatarUrl: data.avatarUrl,
+  });
 
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -125,7 +132,9 @@ export function OnboardingScreen({
         form.lastName.trim(),
         form.dob,
         form.city.trim(),
-        form.stateCode
+        form.stateCode,
+        form.country,
+        form.termsAccepted
       );
       clearDraft();
       // Caller navigates. If it doesn't, we stay on screen 12.
@@ -176,6 +185,8 @@ export function OnboardingScreen({
           <Screen4
             onNext={goNext}
             onReadPrivacy={() => setPrivacyOpen(true)}
+            termsAccepted={form.termsAccepted}
+            onToggleTerms={setTermsAccepted}
           />
         )}
         {currentScreen === 5 && <Screen5 onNext={goNext} />}

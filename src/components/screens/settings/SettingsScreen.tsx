@@ -26,6 +26,7 @@ import type {
   SubscriptionData,
 } from './SettingsScreen.types';
 import { SETTINGS_CSS } from './SettingsScreen.css';
+import { LegalFooter } from '@/components/ui/LegalFooter';
 
 type Overlay = 'none' | 'cancel' | 'photo' | 'email' | 'delete';
 type Terminal = null | 'closed' | 'failed';
@@ -665,6 +666,8 @@ export function SettingsScreen(props: SettingsScreenProps) {
               )}
             </div>
           </section>
+
+          <LegalFooter />
         </div>
       )}
 

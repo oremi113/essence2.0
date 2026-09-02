@@ -210,8 +210,8 @@ export function MemoryShelf({
             carries your words forward.
           </p>
           <p className="shelf-empty__promise">
-            These messages are preserved and protected. They&rsquo;re not
-            temporary. They&rsquo;re yours to keep.
+            They stay in your vault, preserved and protected. ESSENCE never
+            sends them to anyone. They&rsquo;re yours to keep.
           </p>
           <button
             type="button"

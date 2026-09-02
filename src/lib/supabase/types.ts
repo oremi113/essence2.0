@@ -282,6 +282,7 @@ export type Database = {
           avatar_storage_path: string | null
           birth_year: number | null
           city: string | null
+          country: string | null
           created_at: string
           date_of_birth: string | null
           display_name: string | null
@@ -293,6 +294,8 @@ export type Database = {
           state: string | null
           stripe_customer_id: string | null
           suspended_reason: string | null
+          terms_accepted_at: string | null
+          terms_version_accepted: string | null
           three_shaped_ceremony_seen_at: string | null
           timezone: string | null
           ui_flags: Json
@@ -304,6 +307,7 @@ export type Database = {
           avatar_storage_path?: string | null
           birth_year?: number | null
           city?: string | null
+          country?: string | null
           created_at?: string
           date_of_birth?: string | null
           display_name?: string | null
@@ -315,6 +319,8 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           suspended_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version_accepted?: string | null
           three_shaped_ceremony_seen_at?: string | null
           timezone?: string | null
           ui_flags?: Json
@@ -326,6 +332,7 @@ export type Database = {
           avatar_storage_path?: string | null
           birth_year?: number | null
           city?: string | null
+          country?: string | null
           created_at?: string
           date_of_birth?: string | null
           display_name?: string | null
@@ -337,6 +344,8 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           suspended_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version_accepted?: string | null
           three_shaped_ceremony_seen_at?: string | null
           timezone?: string | null
           ui_flags?: Json
@@ -573,6 +582,50 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      voice_consent_records: {
+        Row: {
+          accepted_at: string
+          consent_text_version: string
+          consent_to_clone: boolean
+          id: string
+          ip_address: unknown
+          ownership_attestation: boolean
+          user_agent: string | null
+          user_id: string
+          voice_profile_id: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          consent_text_version: string
+          consent_to_clone: boolean
+          id?: string
+          ip_address?: unknown
+          ownership_attestation: boolean
+          user_agent?: string | null
+          user_id: string
+          voice_profile_id?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          consent_text_version?: string
+          consent_to_clone?: boolean
+          id?: string
+          ip_address?: unknown
+          ownership_attestation?: boolean
+          user_agent?: string | null
+          user_id?: string
+          voice_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_consent_records_voice_profile_id_fkey"
+            columns: ["voice_profile_id"]
+            isOneToOne: false
+            referencedRelation: "voice_profiles"
+            referencedColumns: ["id"]
           },
         ]
       }

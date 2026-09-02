@@ -1,8 +1,11 @@
 # ESSENCE — Attorney Input Packet: Decisions & Documents Needed
 
 **Prepared:** 2026-07-12
+**Owner-decisions update:** 2026-08-31 — Section 1 partially resolved (see the status log below).
 **For:** Owner's counsel (Terms of Service / Privacy Policy / Acceptable-Use engagement)
 **Technical companion:** `docs/legal/2026-07-12-legal-questionnaire-code-findings.md` — a code-grounded, `file:line`-cited answer to the questionnaire's technical questions. Read that doc for "what the product does." Read **this** doc for "what the owner must decide and what counsel must draft."
+
+> **On the resolutions marked below (2026-08-31):** items tagged **✅ RESOLVED** or **🟡 OWNER WORKING POSITION** were settled by the owner (with assistant help) *to reduce billable consult time on structural defaults* — they are not legal advice, and counsel remains free to override any of them. Items tagged **🔴 NEEDS COUNSEL** are genuine legal-judgment calls left open on purpose.
 
 ---
 
@@ -13,39 +16,37 @@ The findings doc settles the *factual* questions about the shipping product. Thi
 Two framing facts that shape almost every decision here:
 
 - **The delivery / posthumous-release system is entirely unbuilt.** Nothing is ever sent to anyone. A "recipient" is a private label (name + optional relationship, **no contact info**) inside the creator's own vault. Messages are played back **only by the creator**. Terms must not imply a delivery capability that does not exist.
-- **No legal documents exist yet.** There is no Terms of Service, no Acceptable-Use Policy, no Privacy Policy, no company entity, no governing-law/venue language anywhere in the repo. The only "policy" artifact is a 3-bullet marketing "Privacy Promise" modal. Everything below must be authored, not edited.
+- **No legal documents exist yet.** There is no Terms of Service, no Acceptable-Use Policy, no Privacy Policy, and no governing-law/venue language anywhere in the repo. The only "policy" artifact is a 3-bullet marketing "Privacy Promise" modal. Everything below must be authored, not edited. *(Update 2026-08-31: the operating **entity now exists** — ESSENCE APP LLC, a Florida LLC — see Section 1.)*
 
 ---
 
 ## Section 1 — Company & disputes
 
-*(Findings §14. The repo contains no entity name, no state of incorporation, and no governing-law/venue/arbitration/liability language. Nothing to draft from or contradict — these are pure business/legal calls.)*
+*(Findings §14. Governing-law/venue/arbitration/liability language still needs authoring — but the entity, state, and governing-law defaults are now settled. Status per item below.)*
 
-**1.1 — Legal entity name and form.**
-What is the operating entity's exact legal name and form (LLC / Inc. / other)? The product ships under the domain **`essencevault.app`**. Note: `essence.co` appears only in dev mock data and "Florida" appears only as one option in a 50-state user-profile dropdown — neither is a corporate identifier. Counsel needs the real entity to name the contracting party in the Terms.
+> **Section 1 status (2026-08-31):** 1.1, 1.2, 1.3 resolved · 1.6 accepted as a working position · 1.4, 1.5 left open for counsel (with a stated leaning). No open owner inputs remain in Section 1 — venue county confirmed as **Broward County, Florida**. What's left is counsel's judgment on arbitration-vs-courts (1.4) and the liability-cap figure (1.5).
 
-**1.2 — State/base of incorporation.**
-What state is the entity incorporated/organized in, and what is its principal place of business? Drives the natural default for governing law and venue.
+**1.1 — Legal entity name and form.** — ✅ **RESOLVED (2026-08-31)**
+**Operating entity: `ESSENCE APP LLC`, a Florida limited liability company.** This is the contracting party to name in the Terms and Privacy Policy. The product ships under the domain **`essencevault.app`**; `essence.co` (dev mock data) is not a corporate identifier and should not appear in any document.
 
-**1.3 — Governing law.**
-Which state's law governs the Terms?
-*Suggested default (for counsel):* the state of incorporation/principal place of business from 1.1–1.2, unless counsel prefers a more favorable forum.
+**1.2 — State/base of incorporation.** — ✅ **RESOLVED (2026-08-31)**
+**Organized in Florida.** Principal place of business: **610 W Las Olas Blvd, #513, Fort Lauderdale, FL 33312** (Broward County; owner-confirmed 2026-09-01). Confirm registered-agent of record separately if different from the principal address.
 
-**1.4 — Dispute venue: courts vs. arbitration.**
-Should disputes go to the courts of a named venue, or to binding arbitration with a class-action waiver?
-*Context / recommendation from the findings work:* the findings doc flags that an **aggressive arbitration + class-waiver clause carries consumer-law and enforceability risk and should not be adopted without counsel's deliberate sign-off.** Given the sensitive, grief-adjacent subject matter, this is a decision to make with eyes open rather than boilerplate it in.
+**1.3 — Governing law.** — ✅ **RESOLVED (2026-08-31): Florida.**
+**The Terms are governed by the law of the State of Florida** (without regard to conflict-of-laws rules). *Reasoning (owner working default, counsel may override):* aligning governing law with the state of organization and principal place of business is the standard, lowest-friction choice; Florida carries no consumer-contract quirk that would make a foreign state's law preferable, and choosing a non-home state's law for a Florida consumer product buys a single-member LLC nothing while inviting enforceability questions. Left as a settled default precisely so counsel doesn't bill time re-deriving it — counsel may still substitute a more favorable forum if they see a specific reason.
 
-**1.5 — Limitation-of-liability cap.**
-What is the liability cap? Common options:
-- (a) the greater of fees paid in the last 12 months, or
-- (b) a fixed floor such as $100, or
-- (c) another figure counsel recommends.
+**1.4 — Dispute venue: courts vs. arbitration.** — 🟡 **OWNER WORKING POSITION / 🔴 NEEDS COUNSEL**
+**Owner's leaning: courts, not binding arbitration** — specifically the state courts located in **Broward County, Florida** and the federal courts of the U.S. District Court for the Southern District of Florida (which sits in Broward County), with each party consenting to that exclusive venue and jurisdiction. **No** aggressive mandatory-arbitration + class-waiver clause at launch.
+*Reasoning:* for a solo/small LLC, a consumer-arbitration program adds per-case administrative fees that can exceed the value of small claims, real mass-arbitration exposure, and enforceability scrutiny that is heightened for grief-adjacent consumer contracts — the findings doc flags exactly this. Courts in the home county keep disputes cheap to defend and the clause easy to enforce.
+*Why still open for counsel:* the courts-vs-arbitration trade-off is a genuine legal-judgment call (arbitration can also *reduce* class exposure), so counsel should confirm the leaning or make the case for arbitration with eyes open — not boilerplate either one. (Venue county is now settled: Broward.)
 
-*Context:* the product carries **no fee floor for a large swath of users** — there is a 7-day free trial and playback of already-saved messages is not subscription-gated, so a "fees paid in the last 12 months" cap could be near-zero for some claimants. Counsel should weigh a fixed floor alongside the fees-paid measure.
+**1.5 — Limitation-of-liability cap.** — 🔴 **NEEDS COUNSEL** *(owner starting position noted)*
+*Owner starting position for counsel to price/confirm:* a **fixed floor** — cap liability at **the greater of (a) fees paid in the trailing 12 months or (b) $100** — rather than fees-paid alone.
+*Reasoning:* the product has **no fee floor for a large swath of users** (7-day free trial; playback of already-saved messages is not subscription-gated), so a pure "fees paid in the last 12 months" cap could be near-zero for many claimants. A modest fixed floor keeps the cap meaningful and defensible. Final figure is counsel's call.
 
-**1.6 — Liability disclaimers to include.**
-Should the Terms expressly disclaim liability for each of the following? Recommend **yes to all**, given the product reality:
-- **Failed or delayed delivery** — note delivery is entirely unbuilt today, but the disclaimer future-proofs any later delivery feature.
+**1.6 — Liability disclaimers to include.** — 🟡 **OWNER WORKING POSITION (2026-08-31): yes to all.**
+Owner accepts the recommendation to **expressly disclaim liability for each of the following** (counsel to draft the operative language):
+- **Failed or delayed delivery** — delivery is entirely unbuilt today, but the disclaimer future-proofs any later delivery feature.
 - **Incorrect recipient information** — recipients are free-text labels the creator enters; nothing is validated.
 - **Recipient conduct** — how any future recipient uses or reacts to a message.
 - **Third-party outages** — Supabase, Vercel, Stripe, ElevenLabs, Anthropic are all load-bearing vendors.
