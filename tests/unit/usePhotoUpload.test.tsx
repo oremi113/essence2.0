@@ -29,8 +29,8 @@ function makeFile(
 }
 
 function makeOversizedFile(name = 'big.png', type = 'image/png'): File {
-  // 2MB cap lives in AVATAR_MAX_BYTES; go comfortably over.
-  const bytes = new Uint8Array(3 * 1024 * 1024);
+  // Cap lives in AVATAR_MAX_BYTES (10MB); go comfortably over.
+  const bytes = new Uint8Array(11 * 1024 * 1024);
   return new File([bytes], name, { type });
 }
 
