@@ -5,6 +5,7 @@ import { STEP6_LIMITS } from "@/lib/messages/cost-controls";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "./sign-out-button";
 import { HomeBPageClient } from "./HomeBPageClient";
+import { HomeAScreen } from "@/components/screens/home/HomeAScreen";
 import type { HomeBVaultState } from "@/components/screens/home/HomeBScreen.types";
 import { ROUTES, signInWithNext } from "@/lib/routes";
 import { JourneyBeacon } from "@/components/analytics/JourneyBeacon";
@@ -65,17 +66,10 @@ export default async function HomePage({
   const voiceProfile = await getOrCreateVoiceProfile();
 
   if (voiceProfile.status !== "ready") {
-    // ── Home A (placeholder stub until its own brief lands) ──
-    return (
-      <>
-        <h1>Home</h1>
-        <p>Signed in as {user.email ?? "unknown"}.</p>
-        <p>
-          <a href={ROUTES.record}>Record training clip</a> (Phase 4: init → upload → commit → playback)
-        </p>
-        <SignOutButton />
-      </>
-    );
+    // ── Home A — interim stopgap until its own design brief lands (§6.5). ──
+    const isProcessing =
+      voiceProfile.status === "processing" || voiceProfile.status === "queued";
+    return <HomeAScreen isProcessing={isProcessing} footer={<SignOutButton />} />;
   }
 
   // ── Home B (the completed-user hub) ──

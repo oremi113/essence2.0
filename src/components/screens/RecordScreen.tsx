@@ -466,6 +466,10 @@ function PromptView({
   onAdvance: () => void;
 }) {
   const engineRef = useRef<RecordingUploadHandle>(null);
+  // Timestamp of the last record-button tap, to debounce double-taps (which
+  // otherwise race start→immediate-stop into a too-short clip that fails commit
+  // and wedges the recorder). See handleRecordClick.
+  const lastRecordTapRef = useRef(0);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -514,18 +518,35 @@ function PromptView({
   }, []);
 
   function handleRecordClick() {
-    if (hasStopped) return;
     const engine = engineRef.current;
     if (!engine) return;
-    if (isRecording) engine.stopAndUpload();
-    else engine.startRecording();
+
+    // Debounce: ignore a second tap within 600ms. A fast double-tap otherwise
+    // fired start→immediate-stop, producing a too-short clip whose commit failed
+    // and left the recorder wedged in the error state.
+    const now = Date.now();
+    if (now - lastRecordTapRef.current < 600) return;
+    lastRecordTapRef.current = now;
+
+    if (isRecording) {
+      engine.stopAndUpload();
+      return;
+    }
+    // Block only while a save is in flight or a clip already succeeded (which
+    // auto-advances). On `error`, the tap is a RETRY: startRecording() clears
+    // the error and re-acquires the mic, re-arming in place — no reload needed.
+    if (isSaving || isUploaded) return;
+    engine.startRecording();
   }
 
-  const buttonClass = hasStopped
-    ? 'record-button record-button--finished'
-    : isRecording
-      ? 'record-button record-button--recording'
-      : 'record-button';
+  // On error the button is tappable again (the retry), so it must NOT look
+  // "finished" — only a real save-in-flight / success shows the finished state.
+  const buttonClass =
+    isSaving || isUploaded
+      ? 'record-button record-button--finished'
+      : isRecording
+        ? 'record-button record-button--recording'
+        : 'record-button';
 
   return (
     <div className={`record-step record-step--prompt-stage-${stage}`}>
