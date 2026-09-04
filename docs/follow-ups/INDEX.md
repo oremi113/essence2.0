@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 31 · 30 open · 1 decision · 0 resolved · 0 dropped
+Total: 33 · 32 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (30)
+## Open (32)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -21,6 +21,7 @@ Total: 31 · 30 open · 1 decision · 0 resolved · 0 dropped
 | P2 | Onboarding copy promises "end-to-end encryption" / "not even our team can access" but audio is stored as plaintext and a service-role key can read any user's recordings *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md`](./2026-07-12-privacy-copy-claims-e2e-encryption-but-audio-is-plaintext.md) |
 | P2 | Production DB backups now enabled (Supabase Pro, 2026-07-12, 7-day) — BUT Supabase Storage (the actual voice audio) is NOT included in DB backups, so the crown-jewel recordings remain unprotected against logical delete/corruption on a "preserve forever" product *(surfaced 2026-07-12 during vendor checks)* | 2026-07-12 | — | [`2026-07-12-production-supabase-free-tier-has-no-backups.md`](./2026-07-12-production-supabase-free-tier-has-no-backups.md) |
 | P2 | L2 consent gate DONE in code — own-voice-only copy, voice_consent_records table applied to prod + persistence wired. ONLY remaining item is the owner env flip VOICE_CONSENT_REQUIRED=true to enforce it for beta. | 2026-09-01 | — | [`2026-09-01-wire-voice-consent-persistence.md`](./2026-09-01-wire-voice-consent-persistence.md) |
+| P2 | `DEFERRED_AUDIO_ENABLED` is a flag with only one working arm — the control arm has no A6 screen, so "off" 404s after a paid generation *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-control-arm-a6-screen-was-never-built.md`](./2026-09-04-control-arm-a6-screen-was-never-built.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
@@ -35,6 +36,7 @@ Total: 31 · 30 open · 1 decision · 0 resolved · 0 dropped
 | P3 | Nothing requires the user to attest the voice is their own / that they aren't impersonating another living or deceased person; no ToS, no ownership certification, no technical voice-identity check *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-no-ownership-impersonation-attestation-before-cloning.md`](./2026-07-12-no-ownership-impersonation-attestation-before-cloning.md) |
 | P3 | Record screen animation is a frame-rate outlier under CPU throttle — 42fps @4×, 26fps @6× vs ~120 on idle screens — the one screen that visibly misses the motion bar *(qa-scout full-sweep 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-record-animation-frame-pressure-under-cpu-throttle.md`](./2026-07-12-record-animation-frame-pressure-under-cpu-throttle.md) |
 | P3 | gen:types --linked emits an __InternalSupabase PostgrestVersion header that the CI local generator (postgres-meta image) no longer emits, so any types.ts regenerated via --linked fails the types-drift check even when the schema matches | 2026-09-01 | — | [`2026-09-01-types-gen-linked-vs-local-internalsupabase-drift.md`](./2026-09-01-types-gen-linked-vs-local-internalsupabase-drift.md) |
+| P3 | `pending_generations.expires_at` is written but nothing ever prunes it; the per-user active cap depends on an entry-point reclaim *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-abandoned-pending-generations-have-no-sweeper.md`](./2026-09-04-abandoned-pending-generations-have-no-sweeper.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |

@@ -63,13 +63,22 @@ export const STEP6_LIMITS = {
 };
 
 /**
- * Deferred Audio Render master switch (Amendment A1, §A1.8 / §5.10). Off by
- * default: the proven audio-on-every-regenerate control arm runs. When true,
+ * Deferred Audio Render master switch (Amendment A1, §A1.8 / §5.10). When on,
  * regenerate produces a free text candidate and /commit renders on demand.
  * Gated here so every Step 6 surface reads one flag.
+ *
+ * ON by default (opt OUT with `DEFERRED_AUDIO_ENABLED=false`). It used to be
+ * off by default, which shipped a broken flow: the control arm's A6 screen was
+ * never built, so `/messages/new/g/[generationId]` calls `notFound()` when the
+ * flag is off. Every environment that didn't set the variable by hand therefore
+ * ran a full paid generation (LLM + ElevenLabs render) and then dropped the
+ * user on a 404. The only arm with a working preview screen is the deferred
+ * one, so it is the only safe default. Flip to "false" ONLY to exercise the
+ * control arm's API behaviour in a test — never in an environment a user
+ * touches.
  */
 export function isDeferredAudioEnabled(): boolean {
-  return process.env.DEFERRED_AUDIO_ENABLED === "true";
+  return process.env.DEFERRED_AUDIO_ENABLED !== "false";
 }
 
 export type CostLimitKind =

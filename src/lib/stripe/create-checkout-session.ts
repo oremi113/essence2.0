@@ -186,11 +186,32 @@ export async function createCheckoutSession(
 
   const origin = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3100';
 
+  // Beta comp (STRIPE_BETA_COUPON_ID) — a 100%-off Stripe coupon applied to
+  // every checkout while the flag is set. Beta testers walk the REAL Checkout
+  // screen and enter a real card, and are charged $0. That's the point: the
+  // mock checkout (VAULT_STRIPE_ENABLED off) skips Stripe entirely, so the
+  // webhook, the subscription row, and the success_url reconcile never run
+  // until launch day. This exercises all three at zero cost.
+  //
+  // `payment_method_collection: 'always'` is explicit rather than implied: with
+  // a 100%-off coupon there is nothing to charge, and we still want the card on
+  // file so the collect-and-store half of the flow is genuinely tested.
+  //
+  // UNSET THIS BEFORE CHARGING REAL MONEY. Leaving it set in a live-mode
+  // environment comps every subscriber, forever.
+  const betaCouponId = process.env.STRIPE_BETA_COUPON_ID?.trim() || undefined;
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
+    ...(betaCouponId
+      ? {
+          discounts: [{ coupon: betaCouponId }],
+          payment_method_collection: 'always' as const,
+        }
+      : {}),
     subscription_data: {
       // First-timers only — see the trial-abuse guard above.
       ...(grantTrial ? { trial_period_days: 7 } : {}),
