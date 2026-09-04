@@ -23,6 +23,51 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-09-04 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 2 new backlog items; no application
+  code touched (only `docs/follow-ups/` + this log).
+- Scanned: health checks on latest `main` (typecheck ✅ · lint ✅ [2 unused-import
+  warnings, no errors] · test:unit 411/411 ✅); marker-debt grep over `src/`
+  (zero TODO/FIXME/HACK/XXX — clean); a `/code-review`-style read of the last
+  week's beta-launch push (PRs #133–#140: legal/consent gate, voice-clone
+  teardown, 6-digit OTP auth, avatar-client hardening, photo cap) plus deep
+  reads of the account-teardown, voice-profile create/consent, cost-controls,
+  waitlist, subscription, and auth/middleware subsystems.
+- WIP excluded (not debt): the Home A "stopgap" (PR #140), the recorder
+  hardening, and the consent-enforcement env flip — all visibly mid-build in the
+  active beta push; left alone per anti-noise rule 1.
+- Discovered (2 new per-file follow-ups):
+  - `2026-09-04-auth-next-param-open-redirect` [P3, owner-paired] — the sign-in
+    `next` param isn't validated same-origin (client uses it raw; server callback
+    only checks `startsWith("/")`, bypassed by `//evil.com`) → phishing-grade
+    open redirect after a legit sign-in. Auth is never-touch; flagged, not fixed.
+  - `2026-09-04-app-url-localhost-fallback-on-prod-redirects` [P3] —
+    `NEXT_PUBLIC_APP_URL ?? 'http://localhost:3100'` at 3 sites (Stripe
+    success_url, portal return_url, email-change link) with no validation in
+    `env.ts` → one missing prod env var silently strands a just-paid user on
+    localhost. Fix = fail-fast env assertion.
+- Triggers came true / appears already resolved (flagged for the fixer to strike,
+  discovery does not strike): the P2 `2026-07-12-account-deletion-never-deletes-
+  the-elevenlabs-voice-clone` now looks addressed in code — `deleteAccountAction`
+  step 2 (`src/app/app/settings/actions.ts:222–256`) deletes the ElevenLabs clone
+  vendor-side before any local data loss (PR #133). Recommend the owner/fixer
+  verify and close it.
+- Reviewed-and-cleared (no entry warranted): account-teardown ordering + honest
+  failure reporting (covers FU-86); the storage-wipe 1000-cap is unchanged and
+  already tracked as FU-95; `cost-controls.ts` fail-open on the pending count is
+  deliberate + documented and the vendor-spend path is already FU-92/93; the
+  waitlist route and Supabase session middleware are correct.
+- Not logged (below the senior-engineer bar): 2 eslint unused-import warnings in
+  the new `scripts/backup-snapshot.mjs`; `meetsMinimumAge` exported-but-unused
+  (the caller inlines `ageInYears`); `getOrCreateVoiceProfile` selecting without
+  `.order()` (harmless unless duplicate rows exist, which the flow doesn't
+  produce today).
+- Branch / commit: `triage/2026-09-04` @ <this commit>
+- Checks: n/a for the docs changes; CI re-runs lint/typecheck/test/build on the PR.
+- Merged: <stamped later when the owner merges>
+
+---
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
