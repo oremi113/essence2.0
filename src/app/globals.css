@@ -271,10 +271,17 @@
     margin-inline: auto;
     padding-inline: 28px;
     padding-bottom: 40px;
+    /* Published so a full-bleed child can size to the space the shell actually
+       leaves it. A `min-height: 100dvh` child inside this padding overflows the
+       viewport by exactly this much — a phantom scroll on a screen meant to be
+       one still frame. Inherits, so children read it without knowing the
+       number; unset outside the shell, where the fallback is 0. */
+    --app-main-inset-bottom: 40px;
   }
 
   .app-main--with-footer {
     padding-bottom: 100px;
+    --app-main-inset-bottom: 100px;
   }
 
   /* ─── SCREEN HEADER ─────────────────────────────────────── */
@@ -3050,7 +3057,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100dvh;
+    /* Fill the shell, not the viewport. Plain `100dvh` here overflowed by the
+       shell's bottom padding, so a ceremonial single-frame screen scrolled 40px
+       to nothing — and invited the scroll gesture the old chevron was asking
+       for. Falls back to a full 100dvh when rendered outside the shell (the
+       /dev harnesses). */
+    min-height: calc(100dvh - var(--app-main-inset-bottom, 0px));
     padding: var(--space-3xl) var(--space-xl);
     text-align: center;
   }
@@ -3119,21 +3131,39 @@
     font-size: var(--text-body);
     color: var(--color-text-secondary);
   }
-  .vault-reveal__scroll-cue {
+  /* Forward affordance. Was a scroll chevron in --color-text-tertiary (a
+     *disabled* token) — 1.34:1 on this ground, and naming a gesture that does
+     nothing on a tap-to-advance route. Now the same AA-safe primary fill the
+     rest of the app's warm-ground CTAs use (cf. .vault-restore-screen__cta). */
+  .vault-reveal__cta {
     position: absolute;
     bottom: var(--space-2xl);
-    width: 24px;
-    height: 24px;
-    color: var(--color-text-tertiary);
-    animation: vault-scroll-nudge 3s var(--ease-essence) infinite;
+    background-color: var(--color-mineral-dark);
+    color: var(--color-bg-neutral);
+    font-family: var(--font-body);
+    font-size: var(--text-ui);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg) var(--space-2xl);
+    min-width: 220px;
+    min-height: 52px;
+    cursor: pointer;
+    box-shadow: var(--shadow-mineral);
+    transition: background-color var(--duration-micro) var(--ease-essence);
+    /* Held until the reveal has landed — "hold the peak before the next line"
+       (Copy Guide §6), and the beat the prototype gave its cue. `both` keeps it
+       painted-out during the delay and settled after; the button stays
+       operable throughout — only its paint waits. */
+    opacity: 0;
+    animation: vault-reveal-cta-in var(--duration-medium) var(--ease-essence) 3400ms both;
   }
-  .vault-reveal__scroll-cue svg {
-    width: 100%;
-    height: 100%;
-  }
-  @keyframes vault-scroll-nudge {
-    0%, 100% { transform: translateY(0); opacity: 0.5; }
-    50% { transform: translateY(4px); opacity: 1; }
+  .vault-reveal__cta:hover { background-color: var(--color-mineral-darker); }
+  .vault-reveal__cta:active { transform: translateY(1px); }
+
+  @keyframes vault-reveal-cta-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
   }
 
   /* ─── Screen 2: Protect ──────────────────────────────────────────────── */
@@ -3436,8 +3466,9 @@
 
   /* ─── Reduced motion ─────────────────────────────────────────────────── */
   @media (prefers-reduced-motion: reduce) {
-    .vault-reveal__scroll-cue,
     .vault-continuity__scroll-cue { animation: none; }
+    /* No held entrance under reduced motion — the CTA is simply there. */
+    .vault-reveal__cta { animation: none; opacity: 1; transform: none; }
     .vault-sealed__content {
       transition: opacity var(--duration-small) linear;
       transform: none;
