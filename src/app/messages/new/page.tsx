@@ -3,8 +3,10 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { MessagesNewPageClient } from './MessagesNewPageClient';
 import type { ExistingRecipient } from '@/components/screens/messages/RecipientSetupScreen.types';
 import type { RelationshipKey } from '@/lib/messageTemplates';
-import { ROUTES, signInWithNext } from '@/lib/routes';
+import { ROUTES, messageGenerationRoute, signInWithNext } from '@/lib/routes';
 import { STEP6_LIMITS } from '@/lib/messages/cost-controls';
+import { bestEffortWrite } from '@/lib/supabase/checked-write';
+import { isStalePending } from '@/lib/messages/stale-pending';
 
 /**
  * /messages/new — entry point for Step 6 (message creation) per
@@ -62,6 +64,61 @@ export default async function MessagesNewPage() {
     .maybeSingle();
   if (!readyVoice?.id) {
     redirect(ROUTES.voiceCreate);
+  }
+
+  // ── Resume / reclaim an in-flight generation ───────────────────────────
+  // /generate enforces `maxActivePendingPerUser` (1). An active row that the
+  // user never finished therefore BLOCKS every future flow with a 429 — and
+  // before the deferred-audio default was fixed, a successful generate stranded
+  // exactly such a row on a 404, permanently locking the user out of message
+  // creation. This entry point is the only place that can resolve it, so it
+  // does, before the flow starts:
+  //
+  //   finished row (text + audio succeeded) → resume it at A6
+  //   stale unfinished row                  → supersede it, start fresh
+  //   recent unfinished row                 → leave alone (a live /generate)
+  //
+  // "Stale" is anything older than the /generate route's own 120s ceiling plus
+  // margin — see isStalePending.
+  const { data: activePending } = await supabase
+    .from('pending_generations')
+    .select('generation_id, text_status, audio_status, generated_text, created_at')
+    .eq('user_id', user.id)
+    .is('saved_message_id', null)
+    .is('superseded_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activePending) {
+    const ready =
+      activePending.text_status === 'succeeded' &&
+      activePending.audio_status === 'succeeded' &&
+      Boolean(activePending.generated_text);
+
+    if (ready) {
+      redirect(messageGenerationRoute(activePending.generation_id));
+    }
+
+    if (isStalePending(activePending.created_at)) {
+      // Best-effort: a lost write just means the user hits the cap once more
+      // and clears it on the next visit — never block entry to the flow on it.
+      await bestEffortWrite(
+        supabase
+          .from('pending_generations')
+          .update({ superseded_at: new Date().toISOString() })
+          .eq('generation_id', activePending.generation_id)
+          .eq('user_id', user.id),
+        {
+          op: 'step6_stale_pending_superseded',
+          userId: user.id,
+          meta: {
+            generationId: activePending.generation_id,
+            createdAt: activePending.created_at,
+          },
+        },
+      );
+    }
   }
 
   const { data: rawRecipients } = await supabase

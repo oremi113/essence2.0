@@ -75,6 +75,7 @@ async function expectCode(p: Promise<unknown>, code: string) {
 }
 
 beforeEach(() => {
+  delete process.env.STRIPE_BETA_COUPON_ID;
   process.env.STRIPE_PRICE_ID_VAULT_MONTHLY = 'price_monthly';
   process.env.STRIPE_PRICE_ID_VAULT_ANNUAL = 'price_annual';
   process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3100';
@@ -88,7 +89,48 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  delete process.env.STRIPE_BETA_COUPON_ID;
   vi.restoreAllMocks();
+});
+
+describe('createCheckoutSession — beta comp coupon (STRIPE_BETA_COUPON_ID)', () => {
+  function liveCustomer() {
+    mockServer({ results: [{ data: { stripe_customer_id: 'cus_live' }, error: null }] });
+    vi.mocked(stripe.customers.retrieve).mockResolvedValue({ id: 'cus_live' } as never);
+  }
+
+  it('applies no discount when the var is unset (real price is charged)', async () => {
+    liveCustomer();
+    await createCheckoutSession('annual');
+    const arg = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<string, unknown>;
+    expect(arg).not.toHaveProperty('discounts');
+    expect(arg).not.toHaveProperty('payment_method_collection');
+  });
+
+  it('applies the coupon and still collects a card when the var is set', async () => {
+    process.env.STRIPE_BETA_COUPON_ID = 'ESSENCE_BETA_100';
+    liveCustomer();
+
+    await createCheckoutSession('annual');
+
+    // The card must still be collected: the point of the beta comp is to
+    // exercise the REAL collect → webhook → subscription-row path at $0, not to
+    // skip it the way the mock checkout does.
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        discounts: [{ coupon: 'ESSENCE_BETA_100' }],
+        payment_method_collection: 'always',
+      }),
+    );
+  });
+
+  it('treats a whitespace-only value as unset', async () => {
+    process.env.STRIPE_BETA_COUPON_ID = '   ';
+    liveCustomer();
+    await createCheckoutSession('annual');
+    const arg = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<string, unknown>;
+    expect(arg).not.toHaveProperty('discounts');
+  });
 });
 
 describe('createCheckoutSession — auth + profile gates', () => {
