@@ -26,7 +26,7 @@ import { useReducedMotion } from '@/lib/animation/useReducedMotion';
 const SAMPLE_LABEL = 'Hear what a preserved voice sounds like. An example, from another family.';
 const SAMPLE_CLIP_URL = '/samples/carol-preserved-voice.mp3';
 
-// $119/yr ÷ 12 ≈ $9.92 → "$10". Derived from VAULT_PRICING so it can't drift.
+// $119.99/yr ÷ 12 ≈ $10.00 → "$10". Derived from VAULT_PRICING so it can't drift.
 const MONTHLY_EQUIVALENT = `$${Math.round(VAULT_PRICING.annual.priceCents / 12 / 100)}`;
 const TRIAL_DAYS = 7;
 

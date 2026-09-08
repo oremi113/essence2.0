@@ -34,7 +34,7 @@ type EmailPhase = 'form' | 'sending' | 'sent';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** "$12.99" for 1299, "$119" for 11900 (drop a whole-dollar’s trailing .00). */
+/** "$12.99" for 1299, "$100" for 10000 (drop a whole-dollar’s trailing .00). */
 function formatMoney(cents: number): string {
   const dollars = cents / 100;
   return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;

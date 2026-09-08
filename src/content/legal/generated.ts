@@ -80,7 +80,7 @@ export const LEGAL_DOCS: Record<string, LegalDocContent> = {
 <p>You may stop using ESSENCE at any time and may delete your account from Settings. Deletion is immediate and permanent. There is no recovery period, no undo, and no export. What deletion does and does not remove is described in the Privacy Policy, and you should read that section before you delete anything.</p>
 <h2>9. Subscriptions, trial, and billing</h2>
 <h3>9.1 Plans and price</h3>
-<p>ESSENCE offers a single paid subscription, <strong>Voice Vault</strong>, billed at <strong>US$12.99 per month</strong> or <strong>US$119.00 per year</strong>. Prices are in US dollars and exclude any taxes that may apply. We may change prices on notice; a price change applies to your next renewal, never to a term you have already paid for.</p>
+<p>ESSENCE offers a single paid subscription, <strong>Voice Vault</strong>, billed at <strong>US$12.99 per month</strong> or <strong>US$119.99 per year</strong>. Prices are in US dollars and exclude any taxes that may apply. We may change prices on notice; a price change applies to your next renewal, never to a term you have already paid for.</p>
 <h3>9.2 Free trial</h3>
 <p>New subscribers may be offered a <strong>7-day free trial</strong>. The trial is available once per customer, on your first subscription only. <strong>You must provide a payment method to start the trial, and unless you cancel before the trial ends, the subscription begins automatically and your payment method is charged.</strong></p>
 <h3>9.3 Automatic renewal</h3>

@@ -16,7 +16,7 @@ const CARD = { brand: 'Visa', last4: '4242' } as const;
 
 const PRICES = {
   priceMonthlyCents: 1299, // "$12.99 a month"
-  priceAnnualCents: 11900, // "$119 a year"
+  priceAnnualCents: 11999, // "$119.99 a year"
 } as const;
 
 const NOTIF: NotificationSettings = { trialReminders: true, paymentNotices: true };

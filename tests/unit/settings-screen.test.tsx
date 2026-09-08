@@ -49,7 +49,7 @@ describe('plan variants', () => {
 
   it('active annual carries the year and the ~monthly framing', () => {
     renderSettings({ subscription: mockSubscriptionAnnual() });
-    expect(screen.getByText('Renews June 14, 2027 · $119 a year')).toBeTruthy();
+    expect(screen.getByText('Renews June 14, 2027 · $119.99 a year')).toBeTruthy();
     expect(screen.getByText(/about \$10 a month/)).toBeTruthy();
   });
 

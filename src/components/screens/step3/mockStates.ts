@@ -1,13 +1,13 @@
 // Step 3 — mock rail states (Pass 1). One row of the §3 prop shape per rail
 // state, fed to the screens from the /dev sandboxes. These are the canonical
 // 18 states (12 CardCapture + 6 Processing) from handoff §4. Mock pricing per
-// §4: annual $119, monthlyEquivalent ~$10, monthly $12.99, trialDays 7.
+// §4: annual $119.99, monthlyEquivalent ~$10, monthly $12.99, trialDays 7.
 
 import type { ProcessingEntry, Step3Props } from './types';
 
 const PRICING: Step3Props['pricing'] = {
   plan: 'annual',
-  annualPrice: '$119',
+  annualPrice: '$119.99',
   monthlyPrice: '$12.99',
   monthlyEquivalent: '$10',
   trialDays: 7,

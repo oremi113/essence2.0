@@ -106,7 +106,7 @@ You may stop using ESSENCE at any time and may delete your account from Settings
 
 ### 9.1 Plans and price
 
-ESSENCE offers a single paid subscription, **Voice Vault**, billed at **US$12.99 per month** or **US$119.00 per year**. Prices are in US dollars and exclude any taxes that may apply. We may change prices on notice; a price change applies to your next renewal, never to a term you have already paid for.
+ESSENCE offers a single paid subscription, **Voice Vault**, billed at **US$12.99 per month** or **US$119.99 per year**. Prices are in US dollars and exclude any taxes that may apply. We may change prices on notice; a price change applies to your next renewal, never to a term you have already paid for.
 
 ### 9.2 Free trial
 

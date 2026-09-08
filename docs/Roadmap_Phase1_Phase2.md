@@ -28,7 +28,7 @@ pass on real phones is irreducible. Coding is mostly behind us; calendar from
 here is bounded by owner availability and the paperwork/hardware residue, not
 build speed.
 
-Pricing is current in `MASTER_SPEC.md` §V1.1 (Vault $12.99/mo · $119/yr ·
+Pricing is current in `MASTER_SPEC.md` §V1.1 (Vault $12.99/mo · $119.99/yr ·
 7-day trial · 3 lifetime messages).
 
 ### Shipped in the last session or two
