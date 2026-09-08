@@ -283,7 +283,7 @@ Think of the Voice Vault like a keepsake case holding something irreplaceable. I
 | State | Condition | What the User Sees |
 |-------|-----------|-------------------|
 | **Trial** | User within 7-day trial period. Card captured, voice processed. | Vault exists. Full experience available. Subtle visual cue that protection is pending. |
-| **Protected** | Paying Vault subscriber ($12.99/mo or $119/year). | Vault is sealed. Warm glow, complete visual. Voice is covered. |
+| **Protected** | Paying Vault subscriber ($12.99/mo or $119.99/year). | Vault is sealed. Warm glow, complete visual. Voice is covered. |
 | **Lapsed** | Trial ended without conversion, or subscription cancelled/expired. | Vault is no longer active. Voice is no longer available. Dormant visual. |
 
 **Key Principles:**
@@ -1879,7 +1879,7 @@ Three tiers. Each unlocked by behavioral signals, not comparison shopping.
 | | |
 |---|---|
 | Monthly | $12.99 |
-| Annual | $119 |
+| Annual | $119.99 |
 | Includes | 1 preserved voice profile, 3 lifetime messages, cold storage stewardship, archive access |
 | Message replenishment | None |
 | Role | Primary conversion product. Must carry CAC. |

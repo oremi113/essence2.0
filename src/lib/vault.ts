@@ -33,19 +33,29 @@ export interface PlanPricing {
   };
 }
 
+// Must match the live Stripe prices exactly — this is what the user READS
+// while Stripe decides what to CHARGE. They had drifted: the annual Stripe
+// price is 11999, while this said $119 / 11900, so a customer would have been
+// shown "$119 per year" and billed $119.99. Reconciled to Stripe 2026-09-08.
+// If a Stripe price ever changes, change it here in the same commit, and check
+// docs/legal/ESSENCE_Terms_of_Service_v1_DRAFT.md (then `npm run legal:build`),
+// which states both prices to the customer.
 export const VAULT_PRICING: PlanPricing = {
   monthly: {
     displayPrice: '$12.99',
     period: 'per month',
-    altText: 'or $119 per year',
+    altText: 'or $119.99 per year',
     priceCents: 1299,
   },
   annual: {
-    displayPrice: '$119',
+    displayPrice: '$119.99',
     period: 'per year',
     altText: 'or $12.99 per month',
-    priceCents: 11900,
-    savingsLabel: 'Save 24%',
+    priceCents: 11999,
+    // $12.99 x 12 = $155.88; $119.99 is 23.0% off that. Was "Save 24%", which
+    // was already rounded up from the old $119 (23.7%) — a savings claim is a
+    // pricing claim, so it tracks the real number.
+    savingsLabel: 'Save 23%',
   },
 };
 

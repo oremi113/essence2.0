@@ -40,7 +40,7 @@ export interface SubscriptionData {
   paidThroughAt: string | null;
   /** Monthly price in cents (e.g. 1299 → "$12.99 a month"). */
   priceMonthlyCents: number;
-  /** Annual price in cents (e.g. 11900 → "$119 a year"). */
+  /** Annual price in cents (e.g. 11999 → "$119.99 a year"). */
   priceAnnualCents: number;
   /** Card on file, or null if none captured yet. */
   card: CardSummary | null;
