@@ -23,6 +23,42 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-09-08 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 2 new backlog items; no app code touched.
+- Scanned: installed deps and ran the health checks on `main` @ d05b3fa
+  (typecheck ✅ · lint ✅ [2 unused-import warnings in `scripts/backup-snapshot.mjs`,
+  non-blocking] · test:unit 429/429 ✅); marker-debt grep over `src/` (all
+  `eslint-disable`/comment markers are conventional or already tracked — no
+  untracked TODO/FIXME/HACK); deep reads of the freshly-shipped beta-hardening
+  work (#142 message-creation 404 + real-Stripe-at-$0 + Reveal CTA; #140 photo
+  cap + recorder debounce + Home A stopgap), the new `stale-pending` reclaim,
+  the checkout-session builder, and the FU-84 processing-reconcile path.
+- Excluded as work-in-progress (anti-noise rule 1): the Home A interim screen
+  (owner says the full design is a pending brief — unfinished, not debt) and the
+  recorder debounce (fresh, well-reasoned #140 code).
+- Deduped against: the unmerged `triage/2026-09-04` items (auth open-redirect,
+  app-url localhost fallback) and every open per-file follow-up — the control-arm
+  `notFound()` landmine, the `pending_generations` sweeper, and the full-height
+  `100dvh` overflow were all already filed on 2026-09-04, so NOT re-logged.
+- Discovered (new `docs/follow-ups/` entries):
+  - `2026-09-08-beta-coupon-comps-every-subscriber-if-left-set` [P2, owner-paired]
+    — `STRIPE_BETA_COUPON_ID` applies a 100%-off coupon to every checkout with no
+    live-mode guard; one leftover env var at launch comps every real subscriber
+    $0 forever, silently (same silent-env class as the 2026-09-04 app-url item,
+    but leaks revenue). Flagged, not fixed — Stripe + env, never-touch.
+  - `2026-09-08-photo-upload-no-client-downscale` [P4] — photos upload at full
+    native size (10MB cap); the #140 commit and the `avatar-shared.ts` comment
+    both promise a "tracked" client-downscale follow-up that never existed. Filed
+    it, cross-referenced to the legacy FU-6 (server-thumbnail, the download half).
+- Reviewed-and-cleared (no entry warranted): the `stale-pending` reclaim and
+  `/messages/new` resume/supersede logic (sound + already covered by the sweeper
+  FU); the checkout-session duplicate/trial guards and the processing-reconcile
+  race fix (correctly hardened).
+- Branch / commit: `triage/2026-09-08` @ <this commit>
+- Checks: n/a for the docs delta (docs-only); repo health captured above. CI
+  re-runs lint/typecheck/test/build + the followups-index check on the PR.
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
