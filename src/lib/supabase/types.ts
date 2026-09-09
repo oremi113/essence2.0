@@ -646,6 +646,10 @@ export type Database = {
           recorded_clip_count: number
           relationship: string | null
           required_clip_count: number
+          sample_audio_path: string | null
+          sample_duration_ms: number | null
+          sample_render_count: number
+          sample_status: string
           source_clip_count: number | null
           source_clip_seconds: number | null
           status: Database["public"]["Enums"]["voice_profile_status"]
@@ -672,6 +676,10 @@ export type Database = {
           recorded_clip_count?: number
           relationship?: string | null
           required_clip_count?: number
+          sample_audio_path?: string | null
+          sample_duration_ms?: number | null
+          sample_render_count?: number
+          sample_status?: string
           source_clip_count?: number | null
           source_clip_seconds?: number | null
           status?: Database["public"]["Enums"]["voice_profile_status"]
@@ -698,6 +706,10 @@ export type Database = {
           recorded_clip_count?: number
           relationship?: string | null
           required_clip_count?: number
+          sample_audio_path?: string | null
+          sample_duration_ms?: number | null
+          sample_render_count?: number
+          sample_status?: string
           source_clip_count?: number | null
           source_clip_seconds?: number | null
           status?: Database["public"]["Enums"]["voice_profile_status"]
