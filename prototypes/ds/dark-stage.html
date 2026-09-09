@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Brand" name="Design system — Dark ceremonial stage" subtitle="Atmosphere layers, cream-on-dark ramp, status ruling, promotion rules" viewport="1200x2400" -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1200, initial-scale=1" />
+<title>Essence — Dark ceremonial stage</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  * { box-sizing: border-box; }
+  body { background: var(--color-bg-neutral); padding: 64px; }
+  a { color: var(--color-text-primary); text-decoration: underline; text-underline-offset: 2px; }
+  a:hover { color: var(--color-mineral-dark); }
+  .page { max-width: 1080px; margin: 0 auto; }
+  header { margin-bottom: 48px; }
+  header .eyebrow { display: block; margin-bottom: 12px; }
+  header h1 { font-size: 36px; }
+  header p { margin-top: 12px; max-width: 660px; }
+  header p + p { margin-top: 10px; }
+
+  section { margin-bottom: 64px; }
+  section > h2 {
+    font-size: 14px; font-family: var(--font-body); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--color-text-tertiary);
+    border-top: 1px solid var(--color-border);
+    padding-top: 16px; margin-bottom: 20px;
+  }
+  section > p.lead { font-size: 14px; line-height: 1.7; max-width: 68ch; margin-bottom: 24px; }
+  section > p.lead + p.lead { margin-top: -14px; }
+  code {
+    background: rgba(0,0,0,0.04); padding: 1px 6px; border-radius: 4px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--color-text-primary);
+  }
+
+  /* ═══ live stage ═══ */
+  .stages { display: flex; gap: 24px; flex-wrap: wrap; }
+  .stage-fig { width: 390px; }
+  .stage-fig figcaption {
+    font-size: 13px; line-height: 1.6; color: var(--color-text-secondary);
+    margin-top: 12px;
+  }
+  .stage-fig figcaption b { color: var(--color-text-primary); font-weight: 600; }
+
+  .stage {
+    width: 390px; height: 470px; position: relative; overflow: hidden;
+    border-radius: 20px; background: var(--color-ink);
+    --lum: 0; --sus: 0; isolation: isolate;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 34px 30px 30px;
+  }
+  .stage--lit { --lum: 0.85; --sus: 1; }
+
+  .l-base { position: absolute; inset: 0; background: radial-gradient(130% 78% at 50% 34%, #2A2621 0%, #1E1B18 45%, #171512 78%, #121110 100%); }
+  .l-cast { position: absolute; inset: 0; background: radial-gradient(58% 38% at 50% 36%, rgba(255,230,180,.30), rgba(255,230,180,.10) 45%, transparent 72%); opacity: calc(.14 + var(--lum)*.86); mix-blend-mode: screen; }
+  .l-bloom { position: absolute; left: 50%; top: 100%; width: 400px; height: 110px; transform: translate(-50%,-30%); background: radial-gradient(ellipse at center, rgba(255,230,180,.24), transparent 52%); filter: blur(18px); opacity: calc(.32 + var(--lum)*.55); mix-blend-mode: screen; }
+  .l-contact { position: absolute; left: 50%; top: 100%; width: 214px; height: 32px; transform: translate(-50%,-42%) scaleX(calc(1 + var(--lum)*.10)); background: radial-gradient(ellipse at center, rgba(0,0,0,.62), transparent 70%); filter: blur(9px); }
+  .l-vig { position: absolute; inset: 0; background: radial-gradient(88% 62% at 50% 40%, transparent 42%, rgba(0,0,0,.42) 82%, rgba(0,0,0,.66) 100%); }
+  .l-grain { position: absolute; inset: 0; opacity: .055; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .atmos { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+
+  .stone-wrap {
+    position: relative; width: 220px; height: 220px; flex: none; z-index: 1;
+    transform: scale(calc(1 + var(--sus)*.045));
+  }
+  .aura-far { position: absolute; inset: -46%; border-radius: 999px; background: radial-gradient(circle, var(--stone-halo), rgba(255,230,180,.05) 42%, transparent 66%); opacity: calc(.30 + var(--lum)*.70); transform: scale(calc(1 + var(--lum)*.13)); }
+  .aura-near { position: absolute; inset: -15%; border-radius: 999px; background: radial-gradient(circle, var(--stone-halo), transparent 60%); opacity: calc(.45 + var(--lum)*.55); transform: scale(calc(1 + var(--lum)*.12)); }
+  .stone { width: 100%; height: 100%; border-radius: 999px; position: relative; background: radial-gradient(circle at 30% 28%, #FFFBF1 0%, #F0E5CE 25%, #C9B68B 55%, #6E5B3A 85%, #2A2216 100%); box-shadow: 0 0 80px 20px rgba(247,230,181,.15), inset -20px -30px 60px rgba(50,38,20,.4), inset 20px 20px 40px rgba(255,255,240,.25), 0 24px 48px rgba(0,0,0,.45); }
+  .stone-sub { position: absolute; inset: 9%; border-radius: 999px; background: radial-gradient(circle at 48% 58%, rgba(255,230,180,.9), rgba(255,214,150,.32) 44%, transparent 70%); filter: blur(16px); mix-blend-mode: screen; opacity: calc(.06 + var(--lum)*.72); }
+  .rim { position: absolute; inset: 0; border-radius: 999px; background: radial-gradient(circle at 71% 77%, rgba(255,230,180,.5), transparent 40%); mix-blend-mode: screen; opacity: calc(.22 + var(--lum)*.34); }
+  .spec { position: absolute; top: 15%; left: 22%; width: 30%; height: 20%; border-radius: 999px; background: radial-gradient(ellipse, rgba(255,255,255,.55), transparent 70%); filter: blur(6px); }
+
+  .stage__eyebrow {
+    font-family: var(--font-body); font-size: var(--text-caption); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .12em; color: var(--on-dark-muted);
+    margin: 0 0 26px; z-index: 1;
+  }
+  .stage__line {
+    font-family: var(--font-display); font-size: var(--text-display); font-weight: 400;
+    line-height: 1.34; letter-spacing: -.015em; text-align: center; text-wrap: pretty;
+    max-width: 255px; margin: 24px 0 0; z-index: 1; color: var(--color-on-dark);
+  }
+  .stage--rest .stage__line { opacity: .13; filter: blur(4px); }
+  .stage--lit .stage__line { color: #FFF6E4; text-shadow: 0 0 26px rgba(255,230,180,.42); }
+
+  /* ═══ layer isolation strip ═══ */
+  .iso-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .iso {
+    position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden;
+    background: var(--color-ink); --lum: 0.85;
+  }
+  .iso__anchor { position: absolute; left: 50%; top: 44%; width: 220px; height: 220px; transform: translate(-50%,-50%); }
+  .iso__tag {
+    position: absolute; left: 12px; bottom: 10px; z-index: 2;
+    font-family: var(--font-mono); font-size: 11px; color: var(--on-dark-body);
+  }
+  .iso figcaption { font-size: 12px; line-height: 1.55; color: var(--color-text-secondary); margin-top: 8px; }
+  .iso-item p { font-size: 12px; line-height: 1.55; color: var(--color-text-secondary); margin-top: 8px; }
+  .iso-item p b { color: var(--color-text-primary); font-weight: 600; }
+
+  /* ═══ tables ═══ */
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+  table.t th {
+    text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--color-text-tertiary); font-weight: 600; padding: 0 14px 8px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  table.t td {
+    padding: 10px 14px 10px 0; border-bottom: 1px solid rgba(0,0,0,.05);
+    color: var(--color-text-secondary); line-height: 1.6; vertical-align: top;
+  }
+  table.t td:first-child { font-family: var(--font-mono); font-size: 11.5px; color: var(--color-text-primary); white-space: nowrap; }
+  table.t td b { color: var(--color-text-primary); font-weight: 600; }
+  table.t td.val { font-family: var(--font-mono); font-size: 11px; white-space: normal; color: var(--color-text-secondary); }
+
+  /* ═══ specimen panels on ink ═══ */
+  .ink-panel {
+    background: var(--color-ink); border-radius: 16px; padding: 36px 32px;
+    position: relative; overflow: hidden;
+  }
+  .ink-panel > * { position: relative; z-index: 1; }
+  .ramp { display: flex; flex-direction: column; gap: 20px; }
+  .ramp__row { display: grid; grid-template-columns: 1fr 190px; gap: 24px; align-items: baseline; }
+  .ramp__meta { font-family: var(--font-mono); font-size: 12px; color: var(--on-dark-muted); text-align: right; }
+  .s-strong { font-family: var(--font-display); font-size: var(--text-ceremonial); font-weight: 600; color: var(--on-dark-strong); letter-spacing: -.01em; }
+  .s-display { font-family: var(--font-display); font-size: var(--text-display); font-weight: 400; line-height: 1.34; letter-spacing: -.015em; color: var(--color-on-dark); }
+  .s-aside { font-family: var(--font-display); font-style: italic; font-size: 18px; color: var(--on-dark-muted); }
+  .s-notice { font-family: var(--font-body); font-size: 15px; color: var(--on-dark-body); }
+  .s-lede { font-family: var(--font-display); font-style: italic; font-size: 18px; color: var(--on-dark-recede); }
+  .s-eyebrow { font-family: var(--font-body); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--on-dark-muted); }
+
+  .btn-row { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .btn {
+    font-family: var(--font-body); font-size: 17px; font-weight: 600; letter-spacing: .005em;
+    width: 100%; max-width: 330px; min-height: 52px; padding: 0 32px;
+    border-radius: var(--radius-lg); border: 0; cursor: pointer;
+    background: var(--color-primary-dark); color: var(--color-on-primary-dark);
+    box-shadow: var(--shadow-honey);
+    transition: background var(--duration-small) var(--ease-essence),
+                transform var(--duration-small) var(--ease-essence),
+                box-shadow var(--duration-small) var(--ease-essence);
+  }
+  .btn:hover { background: var(--color-primary-dark-hover); box-shadow: 0 12px 34px rgba(255,230,180,.2); }
+  .btn:active { transform: scale(.98); }
+  .btn:focus-visible, .btn--quiet:focus-visible { outline: 2px solid var(--focus-dark); outline-offset: 3px; }
+  .btn--ring { outline: 2px solid var(--focus-dark); outline-offset: 3px; }
+  .btn--quiet {
+    background: transparent; box-shadow: none; color: var(--on-dark-body);
+    font-weight: 500; font-size: 15px; min-height: 44px; padding: 0 12px; width: auto;
+  }
+  .btn--quiet:hover { background: transparent; color: rgba(247,241,228,.85); }
+
+  /* ═══ rules ═══ */
+  .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .rule { background: var(--color-surface-card); border-radius: 16px; padding: 26px 28px; }
+  .rule h3 { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0 0 10px; }
+  .rule p { font-size: 13.5px; line-height: 1.68; color: var(--color-text-secondary); margin: 0; }
+  .rule p + p { margin-top: 8px; }
+  .rule p b { color: var(--color-text-primary); font-weight: 600; }
+  .rule__tag {
+    display: inline-block; font-family: var(--font-body); font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .1em; padding: 3px 8px; border-radius: 999px;
+    background: var(--color-surface-warm); color: var(--color-text-secondary); margin-bottom: 12px;
+  }
+
+  .ruling { background: var(--color-surface-card); border-radius: 16px; padding: 32px 34px; max-width: 74ch; }
+  .ruling h3 { font-family: var(--font-display); font-size: 24px; font-weight: 600; margin: 0 0 12px; }
+  .ruling p { font-size: 14px; line-height: 1.72; color: var(--color-text-secondary); margin: 0 0 10px; }
+  .ruling p b { color: var(--color-text-primary); font-weight: 600; }
+  .ruling ol { margin: 0 0 12px; padding-left: 22px; font-size: 14px; line-height: 1.72; color: var(--color-text-secondary); }
+  .ruling li { margin-bottom: 6px; }
+  .ruling li::marker { color: var(--color-text-tertiary); }
+  .ruling__verdict {
+    font-family: var(--font-display); font-size: 20px; font-weight: 600; line-height: 1.45;
+    color: var(--color-text-primary); margin: 0 0 18px; padding-bottom: 18px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .owed { font-size: 14px; line-height: 1.75; color: var(--color-text-secondary); max-width: 70ch; margin: 0; padding-left: 20px; }
+  .owed li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <span class="eyebrow">Essence · Dark ceremonial stage</span>
+    <h1>The stage is the room the stone lights.</h1>
+    <p>Essence has no dark mode. It has one dark surface, used where the
+    product goes quiet and a single object carries the beat: the
+    <b>crystallize</b>, <b>preserved</b>, <b>detail</b> and <b>playback</b> phases of
+    First Breath. Everything here is promoted verbatim from the Step 5
+    First Playback build — values that were measured, shipped, and argued
+    over, not redrawn for this card.</p>
+    <p>The stone itself lives in
+    <a href="breath-stone.html">ds/breath-stone.html</a>. This card is the
+    atmosphere around it, the type that survives on ink, and the four rules
+    that cost the build a day each.</p>
+  </header>
+
+  <section>
+    <h2>The stage, at rest and lit</h2>
+    <p class="lead">Six atmosphere layers plus the stone's own seven. Nothing
+    here is a static image of a glow: <code>--lum</code> (fast follower,
+    syllable articulation) and <code>--sus</code> (slow follower, sustained
+    swell) are set by one <code>requestAnimationFrame</code> loop, and every
+    layer reads them through <code>calc()</code> on <code>opacity</code> or
+    <code>transform</code> only. The two frames below are the same markup at
+    <code>--lum: 0</code> and <code>--lum: .85</code>.</p>
+    <div class="stages">
+      <figure class="stage-fig">
+        <div class="stage stage--rest">
+          <div class="atmos" aria-hidden="true">
+            <div class="l-base"></div><div class="l-cast"></div><div class="l-vig"></div><div class="l-grain"></div>
+          </div>
+          <p class="stage__eyebrow">Your voice</p>
+          <div class="stone-wrap">
+            <div class="l-bloom"></div><div class="l-contact"></div>
+            <div class="aura-far"></div><div class="aura-near"></div>
+            <div class="stone"><div class="stone-sub"></div><div class="rim"></div><div class="spec"></div></div>
+          </div>
+          <p class="stage__line">If you're hearing this,</p>
+        </div>
+        <figcaption><b>At rest.</b> <code>--lum: 0</code>. The cast layer still
+        holds 14% so the room is never flat black; the line sits at 13% with a
+        4 px blur — legible as a shape before it is spoken.</figcaption>
+      </figure>
+      <figure class="stage-fig">
+        <div class="stage stage--lit">
+          <div class="atmos" aria-hidden="true">
+            <div class="l-base"></div><div class="l-cast"></div><div class="l-vig"></div><div class="l-grain"></div>
+          </div>
+          <p class="stage__eyebrow">Your voice</p>
+          <div class="stone-wrap">
+            <div class="l-bloom"></div><div class="l-contact"></div>
+            <div class="aura-far"></div><div class="aura-near"></div>
+            <div class="stone"><div class="stone-sub"></div><div class="rim"></div><div class="spec"></div></div>
+          </div>
+          <p class="stage__line">If you're hearing this,</p>
+        </div>
+        <figcaption><b>Lit.</b> <code>--lum: .85</code>, <code>--sus: 1</code>.
+        The stone lights its room, the bloom thickens the air beneath it, the
+        contact shadow widens by 10% — brighter reads as closer — and the word
+        under the light warms to <code>#FFF6E4</code>.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Layer order — build to this</h2>
+    <p class="lead">Painted back to front. The four page-level layers sit in a
+    single <code>.atmos</code> element at <code>z-index: 0</code>;
+    <code>l-bloom</code> and <code>l-contact</code> are children of the stone's
+    wrapper so they travel with the object. Content sits at
+    <code>z-index: 1</code>, and the stage sets <code>isolation: isolate</code>
+    so the <code>screen</code> and <code>overlay</code> blends cannot reach the
+    page behind it.</p>
+    <table class="t">
+      <thead><tr><th>Layer</th><th>Role</th><th>Value</th><th>Tracks<br /><code>--lum</code></th></tr></thead>
+      <tbody>
+        <tr>
+          <td>l-base</td>
+          <td><b>Warm-ink ground.</b> Anchored on <code>--color-ink</code>, not a darker invention. Static.</td>
+          <td class="val">radial-gradient(130% 78% at 50% 34%, #2A2621, #1E1B18 45%, #171512 78%, #121110)</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>l-cast</td>
+          <td><b>The stone lighting its room.</b> Screen-blended warm wash. This is the layer that makes the object feel physically present; without it the stone is a sticker.</td>
+          <td class="val">radial-gradient(58% 38% at 50% 36%, halo .30, halo .10 45%, transparent 72%)<br />opacity: .14 + lum × .86 · screen</td>
+          <td>yes</td>
+        </tr>
+        <tr>
+          <td>l-bloom</td>
+          <td><b>Ambient bloom</b> — the light the stone throws into the air below it. <b>Not a ground plane:</b> no floor exists on this screen. 110 px tall with the gradient closed at 52%, so it dies above the first line's cap height and the line brightens with the words, not with the room.</td>
+          <td class="val">400 × 110 px at stone base, translate(-50%,-30%)<br />radial-gradient(ellipse, halo .24, transparent 52%) · blur(18px)<br />opacity: .32 + lum × .55 · screen</td>
+          <td>yes</td>
+        </tr>
+        <tr>
+          <td>l-contact</td>
+          <td><b>Contact shadow</b> at the stone's base. Widens slightly as the stone brightens — closer to its floor when louder. The one dark layer in the stack.</td>
+          <td class="val">214 × 32 px, scaleX(1 + lum × .10)<br />radial-gradient(ellipse, rgba(0,0,0,.62), transparent 70%) · blur(9px)</td>
+          <td>transform</td>
+        </tr>
+        <tr>
+          <td>l-vig</td>
+          <td><b>Vignette.</b> Static. Holds the eye at 40% height, which is where the stone is.</td>
+          <td class="val">radial-gradient(88% 62% at 50% 40%, transparent 42%, rgba(0,0,0,.42) 82%, rgba(0,0,0,.66))</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>l-grain</td>
+          <td><b>Grain.</b> Kills the CSS-gradient banding that makes dark screens read cheap. <code>inset: 0</code> — see the will-change rule below; at <code>inset: -50%</code> this one layer cost more than all nine promoted layers combined.</td>
+          <td class="val">fractalNoise baseFrequency .85, 3 octaves, 180 px tile<br />opacity .055 · overlay · inset: 0</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Layers in isolation</h2>
+    <div class="iso-grid">
+      <div class="iso-item">
+        <div class="iso"><div class="l-base"></div><span class="iso__tag">l-base</span></div>
+        <p><b>Static ground.</b> Warm at the centre, colder at the corners.</p>
+      </div>
+      <div class="iso-item">
+        <div class="iso"><div class="l-base"></div><div class="l-cast"></div><span class="iso__tag">+ l-cast</span></div>
+        <p><b>The room, lit.</b> Nothing has been drawn yet — this is only light.</p>
+      </div>
+      <div class="iso-item">
+        <div class="iso"><div class="l-base"></div><div class="iso__anchor"><div class="l-bloom"></div></div><span class="iso__tag">+ l-bloom</span></div>
+        <p><b>Air, not floor.</b> Closed at 52%, so it never becomes a surface.</p>
+      </div>
+      <div class="iso-item">
+        <div class="iso"><div class="l-base"></div><div class="iso__anchor"><div class="l-contact"></div></div><span class="iso__tag">+ l-contact</span></div>
+        <p><b>Weight.</b> The only element that says the stone is resting on something.</p>
+      </div>
+      <div class="iso-item">
+        <div class="iso"><div class="l-base"></div><div class="l-cast"></div><div class="l-vig"></div><span class="iso__tag">+ l-vig</span></div>
+        <p><b>Attention.</b> Static; it does the work a spotlight would do.</p>
+      </div>
+      <div class="iso-item">
+        <div class="iso"><div class="l-base"></div><div class="l-cast"></div><div class="l-vig"></div><div class="l-grain"></div><span class="iso__tag">+ l-grain</span></div>
+        <p><b>Material.</b> The difference between ink and a dark rectangle.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cream on ink — the opacity ramp</h2>
+    <p class="lead">Type on the stage is one colour, <code>--color-on-dark</code>
+    <code>#F7F1E4</code>, at four amounts. Hierarchy on ink is opacity and
+    family; it is never a second hue. The whole ramp clears AA against the
+    unlit ground and stays clear when <code>l-cast</code> brightens it.</p>
+    <div class="ink-panel">
+      <div class="atmos" aria-hidden="true"><div class="l-base"></div><div class="l-vig"></div><div class="l-grain"></div></div>
+      <div class="ramp">
+        <div class="ramp__row"><span class="s-eyebrow">Your voice</span><span class="ramp__meta">--on-dark-muted · .58<br />12 px Inter 600 · .12em</span></div>
+        <div class="ramp__row"><span class="s-lede">This is what they became.</span><span class="ramp__meta">--on-dark-recede · .50<br />18 px Spectral italic</span></div>
+        <div class="ramp__row"><span class="s-display">If you're hearing this, I found a way to stay.</span><span class="ramp__meta">--color-on-dark · 1.0<br />--text-display · 34 px Spectral 400</span></div>
+        <div class="ramp__row"><span class="s-strong">That's you.</span><span class="ramp__meta">--on-dark-strong · .92<br />--text-ceremonial · 23 px Spectral 600</span></div>
+        <div class="ramp__row"><span class="s-aside">It kept the pauses.</span><span class="ramp__meta">--on-dark-muted · .58<br />18 px Spectral italic</span></div>
+        <div class="ramp__row"><span class="s-notice">Heard nothing? Check your silent switch.</span><span class="ramp__meta">--on-dark-body · .62<br />15 px Inter 400</span></div>
+      </div>
+    </div>
+    <table class="t" style="margin-top:24px">
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>family, not colour</td><td><b>The aside is Spectral italic; a notice is Inter.</b> They share the same slot and nearly the same opacity, and the family is the only signal separating them — Inter reads as the product speaking, Spectral italic as the moment. Do not distinguish them with colour or size alone.</td></tr>
+        <tr><td>the payoff line</td><td>Full-opacity cream at <code>--text-display</code>. It is the primary visual of the beat, not a caption — and it is what a screen reader announces, what a deaf user gets, and the only thing that makes a muted phone survivable.</td></tr>
+        <tr><td>no third step</td><td>If a design needs a fifth level of cream, it has too much on the stage. Cut an element instead of inventing an opacity.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Primary and focus on ink</h2>
+    <p class="lead">Mineral <code>#7A8088</code> is near-invisible on warm ink and
+    appears <b>nowhere</b> on a dark stage. The primary takes the honey fill; the
+    focus ring is the same honey, and it is the one warm value on the stage
+    permitted to sit outside <code>--stone-halo</code> — precisely because it
+    must not track luminance. A focus ring that dims when the voice goes quiet
+    is not a focus ring.</p>
+    <div class="ink-panel">
+      <div class="atmos" aria-hidden="true"><div class="l-base"></div><div class="l-vig"></div><div class="l-grain"></div></div>
+      <div class="btn-row">
+        <button class="btn" type="button">Create your first message</button>
+        <button class="btn btn--ring" type="button">Focused — 2 px at 3 px offset</button>
+        <button class="btn btn--quiet" type="button">Hear it again</button>
+      </div>
+    </div>
+    <table class="t" style="margin-top:24px">
+      <thead><tr><th>Token</th><th>Value</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>--color-primary-dark</td><td class="val">#F2E6CE · 17 px Inter 600 · radius 10 · min-height 52</td><td><b>Full width</b>, <code>max-width: 330px</code>, <code>scale(.98)</code> at <code>--duration-small</code>.</td></tr>
+        <tr><td>--shadow-honey</td><td class="val">0 10px 30px rgba(255,230,180,.12)</td><td>Derived from the halo. Static — never animated per frame.</td></tr>
+        <tr><td>--focus-dark</td><td class="val">#F2E6CE · outline 2 px · offset 3 px</td><td>Both the primary and the quiet button. Never mineral on ink.</td></tr>
+      </tbody>
+    </table>
+    <div class="rule" style="margin-top:20px">
+      <span class="rule__tag">Canon amendment — none needed</span>
+      <h3>Full-width primary on a dark ceremonial stage: confirmed correct.</h3>
+      <p>Canon says a primary is full width on mobile, and a reviewer will keep
+      asking whether a lone 330 px slab is too loud for a reverent screen. It
+      is not, and the reason is worth recording so the next screen doesn't
+      re-litigate it: <b>the dark stage gives the button no container to sit
+      inside.</b> On cream there is a card edge, a gutter, a surface boundary —
+      something for a smaller button to belong to. On ink there is nothing, so
+      width is the only property left that reads as authority. A centred
+      auto-width button on ink reads as a link that gained a background.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Status on ink — the ruling</h2>
+    <div class="ruling">
+      <p class="ruling__verdict">Status on a ceremonial dark stage is carried by
+      language and position, never colour. The system gets no dark-stage
+      terracotta, sage, or amber-umber.</p>
+      <p>Thread 2 declined to invent a dark terracotta and carried three
+      non-happy states with copy and placement instead. That was the right
+      instinct for one screen; it is now the rule, for three reasons.</p>
+      <ol>
+        <li><b>The warm status hues are tuned for cream and only for cream.</b>
+        <code>#9C3528</code> reads 6.72:1 on <code>#FBF8F4</code> and roughly
+        1.9:1 on <code>#1E1B18</code> — a hole in the screen, not a warning.</li>
+        <li><b>Lightening them leaves the palette.</b> Raising terracotta to AA
+        on ink produces a salmon that belongs to no other Essence surface and
+        reads as an alert borrowed from a different app. The warmth that makes
+        the status family cohere on cream is exactly what collapses on ink.</li>
+        <li><b>The stage exists to hold one thing at a time.</b> A coloured
+        notice competes with the stone at the moment the stone <i>is</i> the
+        message. Failure that needs colour to be understood is failure that
+        was written badly.</li>
+      </ol>
+      <p><b>So write it instead.</b> A notice on ink is 15 px Inter at
+      <code>--on-dark-body</code>, in the aside slot — mutually exclusive with
+      the aside, so no state is taller than the happy path. No fill, no border,
+      no icon, no colour. It carries
+      <code>role="status" aria-live="polite"</code>, and it follows the house
+      error pattern: what happened, what to do next.</p>
+      <p><b>The one escape hatch, and it is a surface change, not a colour.</b>
+      If a dark stage ever must carry a genuinely destructive confirmation —
+      deleting a voice, not a playback that failed — it does so on a cream card
+      (<code>--color-surface-card</code>) laid over the stage, and inside that
+      card the normal warm status colours apply unchanged. The system never
+      needs a status value for ink; it changes what the message is sitting on.</p>
+      <p><b>Corollary for reviewers:</b> "this error needs to be red" is, on a
+      dark stage, a note about the sentence. Rewrite the sentence.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Four rules, not four habits</h2>
+    <p class="lead">Each of these bit the Step 5 build once, silently — nothing
+    threw, nothing looked broken in a screenshot, and each cost real time to
+    find. They are properties of the medium, not of that screen.</p>
+    <div class="rules">
+      <div class="rule">
+        <span class="rule__tag">Performance</span>
+        <h3><code>will-change</code> is a state, not a declaration.</h3>
+        <p>Declare it only under the class that means "this is actually
+        animating right now" — on Step 5, <code>.speaking</code>: <b>zero</b>
+        promoted layers at rest, eight for the ~5 s of the utterance.</p>
+        <p>The choreography is compositor-bound by design, so main-thread cost
+        was never the exposure — <b>GPU layer memory was.</b> Measured: p95
+        16.7 ms under a synthetic 6 ms-per-frame main-thread tax, zero frames
+        over 20 ms. Related: keep blend-mode layers at <code>inset: 0</code>.
+        <code>.l-grain</code> at <code>inset: -50%</code> was 1.32 M
+        overlay-blended pixels on a layer that never animates, and cost more
+        than every promoted layer put together.</p>
+      </div>
+      <div class="rule">
+        <span class="rule__tag">Reveal choreography</span>
+        <h3>Unmount, don't just fade.</h3>
+        <p>An element at <code>opacity: 0</code> still occupies its row. On a
+        stage where one action arrives alone and 2.5 s of nothing is the design,
+        an invisible button silently sets the spacing of everything below it.</p>
+        <p>Sequenced elements mount and unmount; opacity is for the transition,
+        not for the absence. This is also what keeps every non-happy state at or
+        below the happy path's height.</p>
+      </div>
+      <div class="rule">
+        <span class="rule__tag">Reveal choreography</span>
+        <h3>Reveal with an animation, not a transition — on anything interactive.</h3>
+        <p>A 1400 ms <code>transform</code> transition for the CTA's rise also
+        governs <code>:active</code>. The press stops being tactile and nobody
+        can say why: the button simply feels dead.</p>
+        <p>Use <code>@keyframes rise</code> for the entrance so the transition
+        stays free for <code>:active</code> at <code>--duration-small</code>. Any
+        element with both an entrance and an interaction state needs this
+        separation.</p>
+      </div>
+      <div class="rule">
+        <span class="rule__tag">Layout</span>
+        <h3>A flex column child does not inherit its parent's width.</h3>
+        <p><code>.actions</code> needed <code>align-self: stretch</code> before
+        <code>width: 100%; max-width: 330px</code> on the primary would bind.
+        Without it the "full-width" CTA rendered at its old 279 px content
+        width — correct-looking, wrong.</p>
+        <p>When a percentage width doesn't take, the parent's cross-axis size is
+        the suspect, not the child's declaration.</p>
+      </div>
+      <div class="rule" style="grid-column: 1 / -1">
+        <span class="rule__tag">Ceremonial type</span>
+        <h3>Font-relative measures do not respond to a fit step.</h3>
+        <p><code>ch</code> scales with the font, so a line rags <b>identically</b>
+        at 34 px and at 26 px: a size clamp can never buy a line back, and a fit
+        loop over <code>font-size</code> is a no-op against a <code>ch</code>
+        measure. <b>Ceremonial display text takes a px measure</b> — Step 5 uses
+        <code>255px</code>, the width <code>15ch</code> produced at the tuned
+        size — and then steps the size down until the line rags to at most three
+        lines inside its reserved block.</p>
+        <p>Two companions to that rule. <b>Size ceremonial type in container
+        units, not <code>vw</code></b> (<code>clamp(26px, 10.3cqw, 34px)</code>):
+        the same arithmetic, but correct when the screen is a 390 px frame inside
+        a desktop review page. And <b>reserve the block, then prove all
+        candidate lines fit it</b> — the layout must not belong to one sentence.
+        Re-fit on <code>document.fonts.ready</code>, or you have measured the
+        fallback face.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tokens promoted in this pass</h2>
+    <table class="t">
+      <thead><tr><th>Token</th><th>Value</th><th>Was</th></tr></thead>
+      <tbody>
+        <tr><td>--text-display</td><td class="val">34 px Spectral 400 · line 1.34 · -.015em</td><td>local literal on Step 5</td></tr>
+        <tr><td>--text-ceremonial</td><td class="val">23 px Spectral 600 · -.01em</td><td>local literal on Step 5</td></tr>
+        <tr><td>--text-scale-display</td><td class="val">48 px</td><td><b>renamed.</b> Held the name <code>--text-display</code> and had no consumer; the semantic role now owns it</td></tr>
+        <tr><td>--color-ink</td><td class="val">#1E1B18</td><td>literal, repeated on four screens</td></tr>
+        <tr><td>--color-ink-lift / -deep</td><td class="val">#2A2621 / #121110</td><td>l-base ramp endpoints</td></tr>
+        <tr><td>--color-on-dark</td><td class="val">#F7F1E4</td><td>literal</td></tr>
+        <tr><td>--on-dark-strong / -body / -muted / -recede</td><td class="val">.92 / .62 / .58 / .50 of #F7F1E4</td><td>six unnamed rgba() literals</td></tr>
+        <tr><td>--stone-halo</td><td class="val">rgba(255,230,180,.18)</td><td>local; now the origin of every warm value on the stage</td></tr>
+        <tr><td>--color-primary-dark</td><td class="val">#F2E6CE (hover #FBF3E2, ink #1B1610)</td><td>literal</td></tr>
+        <tr><td>--shadow-honey</td><td class="val">0 10px 30px rgba(255,230,180,.12)</td><td>literal</td></tr>
+        <tr><td>--focus-dark</td><td class="val">#F2E6CE · 2 px outline · 3 px offset</td><td><b>new.</b> Mineral is unusable on ink</td></tr>
+        <tr><td>--stone-size-hero</td><td class="val">min(320px, 56vw)</td><td><b>new.</b> Closes the clearance conflict — see the Breath Stone card</td></tr>
+        <tr><td>--stone-clearance / -narrow</td><td class="val">120 px / 48 px below 420 px width</td><td><b>new ruling.</b> The docs said 120 px unconditionally; no build ever satisfied it</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top:20px">Nothing else on the stage is a new
+    value. The atmosphere layers keep their literals inside this card's spec
+    because they are a composition, not a palette — tokenising
+    <code>opacity: .32 + lum × .55</code> would name the arithmetic without
+    making it reusable.</p>
+  </section>
+
+  <section>
+    <h2>Not settled — do not treat as promoted</h2>
+    <ul class="owed">
+      <li>A real device at 4× CPU throttle. Every performance number above is desktop, one of them synthetic.</li>
+      <li>Autoplay verified on a real iPhone, and the silent-switch state that looks identical to blocked autoplay.</li>
+      <li>The inbound crossfade from <code>detail</code> — the stone must not re-enter, and no pass has built the transition.</li>
+      <li>The skip affordance and the playback-failure screen exist as agreed direction and copy only; neither is prototyped.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

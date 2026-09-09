@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Brand" name="Design system — Breath Stone" subtitle="Signature motif — states, clearance, do/don't" viewport="1200x1600" -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1200, initial-scale=1" />
+<title>Essence — Breath Stone</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { background: var(--color-bg-neutral); padding: 64px; }
+  a { color: var(--color-text-primary); text-decoration: underline; text-underline-offset: 2px; }
+  a:hover { color: var(--color-mineral-dark); }
+  .page { max-width: 1080px; margin: 0 auto; }
+  header { margin-bottom: 48px; }
+  header .eyebrow { display: block; margin-bottom: 12px; }
+  header h1 { font-size: 36px; }
+  header p { margin-top: 12px; max-width: 640px; }
+
+  section { margin-bottom: 64px; }
+  section > h2 {
+    font-size: 14px; font-family: var(--font-body); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--color-text-tertiary);
+    border-top: 1px solid var(--color-border);
+    padding-top: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* Breath Stone — shared geometry */
+  .stone-stage {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .stone-stage--dark { background: #1E1B18; }
+  .stone-stage--cream { background: var(--color-bg-neutral); }
+  .stone-stage--honey { background: var(--color-bg-warm-2); }
+
+  .stone {
+    width: 60%;
+    aspect-ratio: 1 / 1;
+    border-radius: 999px;
+    position: relative;
+  }
+  /* luminous pearl on dark */
+  .stone--pearl {
+    background:
+      radial-gradient(circle at 30% 28%, #FFFBF1 0%, #F0E5CE 25%, #C9B68B 55%, #6E5B3A 85%, #2A2216 100%);
+    box-shadow:
+      0 0 80px 20px rgba(247, 230, 181, 0.15),
+      inset -20px -30px 60px rgba(50, 38, 20, 0.4),
+      inset 20px 20px 40px rgba(255, 255, 240, 0.25);
+  }
+  .stone--pearl::before {
+    content: "";
+    position: absolute;
+    top: 15%; left: 22%;
+    width: 30%; height: 20%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.55), transparent 70%);
+    border-radius: 999px;
+    filter: blur(6px);
+  }
+  /* honey on cream */
+  .stone--honey {
+    background:
+      radial-gradient(circle at 30% 28%, #FBF2DC 0%, #E8CF9A 28%, #C9A665 60%, #8A6F3E 90%);
+    box-shadow:
+      0 20px 40px rgba(139, 111, 62, 0.25),
+      inset -16px -24px 50px rgba(90, 65, 30, 0.35),
+      inset 16px 16px 36px rgba(255, 245, 220, 0.35);
+  }
+  .stone--honey::before {
+    content: "";
+    position: absolute;
+    top: 15%; left: 22%;
+    width: 32%; height: 22%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.5), transparent 70%);
+    border-radius: 999px;
+    filter: blur(4px);
+  }
+  /* halo (idle ambient) */
+  .stone-stage--dark .stone::after,
+  .stone-stage--cream .stone::after,
+  .stone-stage--honey .stone::after {
+    content: "";
+    position: absolute;
+    inset: -15%;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(255, 230, 180, 0.18), transparent 60%);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* breath animation */
+  @keyframes breath {
+    0%   { transform: scale(1.00); }
+    50%  { transform: scale(1.06); }
+    100% { transform: scale(1.00); }
+  }
+  @keyframes breath-halo {
+    0%   { opacity: 0.45; transform: scale(1.00); }
+    50%  { opacity: 1;    transform: scale(1.12); }
+    100% { opacity: 0.45; transform: scale(1.00); }
+  }
+  .stone--idle       { animation: breath 3s var(--ease-breath) infinite; }
+  .stone--recording  { animation: breath 1.6s var(--ease-breath) infinite; filter: brightness(1.08); }
+  .stone--priming    { animation: breath 2s var(--ease-breath) infinite; filter: brightness(1.12); }
+  .stone--validation { animation: breath 2.2s var(--ease-breath) infinite; filter: brightness(1.15) saturate(1.05); }
+  .stone--validation::after { animation: breath-halo 2.2s var(--ease-breath) infinite; }
+
+  /* speaking — the stone is voicing the user's own audio.
+     Amplitude-driven in production; this keyframe approximates one utterance. */
+  @keyframes speak {
+    0%   { transform: scale(1.000); }
+    6%   { transform: scale(1.034); }
+    14%  { transform: scale(1.012); }
+    26%  { transform: scale(1.040); }
+    38%  { transform: scale(1.016); }
+    52%  { transform: scale(1.036); }
+    66%  { transform: scale(1.014); }
+    78%  { transform: scale(1.030); }
+    90%  { transform: scale(1.008); }
+    100% { transform: scale(1.000); }
+  }
+  @keyframes speak-sub {
+    0%, 100% { opacity: 0.06; }
+    50%      { opacity: 0.72; }
+  }
+  .stone--speaking   { animation: speak 3.6s var(--ease-essence) infinite; filter: brightness(1.10); }
+  .stone--speaking::after { animation: breath-halo 1.8s var(--ease-essence) infinite; }
+  .stone__sub {
+    position: absolute; inset: 9%;
+    border-radius: 999px;
+    background: radial-gradient(circle at 48% 58%, rgba(255,230,180,0.9), rgba(255,214,150,0.32) 44%, transparent 70%);
+    filter: blur(14px);
+    mix-blend-mode: screen;
+    opacity: 0.06;
+    animation: speak-sub 3.6s var(--ease-essence) infinite;
+  }
+
+  /* states grid */
+  .states {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+  .state {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .state__meta {
+    padding: 0 4px;
+  }
+  .state__name { font-size: 14px; font-weight: 600; }
+  .state__desc { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; margin-top: 4px; }
+
+  /* dos / donts */
+  .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .guide {
+    background: var(--color-surface-card);
+    padding: 28px;
+    border-radius: 16px;
+  }
+  .guide h3 {
+    font-size: 12px; font-family: var(--font-body); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    margin-bottom: 16px;
+  }
+  .guide--do h3 { color: var(--color-status-success); }
+  .guide--dont h3 { color: var(--color-status-error); }
+  .guide ul { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; color: var(--color-text-primary); }
+  .guide li { margin-bottom: 6px; }
+  .guide li::marker { color: var(--color-text-tertiary); }
+
+  /* clearance diagram */
+  .clearance {
+    background: var(--color-surface-card);
+    border-radius: 16px;
+    padding: 40px;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+  .clearance__demo {
+    aspect-ratio: 1;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--color-surface-warm),
+      var(--color-surface-warm) 6px,
+      var(--color-surface-honey) 6px,
+      var(--color-surface-honey) 12px
+    );
+    border-radius: 16px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .clearance__inner {
+    position: absolute; inset: 20%;
+    background: var(--color-bg-neutral);
+    border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px dashed rgba(156, 53, 40, 0.3);
+  }
+  .clearance__stone {
+    width: 62%; aspect-ratio: 1;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 30% 28%, #FBF2DC 0%, #E8CF9A 28%, #C9A665 60%, #8A6F3E 90%);
+    box-shadow:
+      inset -12px -18px 40px rgba(90, 65, 30, 0.35),
+      inset 12px 12px 28px rgba(255, 245, 220, 0.35);
+  }
+  .clearance__label {
+    /* Sits in the hatched band above the circle — the region it measures.
+       nowrap because the string reads as one rule, not three fragments. */
+    position: absolute; top: 24px; left: 0; right: 0;
+    text-align: center; white-space: nowrap;
+    font-size: 11px; font-family: var(--font-mono);
+    color: var(--color-status-error);
+  }
+  .clearance__notes h3 { font-family: var(--font-display); font-size: 22px; font-weight: 600; margin-bottom: 10px; }
+  .clearance__notes p { font-size: 14px; line-height: 1.65; color: var(--color-text-secondary); margin-bottom: 10px; }
+  .clearance__notes code {
+    background: rgba(0,0,0,0.04); padding: 1px 6px; border-radius: 4px;
+    font-family: var(--font-mono); font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <span class="eyebrow">Essence · Breath Stone</span>
+    <h1>A quiet animal that breathes at 3 seconds.</h1>
+    <p>The Breath Stone is Essence's one piece of iconography. It inhabits
+    the moment of recording and the moment of listening. Treat it like a
+    quiet animal — it breathes, it responds, it never performs.</p>
+    <p>The atmosphere it lives in on ceremonial screens — the six-layer
+    stage, the cream-on-dark ramp, the honey primary — is specified in
+    <a href="dark-stage.html">ds/dark-stage.html</a>.</p>
+  </header>
+
+  <section>
+    <h2>States</h2>
+    <div class="states">
+      <div class="state">
+        <div class="stone-stage stone-stage--dark">
+          <div class="stone stone--pearl stone--idle"></div>
+        </div>
+        <div class="state__meta">
+          <div class="state__name">idle</div>
+          <div class="state__desc">Gentle 3 s breath cycle. Neutral warmth. Pre-tap, between moments.</div>
+        </div>
+      </div>
+      <div class="state">
+        <div class="stone-stage stone-stage--dark">
+          <div class="stone stone--pearl stone--recording"></div>
+        </div>
+        <div class="state__meta">
+          <div class="state__name">recording</div>
+          <div class="state__desc">Pulses with the speaker's voice (RMS-driven in production). Faster cycle, a trace brighter.</div>
+        </div>
+      </div>
+      <div class="state">
+        <div class="stone-stage stone-stage--cream">
+          <div class="stone stone--honey stone--priming"></div>
+        </div>
+        <div class="state__meta">
+          <div class="state__name">priming</div>
+          <div class="state__desc">Held, charged moment before a ceremonial action — the 3.5 s lock before "Mint my voice".</div>
+        </div>
+      </div>
+      <div class="state">
+        <div class="stone-stage stone-stage--honey">
+          <div class="stone stone--honey stone--validation"></div>
+        </div>
+        <div class="state__meta">
+          <div class="state__name">validation</div>
+          <div class="state__desc">Warm pulse at completion. Halo brightens in time with breath. Lands. Then rests.</div>
+        </div>
+      </div>
+      <div class="state">
+        <div class="stone-stage stone-stage--dark">
+          <div class="stone stone--pearl stone--speaking"><div class="stone__sub"></div></div>
+        </div>
+        <div class="state__meta">
+          <div class="state__name">speaking</div>
+          <div class="state__desc">The stone is voicing the user's own audio. Subsurface core glows from inside; amplitude-driven in production. Speech is not a faster breath — see below.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Clearance &amp; placement</h2>
+    <div class="clearance">
+      <div class="clearance__demo">
+        <div class="clearance__inner">
+          <div class="clearance__stone"></div>
+        </div>
+        <span class="clearance__label">≥ 48 px &lt; 420 px · ≥ 120 px above</span>
+      </div>
+      <div class="clearance__notes">
+        <h3>Give it room</h3>
+        <p><b>Clearance is viewport-conditional.</b> <code>≥ 48 px</code> on every
+        side below 420 px viewport width; <code>≥ 120 px</code> at 420 px and
+        above. During ceremonial moments the stone is the only moving element
+        on screen.</p>
+        <p><b>The hero is fluid:</b> <code>--stone-size-hero: min(320px, 56vw)</code>.
+        Other canonical sizes are fixed — <code>160 px</code> in-card,
+        <code>220 px</code> default, <code>120 px</code> minimum rendered (below
+        that it reads as a dot, not a sphere).</p>
+        <p>Text never sits on top of the stone. If a label belongs nearby,
+        it goes below at 32–48 px separation.</p>
+        <p><b>Conflict closed — thread 4.</b> The card's <code>320 px</code> hero,
+        its <code>48 px</code> clearance, and the README's <code>120 px</code> could
+        not all hold at 390 px (390 − 240 = 150 px maximum), and no build
+        satisfied all three. <b>The builds were right and the docs were wrong.</b>
+        The rule above yields a <b>218 px</b> stone with <b>86 px</b> clearance at
+        390 px — what the Step 5 build already ships at 220 px — and the full
+        320 px hero with 120 px clearance from 560 px up. Every phase of First
+        Breath carried this conflict; it is retired here, once.</p>
+        <p><b>README.md and SKILL.md still say “≥ 120 px on every side”</b> with no
+        width condition. Replace both lines with the sentence above; this card is
+        the source of truth until they are.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Do · Don't</h2>
+    <div class="guide-grid">
+      <div class="guide guide--do">
+        <h3>Do</h3>
+        <ul>
+          <li>Render as a 2D radial gradient sphere with warm highlights upper-left, warm shadow lower-right.</li>
+          <li>Breathe at 3 s with <code>--ease-breath</code>. Symmetric inhale / exhale.</li>
+          <li>Pearl body on dark backgrounds, honey body on cream backgrounds.</li>
+          <li>Let the halo pulse in time with the stone during validation.</li>
+          <li>Speech differs from breath in <em>character</em>, not amount: a sustained swell across the utterance plus syllable articulation on top. A faster breath reads as agitation, not voice.</li>
+          <li>Drive amplitude states through CSS custom properties on <code>transform</code> and <code>opacity</code> only, from one rAF loop. Never animate <code>box-shadow</code> per frame.</li>
+          <li>Make it quieter when in doubt.</li>
+        </ul>
+      </div>
+      <div class="guide guide--dont">
+        <h3>Don't</h3>
+        <ul>
+          <li>Don't outline it with a hard ring.</li>
+          <li>Don't add sparkle, particles, sheen-sweeps, or secondary ornament.</li>
+          <li>Don't give it a face, eyes, mouth, or limbs.</li>
+          <li>Don't animate faster than the breath cycle — <em>except</em> while the stone is voicing, where articulation follows the cadence of the words.</li>
+          <li>Don't place text on top of it.</li>
+          <li>Don't recolor into electric gradients or neon.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
