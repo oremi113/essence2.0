@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Essence · Step 5 — First Playback</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" />
+<style>
+:root{--color-bg-neutral:#FBF8F4;--color-surface-card:#F6F0E5;--color-surface-warm:#EDE3D0;--color-mineral:#7A8088;--color-mineral-dark:#656B73;--color-text-primary:#1C1A18;--color-text-secondary:#6B6B6B;--color-text-tertiary:#ADA9A5;--font-display:'Spectral',Georgia,serif;--font-body:'Inter',system-ui,sans-serif;--font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;--ease-essence:cubic-bezier(.4,0,.2,1);--ease-breath:cubic-bezier(.37,0,.63,1);--ease-page:cubic-bezier(.22,1,.36,1);--ink:#1E1B18;--on-dark:#F7F1E4;--duration-breath:3000ms;--duration-micro:200ms;--duration-small:400ms;--stone-halo:rgba(255,230,180,.18);--focus-dark:#F2E6CE;--text-display:34px;--text-ceremonial:23px;--on-dark-strong:rgba(247,241,228,.92);--on-dark-body:rgba(247,241,228,.62);--on-dark-muted:rgba(247,241,228,.58);--on-dark-recede:rgba(247,241,228,.5)}
+/* the six vars above are promoted system tokens as of thread 4 (see ds/dark-stage.html);
+   they are restated locally only because this file predates linking colors_and_type.css. */
+*{box-sizing:border-box}
+html{background:#221F1B;-webkit-font-smoothing:antialiased}
+body{margin:0;font-family:var(--font-body);color:var(--color-text-primary);background:#221F1B}
+a{color:var(--color-mineral-dark)}a:hover{color:var(--color-text-primary)}
+.wrap{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:40px;align-items:start;padding:40px;max-width:1400px;margin:0 auto}
+@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);padding:20px;gap:24px}}
+
+/* ═══ PHONE ═══ */
+.phone{width:390px;height:844px;max-width:100%;border-radius:44px;background:var(--ink);position:relative;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 10px #0d0c0a,0 0 0 11px #3a3632;margin:0 auto}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;padding:60px 30px 40px;--lum:0;--sus:0;isolation:isolate}
+
+/* ── atmosphere stack (6 layers) ── */
+.atmos{position:absolute;inset:0;pointer-events:none;z-index:0}
+.l-base{position:absolute;inset:0;background:radial-gradient(130% 78% at 50% 34%,#2A2621 0%,#1E1B18 45%,#171512 78%,#121110 100%)}
+.l-cast{position:absolute;inset:0;background:radial-gradient(58% 38% at 50% 36%,rgba(255,230,180,.30),rgba(255,230,180,.10) 45%,transparent 72%);opacity:calc(.14 + var(--lum)*.86);mix-blend-mode:screen}
+/* ambient bloom — the light the stone throws into the air below it. Not a ground plane:
+   no floor exists on this screen, so it dies above the first line's cap height. */
+.l-bloom{position:absolute;left:50%;top:100%;width:400px;height:110px;transform:translate(-50%,-30%);background:radial-gradient(ellipse at center,rgba(255,230,180,.24),transparent 52%);filter:blur(18px);opacity:calc(.32 + var(--lum)*.55);mix-blend-mode:screen}
+.l-contact{position:absolute;left:50%;top:100%;width:214px;height:32px;transform:translate(-50%,-42%) scaleX(calc(1 + var(--lum)*.10));background:radial-gradient(ellipse at center,rgba(0,0,0,.62),transparent 70%);filter:blur(9px)}
+.l-vig{position:absolute;inset:0;background:radial-gradient(88% 62% at 50% 40%,transparent 42%,rgba(0,0,0,.42) 82%,rgba(0,0,0,.66) 100%)}
+.l-grain{position:absolute;inset:0;opacity:.055;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ── stone: 7 layers ── */
+/* crush guard, accepted from thread 2: .stage is flex:1;min-height:0, so any growth below
+   silently crushes the stone into the lede instead of failing loudly. 220 stone + 26 pad. */
+.stage{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:246px;z-index:1;padding-bottom:26px}
+.stone-wrap{flex:none;position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center;transform:scale(calc(1 + var(--sus)*.045))}
+.aura-far{position:absolute;inset:-46%;border-radius:999px;background:radial-gradient(circle,var(--stone-halo),rgba(255,230,180,.05) 42%,transparent 66%);opacity:calc(.30 + var(--lum)*.70);transform:scale(calc(1 + var(--lum)*.13))}
+.aura-near{position:absolute;inset:-15%;border-radius:999px;background:radial-gradient(circle,var(--stone-halo),transparent 60%);opacity:calc(.45 + var(--lum)*.55);transform:scale(calc(1 + var(--lum)*.12))}
+.stone{width:100%;height:100%;border-radius:999px;position:relative;background:radial-gradient(circle at 30% 28%,#FFFBF1 0%,#F0E5CE 25%,#C9B68B 55%,#6E5B3A 85%,#2A2216 100%);box-shadow:0 0 80px 20px rgba(247,230,181,.15),inset -20px -30px 60px rgba(50,38,20,.4),inset 20px 20px 40px rgba(255,255,240,.25),0 24px 48px rgba(0,0,0,.45)}
+/* subsurface: the voice, inside */
+.stone-sub{position:absolute;inset:9%;border-radius:999px;background:radial-gradient(circle at 48% 58%,rgba(255,230,180,.9),rgba(255,214,150,.32) 44%,transparent 70%);filter:blur(16px);mix-blend-mode:screen;opacity:calc(.06 + var(--lum)*.72)}
+.rim{position:absolute;inset:0;border-radius:999px;background:radial-gradient(circle at 71% 77%,rgba(255,230,180,.5),transparent 40%);mix-blend-mode:screen;opacity:calc(.22 + var(--lum)*.34)}
+.spec{position:absolute;top:15%;left:22%;width:30%;height:20%;border-radius:999px;background:radial-gradient(ellipse,rgba(255,255,255,.55),transparent 70%);filter:blur(6px)}
+@keyframes breath{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes halo-breath{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+.breathing .stone{animation:breath var(--duration-breath) var(--ease-breath) infinite}
+.breathing .aura-near{animation:halo-breath var(--duration-breath) var(--ease-breath) infinite}
+.breathing .aura-far{animation:halo-breath var(--duration-breath) var(--ease-breath) infinite}
+/* layers are promoted only for the ~5s they are driven, not for the whole session */
+.speaking .l-cast,.speaking .l-bloom,.speaking .stone-sub,.speaking .rim{will-change:opacity}.speaking .l-contact,.speaking .stone-wrap{will-change:transform}.speaking .aura-far,.speaking .aura-near{will-change:transform,opacity}
+
+/* ── copy ── */
+.top{min-height:82px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:11px;z-index:1}
+.eyebrow-d{font-family:var(--font-body);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--on-dark-muted);margin:0;opacity:0;transition:opacity 1200ms var(--ease-essence)}
+.lede{font-family:var(--font-display);font-style:italic;font-size:18px;line-height:1.45;color:var(--on-dark-recede);text-align:center;margin:0;display:flex;flex-direction:column}
+.lede span{opacity:0;transform:translateY(6px);transition:opacity 1300ms var(--ease-essence),transform 1300ms var(--ease-page)}
+.lede span.show{opacity:1;transform:none}
+.bottom{min-height:368px;container-type:inline-size;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;z-index:1}
+.spoken-wrap{opacity:0;transition:opacity 1200ms var(--ease-essence)}
+/* the measure is px, not ch: a font-relative measure rags identically at every size, so
+   the fit step below could never buy a line back. 255px is the width 15ch produced at the
+   tuned size. */
+.spoken{font-family:var(--font-display);font-size:clamp(26px,10.30cqw,var(--text-display));font-weight:400;line-height:1.34;text-align:center;text-wrap:pretty;margin:0;max-width:255px;letter-spacing:-.015em}
+.spoken .w{display:inline-block;opacity:.13;color:#F7F1E4;filter:blur(4px);transform:translateY(4px);transition:opacity 620ms var(--ease-essence),filter 620ms var(--ease-essence),transform 620ms var(--ease-page),color 900ms var(--ease-essence),text-shadow 900ms var(--ease-essence)}
+.spoken .w.lit{opacity:1;filter:blur(0);transform:none;color:#FFF6E4;text-shadow:0 0 26px rgba(255,230,180,.42)}
+/* per-word decay: each word settles to its resting colour on its own beat, so speech
+   leaves a trace instead of the line changing state in one global switch. */
+.spoken .w.lit.rest{color:#EFE7D6;text-shadow:0 0 0 rgba(255,230,180,0);opacity:.9}
+.after{margin-top:26px;text-align:center}
+.after>*{opacity:0;transform:translateY(10px);transition:opacity 1200ms var(--ease-essence),transform 1200ms var(--ease-page)}
+.after h2{font-family:var(--font-display);font-size:var(--text-ceremonial);font-weight:600;color:var(--on-dark-strong);margin:0;letter-spacing:-.01em}
+.after .aside{font-family:var(--font-display);font-style:italic;font-size:18px;line-height:1.5;color:var(--on-dark-muted);margin:7px 0 0}
+.show{opacity:1;transform:none}
+
+/* ── actions ── */
+.actions{align-self:stretch;display:flex;flex-direction:column;gap:6px;align-items:center;padding-top:24px;min-height:112px;z-index:1}
+.btn{font-family:var(--font-body);font-size:17px;font-weight:600;letter-spacing:.005em;width:100%;max-width:330px;min-height:52px;padding:0 32px;border-radius:10px;border:0;cursor:pointer;background:#F2E6CE;color:#1B1610;box-shadow:0 10px 30px rgba(255,230,180,.12);transition:background var(--duration-small) var(--ease-essence),transform var(--duration-small) var(--ease-essence),box-shadow var(--duration-small) var(--ease-essence)}
+.btn:hover{background:#FBF3E2;box-shadow:0 12px 34px rgba(255,230,180,.2)}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible,.btn--quiet:focus-visible{outline:2px solid var(--focus-dark);outline-offset:3px}
+.btn--quiet{background:transparent;box-shadow:none;color:var(--on-dark-body);font-weight:500;font-size:15px;min-height:44px;padding:0 12px;width:auto}
+.btn--quiet:hover{background:transparent;box-shadow:none;color:rgba(247,241,228,.85)}
+.btn--quiet[aria-disabled="true"] .replay{opacity:.38;transition:opacity 200ms var(--ease-essence)}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* the reveal is an animation, not a transition: a 1400ms transform transition on the button
+   would also govern :active, and the press has to stay tactile at --duration-small. */
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fade{opacity:0;pointer-events:none;transform:translateY(8px)}
+.fade.in{opacity:1;pointer-events:auto;transform:none;animation:rise 1400ms var(--ease-page)}
+.replay{display:flex;align-items:center;gap:7px}
+.replay svg{width:14px;height:14px;flex:none}
+
+/* ═══ NOTES ═══ */
+.notes{background:var(--color-bg-neutral);border-radius:20px;padding:36px 40px;min-width:0}
+@media(max-width:900px){.notes{padding:26px 22px}}
+.notes h1{font-family:var(--font-display);font-size:30px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em;line-height:1.25}
+.eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-tertiary);display:block;margin-bottom:10px}
+.notes>p.sub{font-size:14px;line-height:1.65;color:var(--color-text-secondary);margin:0 0 26px;max-width:62ch}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;padding:16px;background:var(--color-surface-card);border-radius:14px;margin-bottom:12px}
+.ctl button{font-family:var(--font-body);font-size:13px;font-weight:600;min-height:38px;padding:0 14px;border-radius:8px;border:1px solid rgba(0,0,0,.08);background:#fff;color:var(--color-text-primary);cursor:pointer;transition:all 160ms var(--ease-essence)}
+.ctl button:hover{border-color:var(--color-mineral)}
+.ctl button.on{background:var(--color-mineral);border-color:var(--color-mineral);color:#fff}
+.hint{font-size:12px;line-height:1.6;color:var(--color-text-tertiary);margin:0 0 30px}
+.hint code{font-family:var(--font-mono);font-size:11px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:4px}
+h3.sec{font-size:11px;font-family:var(--font-body);font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-tertiary);border-top:1px solid rgba(0,0,0,.08);padding-top:14px;margin:0 0 18px}
+.q{margin-bottom:22px;max-width:66ch}
+/* direct child only: the leading title. An unscoped `.q b` also caught every
+   inline <b> inside a <p> and broke it onto its own line. */
+.q>b{display:block;font-size:14px;font-weight:600;margin-bottom:5px;color:var(--color-text-primary)}
+.q p b{color:var(--color-text-primary);font-weight:600}
+.q p{font-size:13.5px;line-height:1.68;color:var(--color-text-secondary);margin:0}
+.q p+p{margin-top:7px}
+.q code{font-family:var(--font-mono);font-size:11.5px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:4px}
+.tag{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;padding:3px 8px;border-radius:999px;background:var(--color-surface-warm);color:var(--color-text-secondary);margin-left:8px;vertical-align:2px}
+.tag--owner{background:#E9DCC4;color:#7A5B1E}
+.tag--closed{background:#DCE7E1;color:#3C6355}
+table.t{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:28px}
+table.t th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--color-text-tertiary);font-weight:600;padding:0 12px 8px 0;border-bottom:1px solid rgba(0,0,0,.08)}
+table.t td{padding:9px 12px 9px 0;border-bottom:1px solid rgba(0,0,0,.05);color:var(--color-text-secondary);line-height:1.55;vertical-align:top}
+table.t td:first-child{font-family:var(--font-mono);font-size:11.5px;color:var(--color-text-primary);white-space:nowrap}
+table.t td b{color:var(--color-text-primary);font-weight:600}
+@media(prefers-reduced-motion:reduce){.breathing .stone,.breathing .aura-near,.breathing .aura-far{animation:none}}
+.rm .stone,.rm .aura-near,.rm .aura-far{animation:none!important}
+.rm .stone-wrap{transform:none}
+.rm .spoken .w{filter:none!important;transform:none!important;transition-duration:var(--duration-micro)!important}
+.rm .lede span,.rm .after>*,.rm .eyebrow-d,.rm .spoken-wrap{transition-duration:var(--duration-micro)!important}
+.rm .fade.in{animation-duration:var(--duration-micro)}
+/* reduced motion restricts movement, not luminance: --lum still steps per word, the layers
+   cross-fade at --duration-micro, and nothing scales (--sus held at 0). */
+.rm .l-cast,.rm .l-bloom,.rm .stone-sub,.rm .rim,.rm .aura-far,.rm .aura-near{transition:opacity var(--duration-micro) var(--ease-essence)}
+.rm .aura-far,.rm .aura-near{transform:none!important}
+.rm .l-contact{transform:translate(-50%,-42%)!important}
+.rm .lede span{transform:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="phone" id="phone">
+  <div class="screen" id="screen">
+    <div class="atmos" aria-hidden="true"><div class="l-base"></div><div class="l-cast"></div><div class="l-vig"></div><div class="l-grain"></div></div>
+    <div class="top"><p class="eyebrow-d" id="eyebrow">Your voice</p><p class="lede"><span id="lede1">Twenty-five moments.</span><span id="lede2">This is what they became.</span></p></div>
+    <div class="stage"><div class="stone-wrap breathing" id="stoneWrap" role="img" aria-label="Your voice"><div class="l-bloom"></div><div class="l-contact"></div><div class="aura-far"></div><div class="aura-near"></div><div class="stone" id="stone"><div class="stone-sub"></div><div class="rim"></div><div class="spec"></div></div></div></div>
+    <div class="bottom">
+      <div class="spoken-wrap" id="spokenWrap"><p class="spoken" id="spoken" aria-hidden="true"></p></div><p class="sr-only" id="srLine" role="status" aria-live="polite"></p>
+      <div class="after" id="after" aria-hidden="true"><h2 id="aft1">That's you.</h2><p class="aside" id="aft2">It kept the pauses.</p></div>
+      <div class="actions">
+        <button class="btn fade" id="cta">Create your first message</button>
+        <button class="btn btn--quiet fade" id="replay"><span class="replay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg>Hear it again</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <span class="eyebrow">Essence · Step 5</span>
+  <h1>First Playback</h1>
+  <p class="sub">The fifth and final phase of the First Breath ceremony. The stone never leaves the screen; it stops breathing and starts speaking. Answers to §4 are below the prototype.</p>
+
+  <div class="ctl">
+    <button data-run="happy" class="on">Happy path</button>
+    <button data-run="rm">Reduced motion</button>
+  </div>
+  <div class="ctl">
+    <button data-line="0" class="on">Line A · measured</button>
+    <button data-line="1">Line B · “Whatever happens…”</button>
+    <button data-line="2">Line C · “I'm still here…”</button>
+  </div>
+  <p class="hint">Runs at real timings. The prototype speaks no synthetic audio — a fake voice would mislead the review — so the stone's amplitude and the word reveal are driven by the measured cadence of the real line (3.6&nbsp;s). Wire the <code>generateSpeech()</code> buffer into an <code>AnalyserNode</code> and feed RMS to <code>setLum()</code>; every timing survives unchanged.</p>
+
+  <h3 class="sec">Timing</h3>
+  <table class="t"><thead><tr><th>t</th><th>Beat</th></tr></thead><tbody>
+    <tr><td>0 ms</td><td><b>Phase enters.</b> Crossfade from <code>detail</code>. Stone continues its 3 s breath — no re-entrance, no cut.</td></tr>
+    <tr><td>+400</td><td>Eyebrow <b>YOUR VOICE</b>.</td></tr>
+    <tr><td>+900 / +1500</td><td>Lede staggers in two lines, italic Spectral: <b>"Twenty-five moments." / "This is what they became."</b> Names the investment before the proof arrives.</td></tr>
+    <tr><td>+2300</td><td>Breath stops on an exhale. Stone holds for 600 ms — the silence before speech.</td></tr>
+    <tr><td>+2900</td><td><b>Audio plays.</b> Amplitude drives seven layers at once. Words resolve out of blur in sync, already legible at 13% before they're spoken.</td></tr>
+    <tr><td>+6500</td><td>Line ends. Luminance decays over 1.4 s; the stone eases back into the 3 s breath.</td></tr>
+    <tr><td>+9000</td><td><b>Hold the peak — 2.5 s of nothing.</b> Then <b>"That's you."</b>, and the aside at +400.</td></tr>
+    <tr><td>+10700</td><td>CTA rises 8 px over 1.4 s. Nothing else moves.</td></tr>
+    <tr><td>+11900</td><td><b>"Hear it again"</b> — 1.2 s behind the CTA, so the committed action arrives alone. The screen comes to rest.</td></tr>
+  </tbody></table>
+
+  <h3 class="sec">Design-system adherence</h3>
+  <table class="t"><thead><tr><th>Token / spec</th><th>Source: ds/breath-stone.html</th></tr></thead><tbody>
+    <tr><td>body gradient</td><td>Verbatim: <code>circle at 30% 28%, #FFFBF1 0%, #F0E5CE 25%, #C9B68B 55%, #6E5B3A 85%, #2A2216 100%</code></td></tr>
+    <tr><td>box-shadow</td><td>Verbatim, all three. Held <b>static</b> — driving box-shadow per frame repaints; the aura layers carry the glow on opacity/transform instead.</td></tr>
+    <tr><td>highlight</td><td>Verbatim: 30%×20% at top 15% / left 22%, <code>rgba(255,255,255,.55)</code>, <code>blur(6px)</code></td></tr>
+    <tr><td>halo</td><td><code>--stone-halo: rgba(255,230,180,.18)</code>, inset -15%, transparent at 60%. Every warm value on this screen now derives from it — cast, floor, subsurface, rim, word glow, button shadow.</td></tr>
+    <tr><td>breath</td><td>scale 1 → 1.06, halo .45 → 1 at scale 1.12, <code>--duration-breath</code> 3000 ms, <code>--ease-breath</code></td></tr>
+    <tr><td>dark stage</td><td><code>#1E1B18</code> — the atmosphere ramp is anchored on it, not a darker invention</td></tr>
+    <tr><td>size</td><td><b>220 px</b>, the canonical default. See the size conflict below.</td></tr>
+    <tr><td>"no secondary ornament"</td><td><b>Removed</b> the secondary catchlight that violated it.</td></tr>
+  </tbody></table>
+
+  <div class="q"><b>Two documented extensions</b>
+    <p><b><code>.stone-sub</code> (subsurface)</b> and <b><code>.aura-far</code> (two-speed halo)</b> are not in the card. Both are proposed additions for a <code>speaking</code> state — added to <code>ds/breath-stone.html</code> in this pass so the system carries them rather than this prototype owning them privately.</p></div>
+
+  <div class="q"><b>Conflict raised here, closed in thread 4 <span class="tag tag--closed">ruled</span></b>
+    <p>This pass raised it: the card specified a <b>320 px first-breath hero</b> and <b>&ge;48 px clearance on every side</b>, and on a 390 px viewport those are mutually exclusive &mdash; 390 &minus; 96 = 294 px maximum. Every phase of the ceremony carried it, not just this one.</p>
+    <p><b>The ruling went the way this prototype did: the builds were right and the docs were wrong.</b> Clearance is now viewport-conditional &mdash; <code>&ge;48 px</code> below 420 px width, <code>&ge;120 px</code> at 420 px and above &mdash; and the hero is fluid: <code>--stone-size-hero: min(320px, 56vw)</code>. That yields a <b>218 px</b> stone with <b>86 px</b> clearance at 390 px, and the full 320 px hero from 560 px up. <b>The 220 px default used here needs no change.</b></p>
+    <p>Ruling: <code>ds/breath-stone.html</code> &sect; Clearance &amp; placement. Tokens: <code>--stone-size-hero</code>, <code>--stone-clearance</code>, <code>--stone-clearance-narrow</code> in <code>globals.css @theme</code>. Retired &mdash; not an open question.</p></div>
+
+  <h3 class="sec">Depth stack — build to this order</h3>
+  <table class="t"><thead><tr><th>Layer</th><th>Role</th></tr></thead><tbody>
+    <tr><td>l-base</td><td>Warm-ink radial ground. Static.</td></tr>
+    <tr><td>l-cast</td><td><b>The stone lighting its room.</b> Screen-blended warm wash, opacity tracks <code>--lum</code>. This is the layer that makes the object feel real.</td></tr>
+    <tr><td>l-bloom</td><td><b>Ambient bloom</b> below the stone — the light it throws into the air, not a ground plane (no floor exists on this screen). 110 px, gradient closed at 52%, so it dies above the first line's cap height. Child of <code>.stone-wrap</code> so it tracks the object. Tracks <code>--lum</code>.</td></tr>
+    <tr><td>l-contact</td><td>Contact shadow at the stone's base. Widens slightly as the stone brightens — it's closer to its floor when louder.</td></tr>
+    <tr><td>l-vig</td><td>Vignette. Static. Holds the eye at 40% height.</td></tr>
+    <tr><td>l-grain</td><td>fractalNoise at 5.5% overlay. Kills the CSS-gradient banding that makes dark screens read cheap.</td></tr>
+    <tr><td>aura-far / near</td><td>Two-speed halo, both on <code>--stone-halo</code>. Near tracks amplitude, far lags — the light leaves the stone slower than the sound does.</td></tr>
+    <tr><td>stone-sub</td><td><b>Subsurface.</b> Blurred warm core inside the body, screen-blended. The voice is <i>in</i> the stone, not on it.</td></tr>
+    <tr><td>rim / spec</td><td>Lower-right bounce and the card's specular. Separate from the body gradient so they can respond to amplitude independently.</td></tr>
+  </tbody></table>
+
+  <h3 class="sec">Motion — speech is not breath</h3>
+  <div class="q"><p>The idle breath is 5.5% scale, 3 s, symmetric. If speech is also a scale pulse of similar magnitude, the most important state change in the beat is invisible. Speech differs in <b>character</b>:</p>
+  <p><b>Two-envelope follower.</b> A fast follower (attack 0.35, release 0.10) drives <code>--lum</code>: syllable articulation. A slow follower (0.018) drives <code>--sus</code>: a sustained 4.5% swell across the whole utterance that decays after. Breath oscillates; speech <i>rises, articulates, and settles</i>.</p>
+  <p>Everything animated is <code>opacity</code> or <code>transform</code>, driven by two CSS variables from one <code>requestAnimationFrame</code> loop. No layout, no paint on the critical path.</p>
+  <p><b>Measured, not assumed.</b> 599 frames unthrottled: p95 <b>13.6 ms</b>, one frame over 20 ms. Under a synthetic 6 ms-per-frame main-thread tax: p95 <b>16.7 ms</b>, <b>zero</b> frames over 20 ms. The choreography is compositor-bound, as designed, so the exposure was never main-thread cost — it was GPU layer memory. <code>will-change</code> was declared statically on nine elements and is now applied only while <code>.speaking</code> is set. <code>.l-grain</code> dropped from <code>inset:-50%</code> (1.32 M px of <code>overlay</code>-blended pixels, on a layer that never animates) to <code>inset:0</code> (329 k px): the grain alone had been costing more than all nine promoted layers combined. Still owed: a real device at 4× CPU throttle.</p></div>
+
+  <h3 class="sec">Copy — Silent register, Elevated staging</h3>
+  <div class="q"><p>The Copy Guide puts first playback in <b>Silent</b>, and its own model line for this beat — <i>"That's you. Clear, steady, familiar."</i> — carries no ceremony in the language at all. The weight is in the dark, the stone, and the pause. If the words also announce the moment, they compete and the writing loses. <b>No Elevated moment is spent here.</b></p>
+  <p><b>The lede names the 25 prompts.</b> "Moments" is the noun voice training already uses (<code>MOMENT 5 OF 25</code>), so it lands as continuity, not a stat. This is the screen paying off the investment rather than assuming the user remembers it.</p>
+  <p><b>Cut entirely:</b> the reassurance line ("nothing was sent / nothing was kept"). "Kept" reads as <i>my recording wasn't saved</i> to someone who just paid to have it kept, and every rewrite of it stayed abstract — sent where, to whom? The screen now ends on recognition. <b>§2's demonstration requirement is carried by the CTA instead:</b> "Create your <i>first</i> message" states that none exists yet, without narrating an absence.</p>
+  <p><b>The aside is observational.</b> "It kept the pauses." — the guide's own model line ends <i>"Clear, steady, familiar,"</i> three evaluative adjectives; plenty of 60-year-olds hear <i>thin</i>, <i>old</i>, <i>not me</i> and are contradicted at the highest-stakes second of the flow. The slot also hosts three non-happy notices (15 px Inter), so the aside stays 18 px Spectral italic: the family is what tells the moment apart from the product speaking.</p>
+  <p><b>CTA:</b> "Create your first message" — house verb from the guide's bank, and "your first" carries the firstness. No pacing microcopy under it: the CTA arriving alone, with nothing else moving, is the no-rush signal.</p></div>
+
+  <h3 class="sec">Thread 3 — craft pass</h3>
+
+  <div class="q"><b>Hard gate: the layout no longer belongs to one sentence</b>
+    <p><code>cadence(line)</code> returns offsets <b>as data</b> — measured for the canonical line, derived on the follower's own model (<code>max(190, len·64) + 70</code>) for anything else. <code>LINE_END</code> is computed, not literal. Switch lines above; all three play, and both alternates settle inside the reserved block.</p>
+    <p>Two substitutions on the brief's prescription. <b>Container units, not <code>vw</code></b>: the phone is a 390 px frame inside a desktop page, so <code>8.7vw</code> would size the line to the browser. <code>.bottom</code> is a query container and the line is <code>clamp(26px, 10.3cqw, 34px)</code> — identical arithmetic on a real 390 px viewport. <b>The measure moved from <code>15ch</code> to <code>255px</code></b> (the width 15ch produced at the tuned size), because a font-relative measure rags identically at every size — shrinking the type could never buy a line back. "Whatever happens," alone overflowed 15ch and forced one word per line, five lines deep.</p>
+    <p><code>.bottom</code> raised 334 → <b>368 px</b>. Screen total 796 of 844.</p></div>
+
+  <div class="q"><b>Rulings owed to thread 2</b>
+    <p><b>The <code>.stage</code> crush guard: accepted as written.</b> <code>min-height:246px</code> on <code>.stage</code>, <code>flex:none</code> on <code>.stone-wrap</code>. The failure mode is real and it fails loudly instead of overlapping the lede.</p>
+    <p><b>The CTA: confirmed, not reverted.</b> 17 px, <code>width:100%</code>, <code>max-width:330px</code>, <code>scale(.98)</code>, 400 ms. Full width is right here — the dark stage gives the button no container to sit inside, so width is the only thing that reads as authority.</p>
+    <p><b>The aside: "It kept the pauses." confirmed.</b> Observational, and it names something the user can verify against what they just heard rather than telling them how their voice sounds. Its size snapped 17 → <b>18 px</b> Spectral italic; family and italic are untouched, so the Inter/Spectral distinction that separates thread 2's notices from the aside survives.</p></div>
+
+  <div class="q"><b>The other six</b>
+    <p><b>1 · Eyebrow</b> at <code>--text-caption</code> — 12 px, <code>.12em</code>, <code>rgba(247,241,228,.58)</code>. AA against the lit ground.</p>
+    <p><b>2 · The warm haze was a floor with no floor.</b> Renamed <code>.l-bloom</code> and re-scoped as ambient bloom: 110 px, gradient closed at 52%. It no longer reaches the spoken line, so the line brightens with the words instead of with the room.</p>
+    <p><b>5 · Focus</b> — <code>outline:2px solid #F2E6CE; outline-offset:3px</code> on both buttons. Mineral appears nowhere on this screen and dies against warm ink; the honey ring is the CTA's own fill.</p>
+    <p><b>6 · Reduced motion is still lit by the voice.</b> <code>--lum</code> steps per word (coarse, derived from word length), the layers cross-fade at <code>--duration-micro</code>, and <code>--sus</code> is held at 0 so nothing scales. No more bulb held at 50% for 3.6 s. The three <code>220ms!important</code> overrides are now <code>--duration-micro</code>.</p>
+    <p><b>7 · Type snapped:</b> <code>.btn</code> 17, <code>.btn--quiet</code> 15 at <code>rgba(...,.62)</code>, eyebrow 12, aside 18. <code>.after p.re</code> deleted. <b>34 px spoken and 23 px "That's you." held</b> — the scale has no ceremonial display sizes and inventing them locally is worse than promoting them.</p>
+    <p><b>8 · The CTA arrives alone,</b> replay 1.2 s behind it. The global <code>.done</code> flip is gone: each word eases to its resting colour 600 ms after its own reveal, so the line cools in the order it was spoken. Separator kept outside the span.</p></div>
+
+  <div class="q"><b>Handed to thread 4 <span class="tag tag--owner">owner call</span></b>
+    <p><b>Promote two ceremonial type sizes:</b> <code>--text-display</code> 34 px Spectral 400 and <code>--text-ceremonial</code> 23 px Spectral 600. Both survived the pass; both are currently local literals.</p>
+    <p><b>Dark focus ring:</b> <code>#F2E6CE</code> at 2 px / 3 px offset. Mineral is unusable on ink.</p>
+    <p><b>Full-width primary on a dark ceremonial stage: yes</b> — canon holds, no amendment needed.</p>
+    <p><b>Warm values outside <code>--stone-halo</code>:</b> only the focus ring, and only because it must not track luminance. Everything else still derives from the halo.</p>
+    <p><b>Ambient bloom</b> wants to be a named atmosphere layer in the system, not a per-screen decision — it is the second screen to need "light in the air below the stone" with no floor to pool on.</p></div>
+
+  <h3 class="sec">§4 — answered</h3>
+
+  <div class="q"><b>4.1 · A fifth phase of First Breath <span class="tag">owner</span></b>
+    <p><code>forming → crystallize → preserved → detail → playback</code>. The stone is the voice; making the user watch it disappear and reappear on a new URL breaks exactly the continuity this beat exists to prove. No route, no URL lock.</p>
+    <p>Un-resumability is a real cost. Mitigation: choose 4.3(c) caching, so a user who closes the tab isn't losing the artifact — only this framing of it. <code>/dev/first-playback</code> renders the phase in isolation regardless.</p></div>
+
+  <div class="q"><b>4.2 · "If you're hearing this, I found a way to stay." <span class="tag tag--owner">owner call</span></b>
+    <p>Continuity-framed. Neutral to any recipient, creates no Message, and it's the sentence that survives being played aloud to family in the room — it's addressed to no one and therefore to everyone.</p>
+    <p>Held to 3.6 s spoken. Two alternates in the same register if it tests soft: <i>"Whatever happens, this much of me stays."</i> / <i>"I'm still here, in the way I could manage."</i></p></div>
+
+  <div class="q"><b>4.3 · Rendered during processing, cached on the profile <span class="tag">owner</span></b>
+    <p>Fire on <code>/app/voice/processing</code> the moment <code>vendor_voice_id</code> lands, keyed idempotently on the profile id so a refresh or double-tap can't bill twice. Zero wait at the peak. Cost is one render per activated user.</p>
+    <p>Persist it — <code>sample_audio_path</code>, <code>sample_duration_ms</code> nullable on <code>voice_profiles</code> — so this is also 4.3(c) and 4.5 is answered for free later.</p></div>
+
+  <div class="q"><b>4.4 · Autoplay, with the silent-phone state designed <span class="tag">owner</span></b>
+    <p>Autoplay, because a play button turns a gift into a task. The ceremony has had gestures, so the policy permits it — <b>verify on a real iPhone before ship.</b></p>
+    <p>The real failure mode isn't autoplay being blocked, it's the phone being on silent: iOS reports the audio as playing while the user hears nothing. Both look identical to the user and want one shared state — <b>deferred to a later pass.</b> The always-visible line means even an undetected silent phone still delivers the beat.</p></div>
+
+  <div class="q"><b>4.6 · Skip is offered, late <span class="tag">deferred</span></b>
+    <p>"Occur" is satisfied by being offered — never trap someone in a modal to satisfy a spec line. The skip renders only after the line has played and settled, so it's an exit rather than a dismissal. <b>Not prototyped in this pass</b> — happy path first.</p></div>
+
+  <div class="q"><b>4.7 · Failure names the failure, protects the voice <span class="tag">deferred</span></b>
+    <p>Direction agreed: name what broke, protect the voice ("your voice is preserved and safe — this was only the playback failing"), one retry, always a path onward. <b>Not prototyped in this pass.</b></p></div>
+
+  <div class="q"><b>4.8 · No waveform — the stone is the waveform <span class="tag">owner</span></b>
+    <p>A separate waveform would be a fourth playback dialect and the most expensive element on a throttled phone. The stone already breathes with the user's voice while recording; here it breathes with their voice played back. Same grammar, closed loop.</p></div>
+
+  <div class="q"><b>The line is always on screen <span class="tag tag--owner">owner call</span></b>
+    <p>Not a caption, not a fallback — typeset at 34 px as the primary visual of the beat, at 13% opacity and 4 px blur before it's spoken, resolving word by word as it plays. It's what a screen reader announces, it's the whole beat for a deaf user, and it's the only thing that makes a muted phone survivable. One sentence closes three states.</p>
+    <p><b>Now implemented, not only argued.</b> The word spans are <code>aria-hidden</code> decoration; a <code>role="status" aria-live="polite"</code> region receives the full line at playback and the payoff line at its own beat, so a screen reader gets the ceremony in order and in time. The stone carries <code>role="img"</code>. Focus styling is deliberately held for the craft pass.</p></div>
+
+  <div class="q"><b>"Vault" appears zero times</b>
+    <p>Confirmed across every state. The voice is "your voice" throughout — no "clone", "model", or "sample" on screen.</p></div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const screenEl=$('screen'),wrap=$('stoneWrap'),spoken=$('spoken'),phone=$('phone');
+/* Offsets arrive as data, not from a stopwatch. The canonical line carries its measured
+   cadence; any other line derives offsets on the same model the follower already assumes.
+   Production replaces both paths with render-pipeline offsets. */
+const LINES=["If you're hearing this, I found a way to stay.","Whatever happens, this much of me stays.","I'm still here, in the way I could manage."];
+const MEASURED={[LINES[0]]:[0,210,520,980,1620,1870,2240,2380,2690,2880]};
+function cadence(line){
+  const ws=line.split(' '),m=MEASURED[line];
+  if(m)return ws.map((w,i)=>[w,m[i]]);
+  let t=0;return ws.map(w=>{const e=[w,t];t+=Math.max(190,w.length*64)+70;return e});
+}
+const REST=600;   // a word settles to its resting colour 600ms after its own reveal
+let LINE_TEXT=LINES[0],WORDS=cadence(LINE_TEXT),LINE_END=0;
+let timers=[],raf=null,running=false;
+
+function lineEnd(){const l=WORDS[WORDS.length-1];return l[1]+Math.max(190,l[0].length*64)+400}
+/* The display line is fitted, not hand-measured: step down the ceremonial size until the
+   line rags into at most three lines inside its reserved block. */
+function fit(){
+  for(const fs of [34,32,30,28,26]){
+    spoken.style.fontSize=`clamp(26px,${(fs/3.3).toFixed(2)}cqw,${fs}px)`;
+    if(spoken.offsetHeight<=Math.round(fs*1.34*3)+2)break;
+  }
+}
+function buildLine(i){
+  LINE_TEXT=LINES[i];WORDS=cadence(LINE_TEXT);LINE_END=lineEnd();
+  /* the separator stays OUTSIDE the span — a space inside an inline-block collapses to 0 */
+  spoken.innerHTML=WORDS.map((w,k)=>`<span class="w" id="w${k}">${w[0]}</span>`).join(' ');
+  fit();
+}
+buildLine(0);
+
+function at(ms,fn){timers.push(setTimeout(fn,ms))}
+function clearAll(){timers.forEach(clearTimeout);timers=[];if(raf)cancelAnimationFrame(raf);raf=null;running=false}
+function setL(l,s){screenEl.style.setProperty('--lum',l.toFixed(4));screenEl.style.setProperty('--sus',s.toFixed(4))}
+function reset(){
+  clearAll();phone.classList.remove('rm');
+  ['eyebrow','lede1','lede2','spokenWrap','aft1','aft2'].forEach(i=>$(i).classList.remove('show'));
+  ['cta','replay'].forEach(i=>$(i).classList.remove('in'));
+  WORDS.forEach((_,i)=>$('w'+i).classList.remove('lit','rest'));
+  wrap.classList.add('breathing');screenEl.classList.remove('speaking');
+  $('replay').removeAttribute('aria-disabled');$('srLine').textContent='';setL(0,0);
+}
+/* target envelope from the line's own cadence — replaced by AnalyserNode RMS in production */
+function target(t){
+  if(t<0||t>LINE_END)return 0;
+  let a=0;
+  for(const [w,s] of WORDS){
+    const dur=Math.max(190,w.length*64),d=t-s;
+    if(d>-40&&d<dur){const p=Math.max(0,Math.min(1,(d+40)/(dur+40)));a=Math.max(a,Math.sin(p*Math.PI)*(.55+.45*Math.min(1,w.length/6)))}
+  }
+  return a*Math.min(1,(LINE_END-t)/300)*Math.min(1,t/100);
+}
+function announce(s){const el=$('srLine');el.textContent='';setTimeout(()=>{el.textContent=s},60)}
+function endSpeech(){running=false;screenEl.classList.remove('speaking');wrap.classList.add('breathing');$('replay').removeAttribute('aria-disabled')}
+/* leaving mid-utterance resolves to the settled beat. Resuming mid-word is worse than
+   arriving at the end with "Hear it again" available. */
+function settle(){
+  clearAll();
+  ['eyebrow','lede1','lede2','spokenWrap','aft1','aft2'].forEach(i=>$(i).classList.add('show'));
+  WORDS.forEach((_,i)=>$('w'+i).classList.add('lit','rest'));
+  setL(0,0);
+  ['cta','replay'].forEach(i=>$(i).classList.add('in'));
+  announce("That's you. It kept the pauses.");
+  endSpeech();
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)settle()});
+function speak(reduced){
+  running=true;
+  wrap.classList.remove('breathing');
+  screenEl.classList.add('speaking');
+  $('replay').setAttribute('aria-disabled','true');
+  announce(LINE_TEXT);
+  WORDS.forEach((w,i)=>{at(w[1],()=>$('w'+i).classList.add('lit'));at(w[1]+REST,()=>$('w'+i).classList.add('rest'))});
+  if(reduced){
+    /* coarse per-word luminance steps, no scale: still lit by the voice, never moving */
+    WORDS.forEach(w=>at(w[1],()=>setL(Math.round((.3+.5*Math.min(1,w[0].length/7))*10)/10,0)));
+    at(LINE_END,()=>setL(.2,0));
+    at(LINE_END+400,()=>{setL(0,0);endSpeech()});
+    return;
+  }
+  /* the clock accumulates clamped deltas. An absolute performance.now() baseline keeps
+     advancing while rAF is paused, so the utterance snapped forward on return. */
+  let lum=0,sus=0,t=0,prev=null;
+  const loop=now=>{
+    t+=prev===null?16:Math.min(50,now-prev);prev=now;
+    if(t>LINE_END+1600){setL(0,0);endSpeech();return}
+    const tgt=target(t);
+    lum+=(tgt-lum)*(tgt>lum?.35:.10);           // fast follower — articulation
+    sus+=((t<LINE_END?Math.min(1,t/900):0)-sus)*.018; // slow follower — sustain
+    setL(lum,sus);
+    raf=requestAnimationFrame(loop);
+  };
+  raf=requestAnimationFrame(loop);
+}
+function tail(base){
+  at(base+LINE_END+2500,()=>{$('aft1').classList.add('show');announce("That's you. It kept the pauses.")});
+  at(base+LINE_END+2900,()=>$('aft2').classList.add('show'));
+  at(base+LINE_END+4200,()=>$('cta').classList.add('in'));
+  at(base+LINE_END+5400,()=>$('replay').classList.add('in'));   // the CTA arrives alone
+}
+function runHappy(reduced){
+  reset();
+  if(reduced)phone.classList.add('rm');
+  const PLAY=reduced?900:2900;
+  at(reduced?100:400,()=>$('eyebrow').classList.add('show'));
+  at(reduced?200:900,()=>$('lede1').classList.add('show'));
+  at(reduced?300:1500,()=>$('lede2').classList.add('show'));
+  at(PLAY-600,()=>{if(!reduced)wrap.classList.remove('breathing')});
+  at(PLAY-400,()=>$('spokenWrap').classList.add('show'));
+  at(PLAY,()=>speak(reduced));
+  tail(PLAY);
+}
+const RUNS={happy:()=>runHappy(false),rm:()=>runHappy(true)};
+const isRM=()=>phone.classList.contains('rm');
+document.querySelectorAll('.ctl button[data-run]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.ctl button[data-run]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');RUNS[b.dataset.run]();
+}));
+document.querySelectorAll('.ctl button[data-line]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.ctl button[data-line]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');const rm=isRM();buildLine(+b.dataset.line);runHappy(rm);
+}));
+$('replay').addEventListener('click',()=>{
+  if(running)return;
+  WORDS.forEach((_,i)=>$('w'+i).classList.remove('lit','rest'));
+  speak(isRM());
+});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);  // fit against the real face, not the fallback
+runHappy(matchMedia('(prefers-reduced-motion: reduce)').matches);
+</script>
+</body>
+</html>
