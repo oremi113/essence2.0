@@ -56,12 +56,86 @@
   --shadow-mineral:       0 4px 14px rgba(110, 80, 40, 0.20); /* primary-action lift — warm-keyed for the app's warm grounds (re-keyed 2026-06-12, FOLLOW_UPS #40: the old teal rgba(74,107,126,.3) predated the live --color-mineral and cast bluer than the buttons it sat under) */
   --shadow-terracotta:    0 4px 12px rgba(156, 53, 40, 0.3);  /* anchored on --color-status-error — recording button (terracotta state) */
 
+  /* ─── DARK CEREMONIAL STAGE ───────────────────────────
+     Essence has no dark mode. It has one dark surface, used
+     where the product goes quiet and a single object carries
+     the beat: the crystallize / preserved / detail / playback
+     phases of First Breath.
+
+     Promoted verbatim from the Step 5 First Playback build via
+     the design system's ds/dark-stage.html card — measured and
+     argued-over values, not redrawn. Mirror of that card lives
+     at prototypes/ds/dark-stage.html.
+
+     The six atmosphere layers (l-base … l-grain) keep their
+     literals inside the card's spec: they are a composition,
+     not a palette. Tokenising `opacity: .32 + lum × .55` would
+     name the arithmetic without making it reusable. */
+
+  /* Ground */
+  --color-ink:       #1E1B18;  /* the one dark surface */
+  --color-ink-lift:  #2A2621;  /* l-base ramp — warm centre */
+  --color-ink-deep:  #121110;  /* l-base ramp — cold corner */
+
+  /* Cream on ink — hierarchy is opacity and family, never a second hue.
+     One colour at four amounts; the whole ramp clears AA on the unlit
+     ground and stays clear when l-cast brightens it. If a design needs
+     a fifth level, it has too much on the stage — cut an element
+     instead of inventing an opacity. */
+  --color-on-dark:    #F7F1E4;
+  --on-dark-strong:   rgba(247, 241, 228, 0.92);  /* --text-ceremonial, Spectral 600 */
+  --on-dark-body:     rgba(247, 241, 228, 0.62);  /* 15px Inter — the product speaking */
+  --on-dark-muted:    rgba(247, 241, 228, 0.58);  /* eyebrows; Spectral italic asides */
+  --on-dark-recede:   rgba(247, 241, 228, 0.50);  /* Spectral italic lede */
+
+  /* Warmth. Every warm value on the stage originates here — except
+     --focus-dark, which must not track luminance. */
+  --stone-halo:       rgba(255, 230, 180, 0.18);
+
+  /* Primary on ink. Mineral (#7A8088) is near-invisible on warm ink
+     and appears NOWHERE on a dark stage. The primary stays full width
+     (max-width 330px): the stage gives the button no container to sit
+     inside, so width is the only property left that reads as authority. */
+  --color-primary-dark:       #F2E6CE;
+  --color-primary-dark-hover: #FBF3E2;
+  --color-on-primary-dark:    #1B1610;
+  --shadow-honey:             0 10px 30px rgba(255, 230, 180, 0.12);  /* derived from the halo — static, never animated per frame */
+
+  /* Focus on ink — 2px outline at 3px offset, on both the primary and
+     the quiet button. A focus ring that dims when the voice goes quiet
+     is not a focus ring, so this is the one warm value permitted to sit
+     outside --stone-halo. Never mineral on ink. */
+  --focus-dark:               #F2E6CE;
+
+  /* Breath Stone geometry. See prototypes/ds/breath-stone.html.
+     Clearance is viewport-conditional: --stone-clearance-narrow below
+     420px viewport width, --stone-clearance at 420px and above. The
+     docs' unconditional "≥ 120px on every side" was unsatisfiable at
+     390px (390 − 240 = 150px maximum) and no build ever met it. */
+  --stone-size-hero:          min(320px, 56vw);  /* 218px at 390px; full 320px from 560px up */
+  --stone-clearance:          120px;
+  --stone-clearance-narrow:   48px;
+
+  /* Status on ink: there is none, by ruling. Status on a ceremonial
+     dark stage is carried by language and position, never colour —
+     the warm status hues are tuned for cream only (#9C3528 reads
+     6.72:1 on cream and ~1.9:1 on ink: a hole in the screen, not a
+     warning). A notice on ink is 15px Inter at --on-dark-body in the
+     aside slot, role="status" aria-live="polite", no fill/border/icon.
+     The one escape hatch is a surface change, not a colour: a genuinely
+     destructive confirmation sits on a --color-surface-card laid over
+     the stage, where the normal warm status colours apply unchanged. */
+
   /* ─── TYPOGRAPHY ──────────────────────────────────── */
   --font-display: 'Spectral', Georgia, serif;
   --font-body:    'Inter', system-ui, sans-serif;
 
   /* ─── TYPE SCALE ──────────────────────────────────── */
-  --text-display: 48px;
+  /* NOTE: the 48px step is `--text-scale-display`. It was renamed
+     from `--text-display` when the design system promoted that
+     name to the semantic ceremonial role below (34px Spectral).
+     The raw scale step had no consumer; the role now owns the name. */
+  --text-scale-display: 48px;
   --text-h1:      36px;
   --text-h2:      28px;
   --text-h3:      20px;
@@ -77,6 +151,23 @@
   --text-ui:      15px;  /* semibold UI labels — between body and small */
   --text-small:   14px;
   --text-caption: 12px;
+
+  /* Ceremonial type roles — promoted from the Step 5 First Playback
+     build via ds/dark-stage.html ("Tokens promoted in this pass").
+     Both were local literals on that screen.
+
+     Ceremonial display text takes a **px** measure, never `ch`: `ch`
+     scales with the font, so a line rags identically at 34px and at
+     26px and a fit loop over font-size is a no-op against it. Size in
+     container units rather than `vw` — `clamp(26px, 10.3cqw, 34px)` —
+     so the type is still correct when a 390px frame sits inside a
+     desktop review page. Re-fit on `document.fonts.ready`, or you have
+     measured the fallback face. */
+  --text-display:           34px;      /* Spectral 400 — the payoff line */
+  --line-height-display:    1.34;      /* pair with --text-display */
+  --tracking-display:       -0.015em;  /* pair with --text-display */
+  --text-ceremonial:        23px;      /* Spectral 600 — ceremonial strong */
+  --tracking-ceremonial:    -0.01em;   /* pair with --text-ceremonial */
 
   /* ─── SPACING (8px base unit) ─────────────────────── */
   --space-xs:   4px;

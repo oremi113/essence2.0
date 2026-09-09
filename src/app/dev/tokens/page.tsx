@@ -49,7 +49,7 @@ type TypeToken = {
 };
 
 const TYPE_SCALE: TypeToken[] = [
-  { name: "display", varName: "--text-display", px: "48px", family: "display" },
+  { name: "scale-display", varName: "--text-scale-display", px: "48px", family: "display" },
   { name: "h1", varName: "--text-h1", px: "36px", family: "display" },
   { name: "h2", varName: "--text-h2", px: "28px", family: "display" },
   { name: "h3", varName: "--text-h3", px: "20px", family: "body" },
@@ -202,7 +202,7 @@ export default function DesignTokensPage() {
           <h1
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: "var(--text-display)",
+              fontSize: "var(--text-scale-display)",
               marginBottom: "var(--space-sm)",
             }}
           >

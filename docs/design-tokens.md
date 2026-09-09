@@ -141,7 +141,7 @@ Prefer the semantic roles below. Raw scale is retained for edge cases.
 
 | Token            | Size |
 | ---------------- | ---- |
-| `--text-display` | 48px |
+| `--text-scale-display` | 48px | *(renamed from `--text-display` — the semantic ceremonial role now owns that name)* |
 | `--text-h1`      | 36px |
 | `--text-h2`      | 28px |
 | `--text-h3`      | 20px |
@@ -157,6 +157,20 @@ Prefer the semantic roles below. Raw scale is retained for edge cases.
 | `--text-ui`            | 15px | Semibold UI labels — between body and small          |
 | `--text-small`         | 14px | Small body                                            |
 | `--text-caption`       | 12px | Eyebrow, meta, captions                               |
+| `--text-display`       | 34px | **Ceremonial payoff line** — Spectral 400, line 1.34, -0.015em |
+| `--line-height-display`| 1.34 | Pair with `--text-display`                            |
+| `--tracking-display`   | -0.015em | Pair with `--text-display`                        |
+| `--text-ceremonial`    | 23px | Ceremonial strong — Spectral 600, -0.01em             |
+| `--tracking-ceremonial`| -0.01em | Pair with `--text-ceremonial`                      |
+
+> **Ceremonial display text takes a px measure, never `ch`.** `ch` scales with
+> the font, so a line rags *identically* at 34px and at 26px — a size clamp can
+> never buy a line back and a fit loop over `font-size` is a no-op against a `ch`
+> measure. Size in container units rather than `vw`
+> (`clamp(26px, 10.3cqw, 34px)`), so the type stays correct when a 390px frame
+> sits inside a desktop review page. Reserve the block and prove *all* candidate
+> lines fit it — the layout must not belong to one sentence. Re-fit on
+> `document.fonts.ready`, or you have measured the fallback face.
 
 ---
 
@@ -206,6 +220,147 @@ Prefer the semantic roles below. Raw scale is retained for edge cases.
 | `--duration-medium` | 800ms  |
 | `--duration-large`  | 1200ms |
 | `--duration-breath` | 3000ms |
+
+---
+
+## Dark ceremonial stage
+
+Essence has **no dark mode**. It has one dark surface, used where the product
+goes quiet and a single object carries the beat: the *crystallize*, *preserved*,
+*detail* and *playback* phases of First Breath.
+
+Promoted verbatim from the Step 5 First Playback build via the design system's
+`ds/dark-stage.html` card — measured, shipped, argued-over values, not redrawn.
+Local mirror: `prototypes/ds/dark-stage.html`. Source of truth is `@theme` in
+`globals.css`; this table mirrors it.
+
+The six atmosphere layers (`l-base` … `l-grain`) keep their literals inside the
+card's spec. They are a composition, not a palette — tokenising
+`opacity: .32 + lum × .55` would name the arithmetic without making it reusable.
+
+### Ground
+
+| Token              | Hex       | Use                              |
+| ------------------ | --------- | -------------------------------- |
+| `--color-ink`      | `#1E1B18` | The one dark surface             |
+| `--color-ink-lift` | `#2A2621` | `l-base` ramp — warm centre      |
+| `--color-ink-deep` | `#121110` | `l-base` ramp — cold corner      |
+
+### Cream on ink — the opacity ramp
+
+Type on the stage is **one colour at four amounts**. Hierarchy on ink is opacity
+and *family*; it is never a second hue. The whole ramp clears AA against the
+unlit ground and stays clear when `l-cast` brightens it.
+
+| Token               | Value                     | Use                                       |
+| ------------------- | ------------------------- | ----------------------------------------- |
+| `--color-on-dark`   | `#F7F1E4`                 | The payoff line — full opacity, `--text-display` |
+| `--on-dark-strong`  | `rgba(247,241,228,0.92)`  | `--text-ceremonial`, Spectral 600         |
+| `--on-dark-body`    | `rgba(247,241,228,0.62)`  | 15px Inter — the product speaking         |
+| `--on-dark-muted`   | `rgba(247,241,228,0.58)`  | Eyebrows; Spectral italic asides          |
+| `--on-dark-recede`  | `rgba(247,241,228,0.50)`  | Spectral italic lede                      |
+
+- **Family, not colour.** The aside is Spectral italic; a notice is Inter. They
+  share a slot and nearly the same opacity, and the family is the only signal
+  separating them. Never distinguish them by colour or size alone.
+- **No third step.** If a design needs a fifth level of cream, it has too much on
+  the stage. Cut an element instead of inventing an opacity.
+
+### Warmth, primary, and focus
+
+| Token                        | Value                              | Notes                                   |
+| ---------------------------- | ---------------------------------- | --------------------------------------- |
+| `--stone-halo`               | `rgba(255,230,180,0.18)`           | Origin of every warm value on the stage |
+| `--color-primary-dark`       | `#F2E6CE`                          | Honey fill — 17px Inter 600, radius 10, min-height 52 |
+| `--color-primary-dark-hover` | `#FBF3E2`                          |                                         |
+| `--color-on-primary-dark`    | `#1B1610`                          |                                         |
+| `--shadow-honey`             | `0 10px 30px rgba(255,230,180,.12)` | Derived from the halo. **Static — never animated per frame.** |
+| `--focus-dark`               | `#F2E6CE`                          | 2px outline at 3px offset, on both the primary and the quiet button |
+
+**Mineral (`#7A8088`) appears nowhere on a dark stage** — it is near-invisible on
+warm ink. `--focus-dark` is the one warm value permitted to sit outside
+`--stone-halo`, precisely because it must *not* track luminance: a focus ring
+that dims when the voice goes quiet is not a focus ring.
+
+**The primary stays full width** (`max-width: 330px`). The dark stage gives the
+button no container to sit inside — no card edge, no gutter, no surface boundary
+— so width is the only property left that reads as authority. A centred
+auto-width button on ink reads as a link that gained a background.
+
+### Breath Stone geometry
+
+See `prototypes/ds/breath-stone.html`.
+
+| Token                      | Value              | Notes                                     |
+| -------------------------- | ------------------ | ----------------------------------------- |
+| `--stone-size-hero`        | `min(320px, 56vw)` | 218px at 390px; full 320px from 560px up  |
+| `--stone-clearance`        | `120px`            | At 420px viewport width and above         |
+| `--stone-clearance-narrow` | `48px`             | Below 420px viewport width                |
+
+**Clearance is viewport-conditional.** The docs' unconditional "≥ 120px on every
+side" was unsatisfiable at 390px (390 − 240 = 150px maximum) and no build ever
+met it — the builds were right and the docs were wrong. Other canonical sizes are
+fixed: 160px in-card, 220px default, 120px minimum rendered (below that it reads
+as a dot, not a sphere).
+
+### Status on ink — there is none, by ruling
+
+Status on a ceremonial dark stage is carried by **language and position, never
+colour**. The system gets no dark-stage terracotta, sage, or amber-umber.
+
+1. The warm status hues are tuned for cream and only for cream. `#9C3528` reads
+   6.72:1 on `#FBF8F4` and roughly **1.9:1** on `#1E1B18` — a hole in the screen,
+   not a warning.
+2. Lightening them leaves the palette. Raising terracotta to AA on ink produces a
+   salmon that belongs to no other Essence surface.
+3. The stage exists to hold one thing at a time. A coloured notice competes with
+   the stone at the moment the stone *is* the message.
+
+**So write it instead.** A notice on ink is 15px Inter at `--on-dark-body`, in
+the aside slot — mutually exclusive with the aside, so no state is taller than
+the happy path. No fill, no border, no icon, no colour. It carries
+`role="status" aria-live="polite"` and follows the house error pattern: what
+happened, what to do next.
+
+**The one escape hatch is a surface change, not a colour.** A genuinely
+destructive confirmation (deleting a voice, not a playback that failed) sits on a
+`--color-surface-card` laid over the stage, and inside that card the normal warm
+status colours apply unchanged.
+
+*Corollary for reviewers:* "this error needs to be red" is, on a dark stage, a
+note about the sentence. Rewrite the sentence.
+
+### Four rules the medium enforces
+
+Each bit the Step 5 build once, silently — nothing threw, nothing looked broken
+in a screenshot. They are properties of the medium, not of that screen.
+
+1. **`will-change` is a state, not a declaration.** Declare it only under the
+   class that means "this is actually animating right now" — zero promoted layers
+   at rest, eight for the ~5s utterance. The exposure is GPU layer memory, not
+   the main thread. Keep blend-mode layers at `inset: 0`: `.l-grain` at
+   `inset: -50%` was 1.32M overlay-blended pixels on a layer that never animates,
+   and cost more than every promoted layer put together.
+2. **Unmount, don't just fade.** An element at `opacity: 0` still occupies its
+   row and silently sets the spacing of everything below it. Opacity is for the
+   transition, not for the absence.
+3. **Reveal with an animation, not a transition — on anything interactive.** A
+   1400ms `transform` transition for a CTA's rise also governs `:active`, and the
+   press stops being tactile. Use `@keyframes` for the entrance so the transition
+   stays free for `:active` at `--duration-small`.
+4. **A flex column child does not inherit its parent's width.** `.actions` needs
+   `align-self: stretch` before `width: 100%; max-width: 330px` will bind. When a
+   percentage width doesn't take, the parent's cross-axis size is the suspect.
+
+### Not settled — do not treat as promoted
+
+- A real device at 4× CPU throttle. Every performance number above is desktop,
+  one of them synthetic.
+- Autoplay verified on a real iPhone, and the silent-switch state that looks
+  identical to blocked autoplay.
+- The inbound crossfade from `detail` — the stone must not re-enter.
+- The skip affordance and the playback-failure screen exist as agreed direction
+  and copy only; neither is prototyped.
 
 ---
 

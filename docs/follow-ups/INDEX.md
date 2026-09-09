@@ -4,12 +4,13 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
+Total: 37 · 36 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (34)
+## Open (36)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
+| P1 | MASTER_SPEC Step 5 (First Playback) has never existed in code — the user never hears their own voice before being asked to write their first message *(found in beta, 2026-09-08)* | 2026-09-08 | — | [`2026-09-08-first-playback-beat-was-never-built.md`](./2026-09-08-first-playback-beat-was-never-built.md) |
 | P2 | Delete-account teardown erases audio *before* the DB/auth deletes → mid-teardown failure loses recordings under a "Nothing was lost" screen *(triage 2026-07-07)* | 2026-07-07 | FU-86 | [`2026-07-07-delete-account-teardown-erases-audio-before-the-row.md`](./2026-07-07-delete-account-teardown-erases-audio-before-the-row.md) |
 | P2 | Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed *(triage 2026-07-07/-10, merged)* | 2026-07-07 | FU-85 | [`2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md`](./2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a.md) |
 | P2 | Vault restore (past_due) opens the Stripe Portal via `window.open`-after-`await` → blocked on iOS Safari, silent dead-end *(triage 2026-07-07)* | 2026-07-07 | FU-87 | [`2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md`](./2026-07-07-vault-restore-past-due-opens-the-stripe-portal.md) |
@@ -39,6 +40,7 @@ Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
 | P3 | `pending_generations.expires_at` is written but nothing ever prunes it; the per-user active cap depends on an entry-point reclaim *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-abandoned-pending-generations-have-no-sweeper.md`](./2026-09-04-abandoned-pending-generations-have-no-sweeper.md) |
 | P3 | A 429 cost-limit block shows A5's "Something slipped on our end / Try again" — a permanent wall dressed as a transient blip *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-cost-limit-block-renders-as-a-transient-failure.md`](./2026-09-04-cost-limit-block-renders-as-a-transient-failure.md) |
 | P3 | Every `min-height: 100dvh` screen inside `.app-main` overflows by the shell's 40px bottom padding — a phantom scroll on screens meant to be one still frame *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-full-height-screens-overflow-the-app-shell-padding.md`](./2026-09-04-full-height-screens-overflow-the-app-shell-padding.md) |
+| P3 | The promoted dark-ceremonial-stage tokens (`--color-ink`, `--on-dark-*`, `--stone-halo`, `--focus-dark`, …) landed in `@theme` with zero consumers, while `FirstBreathSequence.tsx` still holds the same values as screen-local literals *(design-system promotion pass, 2026-09-09)* | 2026-09-09 | — | [`2026-09-09-dark-stage-tokens-have-no-consumer.md`](./2026-09-09-dark-stage-tokens-have-no-consumer.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
