@@ -16,6 +16,25 @@ export function trainingClipObjectPath(
   return `users/${userId}/voice-profiles/${voiceProfileId}/training-clips/${trainingClipId}/source.${extension}`;
 }
 
+/**
+ * Step 5 First Playback sample: users/{userId}/voice-profiles/{voiceProfileId}/sample.mp3
+ *
+ * The neutral line spoken in the user's own preserved voice, rendered once
+ * during processing and cached on the profile (`voice_profiles.sample_audio_path`).
+ * Deliberately NOT under `messages/` — no Message object exists for this beat,
+ * and MASTER_SPEC Step 5 requires that none is created.
+ *
+ * One object per profile, so a re-render overwrites in place rather than
+ * accumulating orphans.
+ */
+export function voiceSampleObjectPath(
+  userId: string,
+  voiceProfileId: string,
+  extension: string = "mp3"
+): string {
+  return `users/${userId}/voice-profiles/${voiceProfileId}/sample.${extension}`;
+}
+
 /** Message audio (pattern for later): users/{userId}/voice-profiles/{voiceProfileId}/messages/{messageId}/audio.mp3 */
 export function messageAudioObjectPath(
   userId: string,

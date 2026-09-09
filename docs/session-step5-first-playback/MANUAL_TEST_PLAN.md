@@ -39,8 +39,29 @@ Playwright CDP (`Emulation.setCPUThrottlingRate { rate: 4 }`) or
 - **A real device at 4× throttle.** Every number above is headless Chromium.
   Both the prototype and `ds/dark-stage.html` list this as still owed.
 
-## Chunk 2 / 3 — to be written with those chunks
+## Chunk 2 — the render + storage path
 
-Render idempotency (a refresh or double-tap must not bill twice), the signed-URL
-path, the `detail → playback` crossfade (the stone must not re-enter), and the
-journey funnel event.
+Unit-covered by `tests/unit/ensure-voice-sample.test.ts` (10 tests, mutation-checked
+against removing the claim guard and against not counting spend at claim time).
+The rows below are what still needs a **live** walk, because the guard's real
+serialization is Postgres row locking, which a unit test cannot exercise.
+
+| # | Check | Expected |
+|---|---|---|
+| 17 | Apply the migration locally, complete voice creation once | `sample_status = 'ready'`, `sample_audio_path` set, `sample_duration_ms` non-null, **`sample_render_count = 1`** |
+| 18 | Refresh `/app/voice/processing` repeatedly after ready | `sample_render_count` **stays 1**. Anything higher is a double-bill |
+| 19 | Fire two `/start` requests concurrently | Exactly one vendor render. The loser logs `voice_sample_claim_noop` |
+| 20 | `GET /api/voice-profiles/:id/sample/play` when ready | 200 + signed url + `durationMs`; one `signed_url_playback` usage event |
+| 21 | Same endpoint while `sample_status = 'rendering'` | **409** with `status: 'rendering'` — distinguishable from failure, which §4.7 will need |
+| 22 | Same endpoint with no sample | 404 with the status echoed |
+| 23 | Same endpoint for **another user's** profile id | 404 (RLS-scoped read, never a leak) |
+| 24 | Force a TTS 502 during creation | Voice still completes ready; `sample_status = 'failed'`; the beat is re-claimable |
+| 25 | The GET endpoint never renders | No ElevenLabs call on any GET, at any status |
+
+**Free failure testing:** point the vendor at a fake voice per
+`project_step6_live_verify` so 502s cost nothing.
+
+## Chunk 3 — to be written with that chunk
+
+The `detail → playback` crossfade (the stone must not re-enter), the
+AnalyserNode wiring, `handleExit()`, and the journey funnel event.

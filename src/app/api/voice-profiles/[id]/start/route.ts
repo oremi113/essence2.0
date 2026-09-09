@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import { logEvent, logError, durationSince } from "@/lib/logger";
 import { assertCanStartVoiceCreation } from "@/lib/guards";
 import { persistVoiceReady } from "@/lib/voice-training/persistVoiceReady";
+import { ensureVoiceSample } from "@/lib/voice-sample/ensureVoiceSample";
 import { recordUsageEvent, updateUsageEventOutcome } from "@/lib/rate-limit";
 import {
   VOICE_PROFILE_MAX_ATTEMPTS,
@@ -339,6 +340,35 @@ export const POST = defineRoute<true, { id: string }>(
           voiceProfileId,
           outcome: "rejected",
           meta: { reason: "monotonic_guard_zero_rows" },
+        });
+      }
+
+      // ── Step 5 · First Playback sample ──────────────────────────────────
+      // §4.3: render the neutral sample HERE, the moment vendor_voice_id lands,
+      // so there is zero wait at the peak moment. The user is already waiting on
+      // the processing screen, so this costs no perceived time.
+      //
+      // Best-effort by design. The voice was created and billed; a failed sample
+      // must never turn a successful, paid voice creation into an error. The
+      // render is single-flight (it claims `sample_status` before spending), and
+      // a `failed` status is re-claimable, so the beat can recover later without
+      // the user losing anything here.
+      const sample = await ensureVoiceSample({
+        supabase,
+        service,
+        userId: user.id,
+        voiceProfileId,
+        requestId,
+        startMs,
+      });
+      if (!sample.ok) {
+        logEvent({
+          event: "voice_sample_skipped_at_create",
+          requestId,
+          userId: user.id,
+          voiceProfileId,
+          outcome: "rejected",
+          meta: { reason: sample.reason },
         });
       }
 
