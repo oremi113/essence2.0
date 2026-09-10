@@ -20,12 +20,25 @@ export const FIRST_PLAYBACK_CSS = `
      bottom padding and puts a phantom scroll on a screen meant to be one still
      frame. See docs/follow-ups/2026-09-04-full-height-screens-overflow-the-app-shell-padding.md */
   min-height: calc(100dvh - var(--app-main-inset-bottom, 0px));
+
+  /* The stone scales with the height actually available, not with a 844px
+     design frame. Real mobile Safari spends ~130px on its own chrome, so the
+     prototype's fixed 220px stone plus fixed blocks could not fit and the beat
+     ran off the bottom of the screen with no way to reach it. Floor of 140px
+     stays above the design system's 120px "reads as a dot, not a sphere" limit. */
+  --fpb-stone: clamp(132px, 20dvh, 220px);
+
   display: flex;
   flex-direction: column;
-  padding: 60px 30px 40px;
+  /* Padding gives way before the composition does. */
+  padding: clamp(20px, 5.5dvh, 60px) 30px clamp(20px, 3.5dvh, 40px);
   background: var(--color-ink);
   color: var(--color-on-dark);
-  overflow: hidden;
+  /* Was 'hidden', which silently CLIPPED the payoff and the CTA on any viewport
+     shorter than the content floor — unreachable, not just off-screen. Scroll is
+     the fallback, never the intent: at the sizes above it should not engage. */
+  overflow-y: auto;
+  overflow-x: hidden;
   --lum: 0;
   --sus: 0;
   /* keeps the screen/overlay blends off the page behind this screen */
@@ -89,14 +102,17 @@ export const FIRST_PLAYBACK_CSS = `
 
 /* ---------- stone ---------- */
 
-/* Crush guard: .fpb__stage is flex:1;min-height:0, so any growth below would
-   silently crush the stone into the lede instead of failing loudly.
-   246 = 220 stone + 26 padding. */
+/* Crush guard: the stage is the one block allowed to give, and it never goes
+   below the stone plus its clearance. */
 .fpb__stage {
   flex: 1;
   display: flex; align-items: center; justify-content: center;
   position: relative; z-index: 1;
-  min-height: 246px;
+  min-height: calc(var(--fpb-stone) + 26px);
+  /* The aura, not the stone box, is what must clear the lede: .fpb__aura-near
+     reaches inset -15%, so clearance is proportional plus a real gap. A fixed
+     value left the glow sitting on the second lede line at small stone sizes. */
+  padding-top: calc(var(--fpb-stone) * 0.15 + clamp(12px, 2dvh, 20px));
   padding-bottom: 26px;
 }
 /* The entry offset composes with the sustain scale rather than replacing it, so
@@ -105,7 +121,7 @@ export const FIRST_PLAYBACK_CSS = `
 .fpb__stone-wrap {
   flex: none;
   position: relative;
-  width: 220px; height: 220px;
+  width: var(--fpb-stone); height: var(--fpb-stone);
   display: flex; align-items: center; justify-content: center;
   transform:
     translate(var(--fpb-entry-dx, 0px), var(--fpb-entry-dy, 0px))
@@ -207,7 +223,11 @@ export const FIRST_PLAYBACK_CSS = `
 /* ---------- copy ---------- */
 
 .fpb__top {
-  min-height: 82px; z-index: 1;
+  /* flex: none is load-bearing. As a default '0 1 auto' flex child this block
+     was allowed to shrink below its own content when the viewport was short,
+     which pushed the second lede line down over the top of the stone. */
+  flex: none;
+  min-height: 76px; z-index: 1;
   display: flex; flex-direction: column; align-items: center;
   justify-content: flex-start; gap: 11px;
 }
@@ -239,7 +259,8 @@ export const FIRST_PLAYBACK_CSS = `
 }
 
 .fpb__bottom {
-  min-height: 368px; z-index: 1;
+  flex: none;
+  min-height: min(368px, 50dvh); z-index: 1;
   container-type: inline-size;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
 }
@@ -253,7 +274,7 @@ export const FIRST_PLAYBACK_CSS = `
   margin: 0;
   max-width: 255px;
   font-family: var(--font-display);
-  font-size: clamp(26px, 10.30cqw, var(--text-display));
+  font-size: clamp(26px, min(10.30cqw, 4.9dvh), var(--text-display));
   font-weight: 400;
   line-height: var(--line-height-display);
   letter-spacing: var(--tracking-display);
@@ -288,7 +309,7 @@ export const FIRST_PLAYBACK_CSS = `
   opacity: .9;
 }
 
-.fpb__after { margin-top: 26px; text-align: center; }
+.fpb__after { margin-top: clamp(16px, 3dvh, 26px); text-align: center; }
 .fpb__after > * {
   opacity: 0;
   transform: translateY(10px);
@@ -325,14 +346,19 @@ export const FIRST_PLAYBACK_CSS = `
 .fpb__actions {
   align-self: stretch;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding-top: 24px;
-  min-height: 112px;
+  padding-top: clamp(16px, 3dvh, 24px);
+  min-height: clamp(102px, 15dvh, 112px);
   z-index: 1;
 }
 .fpb__btn {
   font-family: var(--font-body);
   font-size: 17px; font-weight: 600; letter-spacing: .005em;
-  width: 100%; max-width: 330px; min-height: 52px; padding: 0 32px;
+  /* 296, not 330. Full width still reads as authority on ink — the dark-stage
+     ruling holds — but at 330 against a 255px ceremonial measure the button was
+     the widest and heaviest object on the stage, out-weighing the stone it is
+     meant to follow. That ruling guards against a primary that reads as a link
+     with a background; it does not license one that dominates the hero. */
+  width: 100%; max-width: 296px; min-height: 52px; padding: 0 24px;
   border: 0; border-radius: var(--radius-lg);
   cursor: pointer;
   background: var(--color-primary-dark);
@@ -401,4 +427,25 @@ export const FIRST_PLAYBACK_CSS = `
 .fpb[data-reduced="true"] .fpb__eyebrow,
 .fpb[data-reduced="true"] .fpb__spoken-wrap { transition-duration: var(--duration-micro); }
 .fpb[data-reduced="true"] .fpb__action-enter { animation-duration: var(--duration-micro); }
+
+/* Compact: a viewport too short to hold the whole composition. Rather than
+   shrink the hero to fit, CUT an element — ds/dark-stage.html's own prescription
+   when a stage has too much on it. The lede goes and the stone takes back the
+   room, because a 140px stone is barely above the 120px "reads as a dot, not a
+   sphere" floor and the sphere IS the beat.
+
+   The 799px threshold sits ABOVE both of iOS Safari's toolbar states on every
+   current iPhone, so the lede cannot pop in and out as the toolbar collapses
+   (16 Pro is 700 / 790 — both compact; 16 Pro Max is 830 / 920 — neither).
+   It is also self-limiting: compact mode is sized to fit, so there is no scroll
+   to collapse the toolbar in the first place.
+
+   A media query rather than JS on purpose — a mount-time measurement cannot
+   survive server rendering without either a hydration mismatch or a visible
+   jump in the stone on the first frame. */
+@media (max-height: 799px) {
+  .fpb { --fpb-stone: clamp(160px, 27dvh, 220px); }
+  .fpb__lede { display: none; }
+  .fpb__top { min-height: 0; gap: 0; }
+}
 `;
