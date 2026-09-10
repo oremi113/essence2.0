@@ -66,9 +66,25 @@ export interface FirstPlaybackScreenProps {
   onPlaybackComplete?: () => void;
   /** Fired each time the user asks to hear it again. */
   onReplay?: () => void;
+  /**
+   * Rect of the stone this screen is taking over from, in viewport coordinates.
+   *
+   * The `detail → playback` handoff has one rule: **the stone must not
+   * re-enter.** Given the outgoing stone's rect, this screen's stone mounts
+   * already occupying it exactly, so the cross-dissolve between the two
+   * renderings happens in place and invisibly; only then does it travel to
+   * where this screen wants it.
+   *
+   * Omit for a standalone mount (the dev page), where there is nothing to take
+   * over from and the stone simply appears.
+   */
+  entranceFrom?: { left: number; top: number; width: number } | null;
   /** Overrides the media query. Dev harness only — production omits it. */
   forceReducedMotion?: boolean;
 }
+
+/** How long the stone takes to travel from the outgoing rect to its own. */
+const ENTRANCE_MS = 700;
 
 const COPY = {
   eyebrow: 'Your voice',
@@ -131,6 +147,7 @@ export function FirstPlaybackScreen({
   onCreateFirstMessage,
   onPlaybackComplete,
   onReplay,
+  entranceFrom,
   forceReducedMotion,
 }: FirstPlaybackScreenProps) {
   const systemReducedMotion = useReducedMotion();
@@ -146,7 +163,10 @@ export function FirstPlaybackScreen({
   const [breathing, setBreathing] = useState(true);
   const [announcement, setAnnouncement] = useState('');
 
+  const [entering, setEntering] = useState(Boolean(entranceFrom));
+
   const rootRef = useRef<HTMLDivElement>(null);
+  const stoneWrapRef = useRef<HTMLDivElement>(null);
   const spokenRef = useRef<HTMLParagraphElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -367,6 +387,61 @@ export function FirstPlaybackScreen({
     };
   }, []);
 
+  // ── the inbound crossfade ────────────────────────────────────────────────
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const wrap = stoneWrapRef.current;
+    if (!entranceFrom || !root || !wrap) return;
+    // Under reduced motion the match cut stands on its own; the stone simply
+    // arrives where it belongs. Travelling it would be movement for its own sake.
+    if (reduced) {
+      setEntering(false);
+      return;
+    }
+
+    // Measure where this screen's stone WANTS to be, then start it where the
+    // outgoing stone currently IS. Measured rather than computed: the stage is
+    // `flex: 1`, so its centre depends on the viewport, and a hard-coded offset
+    // would drift on any screen that isn't the one it was tuned on.
+    const own = wrap.getBoundingClientRect();
+    const dx = entranceFrom.left + entranceFrom.width / 2 - (own.left + own.width / 2);
+    const dy = entranceFrom.top + entranceFrom.width / 2 - (own.top + own.height / 2);
+    const scale = entranceFrom.width / own.width;
+
+    // Driven by the Web Animations API, NOT a CSS transition.
+    //
+    // The resting transform is composed from custom properties (so the entry
+    // offset and the speech follower can share it), and a `var()` change does
+    // not reliably start a transition — set-then-release collapses into one
+    // style resolution and the stone snaps into place. A forced reflow between
+    // the two writes does not fix it either. WAAPI takes an explicit from/to,
+    // composites on the GPU, and releases cleanly when it ends.
+    //
+    // Safe against the follower because --sus is 0 for the whole entrance: the
+    // animation is over ~2.2s before the voice starts.
+    const easing =
+      getComputedStyle(root).getPropertyValue('--ease-page').trim() ||
+      'cubic-bezier(0.22, 1, 0.36, 1)';
+
+    const animation = wrap.animate(
+      [
+        { transform: `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${scale.toFixed(4)})` },
+        { transform: 'translate(0px, 0px) scale(1)' },
+      ],
+      { duration: ENTRANCE_MS, easing, fill: 'none' },
+    );
+
+    const done = setTimeout(() => setEntering(false), ENTRANCE_MS + 60);
+
+    return () => {
+      animation.cancel();
+      clearTimeout(done);
+    };
+    // Runs once, on the mount that takes over from the ceremony.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── the fit step ─────────────────────────────────────────────────────────
 
   /**
@@ -417,6 +492,7 @@ export function FirstPlaybackScreen({
       className="fpb"
       data-speaking={speaking || undefined}
       data-reduced={reduced || undefined}
+      data-entering={entering || undefined}
     >
       <style>{FIRST_PLAYBACK_CSS}</style>
 
@@ -439,6 +515,7 @@ export function FirstPlaybackScreen({
 
       <div className="fpb__stage">
         <div
+          ref={stoneWrapRef}
           className="fpb__stone-wrap"
           data-breathing={breathing && !reduced ? 'true' : undefined}
           role="img"

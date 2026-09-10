@@ -99,12 +99,31 @@ export const FIRST_PLAYBACK_CSS = `
   min-height: 246px;
   padding-bottom: 26px;
 }
+/* The entry offset composes with the sustain scale rather than replacing it, so
+   the inbound crossfade and the speech follower never fight over transform.
+   Defaults are identity, so a screen mounted without an entrance is unaffected. */
 .fpb__stone-wrap {
   flex: none;
   position: relative;
   width: 220px; height: 220px;
   display: flex; align-items: center; justify-content: center;
-  transform: scale(calc(1 + var(--sus) * .045));
+  transform:
+    translate(var(--fpb-entry-dx, 0px), var(--fpb-entry-dy, 0px))
+    scale(calc((1 + var(--sus) * .045) * var(--fpb-entry-scale, 1)));
+}
+
+/* The stone must NOT re-enter. It arrives already occupying the outgoing
+   ceremony stone's exact rect, so the cross-dissolve happens in place and
+   invisibly; only then does it travel to where this screen wants it.
+
+   The travel itself is driven by the Web Animations API in the component, not
+   from here: the resting transform is composed from custom properties, and a
+   var() change does not reliably start a CSS transition. What remains here is
+   only what the entrance should SUPPRESS. */
+.fpb[data-entering="true"] .fpb__l-bloom,
+.fpb[data-entering="true"] .fpb__l-contact {
+  opacity: 0;
+  transition: opacity var(--fpb-entry-ms, 700ms) var(--ease-page);
 }
 /* Two-speed halo, both on --stone-halo. Near tracks amplitude; far lags — the
    light leaves the stone slower than the sound does. */

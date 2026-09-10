@@ -31,12 +31,20 @@ afterEach(() => {
 });
 
 describe('JOURNEY_EVENTS', () => {
-  it('exposes the four V1 funnel event names', () => {
+  // An exhaustive lock, on purpose: the funnel's event names are a published
+  // schema, so adding or renaming one has to be a deliberate edit here and needs
+  // a docs/analytics/ note in the same PR. If this fails, that is the test
+  // working — do not loosen it to a subset match.
+  it('exposes exactly the funnel event names', () => {
     expect(JOURNEY_EVENTS).toEqual({
       onboardingCompleted: 'onboarding_completed',
       subscriptionStarted: 'subscription_started',
       voiceProfileReady: 'voice_profile_ready',
       appOpened: 'app_opened',
+      // Added 2026-09-10 with Step 5 First Playback — the missing link between
+      // voice_profile_ready and first message creation.
+      // See docs/analytics/2026-09-10-first-playback-heard.md
+      firstPlaybackHeard: 'first_playback_heard',
     });
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
 import { track } from '@/lib/analytics/client';
@@ -11,6 +11,9 @@ import {
 import { useReducedMotion } from '@/lib/animation/useReducedMotion';
 import { useCopyCrossfade } from '@/lib/animation/useCopyCrossfade';
 import { ROUTES } from '@/lib/routes';
+import { trackJourney, JOURNEY_EVENTS } from '@/lib/analytics/journey';
+import { FirstPlaybackScreen } from '@/components/screens/first-playback/FirstPlaybackScreen';
+import { VOICE_SAMPLE_LINE } from '@/lib/voice-sample/voice-sample-line';
 import {
   useFirstBreathPhases,
   type FirstBreathPhase,
@@ -32,6 +35,11 @@ const PHASE_CONFIG: Record<Phase, PhaseConfig> = {
   crystallize: { state: 'infused', size: 140 },
   preserved:   { state: 'archive', size: 140 },
   detail:      { state: 'shimmer', size: 200 },
+  // Identical to `detail` on purpose. During the handoff the canvas stone is
+  // still on screen underneath the incoming CSS stone, and the cross-dissolve
+  // is only invisible if the two are the same size in the same place. The
+  // ceremony's stone never changes at this boundary; it is replaced.
+  playback:    { state: 'shimmer', size: 200 },
 };
 
 // Crystallize caption fades in "late" — observational whisper rather than
@@ -50,6 +58,36 @@ const TEXT_WARM_MUTED = 'rgba(245,240,234,0.55)';
 // flat dark surface with a warm highlight pasted over it.
 const BG_DARK =
   'linear-gradient(180deg, #15120F 0%, #1E1915 50%, #2A241E 100%)';
+
+// ─── Step 5 First Playback copy ─────────────────────────────────────────────
+// The lede names the 25 prompts before the proof arrives — "moments" is the
+// noun voice training already uses (MOMENT 5 OF 25), so it lands as continuity
+// rather than a statistic. The screen ends on recognition; there is deliberately
+// no reassurance line, and no Elevated moment is spent here.
+const PLAYBACK_LEDE = ['Twenty-five moments.', 'This is what they became.'] as const;
+const PLAYBACK_PAYOFF = "That's you.";
+const PLAYBACK_ASIDE = 'It kept the pauses.';
+
+// A MATCH CUT, not a cross-dissolve.
+//
+// The obvious approach — fade the overlay up over the ceremony — was built and
+// rejected on the evidence: for the length of the fade you see two different
+// renderings of the same sphere superimposed, and the canvas stone's brighter
+// core reads as a hard-edged disc floating inside the CSS one. It looks broken.
+//
+// The two stones are geometrically identical at the moment of the tap, which is
+// the definition of a match cut: swap in one frame with the hero object in the
+// same place at the same size, and the eye reads continuity. The stone then
+// travels to its new position under its own animation, which is the only motion
+// the boundary should have. The overlay is fully opaque, so the ceremony
+// underneath is covered the instant it mounts.
+const playbackOverlayCss = `
+.fb-playback-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+`;
 
 interface FirstBreathSequenceProps {
   voiceProfileId: string;
@@ -120,6 +158,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     entranceActive,
     skipToPreserved,
     goToDetail,
+    goToPlayback,
   } = useFirstBreathPhases({
     voiceProfileId,
     prefersReducedMotion,
@@ -130,8 +169,69 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   const { entering: enteringCopyPhase, exiting: exitingCopyPhase } =
     useCopyCrossfade<Phase>(phase, { disabled: prefersReducedMotion });
 
+  // ── Step 5 First Playback handoff ─────────────────────────────────────────
+
+  const stoneWrapperRef = useRef<HTMLDivElement>(null);
+  const [sampleUrl, setSampleUrl] = useState<string | null>(null);
+  // What the sample actually says. Falls back to the current constant only when
+  // there is no sample to read from (a silent, cadence-driven beat).
+  const [sampleLine, setSampleLine] = useState<string>(VOICE_SAMPLE_LINE);
+  const [entranceRect, setEntranceRect] =
+    useState<{ left: number; top: number; width: number } | null>(null);
+
+  /**
+   * Prefetch the sample's signed URL as `detail` begins.
+   *
+   * The URL lives 120s and the user is seconds from tapping Continue, so it is
+   * warm at the peak moment and the beat never shows a spinner. The GET never
+   * renders and never spends — the paid render already happened during
+   * processing (see ensureVoiceSample).
+   *
+   * Failure is silent by design. A 404 (`failed`) or a network error leaves
+   * `sampleUrl` null, and the phase still plays: the line is on screen and the
+   * cadence model drives the choreography, so the beat lands silently rather
+   * than not at all. The dedicated failure state is a later pass.
+   */
+  useEffect(() => {
+    if (phase !== 'detail' || sampleUrl) return;
+    let cancelled = false;
+    fetch(`/api/voice-profiles/${voiceProfileId}/sample/play`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { url?: string; line?: string | null } | null) => {
+        if (cancelled || !body?.url) return;
+        setSampleUrl(body.url);
+        if (body.line) setSampleLine(body.line);
+      })
+      .catch(() => {
+        /* silent — see above */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, voiceProfileId, sampleUrl]);
+
+  /**
+   * Detail's Continue tap. Measures the ceremony stone's rect FIRST, so the
+   * incoming screen can mount its own stone exactly on top of it — the stone
+   * must not re-enter.
+   */
+  const handleContinue = useCallback(() => {
+    const rect = stoneWrapperRef.current?.getBoundingClientRect();
+    if (rect) {
+      setEntranceRect({ left: rect.left, top: rect.top, width: rect.width });
+    }
+    goToPlayback();
+  }, [goToPlayback]);
+
+  const handlePlaybackHeard = useCallback(() => {
+    // The funnel landmark: Immutable Rule 4 satisfied, in fact rather than in
+    // principle. Fires on completed listen, so a user who leaves mid-line is
+    // not counted as having heard it.
+    trackJourney(JOURNEY_EVENTS.firstPlaybackHeard, { voiceProfileId });
+  }, [voiceProfileId]);
+
   const handleExit = useCallback(() => {
-    track('breath_stone_cta_tapped', { voiceProfileId, phase: 'detail' });
+    track('breath_stone_cta_tapped', { voiceProfileId, phase: 'playback' });
     // Spine-wiring S3: First Breath hands off to first message creation
     // (MASTER_SPEC §4.4 immutable rule 4: playback before first message). This
     // replaces the old "coming soon" placeholder (recordCompleteStub,
@@ -202,6 +302,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   return (
     <main style={rootStyle}>
       <style>{screenKeyframes}</style>
+      <style>{playbackOverlayCss}</style>
 
       <div aria-hidden style={sanctuaryGlowStyle} />
       <div aria-hidden style={vignetteStyle} />
@@ -211,7 +312,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
         <Particles visible={phase === 'forming'} />
         <Fragments visible={phase === 'crystallize'} />
         {entranceActive && <div aria-hidden style={goldRingStyle} />}
-        <div style={stoneWrapperStyle}>
+        <div ref={stoneWrapperRef} style={stoneWrapperStyle}>
           <BreathStone state={stone.state} size={stone.size} />
         </div>
         {entranceActive && <div aria-hidden style={stoneBloomStyle} />}
@@ -240,7 +341,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
           <HoneyButton onClick={goToDetail}>See My Stone</HoneyButton>
         )}
         {phase === 'detail' && detailRevealed && (
-          <HoneyButton onClick={handleExit}>Continue</HoneyButton>
+          <HoneyButton onClick={handleContinue}>Continue</HoneyButton>
         )}
       </div>
 
@@ -253,6 +354,29 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
         >
           Skip
         </button>
+      )}
+
+      {/* Step 5 First Playback.
+          A sibling overlay rather than a replacement: the ceremony stays
+          mounted underneath for the length of the cross-dissolve, so the two
+          stone renderings can occupy the same rect at the same moment. Without
+          that overlap the stone would blink out and re-enter, which is the one
+          thing this boundary must not do. */}
+      {phase === 'playback' && (
+        <div className="fb-playback-overlay">
+          <FirstPlaybackScreen
+            line={sampleLine}
+            ledeLines={PLAYBACK_LEDE}
+            payoff={PLAYBACK_PAYOFF}
+            aside={PLAYBACK_ASIDE}
+            amplitude={
+              sampleUrl ? { kind: 'audio', url: sampleUrl } : { kind: 'cadence' }
+            }
+            entranceFrom={entranceRect}
+            onPlaybackComplete={handlePlaybackHeard}
+            onCreateFirstMessage={handleExit}
+          />
+        </div>
       )}
     </main>
   );

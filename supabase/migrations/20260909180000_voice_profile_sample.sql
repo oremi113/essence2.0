@@ -26,6 +26,7 @@ begin;
 alter table public.voice_profiles
   add column sample_audio_path text,
   add column sample_duration_ms integer,
+  add column sample_line text,
   add column sample_status text not null default 'none',
   add column sample_render_count integer not null default 0;
 
@@ -38,6 +39,9 @@ comment on column public.voice_profiles.sample_audio_path is
 
 comment on column public.voice_profiles.sample_duration_ms is
   'Measured duration of sample_audio_path, in ms (derived from CBR mp3 byte length, same as pending_generations.audio_duration_ms). Null for unrendered or failed samples.';
+
+comment on column public.voice_profiles.sample_line is
+  'The exact sentence spoken in this sample. Stored rather than assumed, because the screen typesets the line while the audio speaks it: if the constant in voice-sample-line.ts changes, an already-rendered user must keep reading what they actually hear.';
 
 comment on column public.voice_profiles.sample_status is
   'Render lifecycle for the First Playback sample: none | rendering | ready | failed. Claimed by a conditional update so a paid render is single-flight — a refresh or double-tap must not bill twice.';

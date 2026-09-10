@@ -4,7 +4,7 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 37 · 36 open · 1 decision · 0 resolved · 0 dropped
+Total: 38 · 36 open · 2 decision · 0 resolved · 0 dropped
 
 ## Open (36)
 
@@ -47,8 +47,9 @@ Total: 37 · 36 open · 1 decision · 0 resolved · 0 dropped
 | P4 | /dev/breath-stone overflows the viewport by 45px — the state-label row doesn't wrap at 390px; dev-scaffold only, but a real horizontal overflow *(qa-scout full-sweep 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-dev-breath-stone-horizontal-overflow.md`](./2026-07-12-dev-breath-stone-horizontal-overflow.md) |
 | P4 | Migrate the remaining `FOLLOW_UPS.md` monolith (items 1-84 + resolved history) into the per-file `docs/follow-ups/` layout | 2026-07-12 | — | [`2026-07-12-migrate-legacy-followups-to-per-file.md`](./2026-07-12-migrate-legacy-followups-to-per-file.md) |
 
-## Decision (owner call) (1)
+## Decision (owner call) (2)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
+| P2 | The First Breath ceremony has two different Breath Stone implementations — a canvas engine and the CSS dark-stage stone — and they meet at the `detail → playback` cut, where the stone visibly changes material in one frame *(found building Step 5 Chunk 3, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-two-stone-renderers-meet-at-the-playback-cut.md`](./2026-09-10-two-stone-renderers-meet-at-the-playback-cut.md) |
 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |

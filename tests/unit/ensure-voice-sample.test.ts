@@ -15,11 +15,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * stands in for it: `claimMatches` is what the DB would have returned.
  */
 
-const ttsSpy = vi.fn(async () => ({
-  ok: true as const,
-  audioBuffer: Buffer.alloc(16000),
-  contentType: "audio/mpeg",
-}));
+/** Mirrors GenerateSpeechResult so a test can hand back either arm. */
+type TtsResult =
+  | { ok: true; audioBuffer: Buffer; contentType: string }
+  | { ok: false; status: number; code?: string; message: string };
+
+const ttsSpy = vi.fn(
+  async (): Promise<TtsResult> => ({
+    ok: true,
+    audioBuffer: Buffer.alloc(16000),
+    contentType: "audio/mpeg",
+  }),
+);
 vi.mock("@/lib/elevenlabs", () => ({
   generateSpeech: (...args: unknown[]) => ttsSpy(...(args as [])),
 }));
@@ -162,7 +169,7 @@ describe("ensureVoiceSample — the money guard", () => {
     let claimedBeforeTts = false;
     ttsSpy.mockImplementationOnce(async () => {
       claimedBeforeTts = updates.some((u) => u.sample_status === "rendering");
-      return { ok: true as const, audioBuffer: Buffer.alloc(16000), contentType: "audio/mpeg" };
+      return { ok: true, audioBuffer: Buffer.alloc(16000), contentType: "audio/mpeg" };
     });
 
     await run();
@@ -190,7 +197,7 @@ describe("ensureVoiceSample — the money guard", () => {
 
   it("releases the claim to `failed` when the vendor call fails, so a retry can re-claim", async () => {
     ttsSpy.mockImplementationOnce(async () => ({
-      ok: false as const,
+      ok: false,
       status: 502,
       message: "upstream",
     }));

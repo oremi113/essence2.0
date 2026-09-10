@@ -46,6 +46,16 @@ export const JOURNEY_EVENTS = {
   voiceProfileReady: 'voice_profile_ready',
   /** Authenticated, onboarded app entry — the returning-session signal. */
   appOpened: 'app_opened',
+  /**
+   * Step 5 First Playback: the user has heard their own preserved voice.
+   *
+   * The missing link between `voiceProfileReady` and first message creation —
+   * MASTER_SPEC Immutable Journey Rule 4 requires this beat to occur before a
+   * message is created, and until now nothing recorded whether it did. Fires on
+   * completed listen, not on arrival, so the funnel measures the beat landing
+   * rather than the screen mounting.
+   */
+  firstPlaybackHeard: 'first_playback_heard',
 } as const;
 
 export type JourneyEvent = (typeof JOURNEY_EVENTS)[keyof typeof JOURNEY_EVENTS];

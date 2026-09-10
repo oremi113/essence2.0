@@ -31,7 +31,7 @@ export const GET = defineRoute<true, { id: string }>(
 
     const { data: profile, error } = await supabase
       .from("voice_profiles")
-      .select("id, sample_status, sample_audio_path, sample_duration_ms")
+      .select("id, sample_status, sample_audio_path, sample_duration_ms, sample_line")
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -86,6 +86,11 @@ export const GET = defineRoute<true, { id: string }>(
       url,
       expiresIn: PLAYBACK_URL_EXPIRY_SEC,
       durationMs: profile.sample_duration_ms,
+      // What this sample actually SAYS. The screen typesets it while the audio
+      // speaks it, so it must come from the row, not from the current constant
+      // — otherwise a copy change would make old samples read one line and
+      // speak another.
+      line: profile.sample_line,
     });
   },
 );
