@@ -7,7 +7,16 @@ import {
   type SequencePhase,
 } from '@/lib/animation/useSequenceTimeline';
 
-export type FirstBreathPhase = 'forming' | 'crystallize' | 'preserved' | 'detail';
+export type FirstBreathPhase =
+  | 'forming'
+  | 'crystallize'
+  | 'preserved'
+  | 'detail'
+  // Step 5 First Playback (§4.1). A fifth PHASE, deliberately not a route: the
+  // stone is the voice, and making the user watch it disappear and reappear on
+  // a new URL breaks exactly the continuity this beat exists to prove. Entered
+  // only by tapping Continue on `detail`, never by the timeline.
+  | 'playback';
 
 // Sub-phases inside preserved let the timeline drive the revealTone beat
 // (lands on bloom + ring peak) and the text/CTA reveal without sibling
@@ -67,6 +76,8 @@ export interface UseFirstBreathPhasesResult {
   entranceActive: boolean;
   skipToPreserved: () => void;
   goToDetail: () => void;
+  /** Detail's Continue tap. Hands the ceremony to Step 5 First Playback. */
+  goToPlayback: () => void;
 }
 
 /**
@@ -210,6 +221,11 @@ export function useFirstBreathPhases({
     setUserPhase('detail');
   }, [voiceProfileId]);
 
+  const goToPlayback = useCallback(() => {
+    track('breath_stone_cta_tapped', { voiceProfileId, phase: 'detail' });
+    setUserPhase('playback');
+  }, [voiceProfileId]);
+
   return {
     phase,
     skipVisible,
@@ -220,5 +236,6 @@ export function useFirstBreathPhases({
     entranceActive,
     skipToPreserved,
     goToDetail,
+    goToPlayback,
   };
 }

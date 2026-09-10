@@ -648,6 +648,7 @@ export type Database = {
           required_clip_count: number
           sample_audio_path: string | null
           sample_duration_ms: number | null
+          sample_line: string | null
           sample_render_count: number
           sample_status: string
           source_clip_count: number | null
@@ -678,6 +679,7 @@ export type Database = {
           required_clip_count?: number
           sample_audio_path?: string | null
           sample_duration_ms?: number | null
+          sample_line?: string | null
           sample_render_count?: number
           sample_status?: string
           source_clip_count?: number | null
@@ -708,6 +710,7 @@ export type Database = {
           required_clip_count?: number
           sample_audio_path?: string | null
           sample_duration_ms?: number | null
+          sample_line?: string | null
           sample_render_count?: number
           sample_status?: string
           source_clip_count?: number | null

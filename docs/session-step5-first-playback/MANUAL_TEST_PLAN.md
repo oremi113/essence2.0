@@ -61,7 +61,19 @@ serialization is Postgres row locking, which a unit test cannot exercise.
 **Free failure testing:** point the vendor at a fake voice per
 `project_step6_live_verify` so 502s cost nothing.
 
-## Chunk 3 — to be written with that chunk
+## Chunk 3 — the ceremony wiring
 
-The `detail → playback` crossfade (the stone must not re-enter), the
-AnalyserNode wiring, `handleExit()`, and the journey funnel event.
+| # | Check | Expected | Verified 2026-09-10 |
+|---|---|---|---|
+| 26 | Walk the ceremony to `detail`, tap **Continue** | Advances to the playback phase instead of `/messages/new` | ✅ |
+| 27 | The stone does not re-enter | The incoming stone mounts on the outgoing one's exact rect, then travels | ✅ 237.2/200px → 254.2/220px, monotonic |
+| 28 | Handoff has no superimposition artifact | One rendering visible at a time | ✅ match cut; the dissolve was rejected — see follow-up `2026-09-10-two-stone-renderers-meet-at-the-playback-cut` |
+| 29 | Beat plays through inside the ceremony | 10/10 words, CTA then replay, `aria-live` announces | ✅ |
+| 30 | **4× CPU throttle across handoff + utterance** | No frame over 20ms | ✅ p50 8.3, p95 9.2, max 16.7, 0 over 20ms |
+| 31 | Sample fetch 404s (no sample) | Phase still plays, silently, driven by the cadence model. No crash, no dead end | ✅ (dev-mock-id has no profile) |
+| 32 | Reduced motion | No stone travel — the cut alone. Everything else per row 9 | ⬜ |
+| 33 | Live walk with a real rendered sample | Audio plays, the stone's amplitude follows RMS rather than the cadence model | ⬜ needs a seeded account |
+| 34 | `journey.first_playback_heard` fires **once**, on completed listen | Not on arrival; not again on replay | ⬜ needs live analytics |
+
+**The one thing the dev page cannot show:** rows 33–34 need a real profile with a
+rendered sample. Use the seed + magic-link protocol from `project_step6_live_verify`.

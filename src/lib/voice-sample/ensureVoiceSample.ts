@@ -21,23 +21,21 @@ import { ErrorCode } from "@/lib/errors";
 import { logEvent, logError, durationSince } from "@/lib/logger";
 import { sanitizeErrorMessage } from "@/lib/api/sanitize";
 import { bestEffortWrite } from "@/lib/supabase/checked-write";
+import { VOICE_SAMPLE_LINE } from "./voice-sample-line";
 
-/**
- * The spoken line — §4.2, the single highest-stakes copy decision in the
- * product. Continuity-framed, addressed to no one and therefore to everyone,
- * and it survives being played aloud to family in the room.
- *
- * Constraints it has to keep holding: neutral (no Recipient exists yet), short
- * (every second is a paid second), and true — it must not imply a message was
- * created or sent. Changing it changes what every existing user would hear on a
- * re-render, so treat it as a copy decision, not a string.
- */
-export const VOICE_SAMPLE_LINE =
-  "If you're hearing this, I found a way to stay.";
+export { VOICE_SAMPLE_LINE };
+
 
 export type EnsureVoiceSampleResult =
   /** A sample exists (this call rendered it, or found one already there). */
-  | { ok: true; audioPath: string; durationMs: number | null; rendered: boolean }
+  | {
+      ok: true;
+      audioPath: string;
+      durationMs: number | null;
+      /** What this sample actually says — never assume it is the current constant. */
+      line: string;
+      rendered: boolean;
+    }
   /** Another caller holds the claim. Not an error — poll or let it finish. */
   | { ok: false; reason: "in_flight" }
   /** No usable voice yet. */
@@ -64,7 +62,7 @@ export async function ensureVoiceSample(
   const { data: profile, error: readError } = await supabase
     .from("voice_profiles")
     .select(
-      "id, status, vendor_voice_id, sample_audio_path, sample_duration_ms, sample_status, sample_render_count"
+      "id, status, vendor_voice_id, sample_audio_path, sample_duration_ms, sample_line, sample_status, sample_render_count"
     )
     .eq("id", voiceProfileId)
     .eq("user_id", userId)
@@ -81,6 +79,7 @@ export async function ensureVoiceSample(
       ok: true,
       audioPath: profile.sample_audio_path,
       durationMs: profile.sample_duration_ms,
+      line: profile.sample_line ?? VOICE_SAMPLE_LINE,
       rendered: false,
     };
   }
@@ -205,6 +204,10 @@ export async function ensureVoiceSample(
       sample_status: "ready",
       sample_audio_path: audioPath,
       sample_duration_ms: durationMs,
+      // Store what was SPOKEN, not what the constant happens to say later. The
+      // screen typesets this line while the audio speaks it; if the constant
+      // changes, an already-rendered user must keep reading what they hear.
+      sample_line: VOICE_SAMPLE_LINE,
     })
     .eq("id", voiceProfileId)
     .eq("user_id", userId);
@@ -230,5 +233,5 @@ export async function ensureVoiceSample(
     meta: { audioDurationMs: durationMs, bytes: tts.audioBuffer.byteLength },
   });
 
-  return { ok: true, audioPath, durationMs, rendered: true };
+  return { ok: true, audioPath, durationMs, line: VOICE_SAMPLE_LINE, rendered: true };
 }
