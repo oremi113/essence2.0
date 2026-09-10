@@ -350,8 +350,12 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+# Supabase Edge Functions. Disabled because this container fails its health
+# check locally, and the CLI stops every other service when one is unhealthy —
+# it was the actual cause of the stack collapsing. There is no supabase/functions
+# directory and nothing in src calls an edge function. Re-enable if that changes.
 [edge_runtime]
-enabled = true
+enabled = false
 # Supported request policies: `oneshot`, `per_worker`.
 # `per_worker` (default) — enables hot reload during local development.
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
@@ -364,8 +368,12 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Local log aggregation (logflare + vector). Disabled because these two
+# containers bind-mount the Docker socket, which Colima cannot do, so they abort
+# and take the whole `supabase start` down with them. Nothing in the app, the
+# tests, gen:types or CI reads them. Local-stack only; no effect on production.
 [analytics]
-enabled = true
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
