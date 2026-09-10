@@ -14,7 +14,8 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { generateSpeech } from "@/lib/elevenlabs";
+import { generateSpeechWithTimestamps } from "@/lib/elevenlabs";
+import { wordAlignmentFrom } from "./word-alignment";
 import { AUDIO_BUCKET, voiceSampleObjectPath } from "@/lib/audio/storage-paths";
 import { mp3DurationMsFromByteLength } from "@/lib/audio/mp3-duration";
 import { ErrorCode } from "@/lib/errors";
@@ -34,6 +35,8 @@ export type EnsureVoiceSampleResult =
       durationMs: number | null;
       /** What this sample actually says — never assume it is the current constant. */
       line: string;
+      /** Word onsets in ms, or null when the vendor gave no usable alignment. */
+      wordOffsetsMs: number[] | null;
       rendered: boolean;
     }
   /** Another caller holds the claim. Not an error — poll or let it finish. */
@@ -62,7 +65,7 @@ export async function ensureVoiceSample(
   const { data: profile, error: readError } = await supabase
     .from("voice_profiles")
     .select(
-      "id, status, vendor_voice_id, sample_audio_path, sample_duration_ms, sample_line, sample_status, sample_render_count"
+      "id, status, vendor_voice_id, sample_audio_path, sample_duration_ms, sample_line, sample_word_offsets, sample_status, sample_render_count"
     )
     .eq("id", voiceProfileId)
     .eq("user_id", userId)
@@ -80,6 +83,7 @@ export async function ensureVoiceSample(
       audioPath: profile.sample_audio_path,
       durationMs: profile.sample_duration_ms,
       line: profile.sample_line ?? VOICE_SAMPLE_LINE,
+      wordOffsetsMs: (profile.sample_word_offsets as number[] | null) ?? null,
       rendered: false,
     };
   }
@@ -135,7 +139,9 @@ export async function ensureVoiceSample(
 
   // ── the paid call ────────────────────────────────────────────────────────
 
-  const tts = await generateSpeech({
+  // The timestamps variant: same synthesis, same cost, plus the per-character
+  // timings the reveal needs. Alignment is best-effort — audio is what matters.
+  const tts = await generateSpeechWithTimestamps({
     voiceId: profile.vendor_voice_id,
     text: VOICE_SAMPLE_LINE,
   });
@@ -193,7 +199,11 @@ export async function ensureVoiceSample(
     return { ok: false, reason: "render_failed", code: ErrorCode.STORAGE_FAILED };
   }
 
-  const durationMs = mp3DurationMsFromByteLength(tts.audioBuffer.byteLength);
+  const alignment = wordAlignmentFrom(tts.alignment, VOICE_SAMPLE_LINE);
+  // Prefer the vendor's own measurement of the audio it just made; the
+  // byte-length derivation is a fallback and carries the ID3 tag as error.
+  const durationMs =
+    alignment?.durationMs ?? mp3DurationMsFromByteLength(tts.audioBuffer.byteLength);
 
   // The object is uploaded and paid for. If this write fails the audio exists
   // but nothing points at it, and the next caller would claim and re-render —
@@ -208,6 +218,9 @@ export async function ensureVoiceSample(
       // screen typesets this line while the audio speaks it; if the constant
       // changes, an already-rendered user must keep reading what they hear.
       sample_line: VOICE_SAMPLE_LINE,
+      // Valid only for the audio written above. Always set together — a stale
+      // pairing would light the wrong words.
+      sample_word_offsets: alignment?.offsetsMs ?? null,
     })
     .eq("id", voiceProfileId)
     .eq("user_id", userId);
@@ -233,5 +246,21 @@ export async function ensureVoiceSample(
     meta: { audioDurationMs: durationMs, bytes: tts.audioBuffer.byteLength },
   });
 
-  return { ok: true, audioPath, durationMs, line: VOICE_SAMPLE_LINE, rendered: true };
+  logEvent({
+    event: "voice_sample_alignment",
+    requestId,
+    userId,
+    voiceProfileId,
+    outcome: alignment ? "success" : "rejected",
+    meta: { words: alignment?.offsetsMs.length ?? 0, hasAlignment: Boolean(alignment) },
+  });
+
+  return {
+    ok: true,
+    audioPath,
+    durationMs,
+    line: VOICE_SAMPLE_LINE,
+    wordOffsetsMs: alignment?.offsetsMs ?? null,
+    rendered: true,
+  };
 }

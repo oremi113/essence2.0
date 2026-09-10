@@ -176,6 +176,8 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   // What the sample actually says. Falls back to the current constant only when
   // there is no sample to read from (a silent, cadence-driven beat).
   const [sampleLine, setSampleLine] = useState<string>(VOICE_SAMPLE_LINE);
+  // Word onsets for the fetched audio, when the vendor gave usable alignment.
+  const [sampleWordOffsets, setSampleWordOffsets] = useState<number[] | null>(null);
   const [entranceRect, setEntranceRect] =
     useState<{ left: number; top: number; width: number } | null>(null);
 
@@ -197,11 +199,20 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     let cancelled = false;
     fetch(`/api/voice-profiles/${voiceProfileId}/sample/play`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { url?: string; line?: string | null } | null) => {
-        if (cancelled || !body?.url) return;
-        setSampleUrl(body.url);
-        if (body.line) setSampleLine(body.line);
-      })
+      .then(
+        (
+          body: {
+            url?: string;
+            line?: string | null;
+            wordOffsetsMs?: number[] | null;
+          } | null
+        ) => {
+          if (cancelled || !body?.url) return;
+          setSampleUrl(body.url);
+          if (body.line) setSampleLine(body.line);
+          if (Array.isArray(body.wordOffsetsMs)) setSampleWordOffsets(body.wordOffsetsMs);
+        }
+      )
       .catch(() => {
         /* silent — see above */
       });
@@ -372,6 +383,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
             amplitude={
               sampleUrl ? { kind: 'audio', url: sampleUrl } : { kind: 'cadence' }
             }
+            wordOffsetsMs={sampleWordOffsets}
             entranceFrom={entranceRect}
             onPlaybackComplete={handlePlaybackHeard}
             onCreateFirstMessage={handleExit}

@@ -31,7 +31,9 @@ export const GET = defineRoute<true, { id: string }>(
 
     const { data: profile, error } = await supabase
       .from("voice_profiles")
-      .select("id, sample_status, sample_audio_path, sample_duration_ms, sample_line")
+      .select(
+        "id, sample_status, sample_audio_path, sample_duration_ms, sample_line, sample_word_offsets"
+      )
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -91,6 +93,9 @@ export const GET = defineRoute<true, { id: string }>(
       // — otherwise a copy change would make old samples read one line and
       // speak another.
       line: profile.sample_line,
+      // Word onsets for THIS audio. Null means the screen falls back to the
+      // cadence table scaled to the audio's length.
+      wordOffsetsMs: profile.sample_word_offsets,
     });
   },
 );

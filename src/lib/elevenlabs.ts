@@ -4,6 +4,8 @@
  */
 import "server-only";
 
+import type { CharacterAlignment } from "@/lib/voice-sample/word-alignment";
+
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
 const REQUEST_TIMEOUT_MS = 60_000; // 60 s — fail fast so user sees error instead of hanging
 const TTS_MODEL_ID = "eleven_multilingual_v2";
@@ -201,6 +203,108 @@ export type GenerateSpeechParams = {
 export type GenerateSpeechResult =
   | { ok: true; audioBuffer: Buffer; contentType: string }
   | { ok: false; status: number; code?: string; message: string };
+
+export type GenerateSpeechWithTimestampsResult =
+  | {
+      ok: true;
+      audioBuffer: Buffer;
+      contentType: string;
+      /** Per-character timings for the audio just returned. */
+      alignment: CharacterAlignment | null;
+    }
+  | { ok: false; status: number; code?: string; message: string };
+
+/**
+ * Generate speech AND the per-character timings for it.
+ *
+ * Same synthesis and the same cost as `generateSpeech`; a different response
+ * shape. Used by Step 5 First Playback, where the words are typeset on screen
+ * and revealed as they are spoken — which a hand-timed table cannot deliver
+ * across voices that each have their own rate.
+ *
+ * The timings belong to THIS render and only this render: the same text in the
+ * same voice comes back a different length each time (2043ms and 2229ms on two
+ * consecutive calls), so alignment must be stored with the audio it describes
+ * and discarded whenever that audio is replaced.
+ *
+ * Alignment is best-effort. Audio is the thing that matters, so a malformed or
+ * missing `alignment` yields `alignment: null` rather than failing the render —
+ * the caller falls back to the cadence table.
+ */
+export async function generateSpeechWithTimestamps(
+  params: GenerateSpeechParams
+): Promise<GenerateSpeechWithTimestampsResult> {
+  const { voiceId, text, voiceSettings } = params;
+  if (!voiceId?.trim()) {
+    return { ok: false, status: 400, message: "Voice ID is required" };
+  }
+  if (!text?.trim()) {
+    return { ok: false, status: 400, message: "Text is required" };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(
+      `${ELEVENLABS_BASE}/text-to-speech/${encodeURIComponent(voiceId)}/with-timestamps`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": getApiKey(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: text.trim(),
+          model_id: TTS_MODEL_ID,
+          ...(voiceSettings && {
+            voice_settings: {
+              stability: voiceSettings.stability,
+              similarity_boost: voiceSettings.similarity,
+              style: voiceSettings.style,
+              use_speaker_boost: voiceSettings.useSpeakerBoost,
+            },
+          }),
+        }),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return {
+        ok: false,
+        status: res.status,
+        message: body.slice(0, 300) || `ElevenLabs returned ${res.status}`,
+      };
+    }
+
+    const json = (await res.json()) as {
+      audio_base64?: string;
+      alignment?: CharacterAlignment;
+    };
+
+    if (!json.audio_base64) {
+      return { ok: false, status: 502, message: "No audio in timestamps response" };
+    }
+
+    return {
+      ok: true,
+      audioBuffer: Buffer.from(json.audio_base64, "base64"),
+      contentType: "audio/mpeg",
+      alignment: json.alignment ?? null,
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const aborted = err instanceof Error && err.name === "AbortError";
+    return {
+      ok: false,
+      status: aborted ? 504 : 502,
+      message: aborted ? "ElevenLabs timed out" : "ElevenLabs request failed",
+    };
+  }
+}
 
 /**
  * Generate speech audio from text using a cloned voice.

@@ -42,18 +42,31 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 let ttsCalls = 0;
 /** Set to make the next vendor call fail once, for the release-path test. */
 let ttsFailOnce: { status: number; message: string } | null = null;
+/** Alignment the stubbed vendor returns; null exercises the fallback. */
+let ttsAlignment: {
+  characters: string[];
+  character_start_times_seconds: number[];
+  character_end_times_seconds: number[];
+} | null = null;
 
 vi.mock("@/lib/elevenlabs", () => ({
-  generateSpeech: async () => {
+  generateSpeechWithTimestamps: async () => {
     ttsCalls++;
     if (ttsFailOnce) {
       const f = ttsFailOnce;
       ttsFailOnce = null;
+  ttsAlignment = null;
       return { ok: false as const, status: f.status, message: f.message };
     }
-    // A real byte length: the code derives duration from it, so an empty
-    // buffer would silently produce a nonsense duration.
-    return { ok: true as const, audioBuffer: Buffer.alloc(24000), contentType: "audio/mpeg" };
+    // A real byte length: duration falls back to it when alignment is absent.
+    // The alignment mirrors the shape a live call returns — two words so the
+    // collapse has something to reject or accept deliberately.
+    return {
+      ok: true as const,
+      audioBuffer: Buffer.alloc(24000),
+      contentType: "audio/mpeg",
+      alignment: ttsAlignment,
+    };
   },
 }));
 
@@ -120,7 +133,9 @@ async function resetSample(id: string) {
 async function readProfile(id: string) {
   const { data } = await service
     .from("voice_profiles")
-    .select("sample_status, sample_audio_path, sample_duration_ms, sample_line, sample_render_count")
+    .select(
+      "sample_status, sample_audio_path, sample_duration_ms, sample_line, sample_word_offsets, sample_render_count"
+    )
     .eq("id", id)
     .single();
   return data!;
@@ -210,6 +225,40 @@ describe.runIf(await ping())("ensureVoiceSample against real Postgres", () => {
     // Exactly one caller should have believed it did the rendering.
     const rendered = results.filter((r) => r.ok && r.rendered);
     expect(rendered).toHaveLength(1);
+  });
+
+  it("stores word offsets when the vendor returns usable alignment", async () => {
+    // Character timings for the real line, as the vendor shape.
+    const line = "If you're hearing this, I found a way to stay.";
+    const chars = [...line];
+    const starts = chars.map((_, i) => i * 0.05);
+    ttsAlignment = {
+      characters: chars,
+      character_start_times_seconds: starts,
+      character_end_times_seconds: starts.map((t) => t + 0.05),
+    };
+
+    const result = await run();
+
+    expect(result).toMatchObject({ ok: true, rendered: true });
+    const row = await readProfile(profileId);
+    // One onset per word of the stored line, persisted as jsonb.
+    expect(Array.isArray(row.sample_word_offsets)).toBe(true);
+    expect((row.sample_word_offsets as number[]).length).toBe(line.split(" ").length);
+    // Duration comes from the vendor's own measurement, not the byte length.
+    expect(row.sample_duration_ms).toBe(Math.round(chars.length * 0.05 * 1000));
+  });
+
+  it("falls back cleanly when the vendor returns no alignment", async () => {
+    ttsAlignment = null;
+
+    const result = await run();
+
+    expect(result).toMatchObject({ ok: true, rendered: true, wordOffsetsMs: null });
+    const row = await readProfile(profileId);
+    expect(row.sample_word_offsets).toBeNull();
+    // Byte-length derivation still supplies a duration.
+    expect(row.sample_duration_ms).toBeGreaterThan(0);
   });
 
   it("row 23 — a profile belonging to another user is never touched", async () => {
