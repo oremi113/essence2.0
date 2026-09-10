@@ -173,6 +173,16 @@ export function FirstPlaybackScreen({
   const rafRef = useRef<number | null>(null);
   const runningRef = useRef(false);
   const audioGraphRef = useRef<{ ctx: AudioContext; analyser: AnalyserNode } | null>(null);
+  /**
+   * The real spoken length, once the browser has decoded enough to know it.
+   *
+   * The cadence table is hand-timed against ONE reading of the line. Every
+   * user's clone speaks at its own rate — the owner's renders this line in
+   * 2.23s against the table's 3.60s — so a fixed table drifts by more than a
+   * second and the last word lights up after the voice has already stopped.
+   * The table supplies the RHYTHM; the audio supplies the DURATION.
+   */
+  const audioDurationMsRef = useRef<number | null>(null);
 
   // Callbacks live in refs so the sequence effect never re-runs (and restarts
   // the ceremony) because a parent handed down a new closure identity.
@@ -224,15 +234,39 @@ export function FirstPlaybackScreen({
     setBreathing(false);
     announce(line);
 
+    // Stretch or compress the table onto the actual utterance. 1 when there is
+    // no audio to measure against, so the dev page is unchanged.
+    const realMs = audioDurationMsRef.current;
+    const scale = realMs && lineEnd > 0 ? realMs / lineEnd : 1;
+    const scaled = (ms: number) => Math.round(ms * scale);
+    const endMs = scaled(lineEnd);
+
     words.forEach((w, i) => {
-      at(w.atMs, () => setLitCount((n) => Math.max(n, i + 1)));
-      at(w.atMs + WORD_REST_MS, () => setRestCount((n) => Math.max(n, i + 1)));
+      at(scaled(w.atMs), () => setLitCount((n) => Math.max(n, i + 1)));
+      at(scaled(w.atMs) + WORD_REST_MS, () => setRestCount((n) => Math.max(n, i + 1)));
     });
 
+    // The tail is scheduled from here, not from the sequence effect, because
+    // only now is the real length known. Hanging "That's you." off the model
+    // would delay it by the same drift the words were suffering.
+    at(endMs + PAYOFF_AFTER_LINE_MS, () => {
+      setRevealed((r) => ({ ...r, payoff: true }));
+      announce(`${payoff} ${aside}`);
+    });
+    at(endMs + ASIDE_AFTER_LINE_MS, () =>
+      setRevealed((r) => ({ ...r, aside: true }))
+    );
+    at(endMs + CTA_AFTER_LINE_MS, () =>
+      setRevealed((r) => ({ ...r, cta: true }))
+    );
+    at(endMs + REPLAY_AFTER_LINE_MS, () =>
+      setRevealed((r) => ({ ...r, replay: true }))
+    );
+
     if (reduced) {
-      words.forEach((w) => at(w.atMs, () => setLum(reducedLuminanceFor(w.word), 0)));
-      at(lineEnd, () => setLum(0.2, 0));
-      at(lineEnd + 400, () => {
+      words.forEach((w) => at(scaled(w.atMs), () => setLum(reducedLuminanceFor(w.word), 0)));
+      at(endMs, () => setLum(0.2, 0));
+      at(endMs + 400, () => {
         setLum(0, 0);
         endSpeech();
       });
@@ -258,7 +292,7 @@ export function FirstPlaybackScreen({
         // ×3.2 maps speech-level RMS (~0.05–0.3) onto the 0..1 the layers expect.
         return Math.min(1, Math.sqrt(sum / bins.length) * 3.2);
       }
-      return targetAmplitude(tMs, words, lineEnd);
+      return targetAmplitude(tMs / scale, words, lineEnd);
     };
 
     // The clock accumulates CLAMPED deltas. An absolute performance.now()
@@ -273,7 +307,7 @@ export function FirstPlaybackScreen({
       t += prev === null ? FIRST_FRAME_DELTA_MS : Math.min(MAX_FRAME_DELTA_MS, now - prev);
       prev = now;
 
-      if (t > lineEnd + LUM_DECAY_MS) {
+      if (t > endMs + LUM_DECAY_MS) {
         setLum(0, 0);
         endSpeech();
         return;
@@ -281,14 +315,14 @@ export function FirstPlaybackScreen({
 
       const target = sample(t);
       lum += (target - lum) * (target > lum ? LUM_ATTACK : LUM_RELEASE);
-      sus += ((t < lineEnd ? Math.min(1, t / SUS_RAMP_MS) : 0) - sus) * SUS_COEFFICIENT;
+      sus += ((t < endMs ? Math.min(1, t / SUS_RAMP_MS) : 0) - sus) * SUS_COEFFICIENT;
       setLum(lum, sus);
 
       rafRef.current = requestAnimationFrame(loop);
     };
 
     rafRef.current = requestAnimationFrame(loop);
-  }, [announce, at, endSpeech, line, lineEnd, reduced, setLum, words]);
+  }, [announce, aside, at, endSpeech, line, lineEnd, payoff, reduced, setLum, words]);
 
   /**
    * Leaving mid-utterance resolves to the settled beat. Resuming mid-word is
@@ -332,15 +366,9 @@ export function FirstPlaybackScreen({
       speak();
     });
 
-    // The tail is not compressed under reduced motion: the pause after the line
-    // is comprehension time, not choreography.
-    at(play + lineEnd + PAYOFF_AFTER_LINE_MS, () => {
-      setRevealed((r) => ({ ...r, payoff: true }));
-      announce(`${payoff} ${aside}`);
-    });
-    at(play + lineEnd + ASIDE_AFTER_LINE_MS, show('aside'));
-    at(play + lineEnd + CTA_AFTER_LINE_MS, show('cta'));
-    at(play + lineEnd + REPLAY_AFTER_LINE_MS, show('replay'));
+    // The tail is scheduled inside speak(), which is the only place that knows
+    // the real spoken length. It is not compressed under reduced motion: the
+    // pause after the line is comprehension time, not choreography.
 
     return clearTimers;
     // The ceremony runs once per line/motion-mode. Handlers are read from refs
@@ -613,6 +641,14 @@ export function FirstPlaybackScreen({
           src={amplitude.url}
           preload="auto"
           crossOrigin="anonymous"
+          onLoadedMetadata={(e) => {
+            const d = e.currentTarget.duration;
+            // Guard against Infinity/NaN, which some streams report before
+            // enough of the file has arrived.
+            if (Number.isFinite(d) && d > 0) {
+              audioDurationMsRef.current = Math.round(d * 1000);
+            }
+          }}
         />
       )}
     </div>

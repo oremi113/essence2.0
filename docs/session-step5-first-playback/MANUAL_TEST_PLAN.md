@@ -91,7 +91,7 @@ cookie plumbing is shared with the already-shipped messages endpoint.
 | 30 | **4× CPU throttle across handoff + utterance** | No frame over 20ms | ✅ p50 8.3, p95 9.2, max 16.7, 0 over 20ms |
 | 31 | Sample fetch 404s (no sample) | Phase still plays, silently, driven by the cadence model. No crash, no dead end | ✅ (dev-mock-id has no profile) |
 | 32 | Reduced motion | No stone travel — the cut alone. Everything else per row 9 | ✅ 2026-09-10 · movedY 0, 1 distinct position over 1200ms, 0 animations |
-| 33 | Live walk with a real rendered sample | Audio plays, the stone's amplitude follows RMS rather than the cadence model | ⬜ needs a seeded account |
+| 33 | Live walk with a real rendered sample | Audio plays; timings track the real voice | ⚠️ **found a defect** — 1371ms drift, now fixed by scaling; per-word alignment still owed |
 | 34 | `journey.first_playback_heard` fires **once**, on completed listen | Not on arrival; not again on replay | ⬜ needs live analytics |
 
 **The one thing the dev page cannot show:** rows 33–34 need a real profile with a
@@ -155,3 +155,45 @@ give-away was that the CTA had not mounted — the tail had not arrived yet.
 **Still owed:** background the tab for real on the phone. iOS Safari also
 freezes timers on background, which is a different mechanism again from a
 desktop tab switch, so this genuinely needs the device.
+
+## Row 33 — real voice clone, 2026-09-10
+
+One paid render of the §4.2 line in the owner's own clone
+(`xtw4wiBa3u4cFZmEyDXK`, 46 characters, 36,824 bytes, 128kbps mono), uploaded to
+local storage and served through a signed URL. **It found a real defect.**
+
+| | |
+|---|---|
+| Real audio | **2,229 ms** |
+| The cadence table's line length | **3,600 ms** |
+| Drift | **1,371 ms — the model ran 61% long** |
+| Last word lit | **651 ms AFTER the voice had stopped** |
+
+The words kept appearing after the voice finished. The table was hand-timed
+against one 3.6s reading; a real clone speaks the line in 2.2s, and **every
+user's clone has its own rate**, so a fixed table can never hold.
+
+**Fixed** by scaling the table by `realDuration / modelDuration`, read from the
+audio element's `loadedmetadata`, and moving the tail (payoff / aside / CTA /
+replay) into `speak()` so it hangs off the *scaled* end rather than the model's.
+
+| | before | after |
+|---|---|---|
+| Line end vs voice end | +1371ms | **0ms** |
+| Last word vs voice end | +651ms | −446ms (mid-word, correct) |
+
+Both no-audio paths re-verified unchanged — scale is 1 when there is nothing to
+measure, so the dev page behaves exactly as before.
+
+**Still owed:** per-word alignment. Scaling fixes total length, not
+distribution — words still land on the table's relative rhythm. Filed as
+`2026-09-10-word-reveal-should-use-real-tts-timestamps` (P2), which the
+prototype itself anticipated: *"Production replaces both paths with
+render-pipeline offsets."*
+
+## Row 34 — not run
+
+Needs the journey event observed through a real authenticated session. The
+browser here has no cookie session (the dev-auth route needs the test password
+on the URL, and Playwright's snippet sandbox cannot read it from disk), so this
+is still owed.
