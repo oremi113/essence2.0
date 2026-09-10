@@ -77,3 +77,24 @@ serialization is Postgres row locking, which a unit test cannot exercise.
 
 **The one thing the dev page cannot show:** rows 33–34 need a real profile with a
 rendered sample. Use the seed + magic-link protocol from `project_step6_live_verify`.
+
+## Real-device pass — owner, iPhone 16 Pro Safari, 2026-09-10
+
+Found two defects that **no automated check could have caught**, because every
+measurement had been taken at the prototype's 390×844 frame and real Safari
+gives ~700px. See `DECISION-real-device-height.md`.
+
+| # | Check | Expected | Status |
+|---|---|---|---|
+| 35 | The lede never touches the sphere | Clearance is proportional to the stone — the aura glows 15% beyond its box, so a fixed gap is not enough | ✅ fixed · 14px visible clearance at 700px |
+| 36 | Nothing is ever unreachable | Root is `overflow-y: auto`. It was `hidden`, which **clipped** the payoff and CTA rather than letting them scroll | ✅ fixed |
+| 37 | The sphere stays a hero, not a dot | Compact mode **cuts the lede** rather than shrinking the stone. 189px at 700px (was 140px) | ✅ fixed, owner-approved |
+| 38 | The primary does not out-weigh the sphere | 296px, down from 330px against a 255px text measure. Label must not wrap | ✅ fixed, owner-approved · amends the dark-stage ruling |
+| 39 | The lede does not pop in/out as Safari's toolbar collapses | Threshold sits above both toolbar states on every current iPhone | ✅ 700 / 790 both compact |
+| 40 | The 844 design frame is unchanged | Lede shown, prototype fidelity intact | ✅ |
+
+**Residual, accepted:** a 664px screen overflows by 10px (CTA still on screen); a
+560px screen scrolls properly. Both recorded in the decision memo.
+
+**Lesson for the next screen:** a 4× throttle pass at 390×844 says nothing about
+whether a screen fits a real phone. The two are different tests.
