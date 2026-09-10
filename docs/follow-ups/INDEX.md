@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 40 · 38 open · 2 decision · 0 resolved · 0 dropped
+Total: 41 · 39 open · 2 decision · 0 resolved · 0 dropped
 
-## Open (38)
+## Open (39)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -24,6 +24,7 @@ Total: 40 · 38 open · 2 decision · 0 resolved · 0 dropped
 | P2 | L2 consent gate DONE in code — own-voice-only copy, voice_consent_records table applied to prod + persistence wired. ONLY remaining item is the owner env flip VOICE_CONSENT_REQUIRED=true to enforce it for beta. | 2026-09-01 | — | [`2026-09-01-wire-voice-consent-persistence.md`](./2026-09-01-wire-voice-consent-persistence.md) |
 | P2 | `DEFERRED_AUDIO_ENABLED` is a flag with only one working arm — the control arm has no A6 screen, so "off" 404s after a paid generation *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-control-arm-a6-screen-was-never-built.md`](./2026-09-04-control-arm-a6-screen-was-never-built.md) |
 | P2 | No migration creates the storage buckets — `essence-audio` and `profile-photos` exist only because someone made them by hand in the dashboard, so a fresh environment has none and every upload fails with `Bucket not found` *(found running Step 5 live tests, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-storage-buckets-are-not-in-version-control.md`](./2026-09-10-storage-buckets-are-not-in-version-control.md) |
+| P2 | First Playback's word-by-word reveal is driven by a hand-timed cadence table scaled to the audio's total length, not by real per-word timings — so words drift within the line even though the line now ends on time *(found with a real voice clone, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-word-reveal-should-use-real-tts-timestamps.md`](./2026-09-10-word-reveal-should-use-real-tts-timestamps.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
