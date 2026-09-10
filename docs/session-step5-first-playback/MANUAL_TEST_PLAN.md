@@ -91,7 +91,7 @@ cookie plumbing is shared with the already-shipped messages endpoint.
 | 30 | **4× CPU throttle across handoff + utterance** | No frame over 20ms | ✅ p50 8.3, p95 9.2, max 16.7, 0 over 20ms |
 | 31 | Sample fetch 404s (no sample) | Phase still plays, silently, driven by the cadence model. No crash, no dead end | ✅ (dev-mock-id has no profile) |
 | 32 | Reduced motion | No stone travel — the cut alone. Everything else per row 9 | ✅ 2026-09-10 · movedY 0, 1 distinct position over 1200ms, 0 animations |
-| 33 | Live walk with a real rendered sample | Audio plays; timings track the real voice | ⚠️ **found a defect** — 1371ms drift, now fixed by scaling; per-word alignment still owed |
+| 33 | Live walk with a real rendered sample | Audio plays; timings track the real voice | ✅ **found a defect, now fully fixed** — real per-word offsets from the vendor |
 | 34 | `journey.first_playback_heard` fires **once**, on completed listen | Not on arrival; not again on replay | ⬜ needs live analytics |
 
 **The one thing the dev page cannot show:** rows 33–34 need a real profile with a
@@ -185,11 +185,23 @@ replay) into `speak()` so it hangs off the *scaled* end rather than the model's.
 Both no-audio paths re-verified unchanged — scale is 1 when there is nothing to
 measure, so the dev page behaves exactly as before.
 
-**Still owed:** per-word alignment. Scaling fixes total length, not
-distribution — words still land on the table's relative rhythm. Filed as
-`2026-09-10-word-reveal-should-use-real-tts-timestamps` (P2), which the
-prototype itself anticipated: *"Production replaces both paths with
-render-pipeline offsets."*
+**Then fixed properly, same day.** Scaling only corrected total length; words
+still landed on the table's relative rhythm. `ensureVoiceSample` now renders via
+ElevenLabs' `/with-timestamps` — same synthesis, same cost — and stores real word
+onsets in `sample_word_offsets`, which the screen uses verbatim.
+
+Proven with one real paid render through the real code path: `ready`, duration
+**2322 ms** from the vendor's own measurement, `sample_render_count` 1, ten
+offsets for ten words.
+
+**The drift was worse than first measured, and it moves.** On that render the
+scaled table would have been out by up to **176 ms** (mean 110); on an earlier
+render of the same line in the same voice, 141 ms (mean 54). The renders were
+2322 ms and 2043 ms — TTS is not deterministic, so this was never a fixed number
+to tune out. Now 0 by construction.
+
+The cadence table remains the fallback for the dev page, pre-migration samples,
+and any alignment that fails validation.
 
 ## Row 34 — not run
 

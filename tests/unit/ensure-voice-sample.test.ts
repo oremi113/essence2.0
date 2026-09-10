@@ -15,9 +15,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * stands in for it: `claimMatches` is what the DB would have returned.
  */
 
-/** Mirrors GenerateSpeechResult so a test can hand back either arm. */
+/** Mirrors GenerateSpeechWithTimestampsResult so a test can hand back either arm. */
 type TtsResult =
-  | { ok: true; audioBuffer: Buffer; contentType: string }
+  | {
+      ok: true;
+      audioBuffer: Buffer;
+      contentType: string;
+      alignment: null;
+    }
   | { ok: false; status: number; code?: string; message: string };
 
 const ttsSpy = vi.fn(
@@ -25,10 +30,13 @@ const ttsSpy = vi.fn(
     ok: true,
     audioBuffer: Buffer.alloc(16000),
     contentType: "audio/mpeg",
+    // Alignment absent here on purpose: these tests are about the money guard,
+    // and the collapse has its own coverage in word-alignment.test.ts.
+    alignment: null,
   }),
 );
 vi.mock("@/lib/elevenlabs", () => ({
-  generateSpeech: (...args: unknown[]) => ttsSpy(...(args as [])),
+  generateSpeechWithTimestamps: (...args: unknown[]) => ttsSpy(...(args as [])),
 }));
 
 vi.mock("@/lib/audio/mp3-duration", () => ({
@@ -169,7 +177,7 @@ describe("ensureVoiceSample — the money guard", () => {
     let claimedBeforeTts = false;
     ttsSpy.mockImplementationOnce(async () => {
       claimedBeforeTts = updates.some((u) => u.sample_status === "rendering");
-      return { ok: true, audioBuffer: Buffer.alloc(16000), contentType: "audio/mpeg" };
+      return { ok: true, audioBuffer: Buffer.alloc(16000), contentType: "audio/mpeg", alignment: null };
     });
 
     await run();

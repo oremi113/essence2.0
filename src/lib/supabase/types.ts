@@ -651,6 +651,7 @@ export type Database = {
           sample_line: string | null
           sample_render_count: number
           sample_status: string
+          sample_word_offsets: Json | null
           source_clip_count: number | null
           source_clip_seconds: number | null
           status: Database["public"]["Enums"]["voice_profile_status"]
@@ -682,6 +683,7 @@ export type Database = {
           sample_line?: string | null
           sample_render_count?: number
           sample_status?: string
+          sample_word_offsets?: Json | null
           source_clip_count?: number | null
           source_clip_seconds?: number | null
           status?: Database["public"]["Enums"]["voice_profile_status"]
@@ -713,6 +715,7 @@ export type Database = {
           sample_line?: string | null
           sample_render_count?: number
           sample_status?: string
+          sample_word_offsets?: Json | null
           source_clip_count?: number | null
           source_clip_seconds?: number | null
           status?: Database["public"]["Enums"]["voice_profile_status"]

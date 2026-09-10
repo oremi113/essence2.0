@@ -79,6 +79,15 @@ export interface FirstPlaybackScreenProps {
    * over from and the stone simply appears.
    */
   entranceFrom?: { left: number; top: number; width: number } | null;
+  /**
+   * Word onsets in ms, measured from the audio being played.
+   *
+   * When present these are used verbatim: they came from the vendor's own
+   * alignment for this exact render, so there is nothing to scale. When absent
+   * the cadence table is used instead, stretched to the audio's total length —
+   * right about when the line ends, up to ~140ms out within it.
+   */
+  wordOffsetsMs?: number[] | null;
   /** Overrides the media query. Dev harness only — production omits it. */
   forceReducedMotion?: boolean;
 }
@@ -144,6 +153,7 @@ export function FirstPlaybackScreen({
   payoff,
   aside,
   amplitude,
+  wordOffsetsMs,
   onCreateFirstMessage,
   onPlaybackComplete,
   onReplay,
@@ -153,7 +163,21 @@ export function FirstPlaybackScreen({
   const systemReducedMotion = useReducedMotion();
   const reduced = forceReducedMotion ?? systemReducedMotion;
 
-  const words = useMemo<WordBeat[]>(() => cadence(line), [line]);
+  /**
+   * Real onsets win over the table. A length mismatch is treated as unusable
+   * rather than silently lighting the wrong words.
+   */
+  const realBeats = useMemo<WordBeat[] | null>(() => {
+    if (!wordOffsetsMs) return null;
+    const split = line.trim().split(/\s+/).filter(Boolean);
+    if (wordOffsetsMs.length !== split.length) return null;
+    return split.map((word, i) => ({ word, atMs: wordOffsetsMs[i] }));
+  }, [line, wordOffsetsMs]);
+
+  const words = useMemo<WordBeat[]>(
+    () => realBeats ?? cadence(line),
+    [realBeats, line]
+  );
   const lineEnd = useMemo(() => lineEndMs(words), [words]);
 
   const [revealed, setRevealed] = useState<Revealed>(NOTHING_REVEALED);
@@ -236,10 +260,12 @@ export function FirstPlaybackScreen({
 
     // Stretch or compress the table onto the actual utterance. 1 when there is
     // no audio to measure against, so the dev page is unchanged.
+    // Real onsets are already in the audio's own time — scaling them would
+    // reintroduce the error this exists to remove.
     const realMs = audioDurationMsRef.current;
-    const scale = realMs && lineEnd > 0 ? realMs / lineEnd : 1;
+    const scale = realBeats || !realMs || lineEnd <= 0 ? 1 : realMs / lineEnd;
     const scaled = (ms: number) => Math.round(ms * scale);
-    const endMs = scaled(lineEnd);
+    const endMs = realBeats && realMs ? realMs : scaled(lineEnd);
 
     words.forEach((w, i) => {
       at(scaled(w.atMs), () => setLitCount((n) => Math.max(n, i + 1)));
@@ -322,7 +348,7 @@ export function FirstPlaybackScreen({
     };
 
     rafRef.current = requestAnimationFrame(loop);
-  }, [announce, aside, at, endSpeech, line, lineEnd, payoff, reduced, setLum, words]);
+  }, [announce, aside, at, endSpeech, line, lineEnd, payoff, realBeats, reduced, setLum, words]);
 
   /**
    * Leaving mid-utterance resolves to the settled beat. Resuming mid-word is

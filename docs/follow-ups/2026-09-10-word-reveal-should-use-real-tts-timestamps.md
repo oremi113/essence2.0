@@ -1,9 +1,9 @@
 ---
 id: 2026-09-10-word-reveal-should-use-real-tts-timestamps
 priority: P2
-status: open
+status: resolved
 opened: 2026-09-10
-resolved:
+resolved: 2026-09-10
 summary: "First Playback's word-by-word reveal is driven by a hand-timed cadence table scaled to the audio's total length, not by real per-word timings — so words drift within the line even though the line now ends on time *(found with a real voice clone, 2026-09-10)*"
 ---
 
@@ -68,8 +68,24 @@ base64 audio plus `alignment.characters` and their start/end times. So:
 Keep the table. It is what makes the dev page reviewable without spending money,
 and it is the fallback when alignment is missing.
 
-## Pick up when
+## Resolved 2026-09-10
 
-Before Step 5 reaches users. The scaling makes it defensible in the meantime,
-but "the words resolve as they are spoken" is the beat's whole claim, and right
-now that is only true in aggregate.
+Done as described. `generateSpeechWithTimestamps()` renders through
+`/with-timestamps`, `wordAlignmentFrom()` collapses character timings to word
+onsets, and `sample_word_offsets jsonb` stores them beside the audio they
+describe. The endpoint returns them and the screen uses them verbatim — no
+scaling, because they are already in the audio's own time.
+
+Verified with one real paid render through the real code path: status `ready`,
+duration 2322 ms taken from the vendor's own measurement rather than byte
+length, `sample_render_count` 1, ten offsets for ten words.
+
+**The error removed was larger than first measured, and it moves.** On that
+render the scaled table would have been out by up to **176 ms** (mean 110);
+on an earlier render of the same line in the same voice it was 141 ms (mean 54).
+The two renders were 2322 ms and 2043 ms — TTS is not deterministic, so the
+drift is not a fixed number to tune out. It is now 0 by construction.
+
+The cadence table stays as the fallback: it is what makes the dev page
+reviewable without spending money, and what covers pre-migration samples and any
+render whose alignment does not survive validation.
