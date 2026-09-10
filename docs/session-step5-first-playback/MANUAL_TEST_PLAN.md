@@ -46,17 +46,36 @@ against removing the claim guard and against not counting spend at claim time).
 The rows below are what still needs a **live** walk, because the guard's real
 serialization is Postgres row locking, which a unit test cannot exercise.
 
-| # | Check | Expected |
-|---|---|---|
-| 17 | Apply the migration locally, complete voice creation once | `sample_status = 'ready'`, `sample_audio_path` set, `sample_duration_ms` non-null, **`sample_render_count = 1`** |
-| 18 | Refresh `/app/voice/processing` repeatedly after ready | `sample_render_count` **stays 1**. Anything higher is a double-bill |
-| 19 | Fire two `/start` requests concurrently | Exactly one vendor render. The loser logs `voice_sample_claim_noop` |
-| 20 | `GET /api/voice-profiles/:id/sample/play` when ready | 200 + signed url + `durationMs`; one `signed_url_playback` usage event |
-| 21 | Same endpoint while `sample_status = 'rendering'` | **409** with `status: 'rendering'` — distinguishable from failure, which §4.7 will need |
-| 22 | Same endpoint with no sample | 404 with the status echoed |
-| 23 | Same endpoint for **another user's** profile id | 404 (RLS-scoped read, never a leak) |
-| 24 | Force a TTS 502 during creation | Voice still completes ready; `sample_status = 'failed'`; the beat is re-claimable |
-| 25 | The GET endpoint never renders | No ElevenLabs call on any GET, at any status |
+| # | Check | Expected | Result 2026-09-10 |
+|---|---|---|---|
+| 17 | Render once, persisting everything | `sample_status = 'ready'`, path set, duration non-null, line stored, **`sample_render_count = 1`** | ✅ live |
+| 18 | Repeated calls after ready | `sample_render_count` **stays 1**. Anything higher is a double-bill | ✅ live · 5 extra calls, still 1 · mutation-verified |
+| 19 | **Concurrent calls** | Exactly one vendor render; losers log `voice_sample_claim_noop` | ✅ live · 5 parallel → 1 render, 4 noops · mutation-verified |
+| 20 | GET when ready | 200 + signed url + `durationMs` + the **stored** line; one usage event | ✅ route · mutation-verified |
+| 21 | GET while `rendering` | **409** with `status: 'rendering'` — distinguishable from failure | ✅ route · mutation-verified |
+| 22 | GET with no sample | 404 with the status echoed | ✅ route |
+| 23 | GET **another user's** profile | 404, never a leak | ✅ route + live (data layer) |
+| 24 | Vendor 502 during render | `sample_status = 'failed'`; re-claimable | ✅ live |
+| 25 | The GET never renders | No vendor call at any status | ✅ route · asserted across all four states |
+
+Covered by `tests/integration/voice-sample-guard.live.test.ts` (6, against real
+Postgres — run with `npx vitest run --config vitest.integration.config.ts`) and
+`tests/unit/voice-sample-play-route.test.ts` (8). Both mutation-checked: removing
+the claim filter fails row 19, removing both guards fails 18 and 19, collapsing
+409→404 fails 21, and recording usage early fails four tests.
+
+**What is NOT covered:** the full cookie-authenticated HTTP round trip. The route
+tests stub the auth boundary, following `messages-play-route.test.ts`. A real
+browser session needs the test password passed into Playwright's snippet
+sandbox, which has no `fs`/`process` — so it could not be done without printing
+the password. The branch logic and the RLS isolation are both proven; the
+cookie plumbing is shared with the already-shipped messages endpoint.
+
+**Two findings the live run exposed** — neither visible with mocks:
+- `2026-09-10-storage-buckets-are-not-in-version-control` (P2) — no migration
+  creates the buckets, so a fresh database fails every upload.
+- `2026-09-10-voice-sample-retry-has-no-billing-cap` (P3) — a failure *after* the
+  paid call re-bills on every retry. Six attempts, six charges, observed.
 
 **Free failure testing:** point the vendor at a fake voice per
 `project_step6_live_verify` so 502s cost nothing.
