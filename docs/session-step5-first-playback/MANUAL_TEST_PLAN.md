@@ -24,7 +24,7 @@ Playwright CDP (`Emulation.setCPUThrottlingRate { rate: 4 }`) or
 | 10 | Screen-reader order | `role="status" aria-live="polite"` announces the line at playback, then "That's you. It kept the pauses." at its own beat. Word spans are `aria-hidden` | ✅ |
 | 11 | CTA arrives alone | "Hear it again" is 1.2s behind the primary, and both **mount** rather than fade from `opacity: 0` | ✅ |
 | 12 | Press stays tactile | The CTA's entrance is a `@keyframes` animation, so `:active` still scales at `--duration-small`. Press it — it must not feel dead | ✅ |
-| 13 | Tab away mid-utterance, return | Resolves to the settled beat; does not resume mid-word or snap forward | ⬜ |
+| 13 | Tab away mid-utterance, return | Resolves to the settled beat; does not resume mid-word or snap forward | ⚠️ handler ✅, real backgrounding not reproducible — see below |
 | 14 | **4× CPU throttle, 390×844** | No frame over 20ms across the utterance | ✅ p95 10.3ms, max 10.4ms, 0 over 20ms |
 | 15 | Console | Zero errors | ✅ |
 | 16 | The word "Vault" | Appears zero times | ✅ |
@@ -90,7 +90,7 @@ cookie plumbing is shared with the already-shipped messages endpoint.
 | 29 | Beat plays through inside the ceremony | 10/10 words, CTA then replay, `aria-live` announces | ✅ |
 | 30 | **4× CPU throttle across handoff + utterance** | No frame over 20ms | ✅ p50 8.3, p95 9.2, max 16.7, 0 over 20ms |
 | 31 | Sample fetch 404s (no sample) | Phase still plays, silently, driven by the cadence model. No crash, no dead end | ✅ (dev-mock-id has no profile) |
-| 32 | Reduced motion | No stone travel — the cut alone. Everything else per row 9 | ⬜ |
+| 32 | Reduced motion | No stone travel — the cut alone. Everything else per row 9 | ✅ 2026-09-10 · movedY 0, 1 distinct position over 1200ms, 0 animations |
 | 33 | Live walk with a real rendered sample | Audio plays, the stone's amplitude follows RMS rather than the cadence model | ⬜ needs a seeded account |
 | 34 | `journey.first_playback_heard` fires **once**, on completed listen | Not on arrival; not again on replay | ⬜ needs live analytics |
 
@@ -117,3 +117,41 @@ gives ~700px. See `DECISION-real-device-height.md`.
 
 **Lesson for the next screen:** a 4× throttle pass at 390×844 says nothing about
 whether a screen fits a real phone. The two are different tests.
+
+## Rows 13 and 32 — run 2026-09-10
+
+**Row 32 passes outright.** Walked the ceremony to Continue with
+`prefers-reduced-motion: reduce`: the stone occupied **one** position across
+1200ms of frames (`movedY: 0`, `grew: 0`), `wrap.getAnimations()` was empty so no
+entrance animation was even created, `data-entering` never appeared, breath was
+off, `--sus` held at 0, and the words still lit per word. Restriction of
+movement, not of luminance — as designed.
+
+*Noted, not a failure:* under reduced motion the incoming stone appears at its
+own position (cy 295.7 / 169px) rather than the outgoing one's (cy 233.8 /
+200px), so it changes place in a single frame. That is the correct reduced-motion
+behaviour — an instant change instead of a glide — but it means "the stone must
+not re-enter" is weaker here than on the animated path. It resolves with the
+stone-renderer unification in
+`2026-09-10-two-stone-renderers-meet-at-the-playback-cut`.
+
+**Row 13 is half-verified, and the honest half is the handler.**
+
+The `settle()` handler is correct. Interrupted at 2/10 words with the utterance
+running, it resolves immediately and completely to the settled beat: 10/10 words
+lit and rested, `--lum` and `--sus` both 0, CTA and replay mounted, payoff and
+aside shown, and the live region announcing "That's you. It kept the pauses."
+Four seconds later nothing further fired — no late timer, no snap-forward.
+
+**But the browser here never actually backgrounds the page.** Opening a second
+tab and calling `bringToFront()` fired **zero** `visibilitychange` events
+(instrumented and confirmed empty), so the event had to be dispatched manually
+with `document.hidden` overridden. That proves the handler, not the integration.
+
+A first attempt looked like a pass and was not: the 2.4s background window let
+the utterance finish *naturally*, so `settle()` may never have run at all. The
+give-away was that the CTA had not mounted — the tail had not arrived yet.
+
+**Still owed:** background the tab for real on the phone. iOS Safari also
+freezes timers on background, which is a different mechanism again from a
+desktop tab switch, so this genuinely needs the device.
