@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
+Total: 37 · 36 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (34)
+## Open (36)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -22,6 +22,7 @@ Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
 | P2 | Production DB backups now enabled (Supabase Pro, 2026-07-12, 7-day) — BUT Supabase Storage (the actual voice audio) is NOT included in DB backups, so the crown-jewel recordings remain unprotected against logical delete/corruption on a "preserve forever" product *(surfaced 2026-07-12 during vendor checks)* | 2026-07-12 | — | [`2026-07-12-production-supabase-free-tier-has-no-backups.md`](./2026-07-12-production-supabase-free-tier-has-no-backups.md) |
 | P2 | L2 consent gate DONE in code — own-voice-only copy, voice_consent_records table applied to prod + persistence wired. ONLY remaining item is the owner env flip VOICE_CONSENT_REQUIRED=true to enforce it for beta. | 2026-09-01 | — | [`2026-09-01-wire-voice-consent-persistence.md`](./2026-09-01-wire-voice-consent-persistence.md) |
 | P2 | `DEFERRED_AUDIO_ENABLED` is a flag with only one working arm — the control arm has no A6 screen, so "off" 404s after a paid generation *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-control-arm-a6-screen-was-never-built.md`](./2026-09-04-control-arm-a6-screen-was-never-built.md) |
+| P2 | The post-login `next` param is followed without a same-origin check → a crafted `/auth/sign-in?next=//evil.com` link sends a just-authenticated user off-site (open redirect / phishing aid) *(triage 2026-09-11)* | 2026-09-11 | — | [`2026-09-11-open-redirect-via-unvalidated-next-param.md`](./2026-09-11-open-redirect-via-unvalidated-next-param.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
@@ -39,6 +40,7 @@ Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
 | P3 | `pending_generations.expires_at` is written but nothing ever prunes it; the per-user active cap depends on an entry-point reclaim *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-abandoned-pending-generations-have-no-sweeper.md`](./2026-09-04-abandoned-pending-generations-have-no-sweeper.md) |
 | P3 | A 429 cost-limit block shows A5's "Something slipped on our end / Try again" — a permanent wall dressed as a transient blip *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-cost-limit-block-renders-as-a-transient-failure.md`](./2026-09-04-cost-limit-block-renders-as-a-transient-failure.md) |
 | P3 | Every `min-height: 100dvh` screen inside `.app-main` overflows by the shell's 40px bottom padding — a phantom scroll on screens meant to be one still frame *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-full-height-screens-overflow-the-app-shell-padding.md`](./2026-09-04-full-height-screens-overflow-the-app-shell-padding.md) |
+| P3 | The "your first message is here" Memory Shelf ceremony can never fire — its one-time state seed reads `messages.length` while the shelf is still mounting empty (loading), so it always seeds false *(triage 2026-09-11)* | 2026-09-11 | — | [`2026-09-11-first-save-shelf-ceremony-never-fires.md`](./2026-09-11-first-save-shelf-ceremony-never-fires.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |

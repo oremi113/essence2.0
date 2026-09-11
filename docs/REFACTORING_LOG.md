@@ -23,6 +23,51 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-09-11 — discovery
+- Outcome: Scan-only (discovery agent) — read the freshest subsystems after the
+  beta-hardening + legal/consent + pricing work; logged 2 new backlog items, one
+  a live security issue. Docs-only, no app code touched.
+- Health checks on `main` (eafa50a): typecheck ✅ · lint ✅ (2 unused-import
+  warnings in `scripts/backup-snapshot.mjs`, 0 errors) · test:unit 429/429 ✅.
+- Discovered:
+  - **FU `2026-09-11-open-redirect-via-unvalidated-next-param` [P2, owner-paired]** —
+    the post-login `next` param is followed without a same-origin check.
+    `auth/sign-in/page.tsx:102,146` pass it raw to `router.replace`;
+    `auth/callback/route.ts:57` guards with only `startsWith("/")`, which accepts
+    protocol-relative `//evil.com` and then server-side-redirects off-site. A
+    crafted `/auth/sign-in?next=//evil.com` link phishes a just-authenticated
+    user. On the auth surface → flagged owner-paired, not for the scheduled fixer.
+  - **FU `2026-09-11-first-save-shelf-ceremony-never-fires` [P3]** — the
+    "your first message is here" ceremony seeds its one-shot from a `useState`
+    initializer that samples `messages.length` at mount, while the shelf is still
+    in `loading` with `messages: []` (`MemoryShelf.tsx:64`; parent
+    `ShelfPageClient.tsx`). It always seeds false and the initializer never re-runs,
+    so the designed A7→shelf beat is dead on the real path.
+- Scanned (no new entry — verified against existing backlog):
+  - Account teardown (`settings/actions.ts`): `deleteVoice` now wired as step 2
+    (the ElevenLabs-clone-orphan P2 fix landed; item stays open pending the vendor
+    retention fact, as annotated). The swallowed `subscriptions` read (FU-85) is
+    still present at l.198 — the new voice read at l.235 checks its error but the
+    subs read one step above still does not. No re-log (already FU-85).
+  - Checkout / reconcile money path (`create-checkout-session.ts`,
+    `reconcile-checkout-session.ts`, `processing/page.tsx`): duplicate-sub guard,
+    trial-abuse guard, stale-customer reconcile, and session-ownership check
+    (`metadata.user_id === userId`) all present and correct. Beta $0 coupon
+    landmine is documented across `.env.example` + brief + test plan.
+  - Pricing (`vault.ts` `VAULT_PRICING`): single-sourced and reconciled to Stripe
+    ($119.99 / 11999); mock data consistent. No drift.
+  - Consent + 18+ age gates (`voice-creation/consent.ts`, `onboarding/age.ts`):
+    wired into the real request paths and enforced server-side; DECISIONS
+    server-only/service-role locks hold.
+  - Lower-priority observations reviewed and NOT logged (below the senior bar /
+    documented-by-design / notify infra not built): optimistic notification toggle
+    with no revert-on-failure (`SettingsScreen.tsx:304`); `removePhotoAction`
+    swallowed profile read → possible storage orphan reported as removed
+    (`settings/actions.ts:125`); fail-open swallowed reads in the Step 6 entry
+    gate (`messages/new/page.tsx:57,133`, documented, `/save` is authoritative).
+- Branch / commit: triage/2026-09-11 @ <stamped on push>
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
