@@ -219,6 +219,22 @@ export function FirstPlaybackScreen({
   const onPlaybackCompleteRef = useRef(onPlaybackComplete);
   onPlaybackCompleteRef.current = onPlaybackComplete;
 
+  /**
+   * The completed-listen latch. `onPlaybackComplete` is a funnel landmark
+   * (`journey.first_playback_heard`), and a landmark that fires twice is worse
+   * than one that fires late: the analytics note expects its volume to track
+   * `voice_profile_ready` roughly 1:1, so every extra emission reads as an
+   * extra user who heard themselves.
+   *
+   * Two paths reach the end of the utterance without being a first completed
+   * listen, and neither may fire:
+   *   - **Replay.** "Hear it again" runs the whole utterance a second time.
+   *   - **Leaving.** Backgrounding mid-line calls `settle()`, which fast-
+   *     forwards the screen to its resting state. That is the user NOT hearing
+   *     it — the precise case the event is supposed to exclude.
+   */
+  const heardRef = useRef(false);
+
   const setLum = useCallback((lum: number, sus: number) => {
     const root = rootRef.current;
     if (!root) return;
@@ -251,10 +267,18 @@ export function FirstPlaybackScreen({
 
   // ── the utterance ────────────────────────────────────────────────────────
 
-  const endSpeech = useCallback(() => {
+  /**
+   * Settle the utterance's own state, and report a completed listen exactly
+   * once. `heard: false` is for the paths that reach the end without the user
+   * having listened through it — see `heardRef`.
+   */
+  const endSpeech = useCallback((opts: { heard?: boolean } = {}) => {
+    const { heard = true } = opts;
     runningRef.current = false;
     setSpeaking(false);
     setBreathing(true);
+    if (!heard || heardRef.current) return;
+    heardRef.current = true;
     onPlaybackCompleteRef.current?.();
   }, []);
 
@@ -367,7 +391,10 @@ export function FirstPlaybackScreen({
     setRestCount(words.length);
     setLum(0, 0);
     setAnnouncement(`${payoff} ${aside}`);
-    endSpeech();
+    // Not a completed listen: settle() runs only when the user backgrounded the
+    // app mid-line. The screen catches up so returning isn't mid-animation, but
+    // the funnel must not record a beat the user was not present for.
+    endSpeech({ heard: false });
   }, [aside, clearTimers, endSpeech, payoff, setLum, words.length]);
 
   // ── the sequence ─────────────────────────────────────────────────────────

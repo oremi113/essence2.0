@@ -260,6 +260,17 @@ unlit ground and stays clear when `l-cast` brightens it.
 | `--on-dark-muted`   | `rgba(247,241,228,0.58)`  | Eyebrows; Spectral italic asides          |
 | `--on-dark-recede`  | `rgba(247,241,228,0.50)`  | Spectral italic lede                      |
 
+**The spoken word** (Step 5 First Playback only). Not a fifth and sixth level of
+the ramp above — a transient *state*, not a hierarchy. A word is lit while the
+voice is on it and cools a beat later, so the line settles in the order it was
+spoken. These two carry warmth, which the ramp deliberately does not; that is
+why they are named separately rather than folded into it.
+
+| Token            | Value     | Use                                        |
+| ---------------- | --------- | ------------------------------------------ |
+| `--on-dark-lit`  | `#FFF6E4` | A word while the voice is speaking it      |
+| `--on-dark-rest` | `#EFE7D6` | The same word once it has settled          |
+
 - **Family, not colour.** The aside is Spectral italic; a notice is Inter. They
   share a slot and nearly the same opacity, and the family is the only signal
   separating them. Never distinguish them by colour or size alone.
