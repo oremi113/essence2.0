@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
-import { BreathStone, type BreathStoneState } from '@/components/breath-stone';
+import {
+  BreathStone,
+  SPHERE_DIAMETER_RATIO,
+  type BreathStoneState,
+} from '@/components/breath-stone';
 import { track } from '@/lib/analytics/client';
 import {
   createFirstBreathAudio,
@@ -222,14 +226,30 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
   }, [phase, voiceProfileId, sampleUrl]);
 
   /**
-   * Detail's Continue tap. Measures the ceremony stone's rect FIRST, so the
-   * incoming screen can mount its own stone exactly on top of it — the stone
-   * must not re-enter.
+   * Detail's Continue tap. Measures the ceremony stone FIRST, so the incoming
+   * screen can mount its own stone exactly on top of it — the stone must not
+   * re-enter.
+   *
+   * What gets handed over is the **sphere**, not the canvas element. The two
+   * are not the same thing: the canvas is deliberately oversized to give the
+   * bloom and haze room, so a 200px canvas holds a 112px sphere with 44px of
+   * transparent margin on each side. Passing the element's rect handed over a
+   * box 1.79x the stone inside it, and since the incoming stone fills its own
+   * wrapper completely, the hero object jumped 108px -> 195px in the single
+   * frame of the cut. Both numbers were "200", which is why it went unseen.
+   * See docs/follow-ups/2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md
    */
   const handleContinue = useCallback(() => {
     const rect = stoneWrapperRef.current?.getBoundingClientRect();
     if (rect) {
-      setEntranceRect({ left: rect.left, top: rect.top, width: rect.width });
+      // Same centre, sphere's width. Square canvas, so one ratio does both axes.
+      const sphere = rect.width * SPHERE_DIAMETER_RATIO;
+      const inset = (rect.width - sphere) / 2;
+      setEntranceRect({
+        left: rect.left + inset,
+        top: rect.top + inset,
+        width: sphere,
+      });
     }
     goToPlayback();
   }, [goToPlayback]);
@@ -327,11 +347,6 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
           <BreathStone state={stone.state} size={stone.size} />
         </div>
         {entranceActive && <div aria-hidden style={stoneBloomStyle} />}
-        {phase === 'detail' && !prefersReducedMotion && (
-          <div aria-hidden style={stoneGlimmerStyle}>
-            <div style={stoneGlimmerBandStyle} />
-          </div>
-        )}
       </div>
 
       <div style={copyDynamicStyle}>
@@ -681,29 +696,29 @@ const goldRingStyle: CSSProperties = {
 // clipped to a circle so the sweep reads as light grazing the surface,
 // not a rectangle floating in front. Opacity-gated at the edges so the
 // loop wraps cleanly — no visible snap back to start.
-const stoneGlimmerStyle: CSSProperties = {
-  position: 'absolute',
-  left: '50%',
-  top: '50%',
-  width: 220,
-  height: 220,
-  marginLeft: -110,
-  marginTop: -110,
-  borderRadius: '50%',
-  overflow: 'hidden',
-  pointerEvents: 'none',
-  mixBlendMode: 'screen',
-  zIndex: 6,
-};
-
-const stoneGlimmerBandStyle: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  background:
-    'linear-gradient(110deg, transparent 35%, rgba(255, 235, 200, 0.18) 48%, rgba(255, 245, 220, 0.28) 52%, rgba(255, 235, 200, 0.18) 56%, transparent 70%)',
-  animation: 'lightDrift 6s ease-in-out infinite',
-  willChange: 'transform',
-};
+// No DOM glimmer on `detail`.
+//
+// A 220px disc with a screen-blended drifting band used to sit over the stone
+// here. It was sized to the canvas rect (200 + a little), but the canvas is
+// only 56% full of stone, so the band painted a drifting crescent of light up
+// to ~56px OUTSIDE the silhouette on bare dark ground — measured 16px clear of
+// the stone's bottom edge, it peaked at luminance 87 against a ground of 26.
+//
+// Resizing the disc to the sphere does not fix it, it relocates it: the clip
+// edge then lands exactly on the rim and reads as a hard bright ring around
+// the stone. Captured both ways; `ds/breath-stone.html` forbids both outcomes
+// ("Don't outline it with a hard ring", "Don't add sparkle, particles,
+// sheen-sweeps, or secondary ornament").
+//
+// It cannot be made correct from the DOM at all. The stone's silhouette is a
+// per-frame Perlin path, not a circle, so no CSS `border-radius: 50%` element
+// can align to it — only the engine can clip to the real outline, and it
+// already does: `shimmer` runs a two-layer counter-rotating sheen against the
+// silhouette itself. This was a third sheen stacked on those two.
+//
+// Removed 2026-09-15. It was also screen-blending over the stone's shadow
+// side, working against the terminator fitted to match the Step 5 stone.
+// See docs/follow-ups/2026-09-15-detail-glimmer-disc-is-sized-to-the-canvas-box.md
 
 const screenKeyframes = `
 @keyframes sanctuaryBreath {
@@ -750,12 +765,6 @@ const screenKeyframes = `
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes lightDrift {
-  0%   { transform: translateX(-120%); opacity: 0; }
-  20%  { opacity: 1; }
-  80%  { opacity: 1; }
-  100% { transform: translateX(120%); opacity: 0; }
-}
 @media (prefers-reduced-motion: reduce) {
   @keyframes sanctuaryBreath {
     0%, 100% { opacity: 0.9; transform: none; }
@@ -786,9 +795,6 @@ const screenKeyframes = `
   }
   @keyframes chipIn {
     from, to { opacity: 1; transform: none; }
-  }
-  @keyframes lightDrift {
-    0%, 100% { opacity: 0; transform: none; }
   }
 }
 `;
