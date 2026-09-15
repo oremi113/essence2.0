@@ -127,6 +127,14 @@ rules. Re-read them whenever a chunk is about to ship.
   new motion grammar in production code. When a prototype and
   production diverge, the prototype is wrong only by explicit decision
   memo.
+- **Prototype beats generative design guidance.** The
+  `frontend-design` skill (and any similar design-direction skill)
+  proposes a fresh visual identity. On any surface a prototype
+  covers, the prototype *is* the brief and wins outright — palette,
+  type, motion, copy. Use those skills for greenfield surfaces with
+  no prototype (legal pages, marketing, error and empty states), and
+  for their self-critique and copy passes. Never let one re-open a
+  settled visual direction.
 
 ### Deferred work and external docs
 
