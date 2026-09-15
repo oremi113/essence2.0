@@ -1,10 +1,10 @@
 ---
 id: 2026-09-10-storage-buckets-are-not-in-version-control
 priority: P2
-status: open
+status: resolved
 opened: 2026-09-10
-resolved:
-summary: "No migration creates the storage buckets — `essence-audio` and `profile-photos` exist only because someone made them by hand in the dashboard, so a fresh environment has none and every upload fails with `Bucket not found` *(found running Step 5 live tests, 2026-09-10)*"
+resolved: 2026-09-15
+summary: "RESOLVED 2026-09-15 — No migration creates the storage buckets — `essence-audio` and `profile-photos` exist only because someone made them by hand in the dashboard, so a fresh environment has none and every upload fails with `Bucket not found` *(found running Step 5 live tests, 2026-09-10)*"
 ---
 
 # The storage buckets are not in version control
@@ -64,3 +64,43 @@ express what they meant to.
 
 Before anyone else sets up an environment, and before Step 5 ships — its render
 path writes to `essence-audio` on every activated user.
+
+---
+
+## Resolved — 2026-09-15
+
+`supabase/migrations/20260915190000_storage_buckets_in_version_control.sql`
+declares both buckets, `on conflict (id) do nothing`.
+
+Verified from both directions:
+- **Fresh database, migrations only** — both buckets created, `profile-photos`
+  at 15MB.
+- **Re-run over hand-tuned values** — `INSERT 0 0`, and deliberately wrong
+  values (99999999 / 31457280) survived untouched. Against production, where
+  the buckets already exist, it is a genuine no-op.
+
+It also repairs `20260903170000_raise_avatar_size_limit.sql`, whose UPDATE
+matched zero rows in every fresh environment, as its own header admitted.
+Ordering does it: the new migration is dated later, so a fresh database now
+creates `profile-photos` at 15MB directly and ends in the same state a migrated
+one does.
+
+`essence-audio`'s size limit and both `allowed_mime_types` are left NULL — the
+dashboard defaults. Deliberate: production's real values are not knowable from
+this repo, and guessing a *tighter* limit than production would make fresh
+environments reject uploads production accepts. That failure would present as
+an application bug rather than a configuration gap, which is worse than the
+missing migration was.
+
+### It cost real time twice before it was fixed
+
+- **2026-09-10** — the Step 5 live guard tests ran against a bucket-less stack.
+  Six calls, six paid ElevenLabs renders that could never store their audio.
+  That is how `2026-09-10-voice-sample-retry-has-no-billing-cap` was found.
+- **2026-09-15** — the row 41 iPhone setup hit it again, where it was worse
+  than a failure. A failed upload leaves First Playback silent, and silence is
+  exactly what blocked autoplay looks like, so it would have produced a
+  confident *wrong* answer to the question the test existed to settle.
+
+The pattern worth keeping: infrastructure that exists only because someone
+clicked it once fails in whatever way is hardest to attribute.
