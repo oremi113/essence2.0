@@ -203,18 +203,51 @@ to tune out. Now 0 by construction.
 The cadence table remains the fallback for the dev page, pre-migration samples,
 and any alignment that fails validation.
 
-## Still to run
+## Run on a real iPhone — 2026-09-15
 
 | # | Check | Expected | Status |
 |---|---|---|---|
-| 41 | **Autoplay on a real iPhone** (§4.4) | The sample plays without a tap. iOS blocks audio not tied to a user gesture; the ceremony has had taps, so it should be permitted — but "should" is not verified, and a silent failure looks identical to a phone on mute | ⬜ **owner, next** |
-| 42 | No "box" around the stone on any ceremony screen | The canvas element's rect must not be visible against the dark ground | ❌ **fails** — see `2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges` |
+| 41 | **Autoplay on a real iPhone** (§4.4) | The sample plays without a tap | ✅ **PASSES** — owner, real iPhone, 2026-09-15. The voice starts unprompted at the cut; the ceremony's earlier taps do carry the gesture permission |
+| 42 | No "box" around the stone on any ceremony screen | The canvas element's rect must not be visible against the dark ground | ✅ **PASSES** — the mask fix (`2d9dcf3`) landed and the follow-up is resolved; confirmed on the same device walk |
 
-**Row 41 needs more than a URL.** The two dev pages play no audio at all — the
-motion is driven by a timing model so the screen can be reviewed without
-spending money. A real autoplay test needs the full flow: signed in, a profile
-with a rendered sample, the ceremony walked end to end. Worth setting up
-together rather than from a link.
+Also confirmed on the same walk, unprompted by the checklist: the word reveal
+tracks the spoken line rather than drifting, and the stone holds across the
+`detail → playback` cut — the two defects that earlier passes found and fixed,
+now verified on the hardware they were fixed for.
+
+### What it took to make row 41 answerable
+
+**Row 41 needed more than a URL,** and the setup is worth recording because
+every step of it was a way to get a *false* answer.
+
+The two dev pages play no audio at all — the motion is driven by a timing model
+so the screen can be reviewed without spending money. So the test needed the
+full flow on a LAN-served local stack: signed in, a real rendered sample, the
+ceremony walked end to end from `forming` rather than deep-linked (arriving by
+URL is exactly the case that would lose the gesture chain).
+
+Four things had to be fixed before the run could mean anything, and **each one
+would have produced a silent screen — indistinguishable from blocked autoplay,
+which is the answer the row was trying to establish:**
+
+1. **No storage buckets.** The local stack had zero — the open
+   `2026-09-10-storage-buckets-are-not-in-version-control` item, hit live.
+   Every upload would have failed with `Bucket not found`.
+2. **No sample could ever render** for an already-`ready` profile. Found while
+   seeding the account; fixed in this PR — see
+   `2026-09-15-existing-voice-profiles-can-never-get-a-sample`.
+3. **`NEXT_PUBLIC_SUPABASE_URL` was `127.0.0.1`.** The Supabase client runs in
+   the *browser*, so on a phone that address is the phone. Verifying from a
+   desktop browser on the same machine cannot surface this: loopback is correct
+   there. It is the one variable the phone changes.
+4. **The signed audio URL is minted separately** and could still have carried
+   loopback after (3) was fixed — a working screen with silent audio. Asserted
+   explicitly: host `10.104.11.153:54321`, fetched, `audio/mpeg`, 36,824 bytes.
+
+**The lesson worth keeping:** for a device test, assert the *host* of every URL
+the device will fetch, not just that the flow returns 200. A green flow on the
+developer's own machine proves nothing about loopback, and loopback failures
+present as silence — which is precisely the symptom under test.
 
 ## Row 34 — closed, and it was worth writing down
 
