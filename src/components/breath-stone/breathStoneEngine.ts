@@ -279,6 +279,25 @@ const STATE_TARGETS: Record<BreathStoneState, StateParams> = {
   },
 };
 
+/**
+ * The sphere's radius as a fraction of the canvas's shorter side.
+ *
+ * The canvas is deliberately much larger than the stone: the rest of it is
+ * headroom for the bloom (3.5x radius) and haze (2x), which need somewhere to
+ * fall off. A `size={200}` stone is therefore a **112px sphere** centred in a
+ * 200px box, not a 200px sphere.
+ *
+ * Exported because callers kept assuming otherwise. Anything positioning
+ * itself against the stone — a handoff to another renderer, an overlay meant
+ * to sit on the surface — must size against the SPHERE, not the canvas rect,
+ * or it comes out ~1.8x too big. See
+ * docs/follow-ups/2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md
+ */
+export const SPHERE_RADIUS_RATIO = 0.28;
+
+/** The sphere's diameter as a fraction of the canvas box. `0.28 * 2`. */
+export const SPHERE_DIAMETER_RATIO = SPHERE_RADIUS_RATIO * 2;
+
 // ─── ENGINE CLASS ───────────────────────────────────────────────────────────
 
 export interface SetStateOptions {
@@ -497,7 +516,7 @@ export class BreathStoneEngine {
     const H = this.canvas.height / dpr;
     const cx = W / 2;
     const cy = H / 2;
-    const baseRadius = Math.min(W, H) * 0.28;
+    const baseRadius = Math.min(W, H) * SPHERE_RADIUS_RATIO;
 
     ctx.clearRect(0, 0, W, H);
 
@@ -661,20 +680,13 @@ export class BreathStoneEngine {
       ctx.fillRect(0, 0, W, H);
     }
 
-    // Ambient particles — gated under reduced-motion so the single static
-    // frame isn't punctuated by drifting specks that would otherwise never
-    // animate (the loop halts, so a lone random placement would just look
-    // like noise against the stone's otherwise still presence).
-    if (!this.reducedMotion) {
-      ctx.globalAlpha = 0.012;
-      for (let i = 0; i < 25; i++) {
-        const px = (this.noise.get(i * 0.2, timestamp * 0.00004) * 0.5 + 0.5) * W;
-        const py = (this.noise.get(i * 0.2 + 100, timestamp * 0.00004) * 0.5 + 0.5) * H;
-        ctx.fillStyle = '#E8DCC8';
-        ctx.fillRect(px, py, 1.5, 1.5);
-      }
-      ctx.globalAlpha = 1;
-    }
+    // No ambient particles. 25 drifting specks used to be painted across the
+    // whole canvas rect here for "depth". The design system is explicit —
+    // ds/breath-stone.html, Don't: "Don't add sparkle, particles,
+    // sheen-sweeps, or secondary ornament." They also spread the canvas's
+    // paint out to its own rectangular edges, which is half of why the rect
+    // needed masking at all. Removed 2026-09-15; see
+    // docs/follow-ups/2026-09-10-two-stone-renderers-meet-at-the-playback-cut.md
 
     // ── 5. STONE BODY ────────────────────────────────────────────────────
     ctx.save();
@@ -755,14 +767,14 @@ export class BreathStoneEngine {
       -currentRadius * 0.28, -currentRadius * 0.28, 0,
       0, 0, currentRadius * 1.35
     );
-    bodyG.addColorStop(0.00, '#F8F0DC');
-    bodyG.addColorStop(0.12, '#EFE6D0');
-    bodyG.addColorStop(0.28, '#E5D8C0');
-    bodyG.addColorStop(0.45, '#D8CAB0');
-    bodyG.addColorStop(0.62, '#C4B8A0');
-    bodyG.addColorStop(0.78, '#AEA090');
-    bodyG.addColorStop(0.90, '#938A7D');
-    bodyG.addColorStop(1.00, '#7D827E');
+    bodyG.addColorStop(0.00, '#FDFAF0');
+    bodyG.addColorStop(0.12, '#FCF8EA');
+    bodyG.addColorStop(0.28, '#F9F4E0');
+    bodyG.addColorStop(0.45, '#F4EDD4');
+    bodyG.addColorStop(0.60, '#EDE3C5');
+    bodyG.addColorStop(0.72, '#E5D8B5');
+    bodyG.addColorStop(0.84, '#DACBA1');
+    bodyG.addColorStop(1.00, '#C8B589');
     ctx.fillStyle = bodyG;
     ctx.beginPath();
     silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
@@ -793,6 +805,49 @@ export class BreathStoneEngine {
       ctx.closePath();
       ctx.fill();
     }
+
+    // Terminator — the light/shadow falloff ACROSS the sphere, on the axis
+    // from the lit rim (upper-left) to the shadow rim (lower-right).
+    //
+    // This has to be directional, and that is why it cannot live in the body
+    // gradient. The body gradient is radially symmetric about its focus, and
+    // the geometry puts the lit rim at s=0.633 and the shadow rim at s=0.799 —
+    // close enough together that no set of stops can make one bright and the
+    // other dark. Measured on the Step 5 CSS stone, those two positions differ
+    // by ~80 levels. Its own form comes the same way: from two `inset`
+    // box-shadows, not from its gradient.
+    //
+    // Painted after the body and the infused tint so it darkens both, and
+    // before the sheens and the specular so highlights still sit on top of it.
+    // Colour is that stone's `inset -20px -30px 60px rgba(50,38,20,.4)`, pushed
+    // warmer to `8` blue: the shadow side needs a lower blue than a uniform
+    // alpha of the original delivers, and blue cannot go below 0, so the
+    // warmth has to live here rather than in the body stops.
+    //
+    // The alphas are fitted against the CSS stone at `--lum: 0`, which is the
+    // state it is in at the cut and therefore the only correct target. Do NOT
+    // measure that target under reduced motion: that path drives `--lum` per
+    // word through the speech sequence, so it catches the stone mid-lit and
+    // reads ~23 levels too bright on the shadow rim. Fitting to it leaves this
+    // stone visibly pale on its shadow half.
+    const termG = ctx.createLinearGradient(
+      -currentRadius * 0.707, -currentRadius * 0.707,
+      currentRadius * 0.707, currentRadius * 0.707
+    );
+    termG.addColorStop(0.00, 'rgba(52, 38, 8, 0)');
+    termG.addColorStop(0.30, 'rgba(52, 38, 8, 0.02)');
+    termG.addColorStop(0.40, 'rgba(52, 38, 8, 0.09)');
+    termG.addColorStop(0.50, 'rgba(52, 38, 8, 0.15)');
+    termG.addColorStop(0.60, 'rgba(52, 38, 8, 0.26)');
+    termG.addColorStop(0.70, 'rgba(52, 38, 8, 0.35)');
+    termG.addColorStop(0.80, 'rgba(52, 38, 8, 0.45)');
+    termG.addColorStop(0.90, 'rgba(52, 38, 8, 0.56)');
+    termG.addColorStop(1.00, 'rgba(52, 38, 8, 0.67)');
+    ctx.fillStyle = termG;
+    ctx.beginPath();
+    silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.fill();
 
     // Directional sheen — sunlight moving across surface.
     // "Parchment" character: softer core, longer falloff, no spreading.
@@ -855,19 +910,18 @@ export class BreathStoneEngine {
       ctx.fill();
     }
 
-    // Inner shadow — depth, opposite corner from highlight
-    const innerShadow = ctx.createRadialGradient(
-      currentRadius * 0.35, currentRadius * 0.35, 0,
-      0, 0, currentRadius
-    );
-    innerShadow.addColorStop(0, 'rgba(28, 26, 24, 0.20)');
-    innerShadow.addColorStop(0.5, 'rgba(28, 26, 24, 0.08)');
-    innerShadow.addColorStop(1, 'rgba(28, 26, 24, 0)');
-    ctx.fillStyle = innerShadow;
-    ctx.beginPath();
-    silhouette.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-    ctx.closePath();
-    ctx.fill();
+    // No separate inner shadow. One used to be painted here, described as
+    // "depth, opposite corner from highlight" — but its geometry did not do
+    // that. Built as a two-circle gradient focused at (0.35r, 0.35r) with the
+    // outer circle at the origin, it evaluates to 1.0 (i.e. fully transparent)
+    // at BOTH the lit rim and the shadow rim, peaking near the middle. It was
+    // a centre-darkener, not a directional shadow, and being neutral-cool
+    // (28,26,24) it desaturated the body's warm mid-tones on the way.
+    //
+    // The terminator above now does this job on the correct axis and in the
+    // right colour. Keeping both double-darkened the mid-band: measured
+    // against the Step 5 stone it put the centre ~27 levels dark and cut the
+    // warm R-B spread from 31 to 16.
 
     // Oval highlight — upper-left specular, the key to 3D ceramic feel
     const hlG = ctx.createRadialGradient(
@@ -885,22 +939,19 @@ export class BreathStoneEngine {
     ctx.restore();
     ctx.fill();
 
-    // Artisan veining — blurred pigment clouds, not thin marble lines
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = 'rgba(139, 126, 111, 0.35)';
-    ctx.globalAlpha = 0.11;
-    ctx.fillStyle = 'rgba(139, 126, 111, 0.6)';
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2 + this.noise.get(i * 0.6, 0) * 3;
-      const px = Math.cos(angle) * currentRadius * (0.3 + this.noise.get(i, 1) * 0.4);
-      const py = Math.sin(angle) * currentRadius * (0.3 + this.noise.get(i, 2) * 0.4);
-      const ps = currentRadius * (0.15 + this.noise.get(i, 3) * 0.1);
-      ctx.beginPath();
-      ctx.ellipse(px, py, ps, ps * (0.6 + this.noise.get(i, 4) * 0.4), angle, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1;
+    // No veining. Eight blurred pigment ellipses used to be stamped across the
+    // body here, placed by noise and meant to read as artisan pigment clouds.
+    // They did not. The placement is seeded from a fixed noise field, so every
+    // stone everywhere got the SAME eight blotches in the same arrangement —
+    // a cluster in the upper-middle that at ceremony size reads as two eyes
+    // and a mouth. ds/breath-stone.html, Don't: "Don't give it a face, eyes,
+    // mouth, or limbs." On a product about a dying person's voice that is not
+    // a small risk, and the owner's read on device was that the stone "looks
+    // like it has seeds in it." Removed 2026-09-15; see
+    // docs/follow-ups/2026-09-10-two-stone-renderers-meet-at-the-playback-cut.md
+    //
+    // Surface interest now comes from the micro-roughness pass below, which is
+    // per-frame and sub-pixel — texture, not markings.
 
     // Surface roughness — Perlin micro warm/cool variation. Relies on
     // `Math.random()` for position + size, so under reduced-motion we
@@ -908,14 +959,32 @@ export class BreathStoneEngine {
     // grain would otherwise freeze as an arbitrary noise field rather
     // than reading as ceramic micro-texture (the effect depends on
     // per-frame averaging to look like a surface, not pixels).
+    //
+    // Two things below are load-bearing and were both wrong until 2026-09-15.
+    // Together they were a second source of the blotching the owner read as
+    // "seeds" — removing the veining pass alone left a smudge behind.
+    //
+    //   • `sqrt(random())` for the radius, not `random()`. Sampling the radius
+    //     uniformly is NOT a uniform sample of the disc: area grows with r, so
+    //     density falls off as 1/r and the specks pile into the middle. With
+    //     500 of them per frame that reads as a persistent grey smudge sitting
+    //     just off the highlight, not as texture. The sqrt makes it uniform
+    //     per unit area, which is what "micro-texture" needs.
+    //
+    //   • Noise frequency 0.8, not 0.04. At 0.04 the Perlin field has a cell
+    //     size of 25px against a stone whose radius is ~40-60px, so the
+    //     warm/cool choice was coherent across quadrant-sized regions — big
+    //     two-tone patches, the opposite of grain. At 0.8 the decision varies
+    //     at roughly pixel scale, which is the only scale at which a 1-2px
+    //     speck can read as surface rather than as a mark on the surface.
     if (!this.reducedMotion) {
       ctx.globalAlpha = 0.035;
       for (let i = 0; i < 500; i++) {
         const a = Math.random() * Math.PI * 2;
-        const d = Math.random() * currentRadius;
+        const d = Math.sqrt(Math.random()) * currentRadius;
         const x = Math.cos(a) * d;
         const y = Math.sin(a) * d;
-        const rn = this.noise.get(x * 0.04, y * 0.04);
+        const rn = this.noise.get(x * 0.8, y * 0.8);
         ctx.fillStyle = rn > 0 ? 'rgba(28, 26, 24, 0.5)' : 'rgba(245, 240, 234, 0.5)';
         ctx.fillRect(x, y, Math.random() < 0.8 ? 1 : 2, Math.random() < 0.8 ? 1 : 2);
       }
