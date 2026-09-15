@@ -78,6 +78,12 @@ export interface FirstPlaybackScreenProps {
    * Omit for a standalone mount (the dev page), where there is nothing to take
    * over from and the stone simply appears.
    */
+  /**
+   * The outgoing stone's **sphere** rect — the visible circle, not whatever
+   * element happens to contain it. The ceremony's stone is a canvas roughly
+   * 1.8x the sphere it draws, so handing over the element's own rect scales
+   * this screen's stone ~1.8x too large on arrival.
+   */
   entranceFrom?: { left: number; top: number; width: number } | null;
   /**
    * Word onsets in ms, measured from the audio being played.
