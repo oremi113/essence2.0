@@ -4,7 +4,7 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 42 · 39 open · 2 decision · 1 resolved · 0 dropped
+Total: 45 · 39 open · 1 decision · 5 resolved · 0 dropped
 
 ## Open (39)
 
@@ -24,7 +24,6 @@ Total: 42 · 39 open · 2 decision · 1 resolved · 0 dropped
 | P2 | L2 consent gate DONE in code — own-voice-only copy, voice_consent_records table applied to prod + persistence wired. ONLY remaining item is the owner env flip VOICE_CONSENT_REQUIRED=true to enforce it for beta. | 2026-09-01 | — | [`2026-09-01-wire-voice-consent-persistence.md`](./2026-09-01-wire-voice-consent-persistence.md) |
 | P2 | `DEFERRED_AUDIO_ENABLED` is a flag with only one working arm — the control arm has no A6 screen, so "off" 404s after a paid generation *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-control-arm-a6-screen-was-never-built.md`](./2026-09-04-control-arm-a6-screen-was-never-built.md) |
 | P2 | No migration creates the storage buckets — `essence-audio` and `profile-photos` exist only because someone made them by hand in the dashboard, so a fresh environment has none and every upload fails with `Bucket not found` *(found running Step 5 live tests, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-storage-buckets-are-not-in-version-control.md`](./2026-09-10-storage-buckets-are-not-in-version-control.md) |
-| P2 | The Breath Stone canvas shows a visible rectangular 'box' on every dark screen — its radial mask defaults to farthest-corner, so it softens only the four corners and stays fully opaque along all four edges *(found by the owner on an iPhone, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges.md`](./2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
@@ -44,21 +43,25 @@ Total: 42 · 39 open · 2 decision · 1 resolved · 0 dropped
 | P3 | Every `min-height: 100dvh` screen inside `.app-main` overflows by the shell's 40px bottom padding — a phantom scroll on screens meant to be one still frame *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-full-height-screens-overflow-the-app-shell-padding.md`](./2026-09-04-full-height-screens-overflow-the-app-shell-padding.md) |
 | P3 | The promoted dark-ceremonial-stage tokens (`--color-ink`, `--on-dark-*`, `--stone-halo`, `--focus-dark`, …) landed in `@theme` with zero consumers, while `FirstBreathSequence.tsx` still holds the same values as screen-local literals *(design-system promotion pass, 2026-09-09)* | 2026-09-09 | — | [`2026-09-09-dark-stage-tokens-have-no-consumer.md`](./2026-09-09-dark-stage-tokens-have-no-consumer.md) |
 | P3 | A First Playback sample render that keeps failing AFTER the paid vendor call re-bills on every retry — `sample_status: 'failed'` is re-claimable with no attempt ceiling, so a storage outage charges the user once per attempt *(observed in live testing, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-voice-sample-retry-has-no-billing-cap.md`](./2026-09-10-voice-sample-retry-has-no-billing-cap.md) |
+| P3 | 19 of the 45 Breath Stone state pairs differ by 12 levels or less on the stone's surface — Guidance and Archive differ by 1 — because nearly every state parameter drives the halo or the motion, not the body *(owner observation on the state grid, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-breath-stone-states-are-near-indistinguishable-at-rest.md`](./2026-09-15-breath-stone-states-are-near-indistinguishable-at-rest.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
 | P4 | /dev/breath-stone overflows the viewport by 45px — the state-label row doesn't wrap at 390px; dev-scaffold only, but a real horizontal overflow *(qa-scout full-sweep 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-dev-breath-stone-horizontal-overflow.md`](./2026-07-12-dev-breath-stone-horizontal-overflow.md) |
 | P4 | Migrate the remaining `FOLLOW_UPS.md` monolith (items 1-84 + resolved history) into the per-file `docs/follow-ups/` layout | 2026-07-12 | — | [`2026-07-12-migrate-legacy-followups-to-per-file.md`](./2026-07-12-migrate-legacy-followups-to-per-file.md) |
 
-## Decision (owner call) (2)
+## Decision (owner call) (1)
+
+| P | Summary | Opened | Legacy | File |
+|---|---------|--------|--------|------|
+| P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
+
+## Resolved (5)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
 | P2 | The First Breath ceremony has two different Breath Stone implementations — a canvas engine and the CSS dark-stage stone — and they meet at the `detail → playback` cut, where the stone visibly changes material in one frame *(found building Step 5 Chunk 3, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-two-stone-renderers-meet-at-the-playback-cut.md`](./2026-09-10-two-stone-renderers-meet-at-the-playback-cut.md) |
-| P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
-
-## Resolved (1)
-
-| P | Summary | Opened | Legacy | File |
-|---|---------|--------|--------|------|
 | P2 | First Playback's word-by-word reveal is driven by a hand-timed cadence table scaled to the audio's total length, not by real per-word timings — so words drift within the line even though the line now ends on time *(found with a real voice clone, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-word-reveal-should-use-real-tts-timestamps.md`](./2026-09-10-word-reveal-should-use-real-tts-timestamps.md) |
+| P2 | The Breath Stone canvas shows a visible rectangular 'box' on every dark screen — its radial mask defaults to farthest-corner, so it softens only the four corners and stays fully opaque along all four edges *(found by the owner on an iPhone, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges.md`](./2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges.md) |
+| P2 | The `detail → playback` match cut hands over the ceremony stone's CANVAS rect, but the canvas only fills 56% of its own box with the sphere — so the hero object jumps 108px → 195px in a single frame at the ceremony's most ceremonial moment *(found capturing the cut at 4× throttle, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md`](./2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md) |
+| P3 | The `detail` phase's glimmer band runs in a 220px disc around a 112px stone, so a drifting crescent of light is painted up to ~56px OUTSIDE the stone's silhouette on the dark ground — a sheen-sweep, which the design system forbids twice over *(found capturing the cut at 4× throttle, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-detail-glimmer-disc-is-sized-to-the-canvas-box.md`](./2026-09-15-detail-glimmer-disc-is-sized-to-the-canvas-box.md) |

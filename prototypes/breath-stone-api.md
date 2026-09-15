@@ -154,10 +154,17 @@ and play once on mount — remount the node to replay.
 
 ## Rendering notes
 
-- The canvas is wrapped in a **soft radial mask**
-  (`radial-gradient(circle, black 0% 80%, transparent 98%)`) so the
-  engine's ambient dust-mote pass doesn't leave a visible rectangle
-  against dark backgrounds.
+- The canvas is wrapped in a **soft radial mask** so the engine's
+  full-rect paints and the stone's own overshooting bloom don't leave a
+  visible rectangle against dark backgrounds. It is keyed to
+  `closest-side`, not the default farthest-corner — on a square canvas
+  farthest-corner puts 100% at the *diagonal*, which leaves the edge
+  midpoints inside the opaque region, so they never fade. That was a
+  live bug until 2026-09-15: the mask softened only the corners and
+  shipped a visible box on all 25 consumers. The exact stops are
+  measured against the widest the stone body ever gets (84.3% of the
+  half-width, in `recording`) — see the comment on `EDGE_MASK` in
+  `BreathStone.tsx` before changing them.
 - Size changes re-scale the canvas via `engine.resize(size, size)` —
   safe to animate, though changing every frame is wasteful.
 - The canvas is `aria-hidden="true"`. The stone is decorative, not
@@ -169,16 +176,104 @@ and play once on mount — remount the node to replay.
 - **No peak tremor.** The stone is a calm guardian. Never add
   `peakTremor` / jitter to new states. The field exists on `StateParams`
   for per-state override, but default to `0`.
-- **Warm ceramic body is locked.** The 8-stop body gradient
-  (`#F8F0DC → #7D827E`) reproduces the reference prototype and **must
-  not be modified**. Color variation between states comes from overlay
-  layers (tint, sheen, spark, bloom), never from changing the body
-  gradient.
+- **Warm ceramic body is locked — re-cut 2026-09-15, by owner decision.**
+  The previous lock named `#F8F0DC → #7D827E` and said it must not be
+  modified. The owner lifted that specifically to bring the canvas stone
+  onto the same material as the Step 5 CSS stone, which is the other end
+  of the `detail → playback` cut. The ramp now runs
+  `#FDFAF0 → #C8B589` and is fitted, not invented — see
+  *Matching the Step 5 stone* below. **The lock still stands on the new
+  values**: state colour comes from overlay layers (tint, sheen, spark,
+  bloom), never from re-cutting the body gradient. Changing it again is
+  an owner call.
 - **Top-left light source.** All gradients originate at
   `(-radius * 0.28, -radius * 0.28)`. Inset highlights top-left, inset
   shadow bottom-right. Do not invert — that produces a "bowl" look.
+- **Form is directional; the body gradient is not.** The body gradient
+  is radially symmetric about its focus, and the two-circle geometry
+  puts the lit rim at s≈0.633 and the shadow rim at s≈0.799 — so close
+  together that no set of stops can make one bright and the other dark.
+  Sphericity therefore comes from the **terminator** layer (a linear
+  gradient on the light axis), exactly as the CSS stone gets it from
+  `inset` box-shadows rather than from its gradient. If the stone ever
+  reads flat again, that is the layer to look at, not the stops.
 - **No visible border ring.** Depth comes from gradient + shadow
   alone.
+- **No markings on the body.** An "artisan veining" pass used to stamp
+  eight blurred pigment ellipses across the stone. Because their
+  placement was seeded from a fixed noise field, every stone got the
+  same arrangement — which at ceremony size read as a face. Removed
+  2026-09-15. `ds/breath-stone.html` covers this twice: *"Don't add
+  sparkle, particles, sheen-sweeps, or secondary ornament"* and
+  *"Don't give it a face, eyes, mouth, or limbs."* Surface interest
+  comes from the per-frame micro-roughness pass only, which is
+  sub-pixel and evenly distributed — texture, never marks.
+- **Nothing is painted outside the stone.** The engine used to drift 25
+  ambient specks across the whole canvas rect. Environment layers may
+  light the stone; they may not put objects in the air around it.
+
+## The canvas is not the stone
+
+`size={200}` is a **200px canvas holding a 112px sphere**, not a 200px sphere.
+The engine draws at `SPHERE_RADIUS_RATIO` (0.28) of the shorter side, and the
+rest of the box is headroom for the bloom (3.5x radius) and haze (2x).
+
+Anything that positions itself against the stone must size against the sphere:
+
+```ts
+import { SPHERE_DIAMETER_RATIO } from '@/components/breath-stone';
+const sphere = canvasRect.width * SPHERE_DIAMETER_RATIO;   // 0.56
+```
+
+Both ratios are exported for this reason. Two separate pieces of code had
+already assumed the box *was* the stone and come out ~1.8x too large — the
+`detail -> playback` handoff, and the ceremony's glimmer disc. See
+`docs/follow-ups/2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md`.
+
+## Matching the Step 5 stone
+
+The ceremony hands off from this canvas stone (`detail`) to the CSS stone in
+`FirstPlaybackScreen` (`playback`). They are two renderers showing one object,
+so they have to be the same material. As of 2026-09-15 they are, and the way to
+check is to measure rather than to look.
+
+`.tmp/stone/match.mjs` (throwaway, recreate as needed) renders both at the same
+sphere diameter and samples colour along the light axis — the upper-left rim,
+through the centre, to the lower-right rim. Agreement, worst channel per
+sample point:
+
+| | before | after |
+|---|---|---|
+| lit rim | 40 | 8 |
+| centre | 28 | 10 |
+| shadow mid | 26 | 13 |
+| **shadow rim** | **61** | **3** |
+
+The shadow rim was the whole problem: the canvas fell 4 levels across its
+shadow half where the CSS stone falls 75, which is what read as a flat disc
+rather than a sphere.
+
+**Pin `--lum: 0` on the target, and do not use reduced motion to do it.**
+`FirstPlaybackScreen` drives `--lum` per word through the speech sequence under
+reduced motion as well, so sampling that way catches the stone mid-lit — ~23
+levels bright at the shadow rim. Fitting to it leaves the canvas stone visibly
+pale across its whole shadow half, which is exactly what happened on the first
+pass. Override it from a stylesheet instead:
+
+```js
+await page.addStyleTag({ content: '.fpb { --lum: 0 !important; --sus: 0 !important; }' });
+```
+
+Two things worth knowing before touching any of this:
+
+- **The last two stops used to be dead.** The visible stone only ever reaches
+  gradient position **s ≈ 0.80**, so the old `0.90` and `1.00` stops
+  (`#938A7D`, `#7D827E`) were painted nowhere at all. The rim you actually see
+  is the `0.84` stop. Anything past ~0.85 is headroom, not colour.
+- **Warmth on the shadow side belongs to the terminator, not the body.**
+  Fitting it into the body gradient fails: s≈0.42 needs blue ≈226 on the lit
+  side and ≈195 on the shadow side, and it is one stop. The terminator colour
+  `rgba(52, 38, 8)` carries that difference.
 
 ## Adding a new state
 
