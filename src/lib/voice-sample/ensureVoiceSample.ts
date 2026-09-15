@@ -32,6 +32,26 @@ import { VOICE_SAMPLE_LINE } from "./voice-sample-line";
 
 export { VOICE_SAMPLE_LINE };
 
+/**
+ * How many paid renders one profile may ever be charged for.
+ *
+ * `failed` is deliberately re-claimable, so the beat can recover from a
+ * transient vendor or storage blip instead of being silent forever. Without a
+ * ceiling that is unbounded: a storage outage fails every render *after* the
+ * vendor call has already been billed, and each new attempt charges again for
+ * the same sample. Harmless while the only trigger was a one-time processing
+ * step; a live hazard now that entering the ceremony can trigger one.
+ *
+ * Enforced inside the claim itself, not as a check beside it, so two concurrent
+ * callers cannot both pass a ceiling read and then both spend.
+ *
+ * Resolves `docs/follow-ups/2026-09-10-voice-sample-retry-has-no-billing-cap.md`.
+ */
+export const VOICE_SAMPLE_MAX_RENDERS = (() => {
+  const raw = Number(process.env.VOICE_SAMPLE_MAX_RENDERS);
+  return Number.isInteger(raw) && raw > 0 ? raw : 3;
+})();
+
 
 export type EnsureVoiceSampleResult =
   /** A sample exists (this call rendered it, or found one already there). */
@@ -49,6 +69,12 @@ export type EnsureVoiceSampleResult =
   | { ok: false; reason: "in_flight" }
   /** No usable voice yet. */
   | { ok: false; reason: "voice_not_ready" }
+  /**
+   * This profile has already been billed for `VOICE_SAMPLE_MAX_RENDERS`
+   * attempts and will not be charged again. Terminal without an operator
+   * raising the ceiling — never retry past it.
+   */
+  | { ok: false; reason: "render_cap_reached"; renderCount: number }
   | { ok: false; reason: "render_failed"; code: string };
 
 export interface EnsureVoiceSampleParams {
@@ -98,6 +124,23 @@ export async function ensureVoiceSample(
     return { ok: false, reason: "voice_not_ready" };
   }
 
+  // Fast path for the ceiling, so the common refusal is one read and a clear
+  // reason rather than a claim that mysteriously matches nothing. The claim
+  // below repeats the condition atomically — this check is the explanation,
+  // that one is the enforcement.
+  const renderCount = profile.sample_render_count ?? 0;
+  if (renderCount >= VOICE_SAMPLE_MAX_RENDERS) {
+    logEvent({
+      event: "voice_sample_render_cap_reached",
+      requestId,
+      userId,
+      voiceProfileId,
+      outcome: "rejected",
+      meta: { renderCount, cap: VOICE_SAMPLE_MAX_RENDERS },
+    });
+    return { ok: false, reason: "render_cap_reached", renderCount };
+  }
+
   // ── the claim ────────────────────────────────────────────────────────────
   // This is the whole idempotency guarantee, and it must happen BEFORE the
   // vendor call. `.in()` on the prior status is what makes it single-flight:
@@ -116,6 +159,10 @@ export async function ensureVoiceSample(
     .eq("id", voiceProfileId)
     .eq("user_id", userId)
     .in("sample_status", ["none", "failed"])
+    // The billing ceiling, enforced in the same atomic update that makes the
+    // render single-flight. A separate pre-check could be passed by two callers
+    // at once; this cannot.
+    .lt("sample_render_count", VOICE_SAMPLE_MAX_RENDERS)
     .select("id")
     .maybeSingle();
 
@@ -131,7 +178,31 @@ export async function ensureVoiceSample(
   }
 
   if (!claim) {
-    // Someone else holds it, or it went ready between our read and our claim.
+    // Zero rows matched. Three different things look identical here — someone
+    // else holds the claim, it went ready between our read and our claim, or a
+    // concurrent caller just consumed the last allowed attempt. Re-read to say
+    // which, because "wait a moment" and "this will never render" are opposite
+    // instructions for the caller.
+    const { data: current } = await supabase
+      .from("voice_profiles")
+      .select("sample_render_count")
+      .eq("id", voiceProfileId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const currentCount = current?.sample_render_count ?? 0;
+    if (currentCount >= VOICE_SAMPLE_MAX_RENDERS) {
+      logEvent({
+        event: "voice_sample_render_cap_reached",
+        requestId,
+        userId,
+        voiceProfileId,
+        outcome: "rejected",
+        meta: { renderCount: currentCount, cap: VOICE_SAMPLE_MAX_RENDERS, lostRace: true },
+      });
+      return { ok: false, reason: "render_cap_reached", renderCount: currentCount };
+    }
+
     logEvent({
       event: "voice_sample_claim_noop",
       requestId,

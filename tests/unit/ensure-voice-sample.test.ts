@@ -57,7 +57,11 @@ vi.mock("@/lib/supabase/checked-write", () => ({
   },
 }));
 
-import { ensureVoiceSample, VOICE_SAMPLE_LINE } from "@/lib/voice-sample/ensureVoiceSample";
+import {
+  ensureVoiceSample,
+  VOICE_SAMPLE_LINE,
+  VOICE_SAMPLE_MAX_RENDERS,
+} from "@/lib/voice-sample/ensureVoiceSample";
 
 // ── the fake row + query builder ───────────────────────────────────────────
 
@@ -65,6 +69,9 @@ let profileRow: Record<string, unknown> | null;
 let claimMatches: boolean;
 let uploadError: unknown;
 let finishError: unknown;
+/** What the claim actually filtered on — the guard is only real if it is applied. */
+let claimStatuses: string[] | null;
+let claimCeiling: { col: string; bound: number } | null;
 const updates: Record<string, unknown>[] = [];
 
 function makeSupabase() {
@@ -80,15 +87,25 @@ function makeSupabase() {
       update: (payload: Record<string, unknown>) => {
         updates.push(payload);
         const terminal = {
-          // claim path: .eq().eq().in().select().maybeSingle()
-          in: () => ({
-            select: () => ({
-              maybeSingle: async () => ({
-                data: claimMatches ? { id: "vp_1" } : null,
-                error: null,
-              }),
-            }),
-          }),
+          // claim path: .eq().eq().in().lt().select().maybeSingle()
+          in: (_col: string, statuses: string[]) => {
+            claimStatuses = statuses;
+            return {
+              // The billing ceiling rides inside the claim, so the fake has to
+              // model it here rather than beside it — see VOICE_SAMPLE_MAX_RENDERS.
+              lt: (col: string, bound: number) => {
+                claimCeiling = { col, bound };
+                return {
+                  select: () => ({
+                    maybeSingle: async () => ({
+                      data: claimMatches ? { id: "vp_1" } : null,
+                      error: null,
+                    }),
+                  }),
+                };
+              },
+            };
+          },
           // finish / release path: .eq().eq() resolves directly
           then: (resolve: (v: unknown) => void) =>
             resolve({ error: payload.sample_status === "ready" ? finishError : null }),
@@ -138,6 +155,8 @@ beforeEach(() => {
   claimMatches = true;
   uploadError = null;
   finishError = null;
+  claimStatuses = null;
+  claimCeiling = null;
 });
 
 describe("ensureVoiceSample — the money guard", () => {
@@ -245,5 +264,128 @@ describe("ensureVoiceSample — the money guard", () => {
     // Neutral: it must not imply a message was created or sent, and no
     // Recipient exists at this point in the journey.
     expect(VOICE_SAMPLE_LINE).not.toMatch(/vault/i);
+  });
+});
+
+/**
+ * The billing ceiling.
+ *
+ * `failed` is deliberately re-claimable so the beat can recover from a
+ * transient blip. Unbounded, that is a way to charge one user repeatedly for
+ * one sample: the spend is counted at CLAIM time precisely because a render can
+ * fail after the vendor has already billed, so a storage outage bills on every
+ * attempt while never producing audio.
+ *
+ * This was tolerable while the only trigger was a one-time processing step. It
+ * stopped being tolerable when entering the ceremony began triggering a render.
+ *
+ * Resolves docs/follow-ups/2026-09-10-voice-sample-retry-has-no-billing-cap.md
+ */
+describe("ensureVoiceSample — the billing ceiling", () => {
+  it("refuses once the profile has been billed for the cap, without touching the vendor", async () => {
+    profileRow = {
+      ...READY_VOICE,
+      sample_status: "failed",
+      sample_render_count: VOICE_SAMPLE_MAX_RENDERS,
+    };
+
+    const result = await run();
+
+    expect(ttsSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      ok: false,
+      reason: "render_cap_reached",
+      renderCount: VOICE_SAMPLE_MAX_RENDERS,
+    });
+    // Not even a claim was attempted — the refusal costs one read.
+    expect(updates).toHaveLength(0);
+  });
+
+  it("still renders on the last attempt the cap allows", async () => {
+    profileRow = {
+      ...READY_VOICE,
+      sample_status: "failed",
+      sample_render_count: VOICE_SAMPLE_MAX_RENDERS - 1,
+    };
+
+    const result = await run();
+
+    // Off-by-one guard: the cap is a ceiling on attempts taken, not on attempts
+    // remaining. Burning the last one must work.
+    expect(ttsSpy).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ ok: true, rendered: true });
+  });
+
+  it("puts the ceiling INSIDE the claim, not beside it", async () => {
+    await run();
+
+    // A pre-check alone can be passed by two callers at once, who then both
+    // spend. The condition has to ride in the same atomic update that makes the
+    // claim single-flight, or the cap is advisory.
+    expect(claimStatuses).toEqual(["none", "failed"]);
+    expect(claimCeiling).toEqual({
+      col: "sample_render_count",
+      bound: VOICE_SAMPLE_MAX_RENDERS,
+    });
+  });
+
+  it("reports the cap, not `in_flight`, when a concurrent caller consumed the last attempt", async () => {
+    // Our read saw room; by the time we claimed, someone else had taken it.
+    // Zero rows match either way, so a lost race and a hit ceiling are
+    // indistinguishable from the claim alone — and they are opposite
+    // instructions to the caller: "wait a moment" vs "this will never render".
+    // The re-read is what tells them apart, so it is what this test drives.
+    let reads = 0;
+    const supabase = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              maybeSingle: async () => {
+                reads += 1;
+                // 1st: the pre-claim read, with room left.
+                // 2nd: the re-read after losing the race — the winner's
+                //      increment has landed and the ceiling is now full.
+                const data =
+                  reads === 1
+                    ? { ...READY_VOICE, sample_status: "failed", sample_render_count: VOICE_SAMPLE_MAX_RENDERS - 1 }
+                    : { ...READY_VOICE, sample_render_count: VOICE_SAMPLE_MAX_RENDERS };
+                return { data, error: null };
+              },
+            }),
+          }),
+        }),
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              in: () => ({
+                lt: () => ({
+                  select: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    };
+
+    const result = await ensureVoiceSample({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase: supabase as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      service: makeService() as any,
+      userId: "u_1",
+      voiceProfileId: "vp_1",
+      requestId: "req_1",
+      startMs: 0,
+    });
+
+    expect(reads).toBe(2);
+    expect(ttsSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      ok: false,
+      reason: "render_cap_reached",
+      renderCount: VOICE_SAMPLE_MAX_RENDERS,
+    });
   });
 });
