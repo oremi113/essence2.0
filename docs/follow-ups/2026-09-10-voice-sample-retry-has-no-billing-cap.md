@@ -1,10 +1,10 @@
 ---
 id: 2026-09-10-voice-sample-retry-has-no-billing-cap
 priority: P3
-status: open
+status: resolved
 opened: 2026-09-10
-resolved:
-summary: "A First Playback sample render that keeps failing AFTER the paid vendor call re-bills on every retry — `sample_status: 'failed'` is re-claimable with no attempt ceiling, so a storage outage charges the user once per attempt *(observed in live testing, 2026-09-10)*"
+resolved: 2026-09-15
+summary: "RESOLVED 2026-09-15 — A First Playback sample render that keeps failing AFTER the paid vendor call re-bills on every retry — `sample_status: 'failed'` is re-claimable with no attempt ceiling, so a storage outage charges the user once per attempt *(observed in live testing, 2026-09-10)*"
 ---
 
 # The sample render has no retry ceiling
@@ -63,3 +63,42 @@ a user was charged twice for one artifact.
 ## Pick up when
 
 With the §4.7 failure state, and before any retry affordance ships.
+
+---
+
+## Resolved — 2026-09-15
+
+Fixed exactly as the fix shape above proposed, with `VOICE_SAMPLE_MAX_RENDERS`
+(default 3, env-overridable) enforced *inside* the claim:
+
+```
+.in("sample_status", ["none", "failed"])
+.lt("sample_render_count", VOICE_SAMPLE_MAX_RENDERS)
+```
+
+Beside the claim would have been advisory — two callers can both pass a
+pre-check and then both spend. A fast-path check remains, but only to give the
+common refusal a clear reason; the `.lt()` is the enforcement.
+
+`render_cap_reached` is returned as its own result, distinct from `in_flight`,
+so the §4.7 copy can say "we cannot make this right now" rather than offering a
+retry that will never fire. Distinguishing them needs a re-read after a
+zero-row claim, because a lost race and a full ceiling are identical from the
+claim alone and mean opposite things to the caller.
+
+Covered in `tests/unit/ensure-voice-sample.test.ts` (4 cases), mutation-checked:
+removing the `.lt()`, flipping the fast path to `>`, and dropping the re-read
+classification each fail a different test.
+
+### The prediction in "Why it matters" was right, and early
+
+This item said the hazard was "not currently reachable in production" and would
+arrive "the moment §4.7 lands." It arrived sooner, from a direction not
+considered here: making `GET /sample/play` render on demand — the fix for
+existing profiles never getting a sample at all — turned *entering the ceremony*
+into a render trigger. The sentence "the only other caller is a GET that never
+renders" stopped being true, and the cap went in as part of that same change
+rather than waiting for the retry affordance.
+
+Worth keeping as the lesson: "not reachable yet" is a property of the current
+call graph, not of the code, and it expires without notice.

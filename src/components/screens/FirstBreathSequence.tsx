@@ -186,20 +186,25 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     useState<{ left: number; top: number; width: number } | null>(null);
 
   /**
-   * Prefetch the sample's signed URL as `detail` begins.
+   * Prefetch the sample's signed URL on mount.
    *
-   * The URL lives 120s and the user is seconds from tapping Continue, so it is
-   * warm at the peak moment and the beat never shows a spinner. The GET never
-   * renders and never spends — the paid render already happened during
-   * processing (see ensureVoiceSample).
+   * **Why on mount and not at `detail`.** This GET can now render the sample if
+   * the profile has none — which is the only path by which a user who created
+   * their voice before Step 5 existed ever gets one. A render costs a few
+   * seconds, so it needs runway: from mount there is `preserved` at 7.5s plus
+   * two deliberate taps before any audio is needed, and the request lands well
+   * inside that. Firing at `detail` left a render racing the user's own tap.
    *
-   * Failure is silent by design. A 404 (`failed`) or a network error leaves
-   * `sampleUrl` null, and the phase still plays: the line is on screen and the
-   * cadence model drives the choreography, so the beat lands silently rather
-   * than not at all. The dedicated failure state is a later pass.
+   * The URL lives 120s, comfortably longer than the remaining ceremony, so it
+   * is still warm at the peak moment and the beat never shows a spinner.
+   *
+   * Failure is silent by design. A 404, a 409 (`in_flight`), or a network error
+   * leaves `sampleUrl` null, and the phase still plays: the line is on screen
+   * and the cadence model drives the choreography, so the beat lands silently
+   * rather than not at all. The dedicated failure state is a later pass.
    */
   useEffect(() => {
-    if (phase !== 'detail' || sampleUrl) return;
+    if (sampleUrl) return;
     let cancelled = false;
     fetch(`/api/voice-profiles/${voiceProfileId}/sample/play`)
       .then((res) => (res.ok ? res.json() : null))
@@ -223,7 +228,7 @@ export function FirstBreathSequence({ voiceProfileId }: FirstBreathSequenceProps
     return () => {
       cancelled = true;
     };
-  }, [phase, voiceProfileId, sampleUrl]);
+  }, [voiceProfileId, sampleUrl]);
 
   /**
    * Detail's Continue tap. Measures the ceremony stone FIRST, so the incoming
