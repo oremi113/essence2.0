@@ -24,7 +24,7 @@ Playwright CDP (`Emulation.setCPUThrottlingRate { rate: 4 }`) or
 | 10 | Screen-reader order | `role="status" aria-live="polite"` announces the line at playback, then "That's you. It kept the pauses." at its own beat. Word spans are `aria-hidden` | ✅ |
 | 11 | CTA arrives alone | "Hear it again" is 1.2s behind the primary, and both **mount** rather than fade from `opacity: 0` | ✅ |
 | 12 | Press stays tactile | The CTA's entrance is a `@keyframes` animation, so `:active` still scales at `--duration-small`. Press it — it must not feel dead | ✅ |
-| 13 | Tab away mid-utterance, return | Resolves to the settled beat; does not resume mid-word or snap forward | ⚠️ handler ✅, real backgrounding not reproducible — see below |
+| 13 | Tab away mid-utterance, return | Resolves to the settled beat; does not resume mid-word or snap forward | ✅ **owner-verified on device 2026-09-15** — swiped away mid-line, returned to the finished screen |
 | 14 | **4× CPU throttle, 390×844** | No frame over 20ms across the utterance | ✅ p95 10.3ms, max 10.4ms, 0 over 20ms |
 | 15 | Console | Zero errors | ✅ |
 | 16 | The word "Vault" | Appears zero times | ✅ |
@@ -152,9 +152,9 @@ A first attempt looked like a pass and was not: the 2.4s background window let
 the utterance finish *naturally*, so `settle()` may never have run at all. The
 give-away was that the CTA had not mounted — the tail had not arrived yet.
 
-**Still owed:** background the tab for real on the phone. iOS Safari also
-freezes timers on background, which is a different mechanism again from a
-desktop tab switch, so this genuinely needs the device.
+**Closed 2026-09-15.** Owner walked it on an iPhone: swiped away mid-sentence,
+came back, and the screen was already at the finished state. The integration
+half is done; the automated half stands as described above.
 
 ## Row 33 — real voice clone, 2026-09-10
 
@@ -202,6 +202,19 @@ to tune out. Now 0 by construction.
 
 The cadence table remains the fallback for the dev page, pre-migration samples,
 and any alignment that fails validation.
+
+## Still to run
+
+| # | Check | Expected | Status |
+|---|---|---|---|
+| 41 | **Autoplay on a real iPhone** (§4.4) | The sample plays without a tap. iOS blocks audio not tied to a user gesture; the ceremony has had taps, so it should be permitted — but "should" is not verified, and a silent failure looks identical to a phone on mute | ⬜ **owner, next** |
+| 42 | No "box" around the stone on any ceremony screen | The canvas element's rect must not be visible against the dark ground | ❌ **fails** — see `2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges` |
+
+**Row 41 needs more than a URL.** The two dev pages play no audio at all — the
+motion is driven by a timing model so the screen can be reviewed without
+spending money. A real autoplay test needs the full flow: signed in, a profile
+with a rendered sample, the ceremony walked end to end. Worth setting up
+together rather than from a link.
 
 ## Row 34 — not run
 

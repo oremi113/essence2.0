@@ -63,6 +63,44 @@ work the dark-stage card was promoted from, and the atmosphere layers read
 refactor to take unilaterally.** Needs a visual pass at 4× throttle on 390×844
 across all four existing phases before and after.
 
+## Owner review, 2026-09-15 — and a much cheaper fix path
+
+The owner compared both stones on device. Verdict: the smooth (CSS) stone is
+better looking, and the canvas stone "looks like it has seeds in it."
+
+**The design system already agrees**, on two counts the canvas stone breaks:
+
+- *"Don't add sparkle, particles, sheen-sweeps, or secondary ornament."* The
+  engine paints 25 drifting specks across the rect (`breathStoneEngine.ts:668`).
+- *"Don't give it a face, eyes, mouth, or limbs."* The "seeds" are the
+  **Artisan veining** pass (`:888-903`) — 8 blurred pigment ellipses placed by
+  noise. At 140px on a phone they read as two eyes and a mouth. On a product
+  about a dying person's voice, that is not a small risk.
+
+**This does NOT require porting to CSS.** That was over-scoped: 11 animated
+states, 25 consumers, a 1034-line engine — weeks, with every screen's motion
+needing re-verification.
+
+All three objections are fixable **inside the canvas engine**, none of them
+touching the state machine, the breath timing, or any consumer's API:
+
+| objection | where | size |
+|---|---|---|
+| the box | the mask, `BreathStone.tsx` | 1 line — filed separately as `2026-09-15-breath-stone-canvas-mask-never-fades-at-the-edges` |
+| the "seeds" / face | Artisan veining, `:888-903` | ~15 lines, state-independent |
+| particles | ambient specks, `:668` | ~10 lines, ds violation regardless of taste |
+
+Agreed sequencing:
+
+1. **The box** — one line, standalone, improves 25 screens.
+2. **Make the canvas stone smooth** — remove veining and particles, retune the
+   surface to read like the Step 5 stone. Needs owner eyes mid-flight: produce
+   before/after captures at 140px and 200px on a dark ground rather than
+   describing it. "Smooth" has a range.
+3. **Re-look at the cut** — only if still needed. If both stones read as the
+   same material, the `detail → playback` swap stops being a material change and
+   full unification may never earn its cost.
+
 ## Pick up when
 
 Before Step 5 ships to users. The beat works and performs without it — this is a
