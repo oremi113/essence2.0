@@ -6,6 +6,52 @@ import type { BreathStoneState } from './breathStoneEngine';
 
 export type { BreathStoneState };
 
+// ─── CANVAS EDGE MASK ───────────────────────────────────────────────────────
+// The engine paints for depth across the whole canvas rect: an ambient
+// gradient, a directional wash, a playback vignette, drifting motes — plus the
+// stone's own HDR bloom (3.5x radius) and haze (2x), both of which legitimately
+// overshoot the rect. All of it is cut off by the canvas boundary, and a
+// straight cut through a non-zero alpha is what reads as a visible "box" on a
+// dark ground.
+//
+// This mask feathers that cut. Three things make it work:
+//
+//   • `closest-side` — without a size keyword the gradient defaults to
+//     farthest-corner, which on a square canvas puts 100% out at the DIAGONAL.
+//     The edge midpoints then sit at only 70.7%, i.e. inside the fully-opaque
+//     region, so they never faded at all. Only the corners softened. That was
+//     the bug: a square with rounded corners, which is exactly the artifact the
+//     mask was added to prevent. `closest-side` puts 100% on the nearest edge.
+//
+//   • It reaches full transparency at exactly 100%, so there is no hard cut
+//     left anywhere on the boundary — and everything past it (the corners, at
+//     141%) is gone outright.
+//
+//   • The falloff is back-loaded rather than linear. Measured on the 140px
+//     ceremony stone, the widest the stone body ever gets is 84.3% of the
+//     half-width (recording, at a breath peak with voice reactivity and
+//     silhouette irregularity all stacking); every other state stays under 75%.
+//     So the mask holds ~full opacity through the mid-80s and does its real
+//     work in the last 10%, where only the faint overshoot lives. A linear
+//     ramp from the mid-60s would have dimmed the stone's own rim.
+//
+// If the stone's geometry changes — baseRadius (0.28), the 1.30 breath clamp,
+// recording's voiceReactive or irregularity — re-measure before trusting these
+// stops. /dev/breath-stone renders every state on a dark ground for exactly
+// this check.
+const EDGE_MASK =
+  'radial-gradient(closest-side, ' +
+  '#000 0%, #000 84%, ' +
+  'rgba(0,0,0,0.94) 90%, ' +
+  'rgba(0,0,0,0.72) 95%, ' +
+  'transparent 100%)';
+
+const maskStyle = {
+  display: 'block',
+  maskImage: EDGE_MASK,
+  WebkitMaskImage: EDGE_MASK,
+} as const;
+
 interface BreathStoneProps {
   state: BreathStoneState;
   /** Size in pixels. Canvas renders square at this dimension. Default: 280 */
@@ -61,19 +107,6 @@ export function BreathStone({
   useEffect(() => {
     engineRef.current?.resize(size, size);
   }, [size]);
-
-  // Soft radial mask hides the canvas's rectangular corners. The engine
-  // paints an ambient gradient + dust motes across the whole canvas rect
-  // for depth, which reads as a visible "box" against a dark background.
-  // Fully opaque through 80% of radius (comfortably past the stone's max
-  // breath scale at 1.30), then fades to transparent by 98%.
-  const maskStyle = {
-    display: 'block',
-    maskImage:
-      'radial-gradient(circle, black 0%, black 80%, transparent 98%)',
-    WebkitMaskImage:
-      'radial-gradient(circle, black 0%, black 80%, transparent 98%)',
-  } as const;
 
   return (
     <canvas
