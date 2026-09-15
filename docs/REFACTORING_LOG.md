@@ -23,6 +23,54 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-09-15 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 4 new backlog items + refined 2 open P2s; no code touched.
+- Branch / commit: `triage/2026-09-15` @ <this commit>
+- Health checks on `main` (eafa50a): typecheck ✅ · lint ✅ (2 warnings) · test:unit 429/429 ✅.
+- Scanned: the beta-hardening window 2026-09-01→09-08 (legal consent gate, 18+ age
+  gate, OTP sign-in, pricing reconcile $119.99, recorder hardening, Home A stopgap,
+  message-creation 404 fix, account-teardown clone deletion) read diff-by-diff; then
+  deeper subsystem reads of the Stripe webhook lifecycle and the Step 6 paid-render
+  routes (`generate`/`regenerate`/`commit`/`save` + `lib/messages/audio.ts`).
+  Marker-debt grep over `src/`: no untracked TODO/FIXME (all disables documented).
+  Contract spot-checks (pricing across code+legal, STORAGE_PATHS) show no drift.
+- Discovered (new per-file follow-ups):
+  - [P2] `2026-09-15-stripe-incomplete-status-mapped-to-terminal-lapsed` — Stripe
+    `incomplete` status (SCA/3-DS pending) is mapped to the terminal `lapsed` and
+    the terminal guard makes it permanent; a paying user is locked out of the
+    vault forever. Masked by the beta 100%-off coupon; a launch blocker for
+    real-card billing. `handlers.ts:177-179` / `:164` / `:205-210`.
+  - [P3] `2026-09-15-commit-paid-render-bypasses-hourly-cap-and-ledger` — `/commit`,
+    the default paid ElevenLabs render path since deferred-audio flipped on
+    (2026-09-04), is capped only per-generation; it skips the hourly cap and writes
+    no usage-ledger row, so real render spend is under-fenced and invisible.
+    Sibling of FU-92. `commit/route.ts:66`.
+  - [P3] `2026-09-15-commit-overwrites-committed-audio-before-promote-write` —
+    `/commit` overwrites the shared audio object before the promote DB write, so an
+    upload-success/promote-fail leaves new audio under old text, which `/save` then
+    seals into a permanent, immutable mismatched message. The in-code "(FOLLOW_UPS
+    #62)" reference is dangling (renumbered to an unrelated resolved item), so this
+    was untracked until now. `commit/route.ts:100-137`.
+  - [P4] `2026-09-15-save-quota-count-read-fails-open` — `/save`'s "race-safe
+    security" vault-cap gate reads the count without checking `{ error }`; a
+    transient error reads 0 and lets a 4th message save through. Same read-not-
+    fail-closed class as FU-85 / FU-89. `save/route.ts:105-109`.
+- Refined (existing open P2s — line refs drifted after the 2026-09-01 teardown
+  rewrite, commit 519b45f):
+  - FU-85 (subscriptions read swallowed) — now `actions.ts:198`; recurrence signal:
+    the sibling voice read got the fail-closed fix in 519b45f while this one didn't.
+  - FU-86 (audio wiped before row/auth deletes) — now storage wipe `actions.ts:258-268`,
+    rows `:270-280`, auth `:284`; still un-reordered, "Nothing was lost" copy intact.
+- Root-cause-fixed-in-code (noted for the fixer to strike, discovery does not strike):
+  the P2 "account deletion never deletes the ElevenLabs voice clone" is now wired
+  (deleteVoice as teardown step 2, before local data loss); its follow-up already
+  records this and is kept open only for the vendor-fact confirmation.
+- Anti-noise: capped output; excluded well-built recent work (checkout guards,
+  consent/age gates, pricing reconcile — all clean) and dedup'd against FU-62/79/
+  81/85/86/89/92/97 and the 2026-09-04 self-filed items (control-arm A6, sweeper).
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the PR).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.

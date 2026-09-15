@@ -33,3 +33,13 @@ non-null — the teardown's reads need the same fail-closed treatment as its wri
 repo's `checkedWrite` lint guard covers *writes*, so this *read* slipped through.)
 **Pick up when:** before `ACCOUNT_DELETE_ENABLED` is enabled (part of that sign-off). Pairs
 with #86/#88 and FU-77/78 as billing-hardening. Owner-paired (Stripe/auth teardown).
+
+**Refinement 2026-09-15 (triage):** still open, and now a recurrence signal. The
+2026-09-01 teardown rewrite (commit 519b45f, ElevenLabs clone deletion) added the
+exact fail-closed treatment this entry asks for — but only to the *sibling*
+`voice_profiles` read (`actions.ts:226-243`, `voiceReadErr` → abort). The
+subscriptions read this entry names was left swallowing `{ error }`. Current line
+is `src/app/app/settings/actions.ts:198` (`const { data: subs } = await
+service.from('subscriptions').select(...)`), drifted from the original :191. So
+the same function was edited to fail-close one read while leaving this one open —
+apply the identical pattern here.

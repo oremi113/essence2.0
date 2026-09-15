@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
+Total: 39 · 38 open · 1 decision · 0 resolved · 0 dropped
 
-## Open (34)
+## Open (38)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -22,6 +22,7 @@ Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
 | P2 | Production DB backups now enabled (Supabase Pro, 2026-07-12, 7-day) — BUT Supabase Storage (the actual voice audio) is NOT included in DB backups, so the crown-jewel recordings remain unprotected against logical delete/corruption on a "preserve forever" product *(surfaced 2026-07-12 during vendor checks)* | 2026-07-12 | — | [`2026-07-12-production-supabase-free-tier-has-no-backups.md`](./2026-07-12-production-supabase-free-tier-has-no-backups.md) |
 | P2 | L2 consent gate DONE in code — own-voice-only copy, voice_consent_records table applied to prod + persistence wired. ONLY remaining item is the owner env flip VOICE_CONSENT_REQUIRED=true to enforce it for beta. | 2026-09-01 | — | [`2026-09-01-wire-voice-consent-persistence.md`](./2026-09-01-wire-voice-consent-persistence.md) |
 | P2 | `DEFERRED_AUDIO_ENABLED` is a flag with only one working arm — the control arm has no A6 screen, so "off" 404s after a paid generation *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-control-arm-a6-screen-was-never-built.md`](./2026-09-04-control-arm-a6-screen-was-never-built.md) |
+| P2 | Stripe `incomplete` subscription status is mapped to the TERMINAL `lapsed`, and the terminal guard then makes it permanent → a paying user is locked out of the vault forever *(triage 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-stripe-incomplete-status-mapped-to-terminal-lapsed.md`](./2026-09-15-stripe-incomplete-status-mapped-to-terminal-lapsed.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
@@ -39,11 +40,14 @@ Total: 35 · 34 open · 1 decision · 0 resolved · 0 dropped
 | P3 | `pending_generations.expires_at` is written but nothing ever prunes it; the per-user active cap depends on an entry-point reclaim *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-abandoned-pending-generations-have-no-sweeper.md`](./2026-09-04-abandoned-pending-generations-have-no-sweeper.md) |
 | P3 | A 429 cost-limit block shows A5's "Something slipped on our end / Try again" — a permanent wall dressed as a transient blip *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-cost-limit-block-renders-as-a-transient-failure.md`](./2026-09-04-cost-limit-block-renders-as-a-transient-failure.md) |
 | P3 | Every `min-height: 100dvh` screen inside `.app-main` overflows by the shell's 40px bottom padding — a phantom scroll on screens meant to be one still frame *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-full-height-screens-overflow-the-app-shell-padding.md`](./2026-09-04-full-height-screens-overflow-the-app-shell-padding.md) |
+| P3 | `/commit` overwrites the shared audio object (upsert) BEFORE the promote DB write, so an upload-success/promote-fail leaves new audio under old text — and `/save` then persists it as a permanent, immutable message whose voice doesn't match its words. Believed tracked as "#62" but that number was reassigned; actually untracked *(triage 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-commit-overwrites-committed-audio-before-promote-write.md`](./2026-09-15-commit-overwrites-committed-audio-before-promote-write.md) |
+| P3 | `/commit` — the DEFAULT paid ElevenLabs render path — is capped only per-generation; it never checks the hourly cap and never writes a usage-ledger row, so real voice-render spend is both under-fenced and invisible *(triage 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-commit-paid-render-bypasses-hourly-cap-and-ledger.md`](./2026-09-15-commit-paid-render-bypasses-hourly-cap-and-ledger.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
 | P4 | /dev/breath-stone overflows the viewport by 45px — the state-label row doesn't wrap at 390px; dev-scaffold only, but a real horizontal overflow *(qa-scout full-sweep 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-dev-breath-stone-horizontal-overflow.md`](./2026-07-12-dev-breath-stone-horizontal-overflow.md) |
 | P4 | Migrate the remaining `FOLLOW_UPS.md` monolith (items 1-84 + resolved history) into the per-file `docs/follow-ups/` layout | 2026-07-12 | — | [`2026-07-12-migrate-legacy-followups-to-per-file.md`](./2026-07-12-migrate-legacy-followups-to-per-file.md) |
+| P4 | `/save` reads the saved-message count without checking `{ error }`, so a transient DB error makes the count read 0 and the "race-safe" vault-cap gate lets the save through — fail-open on a gate documented as the security backstop *(triage 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-save-quota-count-read-fails-open.md`](./2026-09-15-save-quota-count-read-fails-open.md) |
 
 ## Decision (owner call) (1)
 
