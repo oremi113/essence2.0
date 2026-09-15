@@ -19,8 +19,24 @@ journey.first_playback_heard   { voiceProfileId }
 ## When it fires
 
 **On completed listen, not on arrival.** The event fires when the utterance
-finishes, not when the phase mounts. A user who backgrounds the tab mid-line
-resolves to the settled beat but is *not* counted as having heard it.
+finishes, not when the phase mounts.
+
+**Exactly once per mount.** Three routes reach the end of the utterance and only
+the first is a completed listen. All three bottom out in the same `endSpeech()`,
+which is why the other two fired before review caught it:
+
+| Route | Counts? |
+|---|---|
+| The line plays through | **yes**, once |
+| "Hear it again" replays it | no — the same user, already counted |
+| Backgrounding mid-line (`settle()`) | no — the user was not there for it |
+
+The second and third were live defects, found in pre-merge audit against test-plan
+row 34 and fixed before this shipped: replay double-counted, and abandoning the
+beat counted as hearing it — the precise case this event exists to exclude.
+Enforced by a latch in `FirstPlaybackScreen`, covered and mutation-checked in
+`tests/unit/first-playback-heard-once.test.tsx`. **If that test is ever loosened,
+the 1:1 expectation below stops meaning anything.**
 
 That choice matters for how the number reads: `first_playback_heard` measures
 the beat *landing*, not the screen being reached. If you need "reached", that is

@@ -92,7 +92,7 @@ cookie plumbing is shared with the already-shipped messages endpoint.
 | 31 | Sample fetch 404s (no sample) | Phase still plays, silently, driven by the cadence model. No crash, no dead end | ✅ (dev-mock-id has no profile) |
 | 32 | Reduced motion | No stone travel — the cut alone. Everything else per row 9 | ✅ 2026-09-10 · movedY 0, 1 distinct position over 1200ms, 0 animations |
 | 33 | Live walk with a real rendered sample | Audio plays; timings track the real voice | ✅ **found a defect, now fully fixed** — real per-word offsets from the vendor |
-| 34 | `journey.first_playback_heard` fires **once**, on completed listen | Not on arrival; not again on replay | ⬜ needs live analytics |
+| 34 | `journey.first_playback_heard` fires **once**, on completed listen | Not on arrival; not again on replay | ✅ **found two defects, both fixed** — see below |
 
 **The one thing the dev page cannot show:** rows 33–34 need a real profile with a
 rendered sample. Use the seed + magic-link protocol from `project_step6_live_verify`.
@@ -216,9 +216,44 @@ spending money. A real autoplay test needs the full flow: signed in, a profile
 with a rendered sample, the ceremony walked end to end. Worth setting up
 together rather than from a link.
 
-## Row 34 — not run
+## Row 34 — closed, and it was worth writing down
 
-Needs the journey event observed through a real authenticated session. The
-browser here has no cookie session (the dev-auth route needs the test password
-on the URL, and Playwright's snippet sandbox cannot read it from disk), so this
-is still owed.
+Originally deferred for wanting a real authenticated session. It did not need
+one: the row's expectation is about *firing semantics*, and those are decidable
+from the call chain and provable deterministically.
+
+Both halves of the expectation were **false** when audited:
+
+| Path | Expected | Was |
+|---|---|---|
+| Line plays through | fires once | fires once ✅ |
+| "Hear it again" | does not fire | **fired again** ❌ |
+| Backgrounds mid-line | does not fire | **fired** ❌ |
+
+`trackJourney` is a bare emitter with no dedupe (other funnel sites carry their
+own once-guards — that is open item FU-101), and this call site had none. All
+three paths bottom out in the same `endSpeech()`, which is why the two bad ones
+were invisible in review: the source reads as a single completion path.
+
+The background case was the sharper of the two. `settle()` has exactly one
+caller — the `visibilitychange` handler — so its *only* purpose is the
+user-left-mid-line case, and it reported that user as having heard the beat.
+That directly contradicted `FirstBreathSequence.tsx`'s own comment ("a user who
+leaves mid-line is not counted as having heard it") and the analytics note's
+stated semantics.
+
+Both fixed via a latch in `FirstPlaybackScreen` (`heardRef` + `endSpeech({
+heard })`). Covered by `tests/unit/first-playback-heard-once.test.tsx`, four
+cases, **mutation-checked**: removing the latch fails the replay case; making
+`settle()` report a completed listen fails the other two.
+
+**Why it mattered before merge, not after.** The event's whole purpose is to
+make Immutable Rule 4 measurable for the first time, and the analytics note's
+success criterion is that its volume tracks `voice_profile_ready` roughly 1:1.
+Shipping as-was would have over-counted on replay and false-positived on
+abandonment, making the first cohort of beta data unusable for the one question
+the event was added to answer.
+
+**Still genuinely owed on a live session:** that the event reaches the analytics
+sink at all from a real authenticated context. That is transport, not
+semantics — and it is shared with the four funnel events already in production.

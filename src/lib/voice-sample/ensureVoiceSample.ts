@@ -12,6 +12,12 @@
  *
  * Server-only.
  */
+// Enforced, not just asserted above. This module takes a service-role client and
+// spends money at ElevenLabs; until now it was kept off the client only
+// TRANSITIVELY, by the `server-only` import inside `@/lib/elevenlabs`. That guard
+// disappears the moment anyone puts that import behind a dynamic import, so the
+// module that holds the privilege declares it itself.
+import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { generateSpeechWithTimestamps } from "@/lib/elevenlabs";

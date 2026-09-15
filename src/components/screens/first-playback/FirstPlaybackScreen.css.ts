@@ -5,8 +5,15 @@
  *
  * Ported from `prototypes/essence-step5-first-playback.html`. The atmosphere
  * stack and the cream-on-ink ramp are specified in `prototypes/ds/dark-stage.html`
- * and tokenised in globals.css @theme § DARK CEREMONIAL STAGE; every colour here
- * resolves to a token. The composition literals — `opacity: .14 + lum × .86` and
+ * and tokenised in globals.css @theme § DARK CEREMONIAL STAGE; every colour that
+ * is a PALETTE choice resolves to a token. What stays literal is the effect
+ * layer — the halo cream at a dozen alphas across the atmosphere stack, the
+ * stone's body ramp (locked by the owner in prototypes/breath-stone-api.md), and
+ * the ink ramp's intermediate stop. Those are a composition, not a palette:
+ * naming `rgba(255,230,180,.24)` would not make it reusable, only harder to
+ * read against the gradient it belongs to.
+ *
+ * The composition literals — `opacity: .14 + lum × .86` and
  * friends — stay inline on purpose: they are a composition, not a palette, and
  * tokenising the arithmetic would name it without making it reusable.
  *
@@ -298,13 +305,13 @@ export const FIRST_PLAYBACK_CSS = `
   opacity: 1;
   filter: blur(0);
   transform: none;
-  color: #FFF6E4;
+  color: var(--on-dark-lit);
   text-shadow: 0 0 26px rgba(255,230,180,.42);
 }
 /* Per-word decay: each word settles on its own beat, so the line cools in the
    order it was spoken instead of flipping state in one global switch. */
 .fpb__w[data-rest="true"] {
-  color: #EFE7D6;
+  color: var(--on-dark-rest);
   text-shadow: 0 0 0 rgba(255,230,180,0);
   opacity: .9;
 }
