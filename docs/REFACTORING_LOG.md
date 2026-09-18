@@ -23,6 +23,57 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-09-18 — discovery (scheduled triage)
+- Outcome: Scan-only (read-only) — logged 2 new backlog items; no code touched.
+- Health on `main` (66775b3): typecheck ✅ · lint ✅ · test:unit 469/469 ✅.
+  Marker-debt grep over `src/`: no untracked TODO/FIXME/HACK; every
+  `eslint-disable` is conventional and documented. Nothing auto-≥P2 from health.
+- Scanned: the full `src/app/api/` route map (middleware, me, analytics, waitlist,
+  discard, messages list + play + generations-play, voice-profiles create /
+  list / start, training-clips list, voice-sample render + play) — uniformly
+  defensive and well-documented; the Step 5 First Playback / breath-stone churn
+  was treated as recently-triaged active work and skipped. A focused agent read
+  the client-side screens/hooks (settings, home-b, message-creation, preview &
+  refine, recipients, `useResource`). Doc-vs-code cross-check on STORAGE_PATHS,
+  API_CONTRACTS, and the follow-ups ledger.
+- Discovered (new per-file follow-ups):
+  - [P3] `2026-09-18-a6-preview-playback-silent-on-commit-url-failure` — A6
+    Preview & Refine's home-grown playback engine has three robustness gaps on
+    the default paid-render flow: post-commit auto-play animates the scrubber in
+    silence with no "try again" affordance when the fresh signed-URL fetch fails;
+    a one-time recovery permanently disables the per-play URL refetch
+    (reintroducing expiry); and the play control has no in-flight guard (rapid
+    double-tap → two signed-URL fetches).
+  - [P4] `2026-09-18-api-contracts-stale-upload-commit-process-stubs` — the first
+    three endpoint stubs in `docs/API_CONTRACTS.md` describe routes
+    (`/api/storage/training-clips/sign-upload`, `/api/training-clips/commit`,
+    `/api/voice-profiles/process`), a bucket (`training-clips`), and path formats
+    that don't exist in shipped code; the real routes are `audio/init-upload`,
+    `audio/commit`, `voice-profiles/{id}/start` on the `essence-audio` bucket.
+- Reviewed-and-cleared (negative results, not logged):
+  - The A6 scrubber *duration* discrepancy (visual clock captures the pre-load
+    duration in the interval closure) is substantially covered by **resolved
+    FU-37** — `/commit` now returns the real measured `audio_duration_ms` (exact
+    for CBR mp3), so the pre-load value is accurate and the residual was already
+    assessed there as "self-corrects on load; purely cosmetic." Not re-logged.
+    (The one nuance FU-37 didn't note — the `loadedmetadata` correction doesn't
+    fix the *in-flight* clock, only the next play — matters only for legacy
+    pre-migration wpm-fallback rows, so it's negligible now.)
+  - `useResource` (ref-sync ordering, AbortController-per-fetch, enabled/disabled
+    transitions), HomeB client fetch/retry/slicing, RecipientSetupScreen mode +
+    validation, MessageCreationFlow honoring-beat handoff, and the Stripe
+    webhook / delete-teardown / Step 6 spend paths (the last already covered by
+    the unmerged triage/2026-09-15 items) — all sound; no entry warranted.
+- Triggers came true: none newly actionable that aren't already tracked (the
+  DEFERRED_AUDIO-default control-arm gap is `2026-09-04-control-arm-a6-screen-
+  was-never-built`).
+- Anti-noise: agent surfaced 4 client-side candidates; 1 was dropped as a
+  dedupe against resolved FU-37, 3 were bundled into one A6 entry (shared root +
+  one fix pass, as FU-99 bundled the Memory Shelf playback bugs). No padding.
+- Branch / commit: `triage/2026-09-18` @ <this commit>
+- Checks: n/a (docs-only; CI re-runs lint/typecheck/test/build on the branch).
+- Merged: <stamped later when the owner merges>
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
