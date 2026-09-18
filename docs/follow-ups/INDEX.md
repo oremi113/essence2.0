@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 47 · 39 open · 1 decision · 7 resolved · 0 dropped
+Total: 49 · 41 open · 1 decision · 7 resolved · 0 dropped
 
-## Open (39)
+## Open (41)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -44,11 +44,13 @@ Total: 47 · 39 open · 1 decision · 7 resolved · 0 dropped
 | P3 | The promoted dark-ceremonial-stage tokens (`--color-ink`, `--on-dark-*`, `--stone-halo`, `--focus-dark`, …) landed in `@theme` with zero consumers, while `FirstBreathSequence.tsx` still holds the same values as screen-local literals *(design-system promotion pass, 2026-09-09)* | 2026-09-09 | — | [`2026-09-09-dark-stage-tokens-have-no-consumer.md`](./2026-09-09-dark-stage-tokens-have-no-consumer.md) |
 | P3 | 19 of the 45 Breath Stone state pairs differ by 12 levels or less on the stone's surface — Guidance and Archive differ by 1 — because nearly every state parameter drives the halo or the motion, not the body *(owner observation on the state grid, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-breath-stone-states-are-near-indistinguishable-at-rest.md`](./2026-09-15-breath-stone-states-are-near-indistinguishable-at-rest.md) |
 | P3 | The First Breath ceremony's canvas stone renders every frame in ~33ms at 4× CPU throttle — a steady 30fps, but every frame is above the repo's 20ms bar, on the product's most ceremonial screen *(measured incidentally during Step 5 prefetch A/B, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-ceremony-canvas-stone-runs-at-30fps-under-throttle.md`](./2026-09-15-ceremony-canvas-stone-runs-at-30fps-under-throttle.md) |
+| P3 | A6 Preview & Refine's home-grown playback engine has three robustness gaps — after a paid commit the auto-play animates the scrubber in silence with no "try again" affordance when the fresh signed-URL fetch fails; a one-time audio recovery permanently disables the per-play URL refetch (reintroducing expiry); and the play control has no in-flight guard so a rapid double-tap fires two signed-URL fetches *(triage 2026-09-18)* | 2026-09-18 | — | [`2026-09-18-a6-preview-playback-silent-on-commit-url-failure.md`](./2026-09-18-a6-preview-playback-silent-on-commit-url-failure.md) |
 | P4 | Journey `voice_profile_ready` emits `voice_profile_id` unguarded → a `null` id can enter the funnel *(triage 2026-06-30)* | 2026-06-30 | FU-100 | [`2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md`](./2026-06-30-journey-voice-profile-ready-emits-voice-profile-id.md) |
 | P4 | Double-tap guards on checkout/delete read render-state not a ref → stray duplicate checkout session *(triage 2026-07-07)* | 2026-07-07 | FU-91 | [`2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md`](./2026-07-07-double-tap-guards-on-the-checkout-delete-actions.md) |
 | P4 | Onboarding draft-save persists the expiring `avatarUrl` signed URL → violates the module's "never persisted" contract *(triage 2026-07-10)* | 2026-07-10 | FU-98 | [`2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md`](./2026-07-10-onboarding-draft-save-persists-the-expiring-avatarurl-despite.md) |
 | P4 | /dev/breath-stone overflows the viewport by 45px — the state-label row doesn't wrap at 390px; dev-scaffold only, but a real horizontal overflow *(qa-scout full-sweep 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-dev-breath-stone-horizontal-overflow.md`](./2026-07-12-dev-breath-stone-horizontal-overflow.md) |
 | P4 | Migrate the remaining `FOLLOW_UPS.md` monolith (items 1-84 + resolved history) into the per-file `docs/follow-ups/` layout | 2026-07-12 | — | [`2026-07-12-migrate-legacy-followups-to-per-file.md`](./2026-07-12-migrate-legacy-followups-to-per-file.md) |
+| P4 | docs/API_CONTRACTS.md §7's first three endpoint stubs (sign-upload / training-clips-commit / voice-profiles-process) describe routes, a bucket, and path formats that don't exist in the shipped code — the doc drifted from the actual upload/commit/process routes and was never updated *(triage 2026-09-18)* | 2026-09-18 | — | [`2026-09-18-api-contracts-stale-upload-commit-process-stubs.md`](./2026-09-18-api-contracts-stale-upload-commit-process-stubs.md) |
 
 ## Decision (owner call) (1)
 
