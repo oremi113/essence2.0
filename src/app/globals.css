@@ -41,7 +41,16 @@
   --color-text-primary:   #1C1A18;  /* headlines, body — 17.8:1 contrast on bg-primary */
   --color-text-secondary: #6B6B6B;  /* supporting text — 5.8:1 contrast */
   --color-text-secondary-strong: #5A5A5A;  /* supporting text on warm surfaces — clears AA where -secondary dips below 4.5:1 */
-  --color-text-tertiary:  #ADA9A5;  /* disabled, subtle — large text only */
+  --color-text-tertiary:  #ADA9A5;  /* NON-TEXT ONLY — disabled controls, borders, icon glyphs.
+                                       Never as readable text at any size: it measures 2.21:1 on cream,
+                                       1.92:1 on oat, 1.66:1 on honey, 1.34:1 on rich — so it clears
+                                       neither AA's 4.5:1 nor the 3:1 large-text floor on ANY ground in
+                                       this system. The old "large text only" note was wrong; there is no
+                                       size that rescues it. Disabled controls are exempt (WCAG 1.4.3
+                                       "inactive user interface components"), which is the real use.
+                                       For small supporting copy on warm grounds use
+                                       --color-text-secondary-strong (6.51:1 cream / 5.66:1 oat).
+                                       19 live rules still violate this — see FOLLOW_UPS #107. */
 
   /* ─── STATUS ──────────────────────────────────────── */
   --color-status-error:   #9C3528;  /* terracotta — 6.72:1 contrast */

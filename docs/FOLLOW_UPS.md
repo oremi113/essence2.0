@@ -999,3 +999,47 @@ decision with two data points instead of one.
 **Pick up when:** before any accessibility audit or app-store accessibility questionnaire, and before
 a second screen re-derives the same 130% finding by hand. Not a blocker for the Home A retrofit — the
 container fix is already in that chunk.
+
+### 107. [P2] `--color-text-tertiary` is used as readable text in 19 rules, and it fails AA on every ground in the system
+*(found 2026-09-18 while tightening the token's comment during the design-system export regeneration)*
+`--color-text-tertiary: #ADA9A5` (`src/app/globals.css:44`) carried the comment *"disabled, subtle —
+large text only."* Measured against the app's actual grounds, the escape hatch does not exist:
+
+| ground | tertiary #ADA9A5 | `--color-text-secondary-strong` #5A5A5A |
+|---|---|---|
+| cream `--color-bg-neutral` | **2.21:1** | 6.51:1 |
+| card `--color-surface-card` | **2.06:1** | 6.08:1 |
+| oat `--color-bg-warm-2` | **1.92:1** | 5.66:1 |
+| honey `--color-bg-gold` | **1.66:1** | 4.89:1 |
+| rich `--color-bg-rich` | **1.34:1** | 3.96:1 |
+
+AA needs 4.5:1 for normal text and 3:1 for large text. Tertiary clears **neither, on any ground** — so
+"large text only" was not a weaker rule, it was an impossible one. The token is legitimate for disabled
+controls (exempt under WCAG 1.4.3, "inactive user interface components"), borders, and icon glyphs.
+It is not legitimate for text.
+A sweep of every rule that sets `color: var(--color-text-tertiary)` found **19 that set a text size
+below 18px**, concentrated in the two flows a new user meets first:
+`globals.css` — `.screen-header__eyebrow` (12px), `.btn-link--soft` (14px), `.onboarding-eyebrow` (12px),
+`.onboarding-microcopy` (14px), `.onboarding-conveyor__phrase` (16px), `.onboarding-conveyor-tail` (16px),
+`.onboarding-field__helper` (13px), `.onboarding-priming-hint` (14px), `.onboarding-review-row__label`
+(12px), `.privacy-modal__eyebrow` (12px), `.privacy-modal__proof` (14px), `.record-eyebrow` (12px),
+`.record-microcopy` (14px), `.record-progress__row` (12px), `.record-timer` (14px),
+`.record-rerecord-hint` (13px), `.record-mic-hint` (13px), `.record-label` (15px);
+`ThreeShapedScreen.css.ts:141` — `.c1-reassurance` (16px);
+`PersonalNoteScreen.css.ts:220` — `.note-counter` (12px).
+Nine further uses inherit their size and need checking (`::placeholder` rules, `:disabled` states —
+the disabled ones are likely fine and exempt).
+**Why it matters:** the audience is adults 45 to 70 (Copy Guide §3). `.record-timer` and
+`.record-mic-hint` are guidance a user reads *while recording*, and `.onboarding-microcopy` is in the
+first flow they ever see. This is the same defect a Home A review pass found and fixed on one line —
+a reassurance line at 2.21:1 — which turned out to be one instance of a systemic pattern rather than a
+screen-level slip. `.c1-reassurance` is literally the same shape on another screen.
+**Fix shape:** swap `--color-text-secondary-strong` in at every text usage; it clears AA on cream, card,
+oat and honey and is already the token for exactly this role. Rich `--color-bg-rich` at 3.96:1 needs a
+darker value or larger type — check whether any of the 19 actually sit on rich before widening scope.
+Leave disabled states, borders and icon glyphs on tertiary. Mechanical, but it touches onboarding and
+record, so it wants its own chunk and a visual pass rather than a blind find-and-replace: several of
+these are deliberately recessive and the point is to make them *legible*, not prominent.
+**Pick up when:** its own chunk, before any accessibility audit. Not a blocker for the Home A retrofit —
+Home A's instance was already fixed, and the corrected token comment now names this entry so the next
+person to reach for tertiary sees the constraint.
