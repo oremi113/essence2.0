@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getActiveVoiceProfile } from "@/lib/profile";
 import { redirect } from "next/navigation";
 import { RecordScreen } from "@/components/screens/RecordScreen";
 import type { RecordScreenData } from "@/components/screens/RecordScreen.types";
@@ -39,14 +40,11 @@ export default async function RecordPage({
     ) : null;
 
   // --- Fetch the user's voice profile (most recent, non-archived) ---
-  const { data: voiceProfile } = await supabase
-    .from("voice_profiles")
-    .select("id, status, relationship")
-    .eq("user_id", user.id)
-    .neq("status", "archived")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Shared selection (FOLLOW_UPS #105): this used to be an inline query, and
+  // the copy in `getOrCreateVoiceProfile` had neither the archived filter nor
+  // the ORDER BY — so /home could describe a different profile than the one
+  // this page resumes into. One helper now, so they cannot disagree.
+  const voiceProfile = await getActiveVoiceProfile();
 
   // --- No voice profile, or ?new=1 → show creation form ---
   if (!voiceProfile || forceNewProfile) {
