@@ -969,3 +969,33 @@ exists.
 hold several. That is by design, and newest-non-archived is now the consistent answer to "which one"
 everywhere. If multi-profile ever becomes user-visible it needs an explicit selector, not a
 different default.
+
+### 106. [P2] The type scale is px throughout, so large-text users get no reflow — Home A overflows by 92px at 130%
+*(found 2026-09-18 during the Home A retrofit's craft pass; the measurement is thread 3's, the generalisation is ours)*
+`src/app/globals.css:147-162` defines the whole type scale in absolute pixels (`--text-title: 28px`,
+`--text-body: 16px`, `--text-small: 14px`, …) and every screen consumes it directly. A user who raises
+their OS or browser text size gets **no type response at all** from the token layer; only the
+browser's own zoom scales anything, and that scales layout with it rather than reflowing.
+The Home A retrofit made this measurable for the first time. Its design mockup re-expressed every
+in-frame size as `em` against one base so a harness toggle could simulate 130%, and at that setting
+**the content column overflows by 92px once the past-due banner is present** — the banner claims 151px
+and the large text claims the 106px bottom-anchoring cushion, and they cannot both win. The mockup's
+`em` base is a harness technique and deliberately does not port into the TSX (thread 4 §6), so fixing
+it there would have left production with the same behaviour and no way to see it.
+**Why it matters:** the audience is adults 45 to 70 (Copy Guide §3) — the exact group most likely to
+run enlarged text, and the group for whom this product's whole premise is being readable. It is also
+a WCAG 1.4.4 (Resize Text) question: content must remain usable to 200% without loss of function. A
+screen whose primary action is pushed off a fixed-height column fails that, and Home A is only the
+first screen measured, not the only one affected — every screen on the px scale has the same
+exposure, unmeasured.
+**Fix shape:** decide whether the scale moves to `rem` against a root that respects user settings.
+That is a system-wide call, not a per-screen one, and it interacts with every hardcoded `height:` and
+`min-height:` in `globals.css` — a `rem` type scale inside a px box just relocates the clipping. The
+smaller, honest interim is to make the *containers* forgiving: Home A already adopts a scroll region
+above a pinned action block (owner call 2, `docs/session-home-a/owner-calls-2-4-5.md`), which keeps
+the primary action reachable at any text size without touching the scale. Apply that container
+pattern first, measure a second screen to confirm the exposure generalises, then take the `rem`
+decision with two data points instead of one.
+**Pick up when:** before any accessibility audit or app-store accessibility questionnaire, and before
+a second screen re-derives the same 130% finding by hand. Not a blocker for the Home A retrofit — the
+container fix is already in that chunk.
