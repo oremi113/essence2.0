@@ -929,3 +929,43 @@ cannot drift. Wire it into the same place the local stack gets seeded, and delet
 once the script is the single source of truth.
 **Pick up when:** next time a fresh environment is stood up (CI storage tests, a second project, local
 stack work), or before any change to accepted upload types. Agent-fixable.
+
+### 105. [P2] ✅ RESOLVED 2026-09-18 — `getOrCreateVoiceProfile` selected an arbitrary, possibly-archived voice profile
+*(found 2026-09-16 while tracing the Home A journey for `docs/session-home-a/home-a-critique.md`)*
+`src/lib/profile/voice.ts:34-39` reads the user's voice profile with
+`.select("*").eq("user_id", user.id).limit(1).maybeSingle()` — no `.neq("status","archived")`
+and no `.order("created_at", { ascending: false })`. The record page
+(`src/app/app/record/page.tsx:47-51`) has both clauses, so the two disagree by construction.
+Callers: `src/app/home/page.tsx:66` (Home A vs Home B branch) and
+`src/app/app/voice/processing/page.tsx:68`.
+**Why it matters:** two distinct failures. (1) An archived profile is returned as live, so `/home`
+renders Home A's "Your voice is on its way" for a voice that was discarded — `archived` and `failed`
+both fall into the `status !== 'ready'` branch and inherit collecting copy that is simply false.
+(2) With no `ORDER BY`, Postgres may return any matching row, while `/app/record` deterministically
+takes the newest non-archived one. For any user with more than one profile — `/app/record?new=1`
+creates them by design — the home screen's status, clip count and stage band can describe a
+*different* profile than the CTA resumes into. The planned Home A retrofit keys its whole register
+table off this status, so it would be built against a value that isn't the user's real one.
+**Fix shape:** mirror the record page's selection inside `getOrCreateVoiceProfile` — add
+`.neq("status", "archived")` and `.order("created_at", { ascending: false })` — and let the
+create-branch fire when the only rows are archived (today an archived row suppresses creation, so the
+user is stuck). Better still, extract the one selection into a shared
+`getActiveVoiceProfile()` so the record page and the helper cannot drift again; the record page's
+inline query becomes its caller. Extract first, then test, as separate commits.
+**Resolved:** extracted `getActiveVoiceProfile()` into `src/lib/profile/voice.ts` as the single
+canonical selection — `.neq("status","archived")` + `.order("created_at", { ascending: false })`,
+mirroring what `/app/record` already did. `getOrCreateVoiceProfile` now delegates to it and creates
+when there is no *live* row, so a user whose only profiles are archived gets a fresh one instead of
+being stuck on a discarded voice. `/app/record`'s inline query was repointed at the helper, so the
+two copies that disagreed are now one. `relationship` was added to the `VoiceProfile` type so the
+record page's data shuttle still typechecks off the shared shape.
+Coverage: `tests/unit/active-voice-profile.test.ts` — 10 cases, asserting *which clauses the query
+applied* rather than only its return value. Verified to fail (3 cases) against the pre-fix selection
+before landing, so the regression is genuinely pinned.
+Callers audited: `/home`, `/app/voice/processing`, `/app/vault/protect`, `/app/record`. No behaviour
+change for a single-profile user; the fix only bites where an archived row or a second profile
+exists.
+**Left open deliberately:** `/app/record?new=1` still creates additional profiles, so a user can
+hold several. That is by design, and newest-non-archived is now the consistent answer to "which one"
+everywhere. If multi-profile ever becomes user-visible it needs an explicit selector, not a
+different default.
