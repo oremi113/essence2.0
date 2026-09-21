@@ -4624,7 +4624,7 @@
 
 /* ─── ARRIVAL ("settle") ──────────────────────────────────────────────────
    The screen-entrance pattern. Already identical in two shipped screens
-   (HomeBScreen.css.ts:334-341 and .strata.css.ts:170-177) before it was
+   (HomeBScreen.css.ts:334-341, and Home A's Strata direction) before it was
    named; naming it is the promotion. Do not invent a different distance or
    duration per screen — if 620/14px reads wrong, argue it against both
    shipped homes, not in a new file.

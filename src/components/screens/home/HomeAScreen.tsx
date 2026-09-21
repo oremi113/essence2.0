@@ -275,6 +275,7 @@ export function HomeAScreen({
           </div>
         )}
 
+        <div className="homea__body">
         <div className={arr(1)}>
           {isFailed && (
             <>
@@ -316,6 +317,7 @@ export function HomeAScreen({
             )}
           </div>
         )}
+        </div>
       </div>
 
       <div className={`homea__action ${arr(3)}`}>

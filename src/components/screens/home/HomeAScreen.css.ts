@@ -81,10 +81,21 @@ export const homeACss = `
    Only the vertical anchor changes. The shell, the left margin and the pinned
    action block are identical to the other registers, and thread 3's
    two-axes call was about horizontal alignment, which is untouched. */
-.homea[data-register='failed'] .homea__scroll { justify-content: center; }
-/* The gear must stay at the top, so it opts out of the centring. */
-.homea[data-register='failed'] .homea__topbar { position: absolute; top: var(--space-xl); right: var(--space-xl); }
+.homea__body { display: flex; flex-direction: column; }
+.homea[data-register='failed'] .homea__body {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+/* Centring the whole scroll region instead was wrong twice over: it pulled the
+   headline flush against the past-due banner (measured 0px between them, which
+   is why the two read as one squashed block), and the gear had to be lifted out
+   of flow to escape it, which put it behind a 375px banner. Only the register
+   content centres; the banner and the gear stay in flow above it. */
 
+.homea__banner + .homea__topbar { margin-top: var(--space-lg); }
+/* Where there is no gear row between them — and to guarantee the gap even when
+   the register content centres — the body keeps its own distance. */
+.homea__banner ~ .homea__body { margin-top: var(--space-xl); }
 .homea__banner { margin: calc(var(--space-xl) * -1) calc(var(--space-xl) * -1) 0; }
 
 .homea__topbar { display: flex; justify-content: flex-end; align-items: center; }
@@ -193,14 +204,12 @@ export const homeACss = `
 
 .homea__reassurance {
   margin-top: var(--space-lg);
-  text-align: center;
   font-size: var(--text-small);
   line-height: 1.5;
   color: var(--color-text-secondary-strong);
 }
 .homea__cta-note {
   margin-top: var(--space-md);
-  text-align: center;
   font-size: var(--text-small);
   line-height: 1.5;
   color: var(--color-text-secondary-strong);
