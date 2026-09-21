@@ -4613,3 +4613,162 @@
   .step3-seal[data-rm] .step3__ground-shimmer,
   .step3-seal[data-rm] .copy-line { transition: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PATTERNS + COMPONENTS
+   ───────────────────────────────────────────────────────────────────────────
+   Promoted from the Home A review arc (docs/session-home-a/). Every entry is a
+   value that survived a closed thread on a real screen, moved in verbatim.
+   Reasoning and measurement conditions live in that folder; the arguments most
+   likely to be "tidied" away are restated inline.
+
+   Landed with the coded Home A retrofit, its first production consumer. It
+   deliberately did not land earlier: dead CSS awaiting a screen is the same
+   mistake as a token with one usage.
+
+   Two carve-outs handled elsewhere: `font-family: inherit` on form elements
+   comes free from Tailwind Preflight (verified on a real button — /auth/sign-in
+   computes Inter, not Arial), and the arrival-keyframe dedup (hb-arrive /
+   hast-arrive / set-arrive / gen-rise) is its own chunk, because it migrates
+   shipped, verified Home B.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── ARRIVAL ("settle") ──────────────────────────────────────────────────
+   The screen-entrance pattern. Already identical in two shipped screens
+   (HomeBScreen.css.ts:334-341, and Home A's Strata direction) before it was
+   named; naming it is the promotion. Do not invent a different distance or
+   duration per screen — if 620/14px reads wrong, argue it against both
+   shipped homes, not in a new file.
+
+   Canon states the cadence as "headline first, body 100ms later, action 200ms
+   after". 80/160/240 is that cadence with a settling lead-in. */
+@keyframes essence-rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Resting state FIRST, always. Both shipped screens set opacity:1 on the
+   element so content never flashes hidden when the animation doesn't run.
+   A pattern that rests at opacity:0 reintroduces that bug on every adopter. */
+.essence-arr { opacity: 1; }
+.essence-arr--in { animation: essence-rise-in 620ms var(--ease-page) both; }
+.essence-arr--d1 { animation-delay:  80ms; }  /* headline */
+.essence-arr--d2 { animation-delay: 160ms; }  /* supporting block */
+.essence-arr--d3 { animation-delay: 240ms; }  /* action */
+/* First-arrival variant — heavier, for a screen someone is seeing for the
+   first time. Home B only so far (760ms, 120/360/520/700/880). The pattern
+   has to carry this or it is wrong on day one. */
+.essence-arr--first { animation-duration: 760ms; }
+/* Home B's heavy arrival changes the CADENCE, not just the duration — its
+   whole character is "heavier, slower, more spacing" and the delays nearly
+   triple. A --first that only slowed the animation would be a slower arrival
+   on the normal rhythm, which is not the thing described above. Carried in
+   full from HomeBScreen.css.ts:343-349. */
+.essence-arr--first.essence-arr--d1 { animation-delay: 360ms; }
+.essence-arr--first.essence-arr--d2 { animation-delay: 520ms; }
+.essence-arr--first.essence-arr--d3 { animation-delay: 700ms; }
+
+/* Every arrival must be gated on a runtime reduced-motion flag as WELL as the
+   media query. The media query alone cannot be previewed in a dev harness,
+   which is how three animations shipped still playing with the flag on.
+
+   Note: the generated export carries no prefers-reduced-motion block — the app
+   handles it outside @theme — so a design file loading these patterns owns
+   that media query itself. */
+
+/* CTA press. Canon specifies the 0.98 active scale but never its timing, so
+   presses have been instantaneous. Gate the transition on the flag too. */
+.essence-press { transition: transform var(--duration-small) var(--ease-press); }
+.essence-press:active { transform: scale(0.98); }
+
+/* ─── STAGE BAND ──────────────────────────────────────────────────────────
+   Staged journey progress: three tracks, one per stage, honey on the current
+   stage only. A composite (height + boundary + three-state track + fill), so
+   it is a component class and not a set of tokens — a --progress-track-height
+   would have exactly one consumer. Lives beside .record-stage-map.
+
+   NOT the same idiom as progress dots. Dots are AMBIENT ONBOARDING progress
+   and read as a breath count; the band is STAGED JOURNEY progress. Two
+   idioms. Say which one a screen means or they will collide.
+
+   Why the boundary exists, measured (thread 3): the empty track is 1.20:1
+   against cream, and no light track on cream can reach 3:1 — the required
+   luminance is darker than mineral itself. The fill carries WCAG 1.4.11 at
+   3.76:1 against the ground and 3.13:1 against the track. The 1px inset
+   boundary is the only thing that makes an empty track perceptible. Without
+   this paragraph someone "fixes" the track colour in six months.
+
+   Height was 6px, which across a 342px column is a 57:1 ratio that reads as a
+   hairline; the replaced groove (inset 0 1px 2px rgba(0,0,0,0.08)) did nothing
+   legible at that height. */
+.essence-stage-band { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-md); }
+.essence-stage-track {
+  height: 10px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-warm);
+  box-shadow: inset 0 0 0 1px rgba(28, 26, 24, 0.10);
+}
+.essence-stage-track--current { background: var(--color-bg-gold); }
+.essence-stage-fill { height: 100%; border-radius: var(--radius-full); background: var(--color-mineral); transform-origin: left; }
+
+/* ─── STATUS PILL ─────────────────────────────────────────────────────────
+   How a count or a status condition is stated. 37px tall, 15.6:1 measured.
+   The rule that travels with it: a count or a condition belongs in a pill at
+   body-adjacent size, NOT in a 28px Spectral headline. Spectral at title size
+   is for screens with a real headline. Home A carried a 28px count and it
+   read as a scoreboard — the exact thing the brief was written to remove. */
+.essence-status-pill {
+  display: inline-flex; align-items: center;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-card);
+  font-family: var(--font-body); font-size: var(--text-ui); font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+/* ─── BANNER SLOT ─────────────────────────────────────────────────────────
+   ONE full-bleed in-flow slot per screen, holding one banner at a time.
+   Suppression, not stacking: offline suppresses past-due for its duration,
+   because "Update card" calls /api/stripe/portal-session, which throws
+   offline and silently does nothing — a dead primary action.
+   Promoted as the slot, not as two banners. Glyph is 18px at stroke-width
+   1.6. Full-bleed inside a 24px gutter via margin: -24px -24px 0. */
+.essence-banner-slot {
+  display: flex; align-items: flex-start; gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl);
+  background: var(--color-bg-warm-2);
+}
+/* Live-region banners (offline) take role="status". Static content at load
+   does NOT — a paused status pill is not a live region. */
+
+/* ─── UNAVAILABLE PRIMARY ─────────────────────────────────────────────────
+   The treatment for a primary action that cannot currently work. A disabled
+   mineral button was never specified and reads as a broken primary. */
+.essence-cta-unavailable {
+  background: var(--color-surface-warm);
+  color: var(--color-text-secondary-strong);
+  box-shadow: none;
+}
+/* THE RULE, which matters more than the values: when an action cannot work,
+   the screen must not offer it as though it can. Three independent instances
+   argued it (failed sub-state 2, sub-state 3, the offline banner's
+   suppression of past-due). Its corollary: when a capped retry is exhausted,
+   the screen still owes ONE action — a mailto to a person, via
+   supportMailto(subject), never a literal address. */
+
+/* ─── CARD, and the compact variant ───────────────────────────────────────
+   Canon card: surface-card, 16px radius, 24px padding, --shadow-sm. Never
+   nested more than one deep. The wait block is this card at 20px 24px with a
+   1em Inter 600 title over 0.875em --color-text-secondary-strong — a variant,
+   not a new component. */
+.essence-card {
+  background: var(--color-surface-card);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-sm);
+}
+/* 20px is deliberately OFF the 4/8/12/16/24 scale and stays that way: 16px
+   reads tight against the card's 24px and 24px is indistinguishable from it.
+   A measured optical call, not a stray value — a token sweep will otherwise
+   "fix" it and not know why it moved. One consumer, so no token. */
+.essence-card--compact { padding: 20px var(--space-xl); box-shadow: none; }

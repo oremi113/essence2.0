@@ -3,9 +3,10 @@ import { getOrCreateProfile, getOrCreateVoiceProfile } from "@/lib/profile";
 import { getSubscriptionStatus } from "@/lib/subscription/get-status";
 import { STEP6_LIMITS } from "@/lib/messages/cost-controls";
 import { redirect } from "next/navigation";
-import { SignOutButton } from "./sign-out-button";
 import { HomeBPageClient } from "./HomeBPageClient";
-import { HomeAScreen } from "@/components/screens/home/HomeAScreen";
+import { HomeAPageClient } from "./HomeAPageClient";
+import { deriveHomeAState } from "./deriveHomeAState";
+import { RecordPageBannerWrapper } from "@/app/app/record/RecordPageBannerWrapper";
 import type { HomeBVaultState } from "@/components/screens/home/HomeBScreen.types";
 import { ROUTES, signInWithNext } from "@/lib/routes";
 import { JourneyBeacon } from "@/components/analytics/JourneyBeacon";
@@ -61,15 +62,66 @@ export default async function HomePage({
 
   // The home branches on voice-profile status (§6.5, immutable): Home B only
   // appears once the voice is `ready`. Until then the user is still on the
-  // 25-prompt journey — Home A (a separate screen/brief, not yet built; the
-  // existing stub stands in).
+  // 25-prompt journey and gets Home A.
   const voiceProfile = await getOrCreateVoiceProfile();
 
   if (voiceProfile.status !== "ready") {
-    // ── Home A — interim stopgap until its own design brief lands (§6.5). ──
-    const isProcessing =
-      voiceProfile.status === "processing" || voiceProfile.status === "queued";
-    return <HomeAScreen isProcessing={isProcessing} footer={<SignOutButton />} />;
+    // ── Home A ────────────────────────────────────────────────────────────
+    // The state table from docs/session-home-a/home-a-critique.md §2.1.
+    // Resolving these HERE rather than inside the screen is what collapses
+    // Home A from "two states x three directions" to one composition with
+    // three registers, only one of which is common.
+    const { count } = await supabase
+      .from("training_clips")
+      .select("id", { count: "exact", head: true })
+      .eq("voice_profile_id", voiceProfile.id)
+      .eq("status", "uploaded");
+    const clipsRecorded = count ?? 0;
+
+    // The §2.1 state table, extracted so it can be tested without walking the
+    // app with seeded data (src/app/home/deriveHomeAState.ts).
+    const subscription = await getSubscriptionStatus(user.id);
+    const state = deriveHomeAState({
+      voiceStatus: voiceProfile.status,
+      clipsRecorded,
+      subscriptionStatus: subscription.status,
+      lastFailedAttemptCount: subscription.lastFailedAttemptCount,
+      attemptCount: voiceProfile.attempt_count,
+      lastAttemptAt: voiceProfile.last_attempt_at,
+    });
+
+    if (state.kind === "redirect") {
+      redirect(ROUTES.voiceProcessing);
+    }
+
+    return (
+      <>
+        {/*
+          Return/retention signal. The spec (docs/analytics/2026-06-16-journey-
+          funnel-events.md §4) defines app_opened as firing "on render of /home
+          for an authenticated, onboarded user" — not "on Home B". It was only
+          wired to the Home B branch, so a user who came back mid-training was
+          invisible to the retention metric, which is exactly the behaviour this
+          screen exists to encourage. See docs/analytics/2026-09-21-home-a-app-opened.md.
+        */}
+        <JourneyBeacon event={JOURNEY_EVENTS.appOpened} />
+        <HomeAPageClient
+          register={state.register}
+          clipsRecorded={state.clipsRecorded}
+          failedSubState={state.failedSubState}
+          retryAt={state.retryAt}
+          retryWindowMs={state.retryWindowMs}
+          pastDueVariant={state.pastDueVariant}
+          banner={
+            state.pastDueVariant ? (
+              <RecordPageBannerWrapper
+                attemptCount={subscription.lastFailedAttemptCount}
+              />
+            ) : null
+          }
+        />
+      </>
+    );
   }
 
   // ── Home B (the completed-user hub) ──

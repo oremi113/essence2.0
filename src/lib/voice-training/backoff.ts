@@ -10,13 +10,21 @@ export const VOICE_PROFILE_MAX_ATTEMPTS = 3;
 /**
  * Backoff between successive attempts, indexed by attemptCount BEFORE
  * the next attempt. Index 0 = first try (no wait); index 1 = wait 5min
- * before second; index 2 = wait 30min before third; index 3+ clamps.
+ * before second; index 2 = wait 30min before third.
+ *
+ * There are exactly TWO real waits — five minutes and half an hour — and the
+ * UI copy names them, so this list length is load-bearing rather than
+ * incidental. A fourth entry (2h) used to sit here and was unreachable:
+ * `isVoiceProfileRetryAllowed` returns false on the attempt cap before the
+ * wait is ever read, so index 3 could not be selected. Removed rather than
+ * left, because an unreachable window is exactly the kind of value someone
+ * designs a state around — Home A's `failed` register nearly grew a third
+ * wait message for it.
  */
 export const VOICE_PROFILE_BACKOFF_MS = [
   0,
   5 * 60 * 1000,
   30 * 60 * 1000,
-  2 * 60 * 60 * 1000,
 ] as const;
 
 /**

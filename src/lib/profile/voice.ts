@@ -18,6 +18,11 @@ export type VoiceProfile = {
   label: string;
   status: VoiceProfileStatus;
   relationship: string | null;
+  /** Creation-attempt tracking, used by the retry policy in
+   *  `lib/voice-training/backoff.ts`. Home A's `failed` register branches on
+   *  these to decide whether a "Try again" would actually run. */
+  attempt_count: number | null;
+  last_attempt_at: string | null;
   created_at: string;
   updated_at: string;
 };
