@@ -5,13 +5,8 @@ import { STEP6_LIMITS } from "@/lib/messages/cost-controls";
 import { redirect } from "next/navigation";
 import { HomeBPageClient } from "./HomeBPageClient";
 import { HomeAPageClient } from "./HomeAPageClient";
+import { deriveHomeAState } from "./deriveHomeAState";
 import { RecordPageBannerWrapper } from "@/app/app/record/RecordPageBannerWrapper";
-import { TOTAL_PROMPT_COUNT } from "@/lib/voice-training/script";
-import {
-  isVoiceProfileRetryAllowed,
-  VOICE_PROFILE_MAX_ATTEMPTS,
-  VOICE_PROFILE_BACKOFF_MS,
-} from "@/lib/voice-training/backoff";
 import type { HomeBVaultState } from "@/components/screens/home/HomeBScreen.types";
 import { ROUTES, signInWithNext } from "@/lib/routes";
 import { JourneyBeacon } from "@/components/analytics/JourneyBeacon";
@@ -83,59 +78,21 @@ export default async function HomePage({
       .eq("status", "uploaded");
     const clipsRecorded = count ?? 0;
 
-    // Nothing left to record -> hand off to the build. Both the "25 clips,
-    // not yet building" and "already building" cases go to the SAME place,
-    // because that page's guard already fans out correctly (none -> Card
-    // Capture, lapsed -> restore, paid -> /start) and never bounces back to
-    // /home. Sending 25-clips-unpaid to Card Capture directly is a redirect
-    // loop: protect/page.tsx:30 returns any trial/active/past_due user here.
-    const building =
-      voiceProfile.status === "processing" || voiceProfile.status === "queued";
-    if (building || clipsRecorded >= TOTAL_PROMPT_COUNT) {
+    // The §2.1 state table, extracted so it can be tested without walking the
+    // app with seeded data (src/app/home/deriveHomeAState.ts).
+    const subscription = await getSubscriptionStatus(user.id);
+    const state = deriveHomeAState({
+      voiceStatus: voiceProfile.status,
+      clipsRecorded,
+      subscriptionStatus: subscription.status,
+      lastFailedAttemptCount: subscription.lastFailedAttemptCount,
+      attemptCount: voiceProfile.attempt_count,
+      lastAttemptAt: voiceProfile.last_attempt_at,
+    });
+
+    if (state.kind === "redirect") {
       redirect(ROUTES.voiceProcessing);
     }
-
-    const subscription = await getSubscriptionStatus(user.id);
-    const pastDueVariant =
-      subscription.status === "past_due"
-        ? (Math.min(Math.max(subscription.lastFailedAttemptCount, 1), 3) as 1 | 2 | 3)
-        : null;
-
-    // `failed` is one register with three sub-states, because the retry is
-    // capped (3 attempts) and rate-limited. In two of them a "Try again"
-    // button would answer 429 — the dead primary this screen is built to
-    // avoid — so the sub-state, not just the status, decides what the pinned
-    // block holds. See owner-call-failed-register.md.
-    let failedSubState: "retryable" | "waiting" | "exhausted" | undefined;
-    let retryAt: number | undefined;
-    let retryWindowMs: number | undefined;
-    if (voiceProfile.status === "failed") {
-      const attempts = voiceProfile.attempt_count ?? 0;
-      if (attempts >= VOICE_PROFILE_MAX_ATTEMPTS) {
-        failedSubState = "exhausted";
-      } else if (isVoiceProfileRetryAllowed(attempts, voiceProfile.last_attempt_at)) {
-        failedSubState = "retryable";
-      } else {
-        // Reaching here means a wait is in force, and
-        // `isVoiceProfileRetryAllowed` returns true when `last_attempt_at` is
-        // null — so it is necessarily set. No clock read during render.
-        failedSubState = "waiting";
-        retryWindowMs =
-          VOICE_PROFILE_BACKOFF_MS[
-            Math.min(attempts, VOICE_PROFILE_BACKOFF_MS.length - 1)
-          ];
-        retryAt = voiceProfile.last_attempt_at
-          ? new Date(voiceProfile.last_attempt_at).getTime() + retryWindowMs
-          : undefined;
-      }
-    }
-
-    const register =
-      voiceProfile.status === "failed"
-        ? "failed"
-        : clipsRecorded === 0
-          ? "not-started"
-          : "paused";
 
     return (
       <>
@@ -149,16 +106,18 @@ export default async function HomePage({
         */}
         <JourneyBeacon event={JOURNEY_EVENTS.appOpened} />
         <HomeAPageClient
-        register={register}
-        clipsRecorded={clipsRecorded}
-        failedSubState={failedSubState}
-        retryAt={retryAt}
-        retryWindowMs={retryWindowMs}
-        pastDueVariant={pastDueVariant}
-        banner={
-          pastDueVariant ? (
-            <RecordPageBannerWrapper attemptCount={subscription.lastFailedAttemptCount} />
-          ) : null
+          register={state.register}
+          clipsRecorded={state.clipsRecorded}
+          failedSubState={state.failedSubState}
+          retryAt={state.retryAt}
+          retryWindowMs={state.retryWindowMs}
+          pastDueVariant={state.pastDueVariant}
+          banner={
+            state.pastDueVariant ? (
+              <RecordPageBannerWrapper
+                attemptCount={subscription.lastFailedAttemptCount}
+              />
+            ) : null
           }
         />
       </>
