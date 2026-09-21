@@ -17,7 +17,9 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:smoke": "playwright test -c playwright.smoke.config.ts"
+    "test:smoke": "playwright test -c playwright.smoke.config.ts",
+    "build:ds-export": "node scripts/build-ds-export.mjs",
+    "verify:home-a": "node scripts/verify-home-a.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

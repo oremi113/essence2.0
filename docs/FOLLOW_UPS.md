@@ -422,7 +422,11 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 **What:** the Step 6 prototypes draw rich honey-gold CSS-gradient stones (A6: Ready/Playback/Working; A7: the `infused` ceremonial amber, `essence-step6-a7.html`). Production reuses the shared canvas `BreathStone` — the architecturally correct call (one stone grammar across onboarding + Voice Training + vault + Step 6), and the state mapping is clean. But on light grounds the canvas stone renders pale-taupe, noticeably less ceremonial than the prototypes' gold orbs. Confirmed against the reference sandbox (`/dev/breath-stone`): this is the settled engine look, not a usage bug. **2026-06-12, A7 design pass:** user agrees it reads "quite dull"; revisit deliberately deferred because warming the engine touches every stone usage (VaultSeal, FirstBreath, RecordScreen, A6, A7) — a lift of its own. A7 partially compensates with the prototype's 7s amber halo as a CSS layer behind the canvas (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`).
 **Why it matters:** the stone is the emotional anchor of the preview and save-confirmation moments; a washed-out stone undersells "here it is, in your voice" and the ceremonial close. Cosmetic, not functional — states are correct and motion holds at 4× CPU.
 **Fix shape:** a dedicated stone-warmth pass: tune `breathStoneEngine`'s palette/contrast for light grounds (helps every usage), with the prototypes' gold stones as the reference, then re-verify each stone screen. Do NOT fork bespoke CSS stones into individual screens — that re-splits the stone grammar.
-**Pick up when:** its own chunk after the Step 6 spine lands (user-deferred 2026-06-12), or whenever BreathStone-on-light contrast is addressed for RecordScreen.
+**Pick up when:** **Owner decision 2026-09-18 — runs AFTER the Home A retrofit ships.** Scheduled, not deferred again: the retrofit ships knowingly at the ceiling this entry describes, rather than holding a finished screen for a cross-cutting engine pass. Consequences of that ordering, so nobody re-litigates it later:
+  1. **Home A ships with a grey placeholder as its only atmospheric element.** The Home A design review graded the screen A- and attributed the gap to A entirely to this entry ("the stone, and it is not in your gift"). That is an accepted, recorded ceiling — say it in the retrofit's sign-off rather than letting the grade quietly absorb it.
+  2. **Home A must NOT compensate locally.** No CSS halo, no bespoke gradient, no warmer placeholder. A7 carries a compensating amber halo (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`) and that is one screen's debt, not a pattern to spread — every local workaround is another thing this chunk has to unpick. Home A stays clean so the fix lands in one place.
+  3. **Re-verify Home A as part of this chunk**, not separately. It joins VaultSeal, FirstBreath, RecordScreen, A6 and A7 on the re-verification list, and its 4x-throttle harness already exists (`npm run verify:home-a`).
+Superseded scheduling note: "its own chunk after the Step 6 spine lands (user-deferred 2026-06-12), or whenever BreathStone-on-light contrast is addressed for RecordScreen." 
 
 ## A6 live wiring (from Step 6 A6 wiring chunk 2, 2026-06-11)
 
@@ -969,3 +973,77 @@ exists.
 hold several. That is by design, and newest-non-archived is now the consistent answer to "which one"
 everywhere. If multi-profile ever becomes user-visible it needs an explicit selector, not a
 different default.
+
+### 106. [P2] The type scale is px throughout, so large-text users get no reflow — Home A overflows by 92px at 130%
+*(found 2026-09-18 during the Home A retrofit's craft pass; the measurement is thread 3's, the generalisation is ours)*
+`src/app/globals.css:147-162` defines the whole type scale in absolute pixels (`--text-title: 28px`,
+`--text-body: 16px`, `--text-small: 14px`, …) and every screen consumes it directly. A user who raises
+their OS or browser text size gets **no type response at all** from the token layer; only the
+browser's own zoom scales anything, and that scales layout with it rather than reflowing.
+The Home A retrofit made this measurable for the first time. Its design mockup re-expressed every
+in-frame size as `em` against one base so a harness toggle could simulate 130%, and at that setting
+**the content column overflows by 92px once the past-due banner is present** — the banner claims 151px
+and the large text claims the 106px bottom-anchoring cushion, and they cannot both win. The mockup's
+`em` base is a harness technique and deliberately does not port into the TSX (thread 4 §6), so fixing
+it there would have left production with the same behaviour and no way to see it.
+**Why it matters:** the audience is adults 45 to 70 (Copy Guide §3) — the exact group most likely to
+run enlarged text, and the group for whom this product's whole premise is being readable. It is also
+a WCAG 1.4.4 (Resize Text) question: content must remain usable to 200% without loss of function. A
+screen whose primary action is pushed off a fixed-height column fails that, and Home A is only the
+first screen measured, not the only one affected — every screen on the px scale has the same
+exposure, unmeasured.
+**Fix shape:** decide whether the scale moves to `rem` against a root that respects user settings.
+That is a system-wide call, not a per-screen one, and it interacts with every hardcoded `height:` and
+`min-height:` in `globals.css` — a `rem` type scale inside a px box just relocates the clipping. The
+smaller, honest interim is to make the *containers* forgiving: Home A already adopts a scroll region
+above a pinned action block (owner call 2, `docs/session-home-a/owner-calls-2-4-5.md`), which keeps
+the primary action reachable at any text size without touching the scale. Apply that container
+pattern first, measure a second screen to confirm the exposure generalises, then take the `rem`
+decision with two data points instead of one.
+**Pick up when:** before any accessibility audit or app-store accessibility questionnaire, and before
+a second screen re-derives the same 130% finding by hand. Not a blocker for the Home A retrofit — the
+container fix is already in that chunk.
+
+### 107. [P2] `--color-text-tertiary` is used as readable text in 19 rules, and it fails AA on every ground in the system
+*(found 2026-09-18 while tightening the token's comment during the design-system export regeneration)*
+`--color-text-tertiary: #ADA9A5` (`src/app/globals.css:44`) carried the comment *"disabled, subtle —
+large text only."* Measured against the app's actual grounds, the escape hatch does not exist:
+
+| ground | tertiary #ADA9A5 | `--color-text-secondary-strong` #5A5A5A |
+|---|---|---|
+| cream `--color-bg-neutral` | **2.21:1** | 6.51:1 |
+| card `--color-surface-card` | **2.06:1** | 6.08:1 |
+| oat `--color-bg-warm-2` | **1.92:1** | 5.66:1 |
+| honey `--color-bg-gold` | **1.66:1** | 4.89:1 |
+| rich `--color-bg-rich` | **1.34:1** | 3.96:1 |
+
+AA needs 4.5:1 for normal text and 3:1 for large text. Tertiary clears **neither, on any ground** — so
+"large text only" was not a weaker rule, it was an impossible one. The token is legitimate for disabled
+controls (exempt under WCAG 1.4.3, "inactive user interface components"), borders, and icon glyphs.
+It is not legitimate for text.
+A sweep of every rule that sets `color: var(--color-text-tertiary)` found **19 that set a text size
+below 18px**, concentrated in the two flows a new user meets first:
+`globals.css` — `.screen-header__eyebrow` (12px), `.btn-link--soft` (14px), `.onboarding-eyebrow` (12px),
+`.onboarding-microcopy` (14px), `.onboarding-conveyor__phrase` (16px), `.onboarding-conveyor-tail` (16px),
+`.onboarding-field__helper` (13px), `.onboarding-priming-hint` (14px), `.onboarding-review-row__label`
+(12px), `.privacy-modal__eyebrow` (12px), `.privacy-modal__proof` (14px), `.record-eyebrow` (12px),
+`.record-microcopy` (14px), `.record-progress__row` (12px), `.record-timer` (14px),
+`.record-rerecord-hint` (13px), `.record-mic-hint` (13px), `.record-label` (15px);
+`ThreeShapedScreen.css.ts:141` — `.c1-reassurance` (16px);
+`PersonalNoteScreen.css.ts:220` — `.note-counter` (12px).
+Nine further uses inherit their size and need checking (`::placeholder` rules, `:disabled` states —
+the disabled ones are likely fine and exempt).
+**Why it matters:** the audience is adults 45 to 70 (Copy Guide §3). `.record-timer` and
+`.record-mic-hint` are guidance a user reads *while recording*, and `.onboarding-microcopy` is in the
+first flow they ever see. This is the same defect a Home A review pass found and fixed on one line —
+a reassurance line at 2.21:1 — which turned out to be one instance of a systemic pattern rather than a
+screen-level slip. `.c1-reassurance` is literally the same shape on another screen.
+**Fix shape:** swap `--color-text-secondary-strong` in at every text usage; it clears AA on cream, card,
+oat and honey and is already the token for exactly this role. Rich `--color-bg-rich` at 3.96:1 needs a
+darker value or larger type — check whether any of the 19 actually sit on rich before widening scope.
+Leave disabled states, borders and icon glyphs on tertiary. Mechanical, but it touches onboarding and
+record, so it wants its own chunk and a visual pass rather than a blind find-and-replace: several of
+these are deliberately recessive and the point is to make them *legible*, not prominent.
+**Pick up when:** its own chunk, before any accessibility audit. Not a blocker for the Home A retrofit —
+Home A's instance was already fixed, and the corrected token comment now names this entry so the next
+person to reach for tertiary sees the constraint.

@@ -1,0 +1,301 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ESSENCE — Design tokens + semantic type roles
+   ───────────────────────────────────────────────────────────────────────────
+   GENERATED — do not edit by hand.
+   Source: src/app/globals.css @theme
+   Regenerate: node scripts/build-ds-export.mjs
+   Generated 2026-09-18 · 115 tokens
+
+   Emitted verbatim from source, comments included. If a token you need is
+   missing here it is missing in the app too — add it to globals.css, not to
+   this file. A local override in a design file is drift with extra steps.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ─── BACKGROUND GRADIENT RAMP (5 steps) ─────────────
+     Universal palette used by onboarding screens and Voice
+     Training prompt cards alike. Each step is a small jump
+     so the progression reads as richer/warmer, not as abrupt
+     mode changes. Source: ESSENCE Session 4 handoff.
+
+     Warmth-step rule (Voice Training): prompt screens step
+     through the ramp; cards step one stop warmer than their
+     screen. See .record-step--prompt-stage-* rules. */
+  --color-bg-neutral:     #FBF8F4;  /* cream — base app background */
+  --color-bg-warm-phase:  #F2EDE4;  /* warmer oat — onboarding phase 2 (screens 7–12) */
+  --color-bg-warm-1:      #FBF6ED;  /* opening cream, one step above neutral */
+  --color-bg-warm-2:      #F2E8D2;  /* soft oat — widened 2026-04-18 for visible stage progression on device */
+  --color-bg-gold:        #E8D8B3;  /* honey */
+  --color-bg-rich:        #D9C28E;  /* richest; ceremonial */
+
+  /* Alias retained for components/pages that use the older
+     name. Points at the same cream so nothing visually moves. */
+  --color-bg-primary:     #FBF8F4;
+
+  /* Surface tokens — thin elements (tracks, lines, dots, card
+     hovers). Re-pointed at the new ramp so the whole palette
+     aligns without renaming usages across the codebase. */
+  --color-surface-card:   #F6F0E5;  /* warm-2 — cards, elevated surfaces */
+  --color-surface-warm:   #EDE3D0;  /* rich — progress tracks, disabled */
+  --color-surface-honey:  #F2E8D6;  /* gold — hover, celebration */
+
+  /* ─── PRIMARY ACCENT ──────────────────────────────── */
+  --color-mineral:        #7A8088;  /* primary buttons, active states, recording */
+  --color-mineral-dark:   #656B73;  /* AA-safe primary fill / hover — white clears 5.38:1 (vs 3.98:1 on --color-mineral) */
+  --color-mineral-darker: #565C63;  /* pressed/hover on a --color-mineral-dark fill (Home B create CTA) */
+
+  /* ─── TEXT ────────────────────────────────────────── */
+  --color-text-primary:   #1C1A18;  /* headlines, body — 17.8:1 contrast on bg-primary */
+  --color-text-secondary: #6B6B6B;  /* supporting text — 5.8:1 contrast */
+  --color-text-secondary-strong: #5A5A5A;  /* supporting text on warm surfaces — clears AA where -secondary dips below 4.5:1 */
+  --color-text-tertiary:  #ADA9A5;  /* NON-TEXT ONLY — disabled controls, borders, icon glyphs.
+                                       Never as readable text at any size: it measures 2.21:1 on cream,
+                                       1.92:1 on oat, 1.66:1 on honey, 1.34:1 on rich — so it clears
+                                       neither AA's 4.5:1 nor the 3:1 large-text floor on ANY ground in
+                                       this system. The old "large text only" note was wrong; there is no
+                                       size that rescues it. Disabled controls are exempt (WCAG 1.4.3
+                                       "inactive user interface components"), which is the real use.
+                                       For small supporting copy on warm grounds use
+                                       --color-text-secondary-strong (6.51:1 cream / 5.66:1 oat).
+                                       19 live rules still violate this — see FOLLOW_UPS #107. */
+
+  /* ─── STATUS ──────────────────────────────────────── */
+  --color-status-error:   #9C3528;  /* terracotta — 6.72:1 contrast */
+  --color-status-warning: #8A5A1E;  /* amber-umber — 5.57:1 contrast */
+  --color-status-success: #4A7A68;  /* sage — 4.64:1 contrast */
+
+  /* ─── BORDERS & SHADOWS ───────────────────────────── */
+  --color-border:         rgba(0, 0, 0, 0.06);
+  --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md:            0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:            0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-mineral:       0 4px 14px rgba(110, 80, 40, 0.20); /* primary-action lift — warm-keyed for the app's warm grounds (re-keyed 2026-06-12, FOLLOW_UPS #40: the old teal rgba(74,107,126,.3) predated the live --color-mineral and cast bluer than the buttons it sat under) */
+  --shadow-terracotta:    0 4px 12px rgba(156, 53, 40, 0.3);  /* anchored on --color-status-error — recording button (terracotta state) */
+
+  /* ─── DARK CEREMONIAL STAGE ───────────────────────────
+     Essence has no dark mode. It has one dark surface, used
+     where the product goes quiet and a single object carries
+     the beat: the crystallize / preserved / detail / playback
+     phases of First Breath.
+
+     Promoted verbatim from the Step 5 First Playback build via
+     the design system's ds/dark-stage.html card — measured and
+     argued-over values, not redrawn. Mirror of that card lives
+     at prototypes/ds/dark-stage.html.
+
+     The six atmosphere layers (l-base … l-grain) keep their
+     literals inside the card's spec: they are a composition,
+     not a palette. Tokenising `opacity: .32 + lum × .55` would
+     name the arithmetic without making it reusable. */
+
+  /* Ground */
+  --color-ink:       #1E1B18;  /* the one dark surface */
+  --color-ink-lift:  #2A2621;  /* l-base ramp — warm centre */
+  --color-ink-deep:  #121110;  /* l-base ramp — cold corner */
+
+  /* Cream on ink — hierarchy is opacity and family, never a second hue.
+     One colour at four amounts; the whole ramp clears AA on the unlit
+     ground and stays clear when l-cast brightens it. If a design needs
+     a fifth level, it has too much on the stage — cut an element
+     instead of inventing an opacity. */
+  --color-on-dark:    #F7F1E4;
+  --on-dark-strong:   rgba(247, 241, 228, 0.92);  /* --text-ceremonial, Spectral 600 */
+  --on-dark-body:     rgba(247, 241, 228, 0.62);  /* 15px Inter — the product speaking */
+  --on-dark-muted:    rgba(247, 241, 228, 0.58);  /* eyebrows; Spectral italic asides */
+  --on-dark-recede:   rgba(247, 241, 228, 0.50);  /* Spectral italic lede */
+
+  /* The spoken word — Step 5 First Playback only. NOT a fifth and sixth level
+     of the ramp above: these are a transient state, not a hierarchy. A word is
+     --on-dark-lit while the voice is on it and cools to --on-dark-rest a beat
+     later, so the line settles in the order it was spoken. They carry warmth
+     (the voice is warm) where the ramp deliberately carries none, which is
+     exactly why they are named here instead of being mistaken for it. */
+  --on-dark-lit:      #FFF6E4;
+  --on-dark-rest:     #EFE7D6;
+
+  /* Warmth. Every warm value on the stage originates here — except
+     --focus-dark, which must not track luminance. */
+  --stone-halo:       rgba(255, 230, 180, 0.18);
+
+  /* Primary on ink. Mineral (#7A8088) is near-invisible on warm ink
+     and appears NOWHERE on a dark stage. The primary stays full width
+     (max-width 330px): the stage gives the button no container to sit
+     inside, so width is the only property left that reads as authority. */
+  --color-primary-dark:       #F2E6CE;
+  --color-primary-dark-hover: #FBF3E2;
+  --color-on-primary-dark:    #1B1610;
+  --shadow-honey:             0 10px 30px rgba(255, 230, 180, 0.12);  /* derived from the halo — static, never animated per frame */
+
+  /* Focus on ink — 2px outline at 3px offset, on both the primary and
+     the quiet button. A focus ring that dims when the voice goes quiet
+     is not a focus ring, so this is the one warm value permitted to sit
+     outside --stone-halo. Never mineral on ink. */
+  --focus-dark:               #F2E6CE;
+
+  /* Breath Stone geometry. See prototypes/ds/breath-stone.html.
+     Clearance is viewport-conditional: --stone-clearance-narrow below
+     420px viewport width, --stone-clearance at 420px and above. The
+     docs' unconditional "≥ 120px on every side" was unsatisfiable at
+     390px (390 − 240 = 150px maximum) and no build ever met it. */
+  --stone-size-hero:          min(320px, 56vw);  /* 218px at 390px; full 320px from 560px up */
+  --stone-clearance:          120px;
+  --stone-clearance-narrow:   48px;
+
+  /* Status on ink: there is none, by ruling. Status on a ceremonial
+     dark stage is carried by language and position, never colour —
+     the warm status hues are tuned for cream only (#9C3528 reads
+     6.72:1 on cream and ~1.9:1 on ink: a hole in the screen, not a
+     warning). A notice on ink is 15px Inter at --on-dark-body in the
+     aside slot, role="status" aria-live="polite", no fill/border/icon.
+     The one escape hatch is a surface change, not a colour: a genuinely
+     destructive confirmation sits on a --color-surface-card laid over
+     the stage, where the normal warm status colours apply unchanged. */
+
+  /* ─── TYPOGRAPHY ──────────────────────────────────── */
+  --font-display: 'Spectral', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  /* ─── TYPE SCALE ──────────────────────────────────── */
+  /* NOTE: the 48px step is `--text-scale-display`. It was renamed
+     from `--text-display` when the design system promoted that
+     name to the semantic ceremonial role below (34px Spectral).
+     The raw scale step had no consumer; the role now owns the name. */
+  --text-scale-display: 48px;
+  --text-h1:      36px;
+  --text-h2:      28px;
+  --text-h3:      20px;
+
+  /* ─── SEMANTIC TYPE ROLES ─────────────────────────────
+     Canonical role-based tokens. Screens should reach for
+     these, not raw type-scale values, so future changes
+     propagate cleanly across sessions. */
+  --text-title:        28px;   /* screen headlines (Spectral 600 / line 1.4) */
+  --line-height-title: 1.4;
+  --text-body-lg: 18px;
+  --text-body:    16px;
+  --text-ui:      15px;  /* semibold UI labels — between body and small */
+  --text-small:   14px;
+  --text-caption: 12px;
+
+  /* Ceremonial type roles — promoted from the Step 5 First Playback
+     build via ds/dark-stage.html ("Tokens promoted in this pass").
+     Both were local literals on that screen.
+
+     Ceremonial display text takes a **px** measure, never `ch`: `ch`
+     scales with the font, so a line rags identically at 34px and at
+     26px and a fit loop over font-size is a no-op against it. Size in
+     container units rather than `vw` — `clamp(26px, 10.3cqw, 34px)` —
+     so the type is still correct when a 390px frame sits inside a
+     desktop review page. Re-fit on `document.fonts.ready`, or you have
+     measured the fallback face. */
+  --text-display:           34px;      /* Spectral 400 — the payoff line */
+  --line-height-display:    1.34;      /* pair with --text-display */
+  --tracking-display:       -0.015em;  /* pair with --text-display */
+  --text-ceremonial:        23px;      /* Spectral 600 — ceremonial strong */
+  --tracking-ceremonial:    -0.01em;   /* pair with --text-ceremonial */
+
+  /* ─── SPACING (8px base unit) ─────────────────────── */
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   12px;
+  --space-lg:   16px;
+  --space-xl:   24px;
+  --space-2xl:  32px;
+  --space-3xl:  40px;
+  --space-4xl:  48px;
+
+  /* ─── BORDER RADIUS ───────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;  /* cards */
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  /* ─── EASING ──────────────────────────────────────── */
+  --ease-essence: cubic-bezier(0.4, 0.0, 0.2, 1);   /* universal state-transition curve */
+  --ease-breath:  cubic-bezier(0.37, 0, 0.63, 1);   /* symmetric pendulum — breath-stone resting rhythm */
+  --ease-press:   cubic-bezier(0.2, 0.0, 0.0, 1);   /* tactile press — aggressive out, smooth in */
+  --ease-page:    cubic-bezier(0.22, 1, 0.36, 1);   /* cinematic screen entrance — every page + staggered child */
+
+  /* ─── TIMING ──────────────────────────────────────── */
+  --duration-micro:      200ms;
+  --duration-small:      400ms;
+  --duration-medium:     800ms;
+  --duration-large:      1200ms;
+  --duration-breath:     3000ms;
+  --duration-page:       700ms;  /* signature screen-entrance length the flow is composed on */
+  --duration-ceremonial: 2000ms; /* shimmer pulse, celebration swells — ritual one-shots */
+
+  /* ─── STEP 3 · VAULT + SEAL + SHIMMER ─────────────────
+     Reconciled drop-in from
+     docs/session-step3-card-capture/palette-token-reconciliation.md
+     (Bronze Vault palette deck, FU #65, ↔ Motion Spec ↔ Pass 3 prototype).
+     Lands in Pass 1 so screens reference tokens, never per-screen hex.
+     Mirror lives in docs/design-tokens.md (this @theme is canonical). */
+
+  /* Anchor tokens */
+  --color-vault-bronze:  #888278;     /* cool/dormant base · Greige (name historical; value is greige, == --vault-case-cool-1) */
+  --color-vault-ember:   #f3d9a4;     /* ignited ember core */
+  --color-glow-warm-rgb: 214, 162, 92;/* shimmer ground · COMMA form · rgba(var(--color-glow-warm-rgb), <a>) */
+
+  /* caseMetal · cool vessel case (Greige, unsealed) — linear ↓ */
+  --vault-case-cool-0:   #a39c8e;     /*   0% */
+  --vault-case-cool-1:   #888278;     /*  52% */
+  --vault-case-cool-2:   #635d54;     /* 100% */
+
+  /* caseMetalWarm · ignited/sealed case (Reliquary) — linear ↓ */
+  --vault-case-warm-0:   #b6ab97;     /*   0% */
+  --vault-case-warm-1:   #8c8174;     /*  52% */
+  --vault-case-warm-2:   #5f574c;     /* 100% */
+
+  /* interior · open vault interior (cool) — radial ◎ */
+  --vault-interior-0:    #d2c9b9;     /*   0% center */
+  --vault-interior-1:    #bdb29d;     /*  70% */
+  --vault-interior-2:    #968b75;     /* 100% edge */
+
+  /* emberCool · dormant ember socket — radial ◎ */
+  --vault-ember-cool-0:  #b8b3a8;     /*   0% */
+  --vault-ember-cool-1:  #847d70;     /* 100% */
+
+  /* emberIgnited · caught ember halo — radial ◎ fades to 0 */
+  --vault-ember-halo-0:  #fbe6c0;     /*   0% */
+  --vault-ember-halo-1:  #eecb84;     /*  38% */
+  --vault-ember-halo-2:  #d9a85a;     /*  70% */
+  --vault-ember-halo-3:  rgb(217 168 90 / 0);  /* 100% transparent */
+
+  /* lit core · solid lit center of sealed boss */
+  --vault-lit-core:      #f3d9a4;     /* = --color-vault-ember */
+
+  /* shimmer ground · single primitive, OPACITY-driven, plain opacity on oat,
+     NO screen blend. Fixed gradient geometry; rest/active/exit = intensity ×
+     breath, NOT radius (Pass 3 carry-forward contract). Per-state bases live in
+     the screen: faint 0.05 · active 0.12 · neutral 0.025 · RM 0.05 · breath sine
+     7000ms dip 0.25 · exit 1200ms. Lands at 0 in Pass 1; the loop is Pass 3. */
+  --shimmer-intensity:   0;
+
+  /* seal curves (land BEFORE the screen references them, or transitions
+     silently fall back to default `ease` — the --ease-breath drift trap) */
+  --ease-seal-iris:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* placeholder = --ease-essence; vault thread tunes later (one-token swap) */
+  --ease-seal-ember: cubic-bezier(0.2, 0.0, 0.5, 1);  /* ember catch + shimmer onset (Pass 2) */
+  --ease-seal-exit:  cubic-bezier(0.4, 0.0, 0.2, 1);  /* Processing exit ease-down (Pass 3); tune tail toward (0.4,0,0.15,1) on oat */
+
+  /* ─── STEP 9 · SETTINGS & TRUST ───────────────────────
+     Lands BEFORE SettingsScreen references it (per the Step 3 contract:
+     ported verbatim against the old @theme these var()s resolved to
+     nothing and the paused-pill fills / borders / row hairlines rendered
+     blank). Source of truth: prototypes/essence-step9-settings-trust.html
+     PORT NOTE 1. The lapsed family is muted-warm, never red — a paused
+     subscription reassures, it does not alarm. */
+  --color-lapsed-surface: #EBE3D6;  /* paused/lapsed/cancelled pill fill */
+  --color-lapsed-border:  #DCD0BC;  /* pill + switch + confirm-field + trust-band borders */
+  --color-hairline:       rgba(28, 26, 24, 0.08);  /* row top-borders — weightier than --color-border for stacked settings rows */}
+
+/* Two rules the export has always needed to stand alone, since a design file
+   loads this stylesheet without the rest of globals.css. Both are real in the
+   app; they live outside @theme, so a token-only lift misses them. */
+button, input, select, textarea { font-family: inherit; }
+button, a, [role="button"] { min-height: 44px; }
