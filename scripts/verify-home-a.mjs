@@ -29,7 +29,11 @@ const { values } = parseArgs({
     rate: { type: 'string', default: '4' },
     runs: { type: 'string', default: '5' },
     base: { type: 'string', default: 'http://localhost:3000' },
-    path: { type: 'string', default: '/dev/home-a' },
+    /* The FRAME route, not the harness. The harness wraps the screen in an
+       iframe (so media queries and dvh resolve against a real 390px viewport),
+       which means sampling the top document measures a page that does not
+       animate. Point straight at the screen. */
+    path: { type: 'string', default: '/dev/home-a/frame?register=paused&clips=12' },
     headed: { type: 'boolean', default: false },
   },
 });
@@ -95,18 +99,79 @@ page.on('pageerror', (e) => errors.push(String(e)));
 
 await page.goto(URL, { waitUntil: 'networkidle' });
 
-// The harness exposes a "replay" control; each press re-runs the arrival.
-const replay = page.getByRole('button', { name: /replay|run/i }).first();
+// No replay control on the bare frame — re-navigate to re-run the arrival.
+const replay = { count: async () => 0, click: async () => {} };
 
 const rows = [];
 for (let i = 0; i < RUNS; i++) {
   if (await replay.count()) await replay.click();
+  else await page.goto(URL, { waitUntil: 'domcontentloaded' });
   // Arrival is 620ms + a 240ms stagger tail; sample past it so the tail's
   // settle is included rather than clipped at the interesting moment.
   const deltas = await sampleFrames(page, 1200);
   // Drop the first delta: it spans the click, not the animation.
   rows.push(deltas.slice(1));
 }
+
+/**
+ * Focus order, asserted rather than documented — prose does not fail.
+ * A review pass found the order "correct by accident"; the composition has
+ * changed three times since (banner into flow, action block pinned outside the
+ * scroll region, sign-out removed), so it is captured here against the shape
+ * that actually ships.
+ */
+async function focusOrder() {
+  await page.evaluate(() => document.activeElement?.blur?.());
+  const seen = [];
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press('Tab');
+    const d = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const inFrame = !!el.closest('main.homea');
+      const label = el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 34);
+      return inFrame ? `${el.tagName.toLowerCase()}:${label}` : null;
+    });
+    if (d) seen.push(d);
+  }
+  return [...new Set(seen)];
+}
+
+const order = await focusOrder();
+
+/**
+ * Browser zoom, tested by shrinking the CSS viewport — which is what zoom
+ * actually does. `Emulation.setPageScaleFactor` is pinch-zoom: it magnifies
+ * without reflowing, so it reports no overflow however far you push it and
+ * proves nothing.
+ * The app's type scale is px throughout (FOLLOW_UPS #106), so a text-size
+ * preference moves nothing at all; zoom is the only thing a user has. The
+ * requirement is not that nothing overflows — it is that the primary action
+ * stays reachable when it does.
+ */
+async function atZoom(factor) {
+  const z = await context.newPage();
+  await z.setViewportSize({
+    width: Math.round(390 / factor),
+    height: Math.round(844 / factor),
+  });
+  await z.goto(URL, { waitUntil: 'networkidle' });
+  await z.waitForTimeout(700);
+  const r = await z.evaluate(() => {
+    const cta = document.querySelector('.homea__cta');
+    const sc = document.querySelector('.homea__scroll');
+    if (!cta) return { ctaReachable: null, hidden: null };
+    const c = cta.getBoundingClientRect();
+    return {
+      ctaReachable: c.bottom <= window.innerHeight + 1 && c.top >= 0,
+      hidden: sc ? sc.scrollHeight - sc.clientHeight : 0,
+    };
+  });
+  await z.close();
+  return r;
+}
+const zoom13 = await atZoom(1.3);
+const zoom20 = await atZoom(2.0);
 
 const all = rows.flat();
 const p50 = pct(all, 50);
@@ -127,6 +192,11 @@ Home A — motion verification
   p95            ${p95.toFixed(1)}ms   ${p95 <= BUDGET_MS ? 'PASS' : 'OVER BUDGET'}
   worst          ${worst.toFixed(1)}ms
   over ${BUDGET_MS}ms      ${dropped} / ${all.length}  (${((dropped / all.length) * 100).toFixed(1)}%)
+
+  zoom 130% (300x649)   CTA reachable: ${zoom13.ctaReachable}   scroll hidden: ${zoom13.hidden}px
+  zoom 200% (195x422)   CTA reachable: ${zoom20.ctaReachable}   scroll hidden: ${zoom20.hidden}px
+
+  focus order    ${order.length ? order.join('  ->  ') : '(none inside the screen)'}
 
   console errors ${errors.length === 0 ? 'none' : errors.length}
 ${errors.map((e) => `    ${e}`).join('\n')}
