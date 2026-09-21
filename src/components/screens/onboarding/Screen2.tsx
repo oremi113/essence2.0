@@ -20,22 +20,25 @@ import { StepShell, StoneSlot } from './chrome';
 // `@media (prefers-reduced-motion: reduce)`; there is no width query. The
 // conveyor plays on a phone, and this list drives the CTA delay there too.
 //
-// Which matters, because the count IS the gate: at 12 phrases the Continue
-// button does not appear for ~25s. Changing this list changes how long a
-// tester waits on screen 2 of 12. See
+// Which matters, because the count IS the gate: the timing below re-derives
+// from it, so every phrase added costs a tester 1.5s before they can advance.
+// At twelve phrases Continue did not appear for ~25s on screen 2 of 12. Now
+// four phrases plus a CTA measured from the conclusion puts it at ~9.3s. See
 // docs/follow-ups/2026-09-21-screen-2-conveyor-gates-the-cta-for-25-seconds.md
 const CONVEYOR_PHRASES: readonly string[] = [
+  // Four, deliberately, and in this order. The list is the CTA gate (the
+  // timing below re-derives from its length), so every phrase costs a tester
+  // 1.5s of waiting and has to earn it.
+  //
+  // The order is an escalation, not a catalogue. It opens somewhere ordinary
+  // and warm so nobody is asked to think about death on screen 2, moves into
+  // something said rather than sent, then into a nightly ritual that implies
+  // a child and an absence without naming either, and only then lands on the
+  // reason the product exists. Trimmed from twelve on 2026-09-21: twelve was
+  // a list, and a list is browsed rather than felt.
   'Birthday wishes.',
-  'Holiday greetings.',
-  'Just because moments.',
   '\u201CI\u2019m proud of you.\u201D',
-  'Love notes.',
-  'Daily affirmations.',
-  'Words of comfort.',
   'Bedtime stories.',
-  'Life advice.',
-  'Letters for later.',
-  'Graduation messages.',
   'A goodbye, whenever it comes.',
 ];
 
@@ -43,10 +46,19 @@ const finalLandMs =
   ONBOARDING_TIMING.CONVEYOR_INTRO_DELAY_MS +
   CONVEYOR_PHRASES.length * ONBOARDING_TIMING.CONVEYOR_PHRASE_DURATION_MS +
   ONBOARDING_TIMING.CONVEYOR_FINAL_BEAT_MS;
-// "Their timeline." lands a widened beat after "Your voice."; the CTA then waits
-// for that full conclusion.
+// "Their timeline." lands a widened beat after "Your voice.".
+//
+// The CTA is measured from the CONCLUSION, not from the tail. It used to wait
+// for the tail AND a further 3s, which made the phrase count a gate on
+// advancing: twelve phrases held Continue for ~25s on screen 2 of 12, while
+// anyone with reduced motion on (who sees no conveyor at all) got the button
+// instantly. The incentive was exactly inverted.
+//
+// Now Continue arrives shortly after "Your voice." lands and "Their timeline."
+// settles just behind it, so the stacked conclusion is a reward for staying
+// rather than a toll for leaving.
 const tailLandMs = finalLandMs + ONBOARDING_TIMING.CONVEYOR_TAIL_BEAT_MS;
-const ctaLandMs = tailLandMs + ONBOARDING_TIMING.CONVEYOR_CTA_BEAT_MS;
+const ctaLandMs = finalLandMs + ONBOARDING_TIMING.CONVEYOR_CTA_BEAT_MS;
 
 export function Screen2({ onNext }: { onNext: () => void }) {
   return (
