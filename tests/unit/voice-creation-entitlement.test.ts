@@ -57,12 +57,18 @@ describe("assertCanCreateVoice", () => {
   describe("flag ON (post-reorder M2 state)", () => {
     beforeEach(() => flag.mockReturnValue(true));
 
-    it.each(["trial", "active"] as const)("allows %s", async (status) => {
+    // `past_due` allows, and that is the point of FOLLOW_UPS #109: the spec,
+    // Home B, and the Stripe webhook/cancel routes all treat a past-due
+    // subscription as live while retries run. Excluding it here told a user
+    // their vault was protected while blocking what the vault is for — and did
+    // it as a dead end, since /app/voice/processing lets past_due through.
+    it.each(["trial", "active", "past_due"] as const)("allows %s", async (status) => {
       withStatus(status);
       await expect(assertCanCreateVoice("user_1")).resolves.toBeUndefined();
     });
 
-    it.each(["none", "past_due", "lapsed", "cancelled"] as const)(
+    // `lapsed` stays excluded: that is the state meaning the retries gave up.
+    it.each(["none", "lapsed", "cancelled"] as const)(
       "throws SUBSCRIPTION_REQUIRED (402, non-retryable) for %s",
       async (status) => {
         withStatus(status);
@@ -80,5 +86,38 @@ describe("assertCanCreateVoice", () => {
       expect(sub).toHaveBeenCalledTimes(1);
       expect(sub).toHaveBeenCalledWith("user_1");
     });
+  });
+});
+
+/**
+ * The two paid-vendor gates must agree.
+ *
+ * FOLLOW_UPS #109 happened because they drifted from the rest of the product,
+ * not from each other — but they are maintained in two files and the save gate
+ * is a bare inline Set, so keeping them in step is worth asserting rather than
+ * hoping for. If a future change adds a status to one, this fails until the
+ * other is considered.
+ */
+describe("the paid-vendor gates agree with each other", () => {
+  it("voice creation and message saving allow the same statuses", async () => {
+    const { VOICE_CREATION_ALLOWED_STATUSES } = await import(
+      "@/lib/voice-creation/entitlement"
+    );
+    // The save route's Set is module-private, so assert against the literal it
+    // declares. Restated here on purpose: if someone edits one list without the
+    // other, this is the line that objects.
+    const SAVE_ALLOWED = ["trial", "active", "past_due"];
+    expect([...VOICE_CREATION_ALLOWED_STATUSES].sort()).toEqual(SAVE_ALLOWED.sort());
+  });
+
+  it("never entitles a lapsed or cancelled subscription", async () => {
+    const { VOICE_CREATION_ALLOWED_STATUSES } = await import(
+      "@/lib/voice-creation/entitlement"
+    );
+    // The line that actually protects spend: these are the states where Stripe
+    // has stopped trying.
+    for (const dead of ["lapsed", "cancelled", "none"]) {
+      expect(VOICE_CREATION_ALLOWED_STATUSES.has(dead as never)).toBe(false);
+    }
   });
 });
