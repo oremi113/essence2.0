@@ -100,7 +100,7 @@ Vault must independently recover CAC.
 
 Annual pricing:
 
-- Vault — $119/year
+- Vault — $119.99/year
 - Legacy — $179/year
 - Guardian — $269/year
 
@@ -130,7 +130,7 @@ No public pricing comparison grid.
 
 ## 7. Tier 1 — Voice Vault
 
-**Pricing:** $12.99/month · $119/year
+**Pricing:** $12.99/month · $119.99/year
 
 **Includes:**
 
@@ -209,3 +209,23 @@ Guardian appears only when multi-voice intent is triggered.
 ---
 
 *ESSENCE V3.0 is structured for sustainability, cost discipline, and controlled expansion.*
+
+---
+
+## Correction on landing — 2026-09-21
+
+This document sat unmerged from 2026-07-14 and quoted the Vault annual price as
+**$119/year**. Stripe charges **11999**, and the app and the Terms were
+reconciled to **$119.99** in PR #144 - so the two figures above were corrected
+on the way in, rather than landing a "canonical" pricing document that disagreed
+with what the customer is actually charged.
+
+That disagreement is not hypothetical; it is the bug #144 fixed. A customer read
+"$119 per year" on Card Capture, accepted Terms stating $119.00, and would have
+been billed $119.99.
+
+The Legacy ($179) and Guardian ($269) tiers below are **not built** - they are
+architecture, not current state. The 2026-07-12 legal code-findings pass records
+the same thing: the code has exactly one paid product. Treat every figure here
+as a plan except Voice Vault's, which must match `VAULT_PRICING` in
+`src/lib/vault.ts` and the Terms.
