@@ -146,7 +146,7 @@ From `docs/legal/BETA_INVITE_EMAIL.md`, expanded into something checkable.
 
 Confirm `ESSENCE_BETA_100` exists in whichever Stripe account prod points at.
 
-### C1a. ⚠️ The beta coupon has no live-mode guard
+### C1a. ✅ The beta coupon live-mode guard — FIXED 2026-09-21
 
 Verified on `main` 2026-09-21: `create-checkout-session.ts` carries a comment
 reading *"UNSET THIS BEFORE CHARGING REAL MONEY. Leaving it set in a live-mode
@@ -158,9 +158,23 @@ A comment is not a guard. This is not a beta blocker (the beta is comped on
 purpose) but it is a **launch landmine**: one stale env var at cutover silently
 comps every real subscriber $0 forever, and nothing in the system would say so.
 
-**Fix shape:** refuse to attach the coupon when the secret key starts with
-`sk_live_`, or fail the build/boot on that combination. Cheap, and it converts
-an invisible failure into a loud one.
+**Fixed 2026-09-21.** `src/lib/stripe/beta-coupon.ts` now refuses the coupon
+whenever `STRIPE_SECRET_KEY` is a live key (`sk_live_` or `rk_live_`), and the
+caller logs `stripe.beta_coupon_refused_in_live_mode`.
+
+Refusing the *coupon* rather than the *checkout* is deliberate: if the variable
+is still set at cutover, the first real customer is charged correctly and the
+business works, while the outcome that actually matters — silently comping
+every subscriber — is impossible. Throwing would have blocked all revenue until
+someone noticed a conversion rate of zero.
+
+Not asserted at boot because `client.ts` initialises Stripe lazily on purpose:
+CI's "Collecting page data" step evaluates route modules with no
+`STRIPE_SECRET_KEY`, and a module-level assertion would break the build.
+
+**So the env matrix above is now advisory, not load-bearing.** Leaving
+`STRIPE_BETA_COUPON_ID` set at cutover is no longer able to give the product
+away — it is inert against live keys.
 
 ### C2. Webhook
 Stripe Dashboard (test mode) → Developers → Webhooks → add

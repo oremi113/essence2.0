@@ -1,6 +1,8 @@
 import 'server-only';
 import { stripe } from './client';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { generateRequestId, logError } from '@/lib/logger';
+import { resolveBetaCoupon } from './beta-coupon';
 import type { BillingPlan } from '@/lib/vault';
 
 export interface CreateCheckoutSessionResult {
@@ -197,9 +199,30 @@ export async function createCheckoutSession(
   // a 100%-off coupon there is nothing to charge, and we still want the card on
   // file so the collect-and-store half of the flow is genuinely tested.
   //
-  // UNSET THIS BEFORE CHARGING REAL MONEY. Leaving it set in a live-mode
-  // environment comps every subscriber, forever.
-  const betaCouponId = process.env.STRIPE_BETA_COUPON_ID?.trim() || undefined;
+  // The coupon is REFUSED against live keys (see ./beta-coupon). This used to be
+  // a comment reading "UNSET THIS BEFORE CHARGING REAL MONEY", which is not a
+  // guard: one variable left set at cutover would have comped every paying
+  // subscriber, forever, silently.
+  const coupon = resolveBetaCoupon();
+  if (!coupon.apply && coupon.reason === 'live_mode_refused') {
+    // Loud on purpose. Nothing is broken for the customer — they are charged
+    // correctly — but production is one variable away from having given the
+    // product away, and that should not be discovered from a month of $0
+    // invoices.
+    logError({
+      event: 'stripe.beta_coupon_refused_in_live_mode',
+      requestId: generateRequestId(),
+      userId: user.id,
+      errorCode: 'beta_coupon_in_live_mode',
+      error: new Error(
+        'STRIPE_BETA_COUPON_ID is set while STRIPE_SECRET_KEY is a live key. ' +
+          'The comp was refused and this checkout is charging full price. ' +
+          'Unset STRIPE_BETA_COUPON_ID in the production environment.',
+      ),
+      meta: { couponId: coupon.couponId },
+    });
+  }
+  const betaCouponId = coupon.apply ? coupon.couponId : undefined;
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
