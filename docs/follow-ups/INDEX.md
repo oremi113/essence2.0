@@ -4,13 +4,15 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 131 · 106 open · 1 decision · 24 resolved · 0 dropped
+Total: 133 · 108 open · 1 decision · 24 resolved · 0 dropped
 
-## Open (106)
+## Open (108)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
 | P1 | MASTER_SPEC Step 5 (First Playback) has never existed in code — the user never hears their own voice before being asked to write their first message *(found in beta, 2026-09-08)* | 2026-09-08 | — | [`2026-09-08-first-playback-beat-was-never-built.md`](./2026-09-08-first-playback-beat-was-never-built.md) |
+| P2 | BreathStone state mapping for Vault Continuity and Seal is approximated and undocumented - an owner decision, never recorded in the live ledger *(salvaged from the monolith 2026-09-21)* | 2026-06-30 | — | [`2026-06-30-breathstone-state-mapping-vault-continuity-and-seal.md`](./2026-06-30-breathstone-state-mapping-vault-continuity-and-seal.md) |
+| P2 | Vault breath during Step 3 Processing reverses the shipped dead-still treatment - an owner decision, never recorded in the live ledger *(salvaged from the monolith 2026-09-21)* | 2026-06-30 | — | [`2026-06-30-vault-breath-during-step3-processing.md`](./2026-06-30-vault-breath-during-step3-processing.md) |
 | P2 | Copy promises the voice is "permanently gone from our servers within 48 hours" but account teardown never deletes the ElevenLabs clone — it becomes an un-addressable orphan *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone.md`](./2026-07-12-account-deletion-never-deletes-the-elevenlabs-voice-clone.md) |
 | P2 | "We will never use your recordings to train AI models" is unsubstantiated by code — nothing configures ElevenLabs for zero-retention/no-training; depends entirely on the account tier + DPA *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-never-train-promise-unverified-against-elevenlabs-terms.md`](./2026-07-12-never-train-promise-unverified-against-elevenlabs-terms.md) |
 | P2 | No affirmative consent gate before ESSENCE creates a synthetic voice clone — only a passive "I understand" on a privacy screen; no "I consent to processing my voice to create a synthetic voice" checkbox *(legal questionnaire 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-no-affirmative-consent-gate-before-voice-cloning.md`](./2026-07-12-no-affirmative-consent-gate-before-voice-cloning.md) |
