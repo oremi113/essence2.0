@@ -1047,3 +1047,56 @@ these are deliberately recessive and the point is to make them *legible*, not pr
 **Pick up when:** its own chunk, before any accessibility audit. Not a blocker for the Home A retrofit —
 Home A's instance was already fixed, and the corrected token comment now names this entry so the next
 person to reach for tertiary sees the constraint.
+
+### 108. [P3] `?new=1` has no UI entry point, and `archived` is a status nothing ever writes
+*(found 2026-09-21 while tracing which Home A registers a past-due user can actually reach)*
+Two adjacent dead paths, filed together because they were found together and both make code look
+load-bearing when it is not.
+**`/app/record?new=1`** creates an additional voice profile and is reachable only by typing the URL —
+a grep of `src/` finds no link, button, or router push that sets it. So "a user can hold several voice
+profiles" is true of the data model and false of the product.
+**`archived`** is a `voice_profile_status` enum value that **no code path ever assigns**. Every status
+write in the app is `collecting` → `processing` → `ready`, plus `mark-failed`. Three places defend
+against it anyway: `src/app/app/record/complete/page.tsx:28` redirects on it, `src/lib/profile/voice.ts`
+filters it out, and the enum declares it.
+**Why it matters:** it makes FOLLOW_UPS #105 read as a bigger live bug than it was. That fix (one
+canonical `getActiveVoiceProfile`) is still right — two queries answering the same question differently
+is a real liability and the copies had already drifted — but its user-facing impact was hardening, not
+a defect users were hitting. Stating that here so the next person reading #105 does not over-infer.
+More practically, the next reader of the archived-filtering code will reasonably assume a producer
+exists and go looking for it.
+**Fix shape:** decide whether `archived` is intended future behaviour (a "start over" that keeps the old
+clips) or vestigial. If intended, note the three defenders as deliberate and leave them. If vestigial,
+drop it from the enum and the three call sites — but not before checking the DB for rows carrying it,
+since the migration history may have written some. For `?new=1`: either give it a real entry point or
+mark it a dev affordance in the route's own doc comment.
+**Pick up when:** alongside any multi-profile or "record a second voice" feature, or the next time
+someone is confused by the archived checks. Not urgent.
+
+### 109. [P2] "Try again" is a dead primary for a past-due user once the payment gate is flipped on
+*(found 2026-09-21 during the Home A retrofit, from the same reachability trace as #108)*
+The Home A `failed` register offers **"Try again"**, which routes to `/app/voice/processing` and
+triggers `POST /api/voice-profiles/[id]/start`. That route calls `assertCanStartVoiceCreation` →
+`assertCanCreateVoice`, whose allow-list is `VOICE_CREATION_ALLOWED_STATUSES = {"trial", "active"}`
+(`src/lib/voice-creation/entitlement.ts:12`). **`past_due` is not in it.**
+Meanwhile `/app/voice/processing`'s own guard lets `past_due` through — it only redirects `none` and
+`lapsed`/`cancelled`. So a past-due user taps a mineral primary, is routed to a new screen, and is then
+met with a 402 `SUBSCRIPTION_REQUIRED` / "Start your free trial to create your voice."
+This is exactly the rule the Home A review arc settled three times over: **when an action cannot work,
+the screen must not offer it as though it can** (failed sub-state 2, sub-state 3, and offline
+suppressing past-due are the other three instances). This is a fourth, and it is the worst of them,
+because the other three fail quietly in place while this one bounces the user to a different screen
+before failing.
+**Currently latent:** `assertCanCreateVoice` is a no-op while `VOICE_CREATION_REQUIRES_PAYMENT` is off
+(default). It becomes live the moment that flag flips, which is a planned M2 step — so this is a
+landmine, not a present-day bug.
+**Why it matters:** the user is a paying customer whose build already failed and whose card is now
+failing. Sending them into a dead end is the single worst moment in the journey to do it.
+**Fix shape:** the page layer already derives both `failedSubState` and `pastDueVariant` for Home A, so
+it can see the combination. When a `failed` user is `past_due`, the card is the blocker and the retry
+is downstream of it: "Update card" should be the only primary and "Try again" should not be offered as
+though it will run. The honest shape is the one sub-state 2 already uses — an instruction rather than a
+control — reading as "the card needs updating before we can try again." Worth aligning
+`/app/voice/processing`'s guard with the entitlement allow-list at the same time, so the two cannot
+disagree about whether `past_due` may proceed.
+**Pick up when:** BEFORE `VOICE_CREATION_REQUIRES_PAYMENT` is flipped on. Gate the flag flip on this.

@@ -90,6 +90,11 @@ import {
   getActiveVoiceProfile,
   getOrCreateVoiceProfile,
 } from "@/lib/profile/voice";
+import {
+  isVoiceProfileRetryAllowed,
+  VOICE_PROFILE_BACKOFF_MS,
+  VOICE_PROFILE_MAX_ATTEMPTS,
+} from "@/lib/voice-training/backoff";
 
 const ARCHIVED = { id: "vp_old", status: "archived", created_at: "2026-01-01" };
 const LIVE = { id: "vp_live", status: "collecting", created_at: "2026-06-01" };
@@ -172,5 +177,36 @@ describe("getOrCreateVoiceProfile", () => {
     rows = [LIVE];
     await getOrCreateVoiceProfile();
     expect(getOrCreateProfileSpy).toHaveBeenCalled();
+  });
+});
+
+// ── retry policy (FOLLOW_UPS #105's neighbour: the same failed-register logic
+//    Home A branches on). Pins the two real windows so a fourth cannot sneak
+//    back in unnoticed.
+describe("voice-profile retry policy", () => {
+  it("offers exactly two waits — five minutes and half an hour", () => {
+    expect(VOICE_PROFILE_BACKOFF_MS).toEqual([0, 5 * 60 * 1000, 30 * 60 * 1000]);
+  });
+
+  it("every backoff index is reachable", () => {
+    // attemptCount is capped before the wait is read, so a list longer than
+    // the cap has dead entries. This is what removed the old 2h window.
+    const reachable = new Set<number>();
+    for (let n = 0; n < VOICE_PROFILE_MAX_ATTEMPTS; n++) {
+      reachable.add(Math.min(n, VOICE_PROFILE_BACKOFF_MS.length - 1));
+    }
+    expect(reachable.size).toBe(VOICE_PROFILE_BACKOFF_MS.length);
+  });
+
+  it("stops offering a retry at the cap, whatever the clock says", () => {
+    const longAgo = new Date(Date.now() - 86_400_000).toISOString();
+    expect(isVoiceProfileRetryAllowed(VOICE_PROFILE_MAX_ATTEMPTS, longAgo)).toBe(false);
+  });
+
+  it("holds the retry inside the window and releases it after", () => {
+    const justNow = new Date(Date.now() - 1000).toISOString();
+    const past = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    expect(isVoiceProfileRetryAllowed(1, justNow)).toBe(false); // 5min window
+    expect(isVoiceProfileRetryAllowed(1, past)).toBe(true);
   });
 });
