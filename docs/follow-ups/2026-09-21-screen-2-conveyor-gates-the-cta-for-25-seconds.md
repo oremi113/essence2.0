@@ -117,3 +117,39 @@ arithmetic on an existing, already-proven mechanism — `.onboarding-ctas--delay
 carries `animation: onb-fade-up ... both`, and `both` holds opacity 0 through
 the inline `animation-delay`, now 9300ms. Worth a glance during the owner's
 full walkthrough.
+
+
+---
+
+## Re-tuned — 2026-09-21 (second owner call)
+
+The first pass measured the CTA from the CONCLUSION, which put it at 9.3s. The
+owner watched it and said it still appeared at the end of the phrases - which
+was true, and was what the first call had asked for. Restated as a choice
+between four timings, the owner picked **with the last phrase**.
+
+`CONVEYOR_CTA_BEAT_MS` now measures from the last TRANSIENT phrase and is 0.
+
+| | 12 phrases (original) | first pass | now |
+|---|---|---|---|
+| Continue appears | 24.9s | 9.3s | **7.0s** |
+| "Your voice." lands | 20.5s | 8.5s | 8.5s |
+| "Their timeline." lands | 21.9s | 9.9s | 9.9s |
+
+So the entire conclusion now plays to someone who is already free to leave.
+That is the whole point of the change: the stacked ending is a reward for
+staying, and nothing about it is a toll.
+
+`lastPhraseLandMs` is named rather than inlined, because the CTA and the
+conclusion are both derived from it and a single source stops the two drifting.
+
+**Pinned by a test this time.** `tests/unit/onboarding-screen2-cta-timing.test.tsx`
+asserts the rendered `animation-delay` on `.onboarding-ctas--delayed` equals
+`intro + phraseCount * stagger + ctaBeat`, that the CTA precedes both the
+conclusion and the tail, and that the hold stays under 8s. Verified values:
+CTA 7000ms, conclusion 8500ms, tail 9900ms.
+
+The earlier note said this path had no test because `/dev/onboarding` proved
+awkward to drive to screen 2. Asserting the delay directly is better than the
+browser measurement would have been - it fails in CI the moment someone
+lengthens the phrase list, rather than on a device weeks later.

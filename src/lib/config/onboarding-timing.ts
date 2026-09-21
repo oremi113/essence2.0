@@ -19,13 +19,18 @@ export const ONBOARDING_TIMING = {
    *  below it (the stacked conclusion). Salvaged from the animation-polish
    *  conveyor tuning (its tail landed ~1.4s after the final phrase). */
   CONVEYOR_TAIL_BEAT_MS: 1400,
-  /** Screen 2 — beat after "Your voice." lands before the CTA fades in.
-   *  Measured from the CONCLUSION, not from the tail: the CTA used to wait for
-   *  "Their timeline." and a further 3s on top, which made the phrase count a
-   *  gate on advancing (12 phrases held Continue for ~25s on screen 2 of 12).
-   *  The tail now lands just after the button appears, so it reads as a reward
-   *  for staying rather than a toll for leaving. */
-  CONVEYOR_CTA_BEAT_MS: 800,
+  /** Screen 2 — beat after the LAST TRANSIENT PHRASE lands before the CTA
+   *  fades in. Zero by owner call (2026-09-21): Continue arrives *with* the
+   *  last phrase, not after it, so the conclusion ("Your voice." / "Their
+   *  timeline.") plays to someone who has already been let go.
+   *
+   *  The measuring point has moved twice, and the direction is the point. It
+   *  was once the tail plus a further 3s, which made the phrase count a gate
+   *  on advancing — twelve phrases held the button for ~25s on screen 2 of 12,
+   *  while anyone with reduced motion on got it instantly. Kept as a knob
+   *  rather than inlined so the beat can be reintroduced without re-deriving
+   *  where it is measured from. */
+  CONVEYOR_CTA_BEAT_MS: 0,
 
   /** Screen 6→7 — depress → release window on the advance button (DESIGN BRIEF 002). */
   SCREEN6_PRESS_RELEASE_MS: 80,
