@@ -1,9 +1,10 @@
 ---
 id: 2026-09-21-app-main-has-no-bottom-safe-area-inset
 priority: P2
-status: open
+status: resolved
 opened: 2026-09-21
-summary: "`.app-main` reserves the notch at the top but keeps a hardcoded 40px at the bottom — on an inset device a bottom CTA can sit under Safari's chrome or the home indicator *(owner, iPhone 16 Pro, physical pass 2026-09-21)*"
+resolved: 2026-09-21
+summary: "RESOLVED 2026-09-21 — `.app-main` reserves the notch at the top but keeps a hardcoded 40px at the bottom — on an inset device a bottom CTA can sit under Safari's chrome or the home indicator *(owner, iPhone 16 Pro, physical pass 2026-09-21)*"
 ---
 
 # The shell reserves the notch but not the home indicator
@@ -52,3 +53,50 @@ other bottom CTA exposed.
 
 **Pick up when:** before the beta invites go out — it is on the onboarding path,
 which every tester walks.
+
+
+---
+
+## Resolved — 2026-09-21
+
+Two parts, and the first alone would not have fixed the reported symptom.
+
+**1. The shell reserves the space.** `.app-main` (and `--with-footer`) now use
+`calc(40px + env(safe-area-inset-bottom, 0px))` for both `padding-bottom` and
+the published `--app-main-inset-bottom`, so the four full-height children that
+subtract the var stay correct and the phantom scroll is not re-created.
+Verified with a simulated iPhone 16 Pro inset (59px top / 34px bottom): the
+child computes `844 - 59 - 74 = 711px`, and at flat insets the scroll is still
+exactly 0.
+
+**2. `.onboarding-wrapper` had to subtract the insets too** — this is the part
+that actually moved the button. Measured first: adding the shell padding alone
+left the CTA at an unchanged 22px gap, because the wrapper is `min-height:
+100dvh` and so spans past the padding to the raw viewport edge, anchoring its
+CTA under Safari's toolbar. A shell reserving space underneath does nothing if
+the child reaches past it.
+
+This is the same class as
+`2026-09-04-full-height-screens-overflow-the-app-shell-padding`, in the one
+file that pass deliberately skipped — it was skipped on the strength of a
+comment explaining the `100dvh` as a dev-sandbox floor. The comment was right
+about *why* the floor exists and silent about what it does to content anchored
+at the bottom.
+
+Measured, onboarding CTA gap below the button:
+
+| | wrapper min-height | gap below CTA |
+|---|---|---|
+| dev sandbox (no shell) | 844px — full `100dvh`, rationale preserved | — |
+| in shell, flat insets | 804px | 62px |
+| in shell, 34px home indicator | 770px | 96px |
+
+**Still needs the device.** Chromium cannot render Safari's toolbar, so what is
+verified is that the CTA moves up by exactly the inset. Whether
+`env(safe-area-inset-bottom)` is sufficient clearance for Safari's bottom bar
+in every state is a question only the phone answers — re-check on the iPhone 16
+Pro that produced the original screenshot.
+
+Also fixed alongside: the Settings trial line read "Your card won't be charged
+until then" when the trial end date was missing, leaving "then" pointing at
+nothing. Seen on a real account during the same pass.
