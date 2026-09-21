@@ -956,7 +956,14 @@ export function SettingsScreen(props: SettingsScreenProps) {
                   : 'Free trial'}
               </div>
               <div className="set__plan-line sub">
-                Your card won’t be charged until then. After that it’s {money} a month.
+                {/* "until then" needs a "then". When the trial end date is
+                    missing the line above degrades to a bare "Free trial", and
+                    this sentence was left pointing at nothing — seen on a real
+                    account during the 2026-09-21 physical pass. Money copy has
+                    to be legible to a cautious reader in BOTH states. */}
+                Your card won’t be charged{' '}
+                {formatDate(subscription.trialEndsAt) ? 'until then' : 'during your trial'}. After
+                that it’s {money} a month.
               </div>
             </div>
             {paymentRow}
