@@ -1,10 +1,10 @@
 ---
 id: 2026-09-21-screen-2-conveyor-gates-the-cta-for-25-seconds
 priority: P2
-status: open
+status: resolved
 opened: 2026-09-21
-resolved:
-summary: "Onboarding screen 2 holds the Continue button for ~25s while the 12-phrase conveyor plays, and the people who skip the ceremony (reduced motion) are the only ones who get the button immediately *(owner, physical pass 2026-09-21)*"
+resolved: 2026-09-21
+summary: "RESOLVED 2026-09-21 — Onboarding screen 2 holds the Continue button for ~25s while the 12-phrase conveyor plays, and the people who skip the ceremony (reduced motion) are the only ones who get the button immediately *(owner, physical pass 2026-09-21)*"
 ---
 
 # Screen 2 makes a tester wait 25 seconds, and rewards turning the ceremony off
@@ -68,3 +68,52 @@ without skipping ahead.
 
 **Pick up when:** before the beta invites - it is on the onboarding path every
 tester walks, and it is cheap.
+
+
+---
+
+## Resolved — 2026-09-21 (owner call)
+
+Owner asked for three or four phrases, the anchoring intro and conclusion kept,
+and the CTA decoupled.
+
+**Four phrases, ordered as an escalation rather than a catalogue.** It opens
+somewhere ordinary and warm so nobody is asked to think about death on screen
+2, moves into something said rather than sent, then into a nightly ritual that
+implies a child and an absence without naming either, and only then lands on
+the reason the product exists:
+
+    Birthday wishes.
+    "I'm proud of you."
+    Bedtime stories.
+    A goodbye, whenever it comes.
+
+Twelve was a list, and a list is browsed rather than felt. The anchors are
+untouched: the 1s intro beat, "Your voice.", and the stacked "Their timeline."
+
+**CTA decoupled.** `CONVEYOR_CTA_BEAT_MS` now measures from the CONCLUSION
+rather than from the tail, and drops 3000 -> 800.
+
+| | before (12 phrases) | after (4) |
+|---|---|---|
+| "Your voice." lands | 20.5s | **8.5s** |
+| Continue appears | 24.9s | **9.3s** |
+| "Their timeline." lands | 21.9s | 9.9s |
+
+Continue now arrives *before* the tail settles, so the stacked conclusion is a
+reward for staying rather than a toll for leaving. The inverted incentive is
+not fully gone — reduced motion still gets the button at 0s — but the gap it
+buys has fallen from ~25s to ~9s.
+
+**Verified** at 390x844 under 4x CPU throttle: phrases land at 2.5 / 4.0 / 5.5
+/ 7.0s, "Your voice." at 8.5s, the tail fades in across 9.5-10.5s. One phrase
+on screen at a time, no pile-up during the hold.
+
+**Not verified end-to-end:** the CTA's own fade-in was not measured in the
+browser. `/dev/onboarding` starts its sequence on a screen whose CTA reads
+"That sounds like me", so driving it to screen 2 reliably proved fiddly and I
+stopped rather than ship a measurement I did not trust. The change is
+arithmetic on an existing, already-proven mechanism — `.onboarding-ctas--delayed`
+carries `animation: onb-fade-up ... both`, and `both` holds opacity 0 through
+the inline `animation-delay`, now 9300ms. Worth a glance during the owner's
+full walkthrough.
