@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe/client';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 import { ROUTES, signInWithNext } from '@/lib/routes';
+import { safeNextPath } from '@/lib/auth/safeNextPath';
 
 /**
  * POST — create a Stripe Customer Portal session for the authenticated user
@@ -16,12 +17,10 @@ import { ROUTES, signInWithNext } from '@/lib/routes';
  * finish (e.g. Settings passes `/app/settings?card_updated=1`). Only same-origin
  * absolute paths are honoured; anything else falls back to the restore arc.
  */
-function safeReturnPath(raw: unknown): string {
-  if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//')) {
-    return raw;
-  }
-  return '/app/vault/restore';
-}
+// Shared with the post-auth `?next=` guard: the old local check here blocked
+// "//evil.com" but not the backslash form "/\evil.com", which browsers
+// normalise to the same thing. See src/lib/auth/safeNextPath.ts.
+const safeReturnPath = (raw: unknown): string => safeNextPath(raw, '/app/vault/restore');
 
 export async function POST(request?: Request) {
   if (!isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
