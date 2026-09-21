@@ -7,10 +7,27 @@ import type { SubscriptionStatus } from "@/lib/vault";
 /**
  * Subscription statuses that entitle a user to invoke paid voice creation
  * (the ElevenLabs call in `/api/voice-profiles/[id]/start`). Mirrors the
- * save-route gate (`trial`/`active`) — both protect a paid vendor call.
+ * save-route gate — both protect a paid vendor call.
+ *
+ * **`past_due` is included, and that is deliberate** (FOLLOW_UPS #109). The
+ * product already treats a past-due subscription as live everywhere else:
+ * MASTER_SPEC §1.6/§6.3 and Home B read it as *Protected* — "the vault is
+ * still live while Stripe retries; it only becomes paused once the retry
+ * ceiling is crossed and the webhook writes `lapsed`" — and the Stripe webhook
+ * and cancel routes both select `['trial','active','past_due']`.
+ *
+ * Excluding it here made the app tell a user their vault was protected while
+ * silently blocking the two things the vault is for. Worse, it was a *dead
+ * end*: `/app/voice/processing` lets `past_due` through, so a "Try again" tap
+ * routed them to a new screen and only then produced a 402.
+ *
+ * The cost is bounded and accepted: a failing card can reach paid vendor calls
+ * for the length of Stripe's retry cycle. They had a valid card, Stripe is
+ * actively retrying, and `lapsed` — which IS excluded — is the state that means
+ * the retries gave up.
  */
 export const VOICE_CREATION_ALLOWED_STATUSES: ReadonlySet<SubscriptionStatus> =
-  new Set<SubscriptionStatus>(["trial", "active"]);
+  new Set<SubscriptionStatus>(["trial", "active", "past_due"]);
 
 /**
  * Gate paid voice creation on an active subscription.

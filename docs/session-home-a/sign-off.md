@@ -20,6 +20,15 @@ The two calls specifically put to the owner both held up in the hand:
 
 ## The ceiling, stated rather than absorbed
 
+> **Correction, 2026-09-21.** A pass on this date briefly recorded #35 as
+> resolved and amended this section to say the ceiling did not exist. That was
+> wrong: it tested whether the stone was *warm* (red above blue) when the
+> question was whether it was *saturated*. Re-measured against the prototype,
+> production is 2-3x less saturated in the mid and deep tones — see #35. **The
+> ceiling below stands as originally written.**
+
+
+
 The design review graded this **A-** and attributed the entire gap to A to
 **FOLLOW_UPS #35** — the canvas `BreathStone` renders cool on light grounds, and
 it is the screen's only atmospheric element.
@@ -73,5 +82,5 @@ rather than blocking on.
 
 ## Open, tracked
 
-#35 (scheduled) · #106 px type scale · #107 tertiary as text in 19 rules ·
-#108 · **#109, which gates the `VOICE_CREATION_REQUIRES_PAYMENT` flip.**
+#35 (open, re-measured) · #106 px type scale · #107 tertiary as text in 19 rules ·
+#108. **#109 closed** (2026-09-21).

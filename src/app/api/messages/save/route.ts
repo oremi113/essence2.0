@@ -28,8 +28,13 @@ import { STEP6_LIMITS } from "@/lib/messages/cost-controls";
 
 export const maxDuration = 60;
 
-// Subscription statuses under which creation/saving is allowed (Vault trial + active).
-const SAVE_ALLOWED_STATUSES = new Set(["trial", "active"]);
+// Subscription statuses under which creation/saving is allowed.
+// `past_due` is included deliberately (FOLLOW_UPS #109): the spec and Home B
+// both read a past-due vault as *Protected* while Stripe retries, and the
+// webhook/cancel routes treat it as live. Blocking it here contradicted what
+// the product tells the user. `lapsed` stays out — that is the state that means
+// the retries gave up. Kept in step with VOICE_CREATION_ALLOWED_STATUSES.
+const SAVE_ALLOWED_STATUSES = new Set(["trial", "active", "past_due"]);
 
 export const POST = defineRoute(
   {
