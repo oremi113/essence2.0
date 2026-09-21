@@ -23,7 +23,14 @@
 export const SETTINGS_CSS = `
 .set {
   position: relative;
-  min-height: 100dvh;
+  /* NOT plain 100dvh — inside the app shell this overflows by .app-main's
+     40px bottom padding, putting a phantom 40px scroll on a screen that has
+     nothing down there. Falls back to a full 100dvh outside the shell (the
+     /dev harnesses), so the value is correct in both places.
+     See docs/follow-ups/2026-09-04-full-height-screens-overflow-the-app-shell-padding.md */
+  min-height: calc(
+    100dvh - var(--app-main-inset-top, 0px) - var(--app-main-inset-bottom, 0px)
+  );
   max-width: 430px;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-lg) var(--space-3xl);

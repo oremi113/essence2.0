@@ -26,7 +26,9 @@ export const FIRST_PLAYBACK_CSS = `
   /* NOT plain 100dvh — inside the app shell that overflows by the shell's 40px
      bottom padding and puts a phantom scroll on a screen meant to be one still
      frame. See docs/follow-ups/2026-09-04-full-height-screens-overflow-the-app-shell-padding.md */
-  min-height: calc(100dvh - var(--app-main-inset-bottom, 0px));
+  min-height: calc(
+    100dvh - var(--app-main-inset-top, 0px) - var(--app-main-inset-bottom, 0px)
+  );
 
   /* The stone scales with the height actually available, not with a 844px
      design frame. Real mobile Safari spends ~130px on its own chrome, so the
