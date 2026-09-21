@@ -1,6 +1,7 @@
 export { getOrCreateProfile, type Profile } from "./core";
 export { ensureProfile } from "./ensure";
 export {
+  getActiveVoiceProfile,
   getOrCreateVoiceProfile,
   type VoiceProfile,
   type VoiceProfileStatus,
