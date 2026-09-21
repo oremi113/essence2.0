@@ -7,7 +7,9 @@
  *                   MAX_REGENERATES). Counts as a generation for the hourly cap.
  *  - "retry_audio"  system retry after an audio-only failure: reuse the cached
  *                   generated_text + same variant, re-run audio only. Does NOT
- *                   touch regenerate_count and is not counted as a generation.
+ *                   touch regenerate_count, but IS bounded by the hourly cost cap
+ *                   and ledgered as a paid render (FOLLOW_UPS #92); a render that
+ *                   already succeeded is never re-billed (idempotent no-op).
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -49,7 +51,7 @@ export const POST = defineRoute(
     const { data: gen } = await supabase
       .from("pending_generations")
       .select(
-        "generation_id, voice_profile_id, category, template_variant, generated_text, regenerate_count, text_reroll_count, audio_render_count, recipient_id, pending_recipient_relationship, pending_recipient_descriptor, note, saved_message_id, superseded_at",
+        "generation_id, voice_profile_id, category, template_variant, generated_text, audio_status, regenerate_count, text_reroll_count, audio_render_count, recipient_id, pending_recipient_relationship, pending_recipient_descriptor, note, saved_message_id, superseded_at",
       )
       .eq("generation_id", generationId)
       .eq("user_id", user.id)
@@ -98,6 +100,39 @@ export const POST = defineRoute(
           { status: 409 },
         );
       }
+
+      // Idempotent: never re-bill a succeeded render. retry_audio exists to
+      // retry a FAILED audio render; calling it on a row whose audio already
+      // succeeded would spend ElevenLabs money to reproduce audio the user
+      // already has — and, looped, is the unbounded-spend hole (FOLLOW_UPS #92).
+      // No-op straight back to success; no reset, no render, no ledger row.
+      if (gen.audio_status === "succeeded") {
+        return NextResponse.json({
+          generationId,
+          textStatus: "succeeded",
+          audioStatus: "succeeded",
+          regenerateCount: gen.regenerate_count,
+        });
+      }
+
+      // Hourly cost backstop. Unlike the control arm ~100 lines below,
+      // retry_audio shipped with NO cap, gate, or ledger — a signed-in client
+      // could loop it to rack up unbounded paid renders, evading even the 20/hr
+      // hourly_max (FOLLOW_UPS #92). Gate it on, and count it toward, the same
+      // rolling-hour ceiling every other paid render already respects.
+      if ((await countGenerationsThisHour(service, user.id)) >= STEP6_LIMITS.maxGenerationsPerHour) {
+        return costLimitBlocked("hourly_max");
+      }
+
+      // Ledger the paid render before it runs — this is also the row the hourly
+      // count above reads, so retry_audio can no longer slip the cap unrecorded.
+      await recordUsageEvent(service, {
+        userId: user.id,
+        action: STEP6_GENERATE_ACTION,
+        requestId,
+        outcome: "started",
+        meta: { generationId, retryAudio: true },
+      });
 
       // Best-effort reset: generateAndStoreAudio below re-marks audio_status on
       // its own success/failure, so a lost reset here is overwritten anyway.
