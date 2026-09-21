@@ -15,6 +15,7 @@
  *     fresh generation at edit_note_depth + 1 (API_CONTRACTS.md).
  */
 import type { MessageCategory } from '@/lib/messageTemplates';
+import type { CostLimitKind } from '@/lib/messages/cost-controls';
 
 /**
  * Result of the submit round-trip (POST /api/messages/generate behind
@@ -22,7 +23,15 @@ import type { MessageCategory } from '@/lib/messageTemplates';
  * stage with the note intact — generation-failure UI proper is A5.b's
  * territory; this just avoids a dead end.
  */
-export type PersonalNoteSubmitResult = { ok: true } | { ok: false };
+export type PersonalNoteSubmitResult =
+  | { ok: true }
+  /**
+   * `blocked` carries the server's `limit_kind` when /generate answered 429
+   * `cost_limit_blocked`. A cap is not a blip: it holds until state changes,
+   * so A5 must say so and offer a next step that can actually succeed. Absent
+   * for an ordinary failure, which keeps its retry.
+   */
+  | { ok: false; blocked?: CostLimitKind };
 
 export interface PersonalNoteScreenProps {
   /** Recipient's display name — crumb context ("FOR SARAH · …"). */

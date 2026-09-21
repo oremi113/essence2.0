@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 123 · 102 open · 1 decision · 20 resolved · 0 dropped
+Total: 123 · 101 open · 1 decision · 21 resolved · 0 dropped
 
-## Open (102)
+## Open (101)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -86,7 +86,6 @@ Total: 123 · 102 open · 1 decision · 20 resolved · 0 dropped
 | P3 | gen:types --linked emits an __InternalSupabase PostgrestVersion header that the CI local generator (postgres-meta image) no longer emits, so any types.ts regenerated via --linked fails the types-drift check even when the schema matches | 2026-09-01 | — | [`2026-09-01-types-gen-linked-vs-local-internalsupabase-drift.md`](./2026-09-01-types-gen-linked-vs-local-internalsupabase-drift.md) |
 | P3 | `pending_generations.expires_at` is written but nothing ever prunes it; the per-user active cap depends on an entry-point reclaim *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-abandoned-pending-generations-have-no-sweeper.md`](./2026-09-04-abandoned-pending-generations-have-no-sweeper.md) |
 | P3 | Three user-facing redirect URLs (Stripe checkout success, Stripe portal return, email-change confirm link) fall back to `http://localhost:3100` when `NEXT_PUBLIC_APP_URL` is unset, and `env.ts` never validates it — so a single missing prod env var silently strands a just-paid user on localhost with no error anywhere | 2026-09-04 | — | [`2026-09-04-app-url-localhost-fallback-on-prod-redirects.md`](./2026-09-04-app-url-localhost-fallback-on-prod-redirects.md) |
-| P3 | A 429 cost-limit block shows A5's "Something slipped on our end / Try again" — a permanent wall dressed as a transient blip *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-cost-limit-block-renders-as-a-transient-failure.md`](./2026-09-04-cost-limit-block-renders-as-a-transient-failure.md) |
 | P3 | The promoted dark-ceremonial-stage tokens (`--color-ink`, `--on-dark-*`, `--stone-halo`, `--focus-dark`, …) landed in `@theme` with zero consumers, while `FirstBreathSequence.tsx` still holds the same values as screen-local literals *(design-system promotion pass, 2026-09-09)* | 2026-09-09 | — | [`2026-09-09-dark-stage-tokens-have-no-consumer.md`](./2026-09-09-dark-stage-tokens-have-no-consumer.md) |
 | P3 | The "your first message is here" Memory Shelf ceremony can never fire — its one-time state seed reads `messages.length` while the shelf is still mounting empty (loading), so it always seeds false *(triage 2026-09-11)* | 2026-09-11 | — | [`2026-09-11-first-save-shelf-ceremony-never-fires.md`](./2026-09-11-first-save-shelf-ceremony-never-fires.md) |
 | P3 | 19 of the 45 Breath Stone state pairs differ by 12 levels or less on the stone's surface — Guidance and Archive differ by 1 — because nearly every state parameter drives the halo or the motion, not the body *(owner observation on the state grid, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-breath-stone-states-are-near-indistinguishable-at-rest.md`](./2026-09-15-breath-stone-states-are-near-indistinguishable-at-rest.md) |
@@ -119,7 +118,7 @@ Total: 123 · 102 open · 1 decision · 20 resolved · 0 dropped
 |---|---------|--------|--------|------|
 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
 
-## Resolved (20)
+## Resolved (21)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -140,6 +139,7 @@ Total: 123 · 102 open · 1 decision · 20 resolved · 0 dropped
 | P3 | RESOLVED 2026-09-21 — `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-app-main-missing-safe-area-inset.md`](./2026-07-12-app-main-missing-safe-area-inset.md) |
 | P3 | RESOLVED 2026-09-21 — portal-session's same-origin guard rejects "//host" but not "/\host", so a crafted returnPath yields an off-site Stripe return_url — an open redirect *(triage 2026-07-17)* | 2026-07-17 | — | [`2026-07-17-portal-session-returnpath-backslash-open-redirect.md`](./2026-07-17-portal-session-returnpath-backslash-open-redirect.md) |
 | P3 | RESOLVED 2026-09-21 — The post-sign-in `next` redirect target is not validated as same-origin — the client uses it raw and the server callback only checks `startsWith("/")`, which a protocol-relative `//evil.com` slips past, so a crafted sign-in link can bounce a just-authenticated user to an attacker's site | 2026-09-04 | — | [`2026-09-04-auth-next-param-open-redirect.md`](./2026-09-04-auth-next-param-open-redirect.md) |
+| P3 | RESOLVED 2026-09-21 — A 429 cost-limit block shows A5's "Something slipped on our end / Try again" — a permanent wall dressed as a transient blip *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-cost-limit-block-renders-as-a-transient-failure.md`](./2026-09-04-cost-limit-block-renders-as-a-transient-failure.md) |
 | P3 | RESOLVED 2026-09-21 — Every `min-height: 100dvh` screen inside `.app-main` overflows by the shell's 40px bottom padding — a phantom scroll on screens meant to be one still frame *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-full-height-screens-overflow-the-app-shell-padding.md`](./2026-09-04-full-height-screens-overflow-the-app-shell-padding.md) |
 | P3 | RESOLVED 2026-09-15 — A First Playback sample render that keeps failing AFTER the paid vendor call re-bills on every retry — `sample_status: 'failed'` is re-claimable with no attempt ceiling, so a storage outage charges the user once per attempt *(observed in live testing, 2026-09-10)* | 2026-09-10 | — | [`2026-09-10-voice-sample-retry-has-no-billing-cap.md`](./2026-09-10-voice-sample-retry-has-no-billing-cap.md) |
 | P3 | The `detail` phase's glimmer band runs in a 220px disc around a 112px stone, so a drifting crescent of light is painted up to ~56px OUTSIDE the stone's silhouette on the dark ground — a sheen-sweep, which the design system forbids twice over *(found capturing the cut at 4× throttle, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-detail-glimmer-disc-is-sized-to-the-canvas-box.md`](./2026-09-15-detail-glimmer-disc-is-sized-to-the-canvas-box.md) |

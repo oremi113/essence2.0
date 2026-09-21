@@ -19,13 +19,17 @@
 import { useCallback, useState } from 'react';
 import { GenerationScreen } from '@/components/screens/messages/GenerationScreen';
 import type { GenerationStatus } from '@/components/screens/messages/GenerationScreen.types';
+import type { CostLimitKind } from '@/lib/messages/cost-controls';
 
 type VariantKey =
   | 'working'
   | 'failed-note'
   | 'failed-skip'
   | 'exhausted-note'
-  | 'exhausted-skip';
+  | 'exhausted-skip'
+  | 'blocked-hourly'
+  | 'blocked-pending'
+  | 'blocked-unknown';
 
 const VARIANTS: Record<
   VariantKey,
@@ -35,6 +39,7 @@ const VARIANTS: Record<
     hasNote: boolean;
     retriesExhausted: boolean;
     hint: string;
+    limitKind?: CostLimitKind;
   }
 > = {
   working: {
@@ -71,6 +76,30 @@ const VARIANTS: Record<
     hasNote: false,
     retriesExhausted: true,
     hint: '3-attempt ceiling, skip path — contact-as-care + “Try once more”.',
+  },
+  'blocked-hourly': {
+    label: 'Blocked · hourly',
+    status: 'blocked',
+    hasNote: true,
+    retriesExhausted: false,
+    limitKind: 'hourly_max',
+    hint: 'Cost cap (429 hourly_max) — no retry at all; “Back to Home” is the only real next step.',
+  },
+  'blocked-pending': {
+    label: 'Blocked · pending',
+    status: 'blocked',
+    hasNote: false,
+    retriesExhausted: false,
+    limitKind: 'pending_max',
+    hint: 'Cost cap (429 pending_max) — a different cause needs different words than the hourly one.',
+  },
+  'blocked-unknown': {
+    label: 'Blocked · unknown kind',
+    status: 'blocked',
+    hasNote: true,
+    retriesExhausted: false,
+    limitKind: 'a_cap_added_later' as CostLimitKind,
+    hint: 'Guard: a limit_kind the screen does not know falls back to calm generic copy, never blank.',
   },
 };
 
@@ -112,6 +141,11 @@ export default function MessagesGenerationDevPage() {
           status={v.status}
           hasNote={v.hasNote}
           retriesExhausted={v.retriesExhausted}
+          limitKind={v.limitKind}
+          onGoHome={() => {
+            console.log('[dev/messages-generation] back to home → onExitFlow (page-owned)');
+            alert('Mock — leaves the flow for Home.');
+          }}
           onRetry={() => {
             console.log('[dev/messages-generation] retry → re-runs /generate, back to working');
             alert('Mock retry — re-runs /generate (back to the working wait).');

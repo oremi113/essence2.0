@@ -90,6 +90,62 @@ const FAILED_COPY = {
   },
 } as const;
 
+/**
+ * A cap is not a failure, and the words have to say so. The generic A5 retry
+ * copy gets all three of its lines wrong here: nothing slipped, it wasn't our
+ * end, and "Try again" cannot succeed until state changes. The owner hit
+ * exactly this in the beta and retried into the same warm apology every time.
+ *
+ * Structure follows the copy guide's failure shape — state it plainly without
+ * blame, reassure what is safe, offer one next step that is real. The next
+ * step is Home, not a retry, because waiting is the only thing that lifts a
+ * cap. No countdown: when it lifts is stated softly or not at all.
+ */
+const BLOCKED_COPY = {
+  hourly_max: {
+    title: 'That’s as many as this hour holds.',
+    aside: 'You’ve shaped a few in the last little while. You can shape more a bit later.',
+  },
+  pending_max: {
+    title: 'One message is still being shaped.',
+    aside: 'Give that one a moment to finish, then start the next.',
+  },
+  edit_note_depth: {
+    title: 'This one’s been reshaped as far as it goes.',
+    aside: 'You can keep the version you have, or start something new later.',
+  },
+  regenerate_cap: {
+    title: 'That’s as many versions as this one holds.',
+    aside: 'You can keep the version you have, or start something new later.',
+  },
+  audio_render_cap: {
+    title: 'That’s as many versions as this one holds.',
+    aside: 'You can keep the version you have, or start something new later.',
+  },
+  text_reroll_cap: {
+    title: 'That’s as many versions as this one holds.',
+    aside: 'You can keep the version you have, or start something new later.',
+  },
+} as const;
+
+/**
+ * Used when the server sends a `limit_kind` this screen does not recognise —
+ * a new cap added server-side should read as calm and honest here, never as
+ * a blank or a wrong-but-specific claim.
+ */
+const BLOCKED_FALLBACK = {
+  title: 'Let’s pause here for now.',
+  aside: 'You can shape another a bit later.',
+} as const;
+
+/** Blocked reassurance mirrors the failed state: the note is never lost. */
+const BLOCKED_REASSURANCE = {
+  withNote: 'Your note is kept.',
+  skip: 'Nothing is lost.',
+} as const;
+
+const BLOCKED_PRIMARY = 'Back to Home';
+
 /** Working stone breathes large + cool; failed stone shrinks + warms. */
 const STONE_WORKING = 180;
 const STONE_FAILED = 160;
@@ -103,6 +159,8 @@ export function GenerationScreen({
   onAdjustNote,
   retriesExhausted = false,
   onContactSupport,
+  limitKind,
+  onGoHome,
 }: GenerationScreenProps) {
   const reducedMotion = useReducedMotion();
   // S10-B: retrying generation needs the network; offline gates only the retry
@@ -152,6 +210,39 @@ export function GenerationScreen({
 
     return () => pending.forEach(clearTimeout);
   }, [status, reducedMotion]);
+
+  if (status === 'blocked') {
+    // A cap holds until state changes, so this beat offers no retry at all —
+    // the only honest next step is to stop shaping for now. `limitKind` is
+    // looked up rather than asserted: an unrecognised kind gets calm generic
+    // copy instead of a confident wrong reason.
+    const copy = (limitKind && BLOCKED_COPY[limitKind]) || BLOCKED_FALLBACK;
+    const reassurance = hasNote ? BLOCKED_REASSURANCE.withNote : BLOCKED_REASSURANCE.skip;
+    return (
+      <div className="gen gen--failed">
+        <style>{GENERATION_CSS}</style>
+        <Crumb recipientName={recipientName} categoryLabel={categoryLabel} />
+
+        <div className="gen__stage gen__stage--failed">
+          <div className="gen__stone-wrap" aria-hidden="true">
+            <BreathStone state="ready" size={STONE_FAILED} reducedMotion={reducedMotion} />
+          </div>
+          <div role="alert">
+            <h1 className="gen__failed-title">{copy.title}</h1>
+            <p className="gen__failed-aside">{copy.aside}</p>
+          </div>
+          <p className="gen__failed-reassurance">{reassurance}</p>
+          <div className="gen__actions">
+            {/* Not disabled when offline: leaving the flow needs no network,
+                and a cap is not waiting on one. */}
+            <button type="button" className="gen__btn" onClick={onGoHome}>
+              {BLOCKED_PRIMARY}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (status === 'failed') {
     // Past the 3-attempt ceiling, swap the endless-retry primary for
