@@ -1,10 +1,10 @@
 ---
 id: 2026-09-04-cost-limit-block-renders-as-a-transient-failure
 priority: P3
-status: open
+status: resolved
 opened: 2026-09-04
-resolved:
-summary: "A 429 cost-limit block shows A5's \"Something slipped on our end / Try again\" — a permanent wall dressed as a transient blip *(found in beta, 2026-09-04)*"
+resolved: 2026-09-21
+summary: "RESOLVED 2026-09-21 — A 429 cost-limit block shows A5's \"Something slipped on our end / Try again\" — a permanent wall dressed as a transient blip *(found in beta, 2026-09-04)*"
 ---
 
 # A permanent cost-limit block is rendered as a retryable failure
@@ -46,3 +46,43 @@ the CTA change.
 
 **Pick up when:** next touching A5, or the first support ticket that describes a
 retry loop on message generation.
+
+
+---
+
+## Resolved — 2026-09-21
+
+A5 gained a third status, `blocked`, distinct from `failed`. The 429's
+`limit_kind` is parsed in `MessagesNewPageClient.handleGenerate`, threaded
+through `PersonalNoteSubmitResult` as `{ ok: false, blocked }`, mapped by
+`MessageCreationFlow` to the new status, and rendered by `GenerationScreen`
+from a per-kind copy table.
+
+What changed for the user: no retry is offered at all, because none can
+succeed. The one CTA is **Back to Home** — the existing string from
+`ThreeShapedScreen` / `WaitlistScreen`, not a new one. The copy follows the
+guide's failure shape (state it plainly without blame, reassure what is safe,
+one real next step) and keeps the warm register; only the diagnosis and the
+CTA changed, as this item asked.
+
+Per-kind copy: `hourly_max` names the hour; `pending_max` says another message
+is still being shaped; the reshape caps say the version count is spent. An
+unrecognised `limit_kind` falls back to calm generic copy rather than blank or
+a confident wrong reason — so a cap added server-side later cannot render
+nonsense here.
+
+`failCount` is deliberately **not** incremented on a cap. Hitting a rate limit
+three times must never push the user into the 3-attempt contact-as-care beat:
+support cannot lift a rate limit, and offering help there would waste both
+people's time.
+
+Covered by `tests/unit/messages-new-cost-limit-parse.test.ts` (the parse — 6
+cases including a plain 500 and a non-cap 429, both of which must keep their
+retry) and the blocked block of `tests/unit/generation-screen.test.tsx` (the
+render — 7 cases including the unknown-kind fallback). Dev variants added to
+`/dev/messages-generation` per the permanent-scaffolding rule.
+
+**Not covered by a test:** the three-line mapping inside
+`MessageCreationFlow.runGenerate`. Driving A2 → A3 → A4 in jsdom to reach A5
+proved brittle, so it was abandoned rather than shipped flaky; the mapping is
+typechecked and was verified by hand in `/dev/messages-generation`.

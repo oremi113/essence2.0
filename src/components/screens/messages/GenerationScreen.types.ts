@@ -19,13 +19,20 @@
  * (Shaping → Listening → Almost there) and all motion. It holds no
  * generation state and never fetches.
  */
+import type { CostLimitKind } from '@/lib/messages/cost-controls';
 
 /**
  * Which stage the screen renders. The parent drives this off the
  * /generate round-trip — "working" while in flight, "failed" once it
  * resolves not-ok. (Success is modelled by unmount, not a third value.)
+ *
+ * "blocked" is a cost cap (429 `cost_limit_blocked`), which is a different
+ * kind of thing from a failure: nothing slipped, it wasn't our end, and
+ * retrying cannot succeed until state changes. It renders its own copy and
+ * its own CTA rather than borrowing the retry's.
  */
-export type GenerationStatus = 'working' | 'failed';
+
+export type GenerationStatus = 'working' | 'failed' | 'blocked';
 
 export interface GenerationScreenProps {
   /** Recipient's display name — crumb context ("FOR SARAH · …"). */
@@ -64,4 +71,18 @@ export interface GenerationScreenProps {
    * knows the address). Required-in-spirit when `retriesExhausted` is true.
    */
   onContactSupport?: () => void;
+  /**
+   * Which cap was hit, when `status` is "blocked". Selects the copy — an
+   * hourly ceiling and a still-in-flight generation need different words and
+   * a different sense of when they lift. Falls back to generic cap copy for
+   * an unrecognised kind, which is why the screen never asserts a specific
+   * reason it wasn't told.
+   */
+  limitKind?: CostLimitKind;
+  /**
+   * Blocked primary — leaves the flow for Home. A cap's only honest next step
+   * is to stop shaping for now, so this replaces "Try again" rather than
+   * sitting beside it.
+   */
+  onGoHome?: () => void;
 }
