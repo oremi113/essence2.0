@@ -42,7 +42,7 @@ Entry template (the agent appends one per run):
   sibling `restart` branch (already a current-tab handoff to Checkout); the Portal's
   `return_url` returns the user afterward, so the old new-tab nicety isn't lost in
   substance. Not a workaround — the dead-end is removed structurally, not masked.
-- Branch / commit: refactor/fu-87-restore-portal-navigation @ <filled by commit>
+- Branch / commit: refactor/fu-87-restore-portal-navigation @ dda7335
 - Checks: typecheck ✅ · lint ✅ (0 errors; 2 pre-existing warnings in
   `scripts/backup-snapshot.mjs`, unrelated) · test:unit ✅ 473/473 (+4 new in
   `tests/unit/vault-restore-actions.test.tsx`, which fail against the old `window.open`
