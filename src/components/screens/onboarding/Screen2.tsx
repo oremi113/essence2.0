@@ -9,12 +9,21 @@ import { StepShell, StoneSlot } from './chrome';
 // Transient phrases pass across the conveyor before "Your voice." lands
 // as the conclusion. Order matters. To add/remove: edit this list; the
 // timing below re-derives automatically.
-// The transient phrases that pass across the (desktop) conveyor before the
-// stacked conclusion "Your voice." / "Their timeline." lands. Restored from the
-// animation-polish tuning (main had trimmed to 3). Edit freely \u2014 the timing
-// below re-derives from the count. NB: the conveyor is display:none on mobile
-// (main's decision \u2014 the body copy above carries the meaning), so this list only
-// affects the desktop flourish and the CTA delay there.
+// The transient phrases that pass across the conveyor before the stacked
+// conclusion "Your voice." / "Their timeline." lands. Restored from the
+// animation-polish tuning (main had trimmed to 3). Edit freely - the timing
+// below re-derives from the count.
+//
+// CORRECTION (2026-09-21): this comment used to claim the conveyor is
+// display:none on mobile and so "only affects the desktop flourish". That is
+// not true and has not been. The only suppression in globals.css sits inside
+// `@media (prefers-reduced-motion: reduce)`; there is no width query. The
+// conveyor plays on a phone, and this list drives the CTA delay there too.
+//
+// Which matters, because the count IS the gate: at 12 phrases the Continue
+// button does not appear for ~25s. Changing this list changes how long a
+// tester waits on screen 2 of 12. See
+// docs/follow-ups/2026-09-21-screen-2-conveyor-gates-the-cta-for-25-seconds.md
 const CONVEYOR_PHRASES: readonly string[] = [
   'Birthday wishes.',
   'Holiday greetings.',
