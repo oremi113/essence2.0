@@ -1031,7 +1031,38 @@ hold several. That is by design, and newest-non-archived is now the consistent a
 everywhere. If multi-profile ever becomes user-visible it needs an explicit selector, not a
 different default.
 
-### 106. [P2] The type scale is px throughout, so large-text users get no reflow — Home A overflows by 92px at 130%
+### 106. [P2] ✅ RESOLVED 2026-09-21 — the type scale is `rem`, so the app answers the reader's font-size setting
+**Resolved:** the twelve `--text-*` tokens in `src/app/globals.css` now carry `rem`, with each px
+equivalent kept in its comment — those are the values every design document measured against, and
+dropping them would make the scale unreviewable.
+
+Verified by emulating a reader's own setting rather than a harness class. At a 200% root, Home A's CTA
+goes **18px → 36px**, the next-stop line 18 → 36, the status pill 15 → 30. Under the px scale every one
+of those stayed put — which is what "the app responds to nothing" meant in practice.
+
+The root font-size is deliberately **not pinned** anywhere (no `html { font-size }`), which is what
+lets this respond at all. **Do not add one.** `rem` rather than `em` because em compounds with whatever
+it nests inside, so the same token would render at different sizes depending on where it landed.
+
+**What this trades.** Under px nothing overflowed because nothing moved. Now text scales, so layouts
+that were never exercised at 200% can overflow. Audited ten screens at 100 / 130 / 200% with a
+clipping detector (content taller or wider than a non-scrollable box, or pushed outside the viewport):
+
+| scale | screen | finding |
+|---|---|---|
+| 1x, 1.3x, 2x | Home B | `homeb__cta--shimmer` — **false positive**, the sweep overlay sits at `left:-45%` by design and fires at 1x too |
+| 2x | Home A | `homea__band-label` pushed off-viewport — **fixed here** |
+| 2x | Home B | `homeb__row-meta` clipped-x |
+| 2x | messages-note | `personal-note` clipped-x by 9px |
+| 2x | settings | `set__card` clipped-x by 35px |
+
+Home A is clean at every scale. The three remaining are filed as #111 rather than folded in — they are
+other screens, and this change is already the one-lever piece.
+This is strictly better than before on WCAG 1.4.4: the app went from not resizing at all to resizing
+with three known spots to tidy.
+
+*Original entry:*
+
 *(found 2026-09-18 during the Home A retrofit's craft pass; the measurement is thread 3's, the generalisation is ours)*
 `src/app/globals.css:147-162` defines the whole type scale in absolute pixels (`--text-title: 28px`,
 `--text-body: 16px`, `--text-small: 14px`, …) and every screen consumes it directly. A user who raises
@@ -1187,3 +1218,27 @@ a justification should either get a new one or go.
 ceremony, write that in a comment beside it and close this — the comment is the point, so the next
 person does not delete it as dead compensation. If not, remove it; one CSS block on one screen.
 **Pick up when:** next time A7 is open for craft work. Not urgent, explicitly not a bug.
+
+### 111. [P3] Three screens overflow horizontally at a 200% root font-size
+*(found 2026-09-21 by the audit that closed #106)*
+With the type scale on `rem` (#106), text finally answers the reader's font-size setting — and three
+layouts that had never been exercised at that size overflow horizontally:
+
+| screen | element | overflow at 200% root |
+|---|---|---|
+| Home B | `.homeb__row-meta` | clipped-x |
+| messages-note | `.personal-note` | 9px |
+| settings | `.set__card` | 35px |
+
+**Not a regression.** Under the old px scale nothing overflowed because nothing scaled; these are
+pre-existing rigidities becoming visible. The app is strictly better off on WCAG 1.4.4 than it was.
+**Why it matters anyway:** the audience is adults 45 to 70, who are the likeliest to raise text size,
+and 200% is the level 1.4.4 names.
+**Fix shape:** the Home A case, fixed in #106, is the likely pattern for all three — a grid or flex
+child inherits `min-width: auto`, so a word wider than its column shoves the row sideways instead of
+wrapping. `min-width: 0` plus `overflow-wrap: anywhere` on the child was the whole fix there. Check
+each against that before reaching for anything larger.
+**Reproduce:** `.tmp/clip-audit.mjs` in the #106 branch — walks ten screens at 100/130/200% and reports
+content taller or wider than a non-scrollable box. Note its one false positive: Home B's CTA shimmer
+overlay sits outside the button by design and fires at every scale.
+**Pick up when:** next time any of those three screens is open, or before an accessibility audit.
