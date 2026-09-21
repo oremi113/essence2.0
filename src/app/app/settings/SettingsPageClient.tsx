@@ -112,6 +112,9 @@ export function SettingsPageClient({
         }
       }}
       onResume={() => router.push(ROUTES.vaultRestore)}
+      // Never-subscribed: Card Capture, NOT the restore arc — there is nothing
+      // to restore.
+      onKeepVoice={() => router.push(ROUTES.vaultProtect)}
       onDismissCardNotice={() => router.replace(ROUTES.settings)}
       onToggleNotification={() => {
         // Optimistic in the screen only. Persistence + telemetry are pending a

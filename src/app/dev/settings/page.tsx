@@ -24,6 +24,7 @@ import {
 } from "@/components/screens/settings/mockSettings";
 
 type SubKey =
+  | "none"
   | "trial"
   | "active-monthly"
   | "active-annual"
@@ -39,6 +40,7 @@ const SUBS: { key: SubKey; label: string }[] = [
   { key: "past_due", label: "Past due" },
   { key: "lapsed", label: "Lapsed" },
   { key: "cancelled", label: "Cancelled" },
+  { key: "none", label: "No vault yet" },
 ];
 
 const SYSTEMS: { key: SystemKey; label: string }[] = [
@@ -91,6 +93,9 @@ export default function SettingsDevPage() {
           return { ok: true };
         }}
         onResume={() => console.log("[dev/settings] bring it back → /app/vault/restore")}
+        onKeepVoice={() =>
+          console.log("[dev/settings] keep my voice → /app/vault/protect (Card Capture)")
+        }
         onDismissCardNotice={() => setCardNotice(false)}
         onToggleNotification={(key, next) =>
           console.log("[dev/settings] toggle", key, "→", next)

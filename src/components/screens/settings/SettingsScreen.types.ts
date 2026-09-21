@@ -10,8 +10,23 @@
  * never fetches it.
  */
 
-/** Raw subscription status (matches the backend `getSubscriptionStatus`). */
+/**
+ * Raw subscription status. Mirrors `SubscriptionStatus` in `@/lib/vault`, which
+ * is what `getSubscriptionStatus` actually returns.
+ *
+ * "none" was missing here until 2026-09-21, and its absence is what forced the
+ * page to rewrite `none` into `trial` before handing the screen its props. The
+ * screen could not represent "never subscribed", so the page lied to it, and
+ * the screen then told a signed-in visitor they were on a free trial they did
+ * not have - with a Cancel row for a subscription that did not exist.
+ *
+ * Kept as a local mirror rather than a re-export because the screen layer owns
+ * its own prop contract (CLAUDE.md three-layer rule). If the backend union
+ * gains a member, it belongs here too - the comment claiming these match is
+ * only true if someone keeps it true.
+ */
 export type SubscriptionStatus =
+  | "none"
   | "trial"
   | "active"
   | "past_due"
@@ -120,6 +135,12 @@ export interface SettingsScreenProps {
   onCancelSubscription: () => Promise<ActionResult>;
   /** "Bring it back" — resume from lapsed / cancelled (routes to the restore arc). */
   onResume: () => void;
+  /**
+   * "Keep my voice" on the no-vault-yet plan card (`status: 'none'`). Routes to
+   * Card Capture. Distinct from `onResume`, which goes to the RESTORE arc and
+   * would be the wrong destination for someone who has never subscribed.
+   */
+  onKeepVoice?: () => void;
   /** Dismiss the "Your card is updated." notice once the person has seen it. */
   onDismissCardNotice?: () => void;
 
