@@ -23,7 +23,7 @@ import { StepShell, StoneSlot } from './chrome';
 // Which matters, because the count IS the gate: the timing below re-derives
 // from it, so every phrase added costs a tester 1.5s before they can advance.
 // At twelve phrases Continue did not appear for ~25s on screen 2 of 12. Now
-// four phrases plus a CTA measured from the conclusion puts it at ~9.3s. See
+// four phrases, with the CTA measured from the last of them, puts it at 7s. See
 // docs/follow-ups/2026-09-21-screen-2-conveyor-gates-the-cta-for-25-seconds.md
 const CONVEYOR_PHRASES: readonly string[] = [
   // Four, deliberately, and in this order. The list is the CTA gate (the
@@ -42,23 +42,28 @@ const CONVEYOR_PHRASES: readonly string[] = [
   'A goodbye, whenever it comes.',
 ];
 
-const finalLandMs =
+// When the LAST transient phrase fires. The CSS gives phrase i (1-based) a
+// delay of `intro + i * stagger`, so the nth lands here. Named rather than
+// inlined because the CTA and the conclusion are now both measured from it,
+// and a single source stops those two drifting apart.
+const lastPhraseLandMs =
   ONBOARDING_TIMING.CONVEYOR_INTRO_DELAY_MS +
-  CONVEYOR_PHRASES.length * ONBOARDING_TIMING.CONVEYOR_PHRASE_DURATION_MS +
-  ONBOARDING_TIMING.CONVEYOR_FINAL_BEAT_MS;
+  CONVEYOR_PHRASES.length * ONBOARDING_TIMING.CONVEYOR_PHRASE_DURATION_MS;
+
+const finalLandMs = lastPhraseLandMs + ONBOARDING_TIMING.CONVEYOR_FINAL_BEAT_MS;
 // "Their timeline." lands a widened beat after "Your voice.".
 //
-// The CTA is measured from the CONCLUSION, not from the tail. It used to wait
-// for the tail AND a further 3s, which made the phrase count a gate on
-// advancing: twelve phrases held Continue for ~25s on screen 2 of 12, while
-// anyone with reduced motion on (who sees no conveyor at all) got the button
-// instantly. The incentive was exactly inverted.
+// The CTA is measured from the LAST TRANSIENT PHRASE, so Continue arrives with
+// it rather than after the conclusion. The whole conclusion - "Your voice."
+// then "Their timeline." - therefore plays to someone who has already been let
+// go, which is the point: it is a reward for staying, not a toll for leaving.
 //
-// Now Continue arrives shortly after "Your voice." lands and "Their timeline."
-// settles just behind it, so the stacked conclusion is a reward for staying
-// rather than a toll for leaving.
+// It used to be measured from the tail plus a further 3s, which made the
+// phrase count a gate on advancing: twelve phrases held Continue for ~25s on
+// screen 2 of 12, while anyone with reduced motion on (who sees no conveyor at
+// all) got the button instantly. The incentive was exactly inverted.
 const tailLandMs = finalLandMs + ONBOARDING_TIMING.CONVEYOR_TAIL_BEAT_MS;
-const ctaLandMs = finalLandMs + ONBOARDING_TIMING.CONVEYOR_CTA_BEAT_MS;
+const ctaLandMs = lastPhraseLandMs + ONBOARDING_TIMING.CONVEYOR_CTA_BEAT_MS;
 
 export function Screen2({ onNext }: { onNext: () => void }) {
   return (
