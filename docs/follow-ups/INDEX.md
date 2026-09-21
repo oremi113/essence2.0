@@ -4,7 +4,7 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 125 · 101 open · 1 decision · 23 resolved · 0 dropped
+Total: 126 · 101 open · 1 decision · 24 resolved · 0 dropped
 
 ## Open (101)
 
@@ -118,7 +118,7 @@ Total: 125 · 101 open · 1 decision · 23 resolved · 0 dropped
 |---|---------|--------|--------|------|
 | P4 | Analytics doc↔code drift: `app_opened` doc says all onboarded returns; code fires only voice-ready Home B *(triage 2026-06-30)* | 2026-06-30 | FU-102 | [`2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md`](./2026-06-30-app-opened-doc-claims-it-covers-all-onboarded.md) |
 
-## Resolved (23)
+## Resolved (24)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -137,6 +137,7 @@ Total: 125 · 101 open · 1 decision · 23 resolved · 0 dropped
 | P2 | The `detail → playback` match cut hands over the ceremony stone's CANVAS rect, but the canvas only fills 56% of its own box with the sphere — so the hero object jumps 108px → 195px in a single frame at the ceremony's most ceremonial moment *(found capturing the cut at 4× throttle, 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md`](./2026-09-15-the-match-cut-scales-the-canvas-box-not-the-stone.md) |
 | P2 | RESOLVED 2026-09-21 — `.app-main` reserves the notch at the top but keeps a hardcoded 40px at the bottom — on an inset device a bottom CTA can sit under Safari's chrome or the home indicator *(owner, iPhone 16 Pro, physical pass 2026-09-21)* | 2026-09-21 | — | [`2026-09-21-app-main-has-no-bottom-safe-area-inset.md`](./2026-09-21-app-main-has-no-bottom-safe-area-inset.md) |
 | P2 | RESOLVED 2026-09-21 — Onboarding screen 2 holds the Continue button for ~25s while the 12-phrase conveyor plays, and the people who skip the ceremony (reduced motion) are the only ones who get the button immediately *(owner, physical pass 2026-09-21)* | 2026-09-21 | — | [`2026-09-21-screen-2-conveyor-gates-the-cta-for-25-seconds.md`](./2026-09-21-screen-2-conveyor-gates-the-cta-for-25-seconds.md) |
+| P2 | RESOLVED 2026-09-21 - Settings rewrote `none` to `trial`, so a signed-in user with no subscription was told they were on a free trial and offered to cancel one that did not exist *(found cross-referencing a prod screenshot against the DB)* | 2026-09-21 | — | [`2026-09-21-settings-shows-a-trial-to-users-with-no-subscription.md`](./2026-09-21-settings-shows-a-trial-to-users-with-no-subscription.md) |
 | P3 | `useCheckout` success path doesn't guard `res.json()`/missing `checkoutUrl` → CTA can stick; `push(undefined)` returns `true` *(triage 2026-07-07)* | 2026-07-07 | FU-89 | [`2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md`](./2026-07-07-usecheckout-success-path-doesn-t-guard-res-json.md) |
 | P3 | RESOLVED 2026-09-21 — `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)* | 2026-07-12 | — | [`2026-07-12-app-main-missing-safe-area-inset.md`](./2026-07-12-app-main-missing-safe-area-inset.md) |
 | P3 | RESOLVED 2026-09-21 — portal-session's same-origin guard rejects "//host" but not "/\host", so a crafted returnPath yields an off-site Stripe return_url — an open redirect *(triage 2026-07-17)* | 2026-07-17 | — | [`2026-07-17-portal-session-returnpath-backslash-open-redirect.md`](./2026-07-17-portal-session-returnpath-backslash-open-redirect.md) |

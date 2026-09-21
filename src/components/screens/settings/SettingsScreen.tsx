@@ -57,6 +57,7 @@ function formatDate(iso: string | null, withYear = false): string {
 }
 
 type PlanVariant =
+  | 'none'
   | 'trial'
   | 'active-monthly'
   | 'active-annual'
@@ -74,6 +75,8 @@ function planVariant(sub: SubscriptionData): PlanVariant {
       return 'lapsed';
     case 'cancelled':
       return 'cancelled';
+    case 'none':
+      return 'none';
     case 'trial':
     default:
       return 'trial';
@@ -147,6 +150,7 @@ export function SettingsScreen(props: SettingsScreenProps) {
     onUpdateCard,
     onCancelSubscription,
     onResume,
+    onKeepVoice,
     onDismissCardNotice,
     onToggleNotification,
     onChangeEmail,
@@ -940,6 +944,45 @@ export function SettingsScreen(props: SettingsScreenProps) {
     );
 
     switch (variant) {
+      // No subscription has ever existed. This used to be coerced to the trial
+      // card, which told a signed-in visitor they were on a free trial they did
+      // not have and offered to cancel a subscription that did not exist. The
+      // empty-vault tense applies (copy guide s7): the voice is not in here
+      // yet, so nothing may speak as though it is.
+      case 'none':
+        return (
+          <>
+            <div className="set__plan-head">
+              <span className="set__pill">
+                <span className="set__pill-dot" />
+                Voice Vault · Not yet
+              </span>
+            </div>
+            <div className="set__plan-body">
+              <div className="set__plan-line">Nothing is kept here yet.</div>
+              <div className="set__plan-line sub">
+                Keep your voice and it will live here. {money} a month, after a
+                7-day free trial.
+              </div>
+            </div>
+            {onKeepVoice ? (
+              <div className="set__row">
+                <div className="set__row-main">
+                  {/* "Your voice", not "Voice Vault" - the pill above already
+                      spends this screen's one allowed use of the vault name
+                      (copy guide s5, the "your voice" rule). */}
+                  <span className="set__row-label">Your voice</span>
+                </div>
+                <button type="button" className="set__row-action" onClick={onKeepVoice}>
+                  Keep my voice
+                </button>
+              </div>
+            ) : null}
+            <div className="set__row-foot">
+              Cancel anytime during the free trial and your card is never charged.
+            </div>
+          </>
+        );
       case 'trial':
         return (
           <>

@@ -100,9 +100,13 @@ export default async function SettingsPage({
 
     // Subscription → the screen's calm data shape.
     const record = await getSubscriptionStatus(user.id);
-    // `none` shouldn't reach Settings (the arc captures a card before processing);
-    // fall back to trial so a stray state never renders an alarming plan card.
-    const status: SubscriptionStatus = record.status === 'none' ? 'trial' : record.status;
+    // `none` reaches Settings routinely: any signed-in user can open it before
+    // they ever see Card Capture. This used to be rewritten to 'trial' on the
+    // assumption it "shouldn't reach Settings", which meant a visitor with no
+    // subscription was told they were on a free trial and offered to cancel it.
+    // The screen now renders a no-vault-yet card, so the truth can be passed
+    // through unchanged.
+    const status: SubscriptionStatus = record.status;
 
     const card =
       isFeatureEnabled('VAULT_STRIPE_ENABLED') && profile?.stripe_customer_id

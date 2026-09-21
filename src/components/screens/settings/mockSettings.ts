@@ -33,6 +33,9 @@ export function mockSubscription(status: SubscriptionStatus): SubscriptionData {
     ...PRICES,
   };
   switch (status) {
+    // Never subscribed: no card was ever captured, so there is none to show.
+    case 'none':
+      return { ...base, card: null };
     case 'trial':
       return { ...base, trialEndsAt: '2026-06-14' };
     case 'active':
