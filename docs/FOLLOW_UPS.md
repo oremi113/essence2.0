@@ -417,7 +417,44 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 ## A6 Preview & Refine — screen build (from Step 6 A6 wiring chunk 1, 2026-06-11)
 
-### 35. [P3] Canvas BreathStone is 2-3x less saturated than the prototype's gold stone (A6 + A7, any light ground)
+### 35. [P4] ✅ CLOSED 2026-09-21 — won't fix as specified; Step 5 is the reference, and the stone already matches it
+*(closed after two measurement passes on 2026-09-21; the original entry text follows the decision)*
+**Owner decision: Step 5 stays the reference.** The canvas stone is correct — it matches the material
+it was authorised to match — and the A6 gold orb this entry compares against is a stale reference that
+the 2026-09-15 re-cut superseded. No change to `breathStoneEngine.ts`; the body-gradient lock stands.
+
+The evidence, because the entry reads like a defect and is not one:
+
+| depth | A6 prototype | production | Step 5 reference |
+|---|---|---|---|
+| mid | `#E8CF9A` sat 78 | sat 37 | — |
+| deep | `#C9A665` sat 100 | sat 41 | — |
+| ramp end | — | `#C8B589` rgb(200,181,137) sat 63 | `#C9B68B` rgb(201,182,139) sat 62 |
+
+Production is 2-3x less saturated than the A6 orb and matches Step 5 to within rounding. That is the
+September decision working as intended: the two stones sit either side of the `detail → playback` cut
+and must be the same material across it.
+
+**An overlay cannot bridge them, checked rather than assumed.** The prototype's deep tone is *brighter*
+in red than production's base, needing multiply factors of 1.35 and 1.21 — multiply only darkens.
+Lightening the shadow band instead fights the terminator, which this repo's stone doc names as the
+layer carrying sphericity. A trial overlay moved deep saturation 41 → 55 and stalled; it was reverted.
+
+**Do not reopen this from the A6 prototype.** More chroma would be a material change to *both* stones
+plus the cut between them, re-verified across VaultSeal, FirstBreath, RecordScreen, A6 and A7, and it
+needs the body-gradient lock lifted again. File that as new work, not as a continuation of this.
+
+**A method note, since it nearly went the other way.** A first pass closed this by measuring
+red-minus-blue and finding it positive. Wrong test: R>B means *not blue*, while the claim was about
+saturation. Measure the property the claim names.
+
+**For anyone reading the Home A review arc:** its "grey disc above an apology" language describes the
+mockup's flat `#C9C4BC` **placeholder**, not this stone. Those reviews never saw the canvas.
+
+---
+
+*Original entry, kept for the reasoning that was sound on the facts then available:*
+
 **Files:** `src/components/screens/messages/PreviewRefineScreen.tsx` and `src/components/screens/messages/SaveConfirmationScreen.tsx` (the `<BreathStone …>` renders); `src/components/breath-stone/breathStoneEngine.ts` (the palette that would change).
 **What:** the Step 6 prototypes draw rich honey-gold CSS-gradient stones (A6: Ready/Playback/Working; A7: the `infused` ceremonial amber, `essence-step6-a7.html`). Production reuses the shared canvas `BreathStone` — the architecturally correct call (one stone grammar across onboarding + Voice Training + vault + Step 6), and the state mapping is clean. But on light grounds the canvas stone renders pale-taupe, noticeably less ceremonial than the prototypes' gold orbs. Confirmed against the reference sandbox (`/dev/breath-stone`): this is the settled engine look, not a usage bug. **2026-06-12, A7 design pass:** user agrees it reads "quite dull"; revisit deliberately deferred because warming the engine touches every stone usage (VaultSeal, FirstBreath, RecordScreen, A6, A7) — a lift of its own. A7 partially compensates with the prototype's 7s amber halo as a CSS layer behind the canvas (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`).
 **Why it matters:** the stone is the emotional anchor of the preview and save-confirmation moments; a washed-out stone undersells "here it is, in your voice" and the ceremonial close. Cosmetic, not functional — states are correct and motion holds at 4× CPU.
@@ -1133,3 +1170,20 @@ actively retrying.
 Coverage: `tests/unit/voice-creation-entitlement.test.ts` — 15 cases, including two that pin the two
 gates **to each other**, since they live in separate files and the save gate is a bare inline Set.
 **No longer gates the `VOICE_CREATION_REQUIRES_PAYMENT` flip.**
+
+### 110. [P4] A7's amber halo compensates for a stone that is no longer considered wrong
+*(found 2026-09-21 while closing #35)*
+`SaveConfirmationScreen.css.ts` (`.stone-wrap::before`) paints a 7s amber halo behind the canvas stone.
+It was added while #35 was open, explicitly as partial compensation for a stone that read "quite dull"
+on light grounds — #35's own text records it that way.
+**#35 is now closed** as won't-fix-as-specified, so the halo compensates for something the product no
+longer considers a defect.
+**Why it matters:** measured inside the sphere, A7 is the warmest of the three stone screens
+(lit/mid/deep saturation 31/40/54 against A6's 15/28/53 and Home A's 17/27/55). A7 is a ceremonial
+moment, so reading warmer than its siblings may well be *right* there — this is not a claim that it
+looks wrong. It is that the halo's stated reason has been withdrawn, and a compensating layer without
+a justification should either get a new one or go.
+**Fix shape:** look at A7 with the halo on and off on a light ground. If it earns its place as
+ceremony, write that in a comment beside it and close this — the comment is the point, so the next
+person does not delete it as dead compensation. If not, remove it; one CSS block on one screen.
+**Pick up when:** next time A7 is open for craft work. Not urgent, explicitly not a bug.
