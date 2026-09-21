@@ -4,9 +4,9 @@
 
 One row per item in `docs/follow-ups/`. **Generated — do not hand-edit.** Add a follow-up by creating a new `<YYYY-MM-DD>-<slug>.md` file (see [README](./README.md)), then run `npm run followups:build`.
 
-Total: 123 · 101 open · 1 decision · 21 resolved · 0 dropped
+Total: 124 · 102 open · 1 decision · 21 resolved · 0 dropped
 
-## Open (101)
+## Open (102)
 
 | P | Summary | Opened | Legacy | File |
 |---|---------|--------|--------|------|
@@ -29,6 +29,7 @@ Total: 123 · 101 open · 1 decision · 21 resolved · 0 dropped
 | P2 | `DEFERRED_AUDIO_ENABLED` is a flag with only one working arm — the control arm has no A6 screen, so "off" 404s after a paid generation *(found in beta, 2026-09-04)* | 2026-09-04 | — | [`2026-09-04-control-arm-a6-screen-was-never-built.md`](./2026-09-04-control-arm-a6-screen-was-never-built.md) |
 | P2 | `STRIPE_BETA_COUPON_ID` applies a 100%-off coupon to EVERY checkout with no live-mode guard — one env var left set at launch comps every real subscriber $0 forever, silently *(triage 2026-09-08)* | 2026-09-08 | — | [`2026-09-08-beta-coupon-comps-every-subscriber-if-left-set.md`](./2026-09-08-beta-coupon-comps-every-subscriber-if-left-set.md) |
 | P2 | Stripe `incomplete` subscription status is mapped to the TERMINAL `lapsed`, and the terminal guard then makes it permanent → a paying user is locked out of the vault forever *(triage 2026-09-15)* | 2026-09-15 | — | [`2026-09-15-stripe-incomplete-status-mapped-to-terminal-lapsed.md`](./2026-09-15-stripe-incomplete-status-mapped-to-terminal-lapsed.md) |
+| P2 | `.app-main` reserves the notch at the top but keeps a hardcoded 40px at the bottom — on an inset device a bottom CTA can sit under Safari's chrome or the home indicator *(owner, iPhone 16 Pro, physical pass 2026-09-21)* | 2026-09-21 | — | [`2026-09-21-app-main-has-no-bottom-safe-area-inset.md`](./2026-09-21-app-main-has-no-bottom-safe-area-inset.md) |
 | P3 | Journey funnel once-guards (JourneyBeacon / VoiceCreationView / sealed actions) ship with zero test coverage *(triage 2026-06-30)* | 2026-06-30 | FU-101 | [`2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md`](./2026-06-30-journey-funnel-once-guards-3-sites-ship-with.md) |
 | P3 | Memory Shelf playback controller: signed-URL fetch race (no AbortController) → rapid card-switch plays the wrong message; + swallowed resume failure; + dead `retry()`; no unit coverage *(triage 2026-06-30)* | 2026-06-30 | FU-99 | [`2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md`](./2026-06-30-memory-shelf-playback-controller-in-flight-fetch-race.md) |
 | P3 | `deleteAccountAction` has no server-side `ACCOUNT_DELETE_ENABLED` gate — irreversible teardown reachable while "dark" *(triage 2026-07-07)* | 2026-07-07 | FU-88 | [`2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md`](./2026-07-07-deleteaccountaction-has-no-server-side-account-delete-enabled.md) |
