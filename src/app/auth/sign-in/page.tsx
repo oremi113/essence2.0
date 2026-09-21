@@ -2,6 +2,7 @@
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
+import { safeNextPath } from "@/lib/auth/safeNextPath";
 import { Suspense, useEffect, useState } from "react";
 
 /**
@@ -80,7 +81,7 @@ const linkBtn: React.CSSProperties = {
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/home";
+  const next = safeNextPath(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code">("email");

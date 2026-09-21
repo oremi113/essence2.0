@@ -1,10 +1,10 @@
 ---
 id: 2026-09-04-full-height-screens-overflow-the-app-shell-padding
 priority: P3
-status: open
+status: resolved
 opened: 2026-09-04
-resolved:
-summary: "Every `min-height: 100dvh` screen inside `.app-main` overflows by the shell's 40px bottom padding — a phantom scroll on screens meant to be one still frame *(found in beta, 2026-09-04)*"
+resolved: 2026-09-21
+summary: "RESOLVED 2026-09-21 — Every `min-height: 100dvh` screen inside `.app-main` overflows by the shell's 40px bottom padding — a phantom scroll on screens meant to be one still frame *(found in beta, 2026-09-04)*"
 ---
 
 # `100dvh` screens inside the app shell scroll by exactly the shell's bottom padding
@@ -44,3 +44,30 @@ full-height screen inherits the correct sizing instead of re-deriving it.
 
 **Pick up when:** next doing a layout pass across screens, or if touch
 rubber-banding on a ceremonial screen is ever reported.
+
+
+---
+
+## Resolved — 2026-09-21
+
+Scope was much narrower than the raw grep suggested. The 40px padding belongs
+to `.app-main`, and `AppShell` wraps only `/app/*`, `/home` and `/onboarding`.
+`/messages/*` has no layout, so its eight screens render under the root layout
+with no padding and their `100dvh` was already correct — as were the legal
+pages, sign-in, `loading.tsx`, `global-error.tsx` and `SystemScreen`.
+
+Two files actually had the bug: `SettingsScreen.css.ts` and
+`HomeBScreen.css.ts`. Both now use
+`calc(100dvh - var(--app-main-inset-top, 0px) - var(--app-main-inset-bottom, 0px))`.
+
+Measured in Chromium at 390x844 with the real stylesheet, wrapping the real
+screen component in a real `.app-shell > .app-main`:
+
+| Home B | shell height | phantom scroll |
+|---|---|---|
+| before | 884px | **40px** |
+| after | 844px | **0** |
+
+Home B's content is 783px intrinsic, so it genuinely is a single frame and the
+40px was user-visible. Settings is a long scrolling page (1718px), so the fix
+is correct there but not visible against real content.

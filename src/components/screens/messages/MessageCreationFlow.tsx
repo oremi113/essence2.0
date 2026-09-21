@@ -43,6 +43,7 @@ import type {
   StagedFlowState,
 } from './MessageCreationFlow.types';
 import type { PersonalNoteSubmitResult } from './PersonalNoteScreen.types';
+import type { CostLimitKind } from '@/lib/messages/cost-controls';
 import type {
   ExistingRecipient,
   RecipientSelection,
@@ -79,6 +80,10 @@ export function MessageCreationFlow({
   // a flow — three failures earn the offer of help whether or not the note
   // changed between them.
   const [failCount, setFailCount] = useState(0);
+  // Which cost cap blocked the last /generate, if any. Kept separate from
+  // failCount: a cap is not an attempt that went wrong, so it must not push
+  // the user toward the 3-attempt contact-as-care ceiling.
+  const [blockedKind, setBlockedKind] = useState<CostLimitKind | undefined>(undefined);
 
   // The request in flight — kept for A5's "Try again" so retry re-sends
   // exactly what failed without re-deriving it from staged state.
@@ -110,12 +115,20 @@ export function MessageCreationFlow({
   const runGenerate = useCallback(
     (request: GenerateRequest) => {
       lastRequest.current = request;
+      setBlockedKind(undefined);
       setGenStatus('working');
       void onGenerate(request).then((result) => {
-        if (!result.ok) {
-          setFailCount((n) => n + 1);
-          setGenStatus('failed');
+        if (result.ok) return;
+        if (result.blocked) {
+          // A cap, not a failure: show the blocked beat and leave failCount
+          // alone so hitting a ceiling never counts toward "this is stubborn,
+          // reach us" — support cannot lift a rate limit.
+          setBlockedKind(result.blocked);
+          setGenStatus('blocked');
+          return;
         }
+        setFailCount((n) => n + 1);
+        setGenStatus('failed');
       });
     },
     [onGenerate],
@@ -204,6 +217,8 @@ export function MessageCreationFlow({
       onAdjustNote={() => setStep('note')}
       retriesExhausted={failCount >= 3}
       onContactSupport={onContactSupport}
+      limitKind={blockedKind}
+      onGoHome={onExitFlow}
     />
   );
 }

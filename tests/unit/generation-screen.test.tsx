@@ -107,3 +107,69 @@ describe("GenerationScreen — exhausted / contact-as-care (attempt 3+)", () => 
     expect(props.onRetry).toHaveBeenCalledOnce();
   });
 });
+
+/**
+ * A5 blocked — the cost-cap beat (follow-up 2026-09-04).
+ *
+ * The bug these pin: a 429 `cost_limit_blocked` used to render A5's generic
+ * failure — "Something slipped on our end. / Try again" — for a wall that is
+ * permanent until state changes. All three lines were wrong, and the retry
+ * could not succeed. The owner hit exactly this in the beta and looped.
+ */
+describe("GenerationScreen — blocked (cost cap)", () => {
+  it("does NOT offer a retry, and does not blame our end", () => {
+    const onRetry = vi.fn();
+    renderGen({ status: "blocked", limitKind: "hourly_max", onRetry, onGoHome: vi.fn() });
+
+    expect(screen.queryByText("Try again")).toBeNull();
+    expect(screen.queryByText("Try once more")).toBeNull();
+    expect(screen.queryByText(/slipped on our end/i)).toBeNull();
+    expect(screen.queryByText(/Couldn’t quite land it/i)).toBeNull();
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+
+  it("offers Back to Home as the one real next step", () => {
+    const onGoHome = vi.fn();
+    renderGen({ status: "blocked", limitKind: "hourly_max", onGoHome });
+
+    const cta = screen.getByText("Back to Home");
+    fireEvent.click(cta);
+    expect(onGoHome).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the hourly ceiling rather than a generic apology", () => {
+    renderGen({ status: "blocked", limitKind: "hourly_max", onGoHome: vi.fn() });
+    expect(screen.getByText(/as many as this hour holds/i)).toBeTruthy();
+  });
+
+  it("distinguishes a still-in-flight generation from an hourly cap", () => {
+    renderGen({ status: "blocked", limitKind: "pending_max", onGoHome: vi.fn() });
+    expect(screen.getByText(/still being shaped/i)).toBeTruthy();
+    expect(screen.queryByText(/as many as this hour holds/i)).toBeNull();
+  });
+
+  it("falls back to calm generic copy for an unrecognised limit kind", () => {
+    // A cap added server-side must not render blank, and must not assert a
+    // specific reason the screen was never told.
+    renderGen({
+      status: "blocked",
+      limitKind: "totally_new_cap" as never,
+      onGoHome: vi.fn(),
+    });
+    expect(screen.getByText(/pause here for now/i)).toBeTruthy();
+    expect(screen.getByText("Back to Home")).toBeTruthy();
+  });
+
+  it("keeps the note-safe reassurance on both paths", () => {
+    renderGen({ status: "blocked", limitKind: "hourly_max", hasNote: true, onGoHome: vi.fn() });
+    expect(screen.getByText("Your note is kept.")).toBeTruthy();
+    cleanup();
+    renderGen({ status: "blocked", limitKind: "hourly_max", hasNote: false, onGoHome: vi.fn() });
+    expect(screen.getByText("Nothing is lost.")).toBeTruthy();
+  });
+
+  it("announces the block to assistive tech", () => {
+    renderGen({ status: "blocked", limitKind: "hourly_max", onGoHome: vi.fn() });
+    expect(screen.getByRole("alert")).toBeTruthy();
+  });
+});

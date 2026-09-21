@@ -1,11 +1,11 @@
 ---
 id: 2026-07-12-app-main-missing-safe-area-inset
 priority: P3
-status: open
+status: resolved
 opened: 2026-07-12
-resolved:
+resolved: 2026-09-21
 owner_paired: false
-summary: `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)*
+summary: RESOLVED 2026-09-21 — `/app` pages without TabNav (record, settings, …) have no top safe-area inset — top content risks sitting under the notch / status bar on inset devices *(triage 2026-07-12)*
 ---
 
 # `.app-main` has no top safe-area inset, so non-TabNav `/app` pages can render under the notch
@@ -30,3 +30,39 @@ double the top padding on nav pages). Verify on a real inset device — Chromium
 
 **Pick up when:** the mobile-web polish pass (roadmap bucket #6) or the physical-feel QA pass
 (bucket #7).
+
+
+---
+
+## Resolved — 2026-09-21
+
+`.app-main` now carries `padding-top: env(safe-area-inset-top, 0px)`, so every
+`/app` page reserves the inset whether or not it renders TabNav. As this item
+instructed, the now-redundant copy was **removed from `.tab-nav`** — leaving
+both would have stacked and doubled the top padding on nav pages.
+
+**One thing this item's prescribed fix would have broken.** Adding top padding
+to `.app-main` silently re-creates the phantom-scroll bug that
+`2026-09-04-full-height-screens-overflow-the-app-shell-padding` fixed: a child
+sized `calc(100dvh - var(--app-main-inset-bottom))` accounts for the bottom
+padding only, so the new top inset pushes it over by exactly the notch height.
+Measured with a simulated 59px inset: **59px of phantom scroll**, i.e. the bug
+back in full.
+
+So `.app-main` now publishes **both** ends — `--app-main-inset-top` alongside
+the existing `--app-main-inset-bottom` — and all four full-height children
+(`vault-screen`, `FirstPlaybackScreen`, `SettingsScreen`, `HomeBScreen`)
+subtract both. `--app-main-inset-bottom` keeps its name and contract because
+`DevFirstPlaybackHarness` sets it directly.
+
+**Not verified on hardware, by nature.** Chromium resolves
+`env(safe-area-inset-top)` to 0, exactly as this item predicted, so the notch
+behaviour was exercised by overriding the padding and the published variable to
+59px rather than by a real inset device. The composition logic is verified; the
+actual notch clearance still needs the physical-feel pass.
+
+**Flagged for that pass:** with a 59px inset simulated on an 844px viewport,
+Home B's 783px of content exceeds the 745px left over and scrolls 38px. That is
+content height, not the min-height math (verified separately), and the
+simulation is artificial — real notched iPhones have taller viewports. Worth a
+look on device.

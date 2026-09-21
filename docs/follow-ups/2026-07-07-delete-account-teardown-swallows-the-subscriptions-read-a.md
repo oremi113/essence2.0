@@ -2,14 +2,27 @@
 id: 2026-07-07-delete-account-teardown-swallows-the-subscriptions-read-a
 legacy_id: 85
 priority: P2
-status: open
+status: resolved
 opened: 2026-07-07
-resolved:
+resolved: 2026-08-10
 owner_paired: true
 summary: Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed *(triage 2026-07-07/-10, merged)*
 ---
 
 # Delete-account teardown swallows the `subscriptions` read → a closed account can keep being billed
+
+> **✅ RESOLVED 2026-08-10** (`refactor/fu-85-subscriptions-read-check`). Root cause:
+> the step-1 subscriptions `.select()` destructured only `{ data }`, discarding
+> `{ error }` — and a Supabase select resolves as `{ data: null, error }` rather than
+> throwing, so the surrounding `try/catch` never saw a read failure. **Fix:** capture
+> `{ error: subsError }` and abort into the "we couldn't finish closing your account"
+> failure terminal *before* any irreversible step, giving the read the same fail-closed
+> treatment the writes already get via `checkedWrite`. On a transient read failure the
+> teardown now stops before cancelling nothing/deleting everything, so a live
+> subscription can never be stranded billing a deleted account. Guarded by
+> `tests/unit/settings-delete-account-subscriptions-read.test.ts` (read-error → aborts
+> with no cancel/row-delete/auth-delete/wipe; healthy read → teardown proceeds). This is
+> a genuine root-cause fix, not a workaround.
 
 *(merged: triage 2026-07-07 #80 + triage 2026-07-10 #81 — same finding)*
 `src/app/app/settings/actions.ts:191` — `deleteAccountAction` step 1 reads the user's

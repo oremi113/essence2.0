@@ -5,12 +5,15 @@
  * these out via callback props; the page keeps the Supabase / Stripe surface).
  *
  * The delete teardown is the load-bearing one. It is a fallible multi-write
- * (Stripe cancel + stored audio/avatar + the user's rows + the auth user), and
- * it reports success ONLY after every step confirms — the calm "account is
- * closed" terminal must never render over a half-deleted account
- * (success-reported-before-fallible-work, FOLLOW_UPS #43/#45/#66). Each row
- * delete goes through `checkedWrite`, which throws on a Postgrest error rather
- * than silently resolving as success.
+ * (Stripe cancel + the user's rows + the auth user + the stored audio/avatar,
+ * in that order), and it reports success ONLY after every reversible step
+ * confirms — the calm "account is closed" terminal must never render over a
+ * half-deleted account (success-reported-before-fallible-work, FOLLOW_UPS
+ * #43/#45/#66). The mirror invariant matters just as much: the "nothing was
+ * lost" failure terminal must never render after the irreplaceable recordings
+ * are gone, so the irreversible storage wipe is deferred to the very last step
+ * (FOLLOW_UPS #86). Each row delete goes through `checkedWrite`, which throws on
+ * a Postgrest error rather than silently resolving as success.
  */
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -157,22 +160,31 @@ export async function removePhotoAction(): Promise<SettingsActionResult> {
 }
 
 /**
- * Account teardown. Order matters and every step is checked:
+ * Account teardown. Order matters: the irreversible step (wiping the stored
+ * audio + avatar — the person's irreplaceable recordings) runs LAST, so any
+ * earlier failure aborts into the "still here / nothing was lost" terminal
+ * while that promise is still true.
  *  1. Cancel any live Stripe subscription so a deleted account is never billed.
  *     A hard Stripe failure aborts BEFORE any data loss (nothing irreversible
  *     has happened yet) — the screen shows the "still here" failure terminal.
  *  2. Delete the cloned voice(s) on ElevenLabs so "permanently gone from our
  *     servers" is true — the vendor holds the clone, and once the local
- *     `vendor_voice_id` is gone (step 4) it can no longer be addressed for
+ *     `vendor_voice_id` is gone (step 3) it can no longer be addressed for
  *     deletion. Runs before any local data loss so a hard vendor failure aborts
  *     while everything is still intact (same philosophy as the Stripe step); a
  *     404 is success (already gone).
- *  3. Wipe stored audio + avatar (storage is NOT cascaded by the auth delete).
- *  4. FK-safe row deletes (messages before voice_profiles — the FK RESTRICT the
- *     `/api/me` teardown documents), each via `checkedWrite`.
- *  5. Delete the auth user last; it cascades `profiles` and the remaining rows
- *     and invalidates the session.
- * Any throw → `{ ok: false }`, and the screen renders the failure terminal.
+ *  3. FK-safe row deletes (messages before voice_profiles — the FK RESTRICT the
+ *     `/api/me` teardown documents), each via `checkedWrite`. A throw here still
+ *     leaves the audio/avatar intact, so the failure terminal stays truthful.
+ *  4. Delete the auth user; it cascades `profiles` and the remaining rows and
+ *     invalidates the session. This is the point of no return for the account.
+ *  5. Wipe stored audio + avatar LAST (storage is NOT cascaded by the auth
+ *     delete). Best-effort: once the account is provably gone a storage failure
+ *     can't un-close it, so it must NOT flip the result to failure (that would
+ *     render "nothing was lost" over a genuinely-closed account). A failure just
+ *     orphans objects under `users/<id>/` for a later sweep — logged, not fatal.
+ * Any throw in steps 1-4 → `{ ok: false }`, and the screen renders the failure
+ * terminal while the recordings are still there.
  */
 export async function deleteAccountAction(): Promise<SettingsActionResult> {
   const requestId = generateRequestId();
@@ -195,10 +207,22 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
   try {
     // 1. Stripe — cancel any subscription that still exists.
     if (isFeatureEnabled('VAULT_STRIPE_ENABLED')) {
-      const { data: subs } = await service
+      // Fail-closed on the READ, not just the writes. A Supabase `.select()`
+      // that errors resolves as `{ data: null, error }` (it does not throw), so
+      // the surrounding try/catch never sees it. Discarding that error would let
+      // a transient DB hiccup silently yield `subs === null`, skip every
+      // cancellation below, and still tear the account down — leaving a live
+      // subscription billing a card for an account that no longer exists (its
+      // `stripe_subscription_id` cascade-deleted out of reach). Abort here, while
+      // nothing irreversible has happened, exactly as the checked writes do.
+      const { data: subs, error: subsError } = await service
         .from('subscriptions')
         .select('stripe_subscription_id, status')
         .eq('user_id', userId);
+      if (subsError) {
+        logError({ event: 'settings.delete_account.subscriptions_read', requestId, userId, error: subsError });
+        return { ok: false, error: 'We couldn’t finish closing your account just now.' };
+      }
       for (const sub of subs ?? []) {
         const stillLive = sub.status !== 'lapsed' && sub.status !== 'cancelled';
         if (sub.stripe_subscription_id && stillLive) {
@@ -222,7 +246,7 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
     // 2. ElevenLabs — delete the cloned voice(s) vendor-side BEFORE any local
     //    data loss, so a hard failure aborts while the account is still intact
     //    and we never orphan a clone we can no longer address (its id lives on
-    //    the voice_profiles row deleted in step 4).
+    //    the voice_profiles row deleted in step 3).
     const { data: voiceRows, error: voiceReadErr } = await service
       .from('voice_profiles')
       .select('vendor_voice_id')
@@ -255,19 +279,9 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
       }
     }
 
-    // 3. Storage — audio + avatar (not cascaded by the auth delete).
-    for (const bucket of [AUDIO_BUCKET, AVATAR_BUCKET]) {
-      const paths = await listAllStorageObjects(service, bucket, `users/${userId}/`);
-      if (paths.length > 0) {
-        const { error } = await service.storage.from(bucket).remove(paths);
-        if (error) {
-          logError({ event: 'settings.delete_account.storage', requestId, userId, error, meta: { bucket } });
-          return { ok: false, error: 'We couldn’t finish closing your account just now.' };
-        }
-      }
-    }
-
-    // 4. FK-safe row deletes (messages before voice_profiles — FK RESTRICT).
+    // 3. FK-safe row deletes (messages before voice_profiles — FK RESTRICT).
+    //    Runs before the storage wipe so a failed row delete aborts while the
+    //    person's recordings are still on disk (the failure terminal stays true).
     const del = (table: 'usage_events' | 'messages' | 'training_clips' | 'voice_profiles') =>
       checkedWrite(service.from(table).delete().eq('user_id', userId), {
         op: `settings.delete_account.${table}`,
@@ -279,12 +293,38 @@ export async function deleteAccountAction(): Promise<SettingsActionResult> {
     await del('training_clips');
     await del('voice_profiles');
 
-    // 5. Delete the auth user — cascades `profiles` (→ subscriptions, recipients,
-    //    pending_generations) and invalidates the session.
+    // 4. Delete the auth user — cascades `profiles` (→ subscriptions, recipients,
+    //    pending_generations) and invalidates the session. Point of no return.
     const { error: authErr } = await service.auth.admin.deleteUser(userId);
     if (authErr) {
       logError({ event: 'settings.delete_account.auth_user', requestId, userId, error: authErr });
       return { ok: false, error: 'We couldn’t finish closing your account just now.' };
+    }
+
+    // 5. Storage LAST — audio + avatar (not cascaded by the auth delete). The
+    //    account is provably gone now, so a storage failure can't un-close it:
+    //    it's best-effort (logged, never fatal) rather than a `{ ok: false }`
+    //    that would falsely tell the user "nothing was lost" over a closed
+    //    account. A failure just orphans objects under `users/<id>/` for a
+    //    later sweep. The service client is service-role, so it still lists and
+    //    removes fine after the auth user is deleted.
+    for (const bucket of [AUDIO_BUCKET, AVATAR_BUCKET]) {
+      const paths = await listAllStorageObjects(service, bucket, `users/${userId}/`);
+      if (paths.length > 0) {
+        // Best-effort, inline (storage returns a StorageError, not the
+        // PostgrestError `bestEffortWrite` types): log an orphan on failure and
+        // keep going — never let it flip the closed account's result.
+        const { error } = await service.storage.from(bucket).remove(paths);
+        if (error) {
+          logError({
+            event: 'settings.delete_account.storage',
+            requestId,
+            userId,
+            error,
+            meta: { bucket, orphanCandidates: paths.length },
+          });
+        }
+      }
     }
 
     logEvent({ event: 'settings.delete_account_complete', requestId, userId, outcome: 'success' });

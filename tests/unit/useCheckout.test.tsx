@@ -130,6 +130,62 @@ describe('useCheckout', () => {
     expect(assignSpy).not.toHaveBeenCalled();
   });
 
+  it('returns false (no throw, no nav) when an ok response body is not JSON', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // A 200 whose body can't be parsed (proxy interstitial / truncated stream):
+    // res.json() rejects. The hook must swallow it into a recoverable `false`,
+    // not let the rejection escape and strand the caller's CTA on its spinner.
+    const badBody = {
+      ok: true,
+      status: 200,
+      json: vi.fn(async () => {
+        throw new SyntaxError('Unexpected token < in JSON');
+      }),
+    } as unknown as Response;
+    vi.stubGlobal('fetch', vi.fn(async () => badBody));
+    const { result } = renderHook(() => useCheckout('protect'));
+
+    let outcome: boolean | undefined;
+    // No unhandled rejection: the success parse is guarded like the error path.
+    await act(async () => { outcome = await result.current('annual'); });
+
+    expect(outcome).toBe(false);
+    expect(errSpy).toHaveBeenCalledWith('[protect] checkout succeeded without a URL', {});
+    expect(push).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns false when an ok response omits checkoutUrl (no silent push(undefined))', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Valid JSON, but the field is absent (a renamed field / contract drift).
+    // Old behavior: checkoutUrl === undefined → /^https?/ false → router.push(
+    // undefined) no-ops, yet the hook still returned true, so the caller thought
+    // navigation was underway and stuck. It must now return false.
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ someOtherField: 'x' })));
+    const { result } = renderHook(() => useCheckout('seal'));
+
+    let outcome: boolean | undefined;
+    await act(async () => { outcome = await result.current('annual'); });
+
+    expect(outcome).toBe(false);
+    expect(errSpy).toHaveBeenCalledWith('[seal] checkout succeeded without a URL', { someOtherField: 'x' });
+    expect(push).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns false when checkoutUrl is an empty string (unusable URL)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ checkoutUrl: '' })));
+    const { result } = renderHook(() => useCheckout('protect'));
+
+    let outcome: boolean | undefined;
+    await act(async () => { outcome = await result.current('monthly'); });
+
+    expect(outcome).toBe(false);
+    expect(push).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
   it('posts the chosen plan to the checkout endpoint', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({ checkoutUrl: '/x' }));
     vi.stubGlobal('fetch', fetchMock);

@@ -104,6 +104,123 @@ Entry template (the agent appends one per run):
 - Merged: <stamped later when the owner merges>
 
 ---
+## 2026-08-10 — scheduled
+- Outcome: Fixed — closing an account used to be able to leave a paid
+  subscription still charging the card if the database hiccupped mid-teardown;
+  now a read failure stops the whole close-out before anything is deleted, so a
+  live subscription can never be stranded billing a deleted account.
+- Item: FU-85 — Delete-account teardown swallows the `subscriptions` read → a
+  closed account can keep being billed.
+- Root cause: symptom — `deleteAccountAction`'s step 1 reads the user's
+  subscriptions to cancel them, but a momentary DB read failure would silently
+  skip every cancellation and let the teardown delete rows + the auth user
+  anyway, returning success. Cause — the read destructured only `{ data: subs }`
+  and threw away `{ error }`; a Supabase `.select()` that errors resolves as
+  `{ data: null, error }` instead of throwing, so the surrounding try/catch never
+  caught it and `subs === null` made the cancel loop a no-op. Why this addresses
+  the cause — the read now captures `{ error: subsError }` and, if non-null,
+  aborts into the "we couldn't finish closing your account" failure terminal
+  *before* any irreversible step, giving the read the same fail-closed treatment
+  the writes already get via `checkedWrite`. The stranded-billing path is removed
+  at its source, not patched downstream. Genuine root-cause fix, not a workaround.
+- Branch / commit: refactor/fu-85-subscriptions-read-check @ 9e6e877
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (388/388; +2 new — read-error
+  aborts with no cancel/row-delete/auth-delete/wipe, healthy read still tears
+  down. The new test fails against the pre-fix code, confirming it guards the fix.)
+- Scanned / discovered: ran the §3 scan. Health green on `main` (93d0bbd):
+  typecheck ✅ · lint ✅ · test:unit 386/386 ✅. No new untracked marker debt in
+  `src/`. Re-scored the open queue: the top P2s FU-86 (teardown storage order) and
+  FU-93 (failed-generation wedge) already have open `refactor/*` branches
+  ("done pending review" — skipped); FU-92 (`retry_audio` cost cap) is a
+  cost-control/owner-decision item, not a clean code fix. FU-85 was the top
+  fixable item — agent-fixable, no open branch/PR, and it does not touch any file
+  changed on the most recent feature branch (`feat/step10-error-copy-pass`, which
+  is Home B / Memory Shelf only). It shares `settings/actions.ts` with FU-86's
+  open branch but in a disjoint region (step-1 read vs steps 2–4 ordering), so the
+  branches don't collide. No new discoveries.
+- Merged: <stamped later when the owner merges>
+
+---
+
+## 2026-07-27 — scheduled
+- Outcome: Fixed — closing your account used to erase your recordings first and
+  only then delete the account; if that later step failed, the app told you
+  "nothing was lost" even though your recordings were already gone. It now erases
+  the recordings last, after the account is fully closed, so that reassurance is
+  only ever shown while your recordings are still safe.
+- Item: FU-86 [P2] — Delete-account teardown erases audio *before* the row/auth
+  deletes → a mid-teardown failure loses recordings under a "Nothing was lost"
+  screen.
+- Root cause: symptom — the account-deletion "we couldn't finish, nothing was
+  lost" failure screen could render *after* the person's audio + photo were
+  already permanently deleted. Cause — `deleteAccountAction` ordered the steps
+  Stripe-cancel → **wipe storage (irreversible)** → delete rows → delete auth
+  user, and a failure in either of the last two steps returned `{ ok: false }`,
+  driving that reassuring terminal even though the irreversible wipe had already
+  run. The "aborts BEFORE any data loss" guarantee only ever held for a *Stripe*
+  failure. Why this change addresses the cause (not the symptom) — the fix moves
+  the single irreversible step (the storage wipe) to *last*, so every failure
+  that can still return `{ ok: false }` now happens while the recordings are
+  untouched; and once the account is provably gone (auth user deleted) a storage
+  failure is logged as an orphan for a later sweep rather than flipping the result
+  to failure (which would falsely claim "nothing was lost" over a closed account).
+  This is a genuine root-cause reorder, not a copy patch. Two orthogonal
+  landmines in the same function are left open by design (no scope creep): FU-85
+  (a swallowed `subscriptions` read, `owner_paired`) and FU-88 (no server-side
+  `ACCOUNT_DELETE_ENABLED` gate) — both should close before the delete flag flips.
+- Branch / commit: refactor/fu-86-teardown-order @ 7956a31
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ (390/390; +4 new in
+  tests/unit/settings-delete-account.test.ts, each verified red against the
+  pre-fix ordering). Non-visual change (server action); no browser verification
+  needed. The flow is flag-gated OFF (`ACCOUNT_DELETE_ENABLED`), so not live.
+- Discovered: none new. Re-scored the open backlog: the delete-teardown cluster
+  (FU-85/86/88/90/95) remains the top P2 concentration; FU-99 (Memory Shelf
+  playback race) overlaps the active `feat/step10-error-copy-pass` branch
+  (shelf/home files) and was skipped for proximity; FU-89 and FU-93 already have
+  open `refactor/*` branches.
+- Merged: <stamped later when the owner merges, with date>
+
+---
+
+## 2026-07-20 — scheduled
+- Outcome: Fixed — the checkout button could get stuck spinning (or silently
+  pretend it was taking you to payment) if the payment-start request came back
+  malformed; it now recovers cleanly and shows the "try again" error instead.
+- Item: FU-89 — `useCheckout` success path doesn't guard `res.json()` / a
+  missing `checkoutUrl`.
+- Root cause: symptom — on a 200 response whose body is either not valid JSON
+  (a proxy interstitial / truncated stream) or valid JSON missing the
+  `checkoutUrl` field, the checkout CTA in Card Capture either stuck disabled
+  forever on its spinner, or reported success while navigating nowhere. Cause —
+  the hook's *error* path parsed the body defensively (`.catch(() => ({}))`) but
+  the *success* path did `const { checkoutUrl } = await res.json()` unguarded
+  and returned `true` without checking `checkoutUrl` was a usable string: a
+  thrown `res.json()` escaped the hook (the awaiting caller never reached
+  `setCheckoutUi('error')`), and a `undefined` field made
+  `router.push(undefined)` a no-op that still returned `true`. Why this addresses
+  the cause — the success path now mirrors the error path: parse defensively and
+  validate `typeof checkoutUrl === 'string' && checkoutUrl`, logging the
+  label-tagged failure and returning `false` on a broken 200, so the failure
+  flows through the hook's own documented "return false so the caller recovers"
+  contract rather than being swallowed or misreported. Not a band-aid — no error
+  is muted, no type widened, no test weakened.
+- Branch / commit: refactor/fu-89-checkout-url-guard @ b538594
+- Checks: typecheck ✅ · lint ✅ · test:unit ✅ 389/389 (386 prior + 3 new in
+  `tests/unit/useCheckout.test.tsx`).
+- Scanned / discovered: read the whole backlog + per-file index; ran the health
+  checks on `main` (fresh `npm ci`): typecheck ✅ · lint ✅ · unit 389/389 ✅.
+  Higher-ranked open items were all blocked for an agent this run — FU-93 and
+  FU-92 already have open PRs (#113, #112); FU-85/FU-86 (account-teardown
+  hardening) are `owner_paired` and belong to the pre-`ACCOUNT_DELETE_ENABLED`
+  sign-off batch; FU-87 is an iOS-Safari popup behaviour needing in-browser
+  verification this environment can't do. FU-89 was the top clean,
+  agent-fixable, here-verifiable item. No new marker debt or untracked
+  discoveries logged (per §5, new-item discovery is the triage agent's job on
+  its own branch). Noted only in-item: the FU-89 restore-branch cross-reference
+  was already guarded and needed no change.
+- Merged: <stamped later when the owner merges>
+
+---
 
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the

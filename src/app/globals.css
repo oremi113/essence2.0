@@ -380,11 +380,20 @@
     margin-inline: auto;
     padding-inline: 28px;
     padding-bottom: 40px;
+    /* Clear the status bar / notch / Dynamic Island on every /app page, not
+       just the ones that render TabNav. `.tab-nav` used to carry this alone,
+       which left `/app/record`, `/app/settings` and friends rendering their top
+       content at y=0 on an inset device. Resolves to 0 where no inset is
+       reported, so it is a no-op on desktop and in Chromium. */
+    padding-top: env(safe-area-inset-top, 0px);
     /* Published so a full-bleed child can size to the space the shell actually
        leaves it. A `min-height: 100dvh` child inside this padding overflows the
        viewport by exactly this much — a phantom scroll on a screen meant to be
        one still frame. Inherits, so children read it without knowing the
-       number; unset outside the shell, where the fallback is 0. */
+       number; unset outside the shell, where the fallback is 0.
+       Both ends are published: a child must subtract BOTH, or adding the top
+       inset above silently re-creates the very overflow the bottom one fixes. */
+    --app-main-inset-top: env(safe-area-inset-top, 0px);
     --app-main-inset-bottom: 40px;
   }
 
@@ -3116,9 +3125,9 @@
        .screen-header__back's negative margin. */
     margin-inline: -8px;
     margin-bottom: 16px;
-    /* Keep the bar clear of the status bar / notch on inset devices;
-       resolves to 0 where no inset is reported. */
-    padding-top: env(safe-area-inset-top, 0px);
+    /* The status-bar/notch inset now lives on `.app-main`, so every /app page
+       gets it whether or not it renders this bar. Keeping a copy here would
+       stack the two and double the top padding on nav pages. */
     font-size: 14px;
   }
 
@@ -3171,7 +3180,9 @@
        to nothing — and invited the scroll gesture the old chevron was asking
        for. Falls back to a full 100dvh when rendered outside the shell (the
        /dev harnesses). */
-    min-height: calc(100dvh - var(--app-main-inset-bottom, 0px));
+    min-height: calc(
+      100dvh - var(--app-main-inset-top, 0px) - var(--app-main-inset-bottom, 0px)
+    );
     padding: var(--space-3xl) var(--space-xl);
     text-align: center;
   }

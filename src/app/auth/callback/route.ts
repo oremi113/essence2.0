@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/auth/safeNextPath";
 
 /**
  * Auth callback. Primary sign-in is now the 6-digit code flow (verifyOtp in the
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next") ?? "/home";
+  const next = safeNextPath(searchParams.get("next"));
 
   const fail = (reason: string) => {
     const url = new URL("/auth/sign-in", request.url);
@@ -54,8 +55,7 @@ export async function GET(request: NextRequest) {
       return fail("missing_token");
     }
 
-    const redirectTo = next.startsWith("/") ? next : "/home";
-    return NextResponse.redirect(new URL(redirectTo, request.url));
+    return NextResponse.redirect(new URL(next, request.url));
   } catch {
     // Never surface the app error boundary on an auth hiccup.
     return fail("unexpected");

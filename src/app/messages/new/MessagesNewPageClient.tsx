@@ -8,6 +8,7 @@ import { supportMailto } from '@/lib/config/support';
 import type { GenerateRequest } from '@/components/screens/messages/MessageCreationFlow.types';
 import type { PersonalNoteSubmitResult } from '@/components/screens/messages/PersonalNoteScreen.types';
 import type { ExistingRecipient } from '@/components/screens/messages/RecipientSetupScreen.types';
+import type { CostLimitKind } from '@/lib/messages/cost-controls';
 import { ROUTES, messageGenerationRoute } from '@/lib/routes';
 
 /**
@@ -81,10 +82,19 @@ export function MessagesNewPageClient({
         });
         const data = (await res.json().catch(() => ({}))) as {
           generationId?: string;
+          code?: string;
+          limit_kind?: CostLimitKind;
         };
         if (res.status === 200 && data.generationId) {
           router.push(messageGenerationRoute(data.generationId));
           return { ok: true };
+        }
+        // A cost cap is a wall, not a blip. The route sends `limit_kind`
+        // precisely so the client can say which one and offer a next step that
+        // can succeed; dropping it is what made a permanent block read as
+        // "Something slipped on our end / Try again".
+        if (res.status === 429 && data.code === 'cost_limit_blocked') {
+          return { ok: false, blocked: data.limit_kind };
         }
       } catch {
         // network/parse failure → not-ok (A5 shows the retry)
