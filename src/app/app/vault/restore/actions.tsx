@@ -40,9 +40,14 @@ export function RestoreActions({
           return;
         }
 
-        // New tab so the user keeps the "paused" context open behind them.
-        window.open(data.portalUrl, '_blank', 'noopener,noreferrer');
-        setIsRestoring(false);
+        // Full-page handoff to the Customer Portal — it's the recovery flow, not
+        // a side errand. A top-level navigation is never gesture-gated, unlike a
+        // post-`await` `window.open('_blank')`, which iOS/Safari block as
+        // non-user-initiated: the blocked handle was silently discarded (no
+        // `restoreFailed`), dead-ending the card-update path on exactly the
+        // devices most people tap this on. Stripe's `return_url` brings the user
+        // back here afterward. Mirrors the `restart` branch's checkout handoff.
+        window.location.href = data.portalUrl;
         return;
       }
 

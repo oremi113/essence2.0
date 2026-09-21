@@ -23,6 +23,48 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-09-21 — scheduled
+- Outcome: Fixed — a past_due subscriber on an iPhone who tapped "Update my card" on
+  the vault-restore screen got nothing: no Stripe page, no error. Now the card-update
+  page opens reliably.
+- Item: FU-87 (`2026-07-07-vault-restore-past-due-opens-the-stripe-portal`) — vault
+  restore opened the Stripe Customer Portal via `window.open('_blank')` *after* an
+  `await`, blocked on iOS/Safari as a silent dead-end.
+- Root cause: symptom — the "Update my card" button re-enabled itself and nothing
+  happened, with no error, only on iOS/Safari. Cause — the `update_card` branch called
+  `window.open(portalUrl, '_blank')` two `await`s after the click; iOS/Safari only allow
+  `window.open` inside a live user gesture, so an open that runs after an `await` is
+  treated as non-user-initiated and blocked. The blocked handle was discarded and the
+  code only re-enabled the button (never set `restoreFailed`), so no error surfaced.
+  Why this change addresses the cause — it replaces the blockable popup with
+  `window.location.href = data.portalUrl`, a top-level navigation, which no browser
+  gesture-gates, so it can't be blocked and there's no handle to drop. This mirrors the
+  sibling `restart` branch (already a current-tab handoff to Checkout); the Portal's
+  `return_url` returns the user afterward, so the old new-tab nicety isn't lost in
+  substance. Not a workaround — the dead-end is removed structurally, not masked.
+- Branch / commit: refactor/fu-87-restore-portal-navigation @ <filled by commit>
+- Checks: typecheck ✅ · lint ✅ (0 errors; 2 pre-existing warnings in
+  `scripts/backup-snapshot.mjs`, unrelated) · test:unit ✅ 473/473 (+4 new in
+  `tests/unit/vault-restore-actions.test.tsx`, which fail against the old `window.open`
+  code and pass against the fix).
+- Verification note: the iOS/Safari popup-blocking itself is a device behaviour this
+  headless environment cannot exercise. The fix's correctness is logical, not visual —
+  a top-level navigation is unblockable by browser spec — and is pinned by unit tests
+  asserting the current-tab handoff and forbidding any `window.open`. No in-browser
+  device verification was performed or claimed.
+- Scanned / discovered: re-ran the §3 scan. Walked the live queue (`docs/follow-ups/`).
+  The P1 (First Playback build) is the active Step-5 work on `main` and a feature build,
+  not a smallest-correct fix — skipped (overlap + scope). Higher-ranked P2s already have
+  open branches/PRs and were skipped as in-flight: FU-86 teardown-order (PR #121),
+  FU-85 subscriptions-read (PR #126), FU-93 wedged-generation (PRs #113/#129/#132),
+  FU-92 retry_audio cap (PR #112), storage-buckets (PR #149); the remaining higher P2s
+  are legal/consent/infra/owner-flip items, not agent code fixes. FU-87 is the top
+  agent-fixable item with no open branch. No new untracked marker debt found; no new
+  FOLLOW_UPS entries this run.
+- Merged: <stamped later when the owner merges>
+
+---
+
 ## 2026-06-29 — scheduled
 - Outcome: Fixed — two shipping Step 6 source comments described behaviour the
   code no longer has; both now match what the code actually does.
