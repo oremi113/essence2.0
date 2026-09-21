@@ -417,36 +417,32 @@ Centralizing routes into `src/lib/routes.ts` surfaced two anomalies:
 
 ## A6 Preview & Refine — screen build (from Step 6 A6 wiring chunk 1, 2026-06-11)
 
-### 35. [P4] ✅ RESOLVED — superseded by the 2026-09-15 body-gradient re-cut (verified 2026-09-21)
+### 35. [P3] Canvas BreathStone is 2-3x less saturated than the prototype's gold stone (A6 + A7, any light ground)
 **Files:** `src/components/screens/messages/PreviewRefineScreen.tsx` and `src/components/screens/messages/SaveConfirmationScreen.tsx` (the `<BreathStone …>` renders); `src/components/breath-stone/breathStoneEngine.ts` (the palette that would change).
 **What:** the Step 6 prototypes draw rich honey-gold CSS-gradient stones (A6: Ready/Playback/Working; A7: the `infused` ceremonial amber, `essence-step6-a7.html`). Production reuses the shared canvas `BreathStone` — the architecturally correct call (one stone grammar across onboarding + Voice Training + vault + Step 6), and the state mapping is clean. But on light grounds the canvas stone renders pale-taupe, noticeably less ceremonial than the prototypes' gold orbs. Confirmed against the reference sandbox (`/dev/breath-stone`): this is the settled engine look, not a usage bug. **2026-06-12, A7 design pass:** user agrees it reads "quite dull"; revisit deliberately deferred because warming the engine touches every stone usage (VaultSeal, FirstBreath, RecordScreen, A6, A7) — a lift of its own. A7 partially compensates with the prototype's 7s amber halo as a CSS layer behind the canvas (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`).
 **Why it matters:** the stone is the emotional anchor of the preview and save-confirmation moments; a washed-out stone undersells "here it is, in your voice" and the ceremonial close. Cosmetic, not functional — states are correct and motion holds at 4× CPU.
 **Fix shape:** a dedicated stone-warmth pass: tune `breathStoneEngine`'s palette/contrast for light grounds (helps every usage), with the prototypes' gold stones as the reference, then re-verify each stone screen. Do NOT fork bespoke CSS stones into individual screens — that re-splits the stone grammar.
-**Resolved:** this entry was written 2026-06-12 against the pre-re-cut engine. The body gradient was
-re-cut to `#FDFAF0 → #C8B589` on **2026-09-15** — owner-authorised, specifically to match the Step 5
-stone — and that change is what this entry was asking for. Nobody came back to close it.
-Verified 2026-09-21 by sampling the canvas directly at `idle` on the three screens this entry names,
-measuring red-minus-blue per zone (positive = warm):
+**Re-measured 2026-09-21, and the entry stands.** A first pass wrongly closed this by testing
+red-minus-blue and finding it positive on all three screens. That was the wrong test: R>B only means
+*not blue*. This entry's complaint is about **saturation** — "less ceremonial than the prototypes' gold
+orbs" — and hue direction cannot measure it. Recorded because the mistake is easy to repeat.
+The right comparison, prototype (`essence-step6-a6.html`) against production, sampled inside the sphere:
 
-| screen | lit face | centre | shadow |
-|---|---|---|---|
-| A6 preview-refine | +20 | +24 | +41 |
-| A7 save-confirmation | +33 | +37 | +42 |
-| Home A | +19 | +25 | +42 |
+| depth | prototype | production (A7) |
+|---|---|---|
+| lit | `#FBF2DC` sat 31 (12%) | `rgb(234,221,203)` sat 31 (13%) |
+| mid | `#E8CF9A` sat **78** (34%) | `rgb(202,189,165)` sat **37** (18%) |
+| deep | `#C9A665` sat **100** (50%) | `rgb(148,137,107)` sat **41** (28%) |
 
-Warm in every zone on every screen, with real depth — `rgb(248,243,229)` at the lit face down to
-`rgb(141,130,99)` in shadow. That is a honey-gold ceramic sphere, not the "pale-taupe" described above.
-**Why it read worse than it was:** the Home A design reviews graded the screen against a flat `#C9C4BC`
-*placeholder* in the mockup, never against the canvas. The "grey disc" language in those reviews — and
-in this repo's own sign-off — describes the placeholder. Home A's A- ceiling was set against something
-that was never going to ship.
-**Left open deliberately:** A7 still carries the compensating amber halo added while the stone read
-dull (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`). It now measures the warmest of the three
-(+33/+37/+42). Worth a look at whether the compensation over-warms it, but that is a craft question on
-one screen, not this entry. The body-gradient lock in `prototypes/breath-stone-api.md` stands: state
-colour comes from overlay layers, never from re-cutting the ramp, and changing it again is an owner call.
+The highlights match; the mid and deep tones are **2-3x less saturated** in production. So the canvas
+stone is warm in hue but desaturated, which is why it reads as pale ceramic rather than gold — and on
+A7, sitting inside a saturated amber halo, it reads frankly sage.
+The 2026-09-15 body-gradient re-cut improved the form and the terminator; it did not change this.
+**Constraint on any fix:** `prototypes/breath-stone-api.md` locks the body gradient — state colour comes
+from overlay layers, never from re-cutting the ramp, and changing it again is an owner call. A
+saturation pass therefore wants an overlay, not new body stops, unless the owner lifts the lock again.
 
-Superseded scheduling note: **Pick up when:** **Owner decision 2026-09-18 — runs AFTER the Home A retrofit ships.** Scheduled, not deferred again: the retrofit ships knowingly at the ceiling this entry describes, rather than holding a finished screen for a cross-cutting engine pass. Consequences of that ordering, so nobody re-litigates it later:
+**Pick up when:** **Owner decision 2026-09-18 — runs AFTER the Home A retrofit ships.** Scheduled, not deferred again: the retrofit ships knowingly at the ceiling this entry describes, rather than holding a finished screen for a cross-cutting engine pass. Consequences of that ordering, so nobody re-litigates it later:
   1. **Home A ships with a grey placeholder as its only atmospheric element.** The Home A design review graded the screen A- and attributed the gap to A entirely to this entry ("the stone, and it is not in your gift"). That is an accepted, recorded ceiling — say it in the retrofit's sign-off rather than letting the grade quietly absorb it.
   2. **Home A must NOT compensate locally.** No CSS halo, no bespoke gradient, no warmer placeholder. A7 carries a compensating amber halo (`SaveConfirmationScreen.css.ts`, `.stone-wrap::before`) and that is one screen's debt, not a pattern to spread — every local workaround is another thing this chunk has to unpick. Home A stays clean so the fix lands in one place.
   3. **Re-verify Home A as part of this chunk**, not separately. It joins VaultSeal, FirstBreath, RecordScreen, A6 and A7 on the re-verification list, and its 4x-throttle harness already exists (`npm run verify:home-a`).

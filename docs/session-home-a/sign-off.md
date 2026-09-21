@@ -1,9 +1,7 @@
 # Home A retrofit — sign-off
 
 **Date:** 2026-09-21
-**Ships at:** **A-**, by decision.
-**Amended 2026-09-21:** the ceiling that grade was set against turned out not to
-exist — see below.
+**Ships at:** **A-**, by decision, with the ceiling named below.
 
 ---
 
@@ -20,29 +18,16 @@ The two calls specifically put to the owner both held up in the hand:
 - **The waiting sub-state's missing button.** It reads as patient, not broken —
   which was the risk of removing a control rather than disabling it.
 
-## The ceiling — amended, and it was measured against the wrong thing
+## The ceiling, stated rather than absorbed
 
-**The stone was never dull.** FOLLOW_UPS #35 is resolved: the body gradient was
-re-cut on 2026-09-15, three months after that entry was written, and sampling
-the canvas on 2026-09-21 shows a warm honey-gold sphere on all three screens the
-entry names (red-minus-blue positive in every zone; full table in #35).
+> **Correction, 2026-09-21.** A pass on this date briefly recorded #35 as
+> resolved and amended this section to say the ceiling did not exist. That was
+> wrong: it tested whether the stone was *warm* (red above blue) when the
+> question was whether it was *saturated*. Re-measured against the prototype,
+> production is 2-3x less saturated in the mid and deep tones — see #35. **The
+> ceiling below stands as originally written.**
 
-The reviews graded this screen against the mockup's flat `#C9C4BC` **placeholder**
-and never saw the canvas. The "grey disc above an apology" line — repeated in
-this document's original text and throughout the review arc — describes
-scaffolding, not the product.
 
-So the A- was set against a ceiling that had already been removed. Whether the
-screen is now an A is a fresh judgement, not a reinstatement, and it should be
-made by looking at it rather than by arithmetic on a superseded grade.
-
-The prohibition still stands and is unaffected: **Home A must not compensate
-locally.** The body-gradient lock in `prototypes/breath-stone-api.md` also
-stands — state colour comes from overlay layers, never from re-cutting the ramp.
-
-<details><summary>Original text, kept because the reasoning was sound on the facts available</summary>
-
-### The ceiling, stated rather than absorbed
 
 The design review graded this **A-** and attributed the entire gap to A to
 **FOLLOW_UPS #35** — the canvas `BreathStone` renders cool on light grounds, and
@@ -57,8 +42,6 @@ Recording it here because the review asked that it be said out loud, so a later
 reader does not mistake a decision for an oversight. **Home A must not
 compensate locally** — no halo, no bespoke gradient. That debt #35 would have to
 unpick.
-
-</details>
 
 ## Retry policy — reviewed and left alone
 
@@ -99,5 +82,5 @@ rather than blocking on.
 
 ## Open, tracked
 
-#106 px type scale · #107 tertiary as text in 19 rules ·
-#108. **#35 and #109 are both closed** (2026-09-21).
+#35 (open, re-measured) · #106 px type scale · #107 tertiary as text in 19 rules ·
+#108. **#109 closed** (2026-09-21).
