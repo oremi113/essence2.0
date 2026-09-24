@@ -19,7 +19,21 @@ export async function markVoiceProfileFailed(
   userId: string,
   code: string,
   message: string,
-  fromStatus: string = "processing"
+  fromStatus: string = "processing",
+  opts: {
+    /**
+     * Write `attempt_count` back to this value in the same update.
+     *
+     * The lock increments `attempt_count` before the vendor call, because that
+     * is what makes the start single-flight. When the failure turns out to be
+     * the operator's — a full account, a rejected key — that increment charged
+     * the user for our problem, and the third one would have bricked their
+     * profile for good. Rolling it back here rather than in a second write
+     * keeps the status flip and the refund atomic, so the two can never be
+     * observed disagreeing.
+     */
+    restoreAttemptCount?: number;
+  } = {}
 ): Promise<void> {
   // Best-effort: the monotonic `.eq("status", fromStatus)` guard means this
   // legitimately matches zero rows when a concurrent finalize/retry already
@@ -33,10 +47,24 @@ export async function markVoiceProfileFailed(
         last_error_code: code,
         last_error_message: message,
         last_error_at: new Date().toISOString(),
+        ...(opts.restoreAttemptCount !== undefined && {
+          attempt_count: opts.restoreAttemptCount,
+        }),
       })
       .eq("id", voiceProfileId)
       .eq("user_id", userId)
       .eq("status", fromStatus),
-    { op: "voice_profile_mark_failed", userId, meta: { voiceProfileId, code, fromStatus } },
+    {
+      op: "voice_profile_mark_failed",
+      userId,
+      meta: {
+        voiceProfileId,
+        code,
+        fromStatus,
+        ...(opts.restoreAttemptCount !== undefined && {
+          restoredAttemptCount: opts.restoreAttemptCount,
+        }),
+      },
+    },
   );
 }

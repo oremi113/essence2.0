@@ -20,6 +20,10 @@ import {
 } from "@/lib/voice-training/backoff";
 import { markVoiceProfileFailed } from "@/lib/voice-creation/mark-failed";
 import {
+  classifyVendorFailure,
+  VOICE_CREATE_OPERATOR_BLOCK_ACTION,
+} from "@/lib/voice-creation/classify-vendor-failure";
+import {
   MIN_CLIP_COUNT,
   MIN_TOTAL_BYTES,
   downloadClipsForVoiceProfile,
@@ -389,6 +393,18 @@ export const POST = defineRoute<true, { id: string }>(
     // ElevenLabs failed
     const isTimeout = result.status === 504;
     const safeMessage = sanitizeErrorMessage(result.message, 500);
+
+    // Whose problem is it? An `operator` failure — our account full, our key
+    // rejected, our plan lapsed — must not be charged to the user's retry
+    // budget and must not be dressed up as something waiting will fix.
+    // See classify-vendor-failure.ts for why this distinction exists.
+    const failureClass = classifyVendorFailure({
+      status: result.status,
+      code: result.code,
+      message: result.message,
+    });
+    const isOperatorFailure = failureClass === "operator";
+
     logEvent({
       event: "voice_create_elevenlabs_failed",
       requestId,
@@ -397,7 +413,7 @@ export const POST = defineRoute<true, { id: string }>(
       outcome: "error",
       errorCode: isTimeout ? "TTS_TIMEOUT" : "TTS_FAILED",
       durationMs: durationSince(startMs),
-      meta: { ttsStatus: result.status },
+      meta: { ttsStatus: result.status, failureClass },
     });
 
     await markVoiceProfileFailed(
@@ -405,11 +421,51 @@ export const POST = defineRoute<true, { id: string }>(
       voiceProfileId,
       user.id,
       result.code ?? String(result.status),
-      safeMessage
+      safeMessage,
+      "processing",
+      // Give the attempt back. The lock incremented it before the call; this
+      // failure was not the user's to pay for.
+      isOperatorFailure ? { restoreAttemptCount: profile.attempt_count ?? 0 } : {}
     );
 
     await updateUsageEventOutcome(service, requestId, "error", durationSince(startMs));
-    const retryAllowed = (profile.attempt_count ?? 0) + 1 < VOICE_PROFILE_MAX_ATTEMPTS;
+
+    if (isOperatorFailure) {
+      // The alert. Nothing else in the system says this is happening — the
+      // 2026-09-22 outage was invisible for a day precisely because the vendor
+      // message only ever reached `voice_profiles.last_error_message`. A
+      // distinct ledger action is greppable, survives a redeploy, and costs no
+      // infrastructure we do not already have. The unsanitised vendor message
+      // is deliberate here: this row is operator-facing and never reaches a
+      // client, and the exact wording is the whole diagnostic value.
+      await recordUsageEvent(service, {
+        userId: user.id,
+        action: VOICE_CREATE_OPERATOR_BLOCK_ACTION,
+        requestId,
+        outcome: "error",
+        meta: {
+          voiceProfileId,
+          vendorStatus: result.status,
+          vendorCode: result.code ?? null,
+          vendorMessage: result.message ?? null,
+        },
+      });
+      logError({
+        event: "voice_create_operator_block",
+        requestId,
+        userId: user.id,
+        voiceProfileId,
+        error: new Error(`Vendor blocked voice creation for account reasons: ${safeMessage}`),
+        meta: { vendorStatus: result.status, vendorCode: result.code ?? null },
+      });
+    }
+
+    // `retry_available: false` on an operator failure is what makes the wait
+    // screen honest: ProcessingActions reads it as terminal and shows the
+    // support-tail register instead of "we'll have it ready soon" forever.
+    const retryAllowed = isOperatorFailure
+      ? false
+      : (profile.attempt_count ?? 0) + 1 < VOICE_PROFILE_MAX_ATTEMPTS;
     return NextResponse.json(
       { status: "failed", error: safeMessage, retry_available: retryAllowed },
       { status: result.status >= 500 ? 502 : 400 }
