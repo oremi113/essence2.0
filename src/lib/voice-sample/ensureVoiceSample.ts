@@ -52,6 +52,39 @@ export const VOICE_SAMPLE_MAX_RENDERS = (() => {
   return Number.isInteger(raw) && raw > 0 ? raw : 3;
 })();
 
+/**
+ * How the First Playback sample is voiced.
+ *
+ * This used to be nothing at all — the call passed no settings, so the render
+ * fell through to the voice's stored defaults, where `style` is 0. Every other
+ * render in the app passes a tuned tuple with style between .15 and .40, which
+ * made First Playback the one place in the product speaking with expressiveness
+ * switched off. `messageTemplates.ts` defines style as "style exaggeration;
+ * higher = more dramatic delivery", and at 0 you get the right timbre with the
+ * performance flattened out of it. A tester heard their own preserved voice for
+ * the first time and asked whether it was really them (2026-09-22).
+ *
+ * The values were chosen by ear from a five-way comparison rendered against a
+ * real clone — see docs/session-voice-render-quality/. Two findings worth
+ * keeping: style 0 → .25 was the audible change, and similarity .75 → .90 was
+ * nearly inaudible. So the dial that matters here is expressiveness, not
+ * likeness. That held for one voice; whether it generalises is what the beta
+ * calibration question in that folder is for.
+ *
+ * These match `future_message`'s shape today, and are **deliberately copied
+ * rather than imported from MESSAGE_VOICE_SETTINGS**. The sample is explicitly
+ * not a Message (MASTER_SPEC Step 5, Immutable Journey Rule 4): no Message
+ * object exists and nothing is addressed to anyone. Importing a message
+ * category's tuple would mean retuning that category silently retunes the
+ * single most important playback in the product.
+ */
+export const VOICE_SAMPLE_SETTINGS = {
+  stability: 0.5,
+  similarity: 0.75,
+  style: 0.25,
+  useSpeakerBoost: true,
+} as const;
+
 
 export type EnsureVoiceSampleResult =
   /** A sample exists (this call rendered it, or found one already there). */
@@ -221,6 +254,7 @@ export async function ensureVoiceSample(
   const tts = await generateSpeechWithTimestamps({
     voiceId: profile.vendor_voice_id,
     text: VOICE_SAMPLE_LINE,
+    voiceSettings: VOICE_SAMPLE_SETTINGS,
   });
 
   if (!tts.ok) {

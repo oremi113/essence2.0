@@ -1242,3 +1242,76 @@ each against that before reaching for anything larger.
 content taller or wider than a non-scrollable box. Note its one false positive: Home B's CTA shimmer
 overlay sits outside the button by design and fires at every scale.
 **Pick up when:** next time any of those three screens is open, or before an accessibility audit.
+
+### 112. [P1] Vendor voice-slot exhaustion is billed to the user's retry budget
+*(found 2026-09-22 diagnosing a beta tester parked on Processing for a day)*
+`src/app/api/voice-profiles/[id]/start/route.ts` treats every non-`ok` ElevenLabs result the same way:
+`markVoiceProfileFailed`, `attempt_count + 1`, retry allowed until the cap. But the failure that
+actually happened is an **operator capacity** error, not a vendor blip:
+```
+bad_request — "You have reached your maximum amount of custom voices (10 / 10)."
+```
+No amount of user retrying fixes that. It burned two of the user's three attempts and would have
+bricked the profile permanently on the third (`isVoiceProfileRetryAllowed` → false → 429 forever).
+**Why it matters:** the account cap is 10 and the closed beta plans for 5–15 testers, so this is the
+single most likely way a beta tester silently dies. It is also invisible: nothing alerts, the vendor
+message only ever lands in `voice_profiles.last_error_message`, and the user is shown a reassuring
+"we'll have it ready soon."
+**Fix shape:** two separable pieces.
+1. Classify operator-side capacity/auth/quota failures apart from transient vendor failures. They
+   should **not** increment `attempt_count` (the user did nothing wrong) and should not be presented as
+   something waiting will resolve. `sanitizeErrorMessage` already keeps the vendor text out of the
+   client, so the classifier can match on the vendor code plus message before that point.
+2. Alert the operator. A capacity error is an inbox-worthy event, not a log line. Cheapest version that
+   works: on that class, write a `usage_events` row with a distinct action and have the daily check read
+   it — no new infra.
+**Pick up when:** before testers land. This one is launch-blocking for the beta, not backlog.
+
+### 113. [P2] "Email me when it's ready" is an offer that does nothing
+*(found 2026-09-22, same session as #112 — the tester pressed it)*
+`src/app/app/voice/processing/ProcessingActions.tsx` renders `Processing` with `onNotify={() => {}}`.
+The screen shows the offer whenever generation has failed or given up, so the one control available to
+a user in the worst state of the flow is inert. Its own comment says the notify infra isn't built and
+a no-op is better than promising mail that won't send — true as far as it goes, but the button is still
+*shown*, so the user reads a promise and gets nothing.
+**Why it matters:** this is the only exit from the give-up tail. Pressing it and seeing no
+acknowledgement is worse than not being offered it, and the copy beside it ("we'll reach out within a
+day") is a commitment no code keeps.
+**Fix shape:** pick one and do it properly.
+- Build it: a `notify_requests` row plus the transactional send, and the offer becomes true.
+- Or stop showing it until it exists: thread `notify.armed` (already in `Step3Props`) through as the
+  gate, so `showNotifyOffer` is false while the infra is absent, and keep the copy that doesn't promise
+  a mail. The support-tail message stands on its own without a control.
+Either way the "we'll reach out within a day" copy needs a human actually watching something.
+**Pick up when:** with #112 — same screen, same user in the same bad state.
+
+### 114. [P1] Nothing checks that prod's schema matches the repo's migrations
+*(found 2026-09-22 — Step 5 First Playback had never once worked in production)*
+Three migrations sat unapplied on prod for up to two weeks:
+```
+20260909180000_voice_profile_sample.sql              (9 days)
+20260910200000_voice_profile_sample_word_offsets.sql (8 days)
+20260915190000_storage_buckets_in_version_control.sql (3 days)
+```
+A beta tester reached the ceremony, heard the musical bed, and never heard their own voice.
+`ensureVoiceSample` claims its single-flight render with a conditional update on
+`voice_profiles.sample_status`; the column did not exist, `bestEffortWrite` swallowed the failure by
+design, and the beat went silent. Applied 2026-09-22; the tester's profile then rendered normally.
+**Why it matters — the failure mode is the problem, not the delay.** Three properties compounded:
+1. Vercel deploys code. Nothing deploys schema. The two drift silently and by default.
+2. A missing column surfaces as a *swallowed best-effort write*, which is correct for a paid-render
+   guard and catastrophic for diagnosis — there is no error anywhere the operator looks.
+3. The symptom is **silence**, which is visually identical to blocked autoplay. `20260915190000`'s own
+   header warns about exactly this ("silence is exactly what a blocked-autoplay result looks like, so
+   it would have produced a confident wrong answer to the question under test") — and then that
+   migration was itself the one left unapplied.
+So a feature marked verified locally can be dead in production indefinitely with no signal.
+**Fix shape:** a check, not discipline. `supabase migration list --linked` already prints local-vs-remote
+in a diffable form; the smallest real fix is a CI step, or a line in the deploy runbook, that fails when
+the remote column is empty for any local migration. Better, if cheap: a startup or health-route assertion
+that the columns the code depends on exist, so the app says "schema behind" instead of going quiet.
+**Also worth doing:** audit which other "verified" features were only ever verified against a local
+stack. Step 5 was verified per `docs/session-step5-first-playback/MANUAL_TEST_PLAN.md`, and that
+verification was true — locally. The manual test plans should state which environment they were run
+against.
+**Pick up when:** before testers land. Same window as #112.
