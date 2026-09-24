@@ -44,6 +44,11 @@ export const homeACss = `
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  /* A size container, so the stone below can respond to how much room this
+     region ACTUALLY has. See the note on the stone for why a media query
+     cannot do this job. */
+  container-type: size;
+  container-name: homea-scroll;
   display: flex;
   flex-direction: column;
   padding: var(--space-xl) var(--space-xl) 0;
@@ -123,6 +128,33 @@ export const homeACss = `
   margin: var(--space-3xl) 0 var(--space-2xl);
 }
 
+/* The stone yields space before the content does.
+   As the reader's text grows, the pinned action block grows with it and eats
+   this region — measured at 507px down to 402px while its content rose to
+   726px. The stone held a fixed 140px plus 72px of margin throughout, so a
+   decorative element (it is aria-hidden) kept half the space while the pill,
+   the band and the next-stop line scrolled out of sight.
+
+   A CONTAINER query, not a media query. Two earlier attempts used
+   'max-height: NNem' and neither reached a real phone:
+     - em in a media query resolves against the browser default font size, not
+       the root element, so setting the root inline leaves it inert;
+     - and iOS Safari's AA control does not change that default at all. It
+       applies -webkit-text-size-adjust, which scales text while the media
+       query's 16px reference never moves.
+   A container query keys on this region's measured height, so it fires
+   whatever made the region small - larger text by any mechanism, a taller
+   banner, a shorter device. */
+@container homea-scroll (max-height: 470px) {
+  .homea__stone { margin: var(--space-lg) 0 var(--space-md); }
+  .homea__stone canvas { width: 96px !important; height: 96px !important; }
+}
+@container homea-scroll (max-height: 400px) {
+  /* Nothing left worth trading: the stone goes so the progress can stay. */
+  .homea__stone { display: none; }
+}
+
+
 /* ── register content ─────────────────────────────────────────────────────
    Left-aligned on one margin; the stone is the only centred object. Mixing
    axes looked accidental when the stone had no air, not because of the axis. */
@@ -154,12 +186,18 @@ export const homeACss = `
   font-size: var(--text-small);
   color: var(--color-text-secondary);
   /* Grid children default to min-width:auto, so a word wider than its column
-     pushes the whole row past the viewport instead of wrapping. At a 200% root
-     'Emotional' is about 150px in a 106px column, which is exactly that. Let
-     the column actually be as narrow as it claims, and let the word break
-     rather than shove the layout sideways. */
+     pushes the whole row past the viewport instead of wrapping. min-width:0
+     lets the column actually be as narrow as it claims.
+
+     For the break itself: NOT overflow-wrap:anywhere. That was the first fix
+     and it cut words at whatever character happened to land at the edge —
+     'Emoti/onal', 'Every/day'. It removed the overflow and replaced it with
+     something harder to read, which on a screen for 45-to-70-year-olds is the
+     wrong trade. hyphens:auto breaks at syllables and marks the break with a
+     hyphen; break-word only cuts mid-word when nothing else is possible. */
   min-width: 0;
-  overflow-wrap: anywhere;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 /* The highest-value line on the screen: it narrates the 12-prompt middle so
