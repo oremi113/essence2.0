@@ -173,6 +173,51 @@ async function atZoom(factor) {
 const zoom13 = await atZoom(1.3);
 const zoom20 = await atZoom(2.0);
 
+/**
+ * Reader text size — the setting, not a simulation of it.
+ *
+ * `Page.setFontSizes` changes the browser's own default font size, which is
+ * what a person changes in Safari's AA control or Chrome's accessibility
+ * settings. That matters beyond convenience: `em` in a MEDIA QUERY resolves
+ * against the browser default, not against `documentElement.style.fontSize`.
+ * Setting the root inline — the obvious-looking approach, and the one used
+ * here first — scales `rem` type but leaves every `max-height: NNem` query
+ * inert, so it reports a layout the user will never see. This screen relies on
+ * exactly such a query to let the stone yield space to the content, so the
+ * wrong emulation hid a real failure.
+ */
+async function atReaderFontSize(px) {
+  const t = await context.newPage();
+  const s = await context.newCDPSession(t);
+  await s.send('Page.setFontSizes', { fontSizes: { standard: px, fixed: px } });
+  await t.goto(URL, { waitUntil: 'networkidle' });
+  await t.waitForTimeout(900);
+  const r = await t.evaluate(() => {
+    const sc = document.querySelector('.homea__scroll');
+    if (!sc) return null;
+    const sr = sc.getBoundingClientRect();
+    const inView = (sel) => {
+      const e = document.querySelector(sel);
+      if (!e) return 'absent';
+      const b = e.getBoundingClientRect();
+      return b.top >= sr.top - 1 && b.bottom <= sr.bottom + 1 ? 'ok' : 'scrolls';
+    };
+    const cta = document.querySelector('.homea__cta');
+    return {
+      cta: getComputedStyle(cta).fontSize,
+      pill: inView('.essence-status-pill'),
+      band: inView('.homea__band'),
+      next: inView('.homea__next-stop'),
+      ctaReachable: cta.getBoundingClientRect().bottom <= window.innerHeight + 1,
+    };
+  });
+  await t.close();
+  return r;
+}
+const read16 = await atReaderFontSize(16);
+const read21 = await atReaderFontSize(21);
+const read32 = await atReaderFontSize(32);
+
 const all = rows.flat();
 const p50 = pct(all, 50);
 const p95 = pct(all, 95);
@@ -195,6 +240,10 @@ Home A — motion verification
 
   zoom 130% (300x649)   CTA reachable: ${zoom13.ctaReachable}   scroll hidden: ${zoom13.hidden}px
   zoom 200% (195x422)   CTA reachable: ${zoom20.ctaReachable}   scroll hidden: ${zoom20.hidden}px
+
+  reader 16px    CTA ${read16?.cta}  pill ${read16?.pill}  band ${read16?.band}  next ${read16?.next}
+  reader 21px    CTA ${read21?.cta}  pill ${read21?.pill}  band ${read21?.band}  next ${read21?.next}
+  reader 32px    CTA ${read32?.cta}  pill ${read32?.pill}  band ${read32?.band}  next ${read32?.next}
 
   focus order    ${order.length ? order.join('  ->  ') : '(none inside the screen)'}
 

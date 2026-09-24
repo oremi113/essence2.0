@@ -123,6 +123,33 @@ export const homeACss = `
   margin: var(--space-3xl) 0 var(--space-2xl);
 }
 
+/* The stone yields space before the content does.
+   As text grows the pinned action block grows with it and eats the scroll
+   region — measured on WebKit at a 200% root, the region fell from 507px to
+   402px while its content rose to 726px. The stone held 140px plus 72px of
+   margin through all of that, so a decorative element (it is aria-hidden) kept
+   half the space while the pill, the band and the next-stop line — the only
+   information on the screen — scrolled out of sight.
+   Height in 'em' is the right query here: em in a media query resolves against
+   the user's own font size, so this fires when the viewport is short RELATIVE
+   TO THEIR TEXT, which is the actual condition. A px height query cannot see
+   it, because the viewport never changed.
+
+   The thresholds are fitted, not picked. A 390x664 Safari viewport is already
+   41.5em tall at default text, so an earlier 44em threshold shrank the stone
+   for every iPhone user at normal size. The real ladder, at that viewport:
+   100% -> 41.5em, 130% -> 31.9em, 160% -> 25.9em, 200% -> 20.8em. 36em
+   therefore leaves default alone and engages from about 120% up; 24em is where
+   there is nothing left worth trading. */
+@media (max-height: 36em) {
+  .homea__stone { margin: var(--space-lg) 0 var(--space-md); }
+  .homea__stone canvas { width: 96px !important; height: 96px !important; }
+}
+@media (max-height: 24em) {
+  /* Nothing left worth trading: the stone goes so the progress can stay. */
+  .homea__stone { display: none; }
+}
+
 /* ── register content ─────────────────────────────────────────────────────
    Left-aligned on one margin; the stone is the only centred object. Mixing
    axes looked accidental when the stone had no air, not because of the axis. */
@@ -154,12 +181,18 @@ export const homeACss = `
   font-size: var(--text-small);
   color: var(--color-text-secondary);
   /* Grid children default to min-width:auto, so a word wider than its column
-     pushes the whole row past the viewport instead of wrapping. At a 200% root
-     'Emotional' is about 150px in a 106px column, which is exactly that. Let
-     the column actually be as narrow as it claims, and let the word break
-     rather than shove the layout sideways. */
+     pushes the whole row past the viewport instead of wrapping. min-width:0
+     lets the column actually be as narrow as it claims.
+
+     For the break itself: NOT overflow-wrap:anywhere. That was the first fix
+     and it cut words at whatever character happened to land at the edge —
+     'Emoti/onal', 'Every/day'. It removed the overflow and replaced it with
+     something harder to read, which on a screen for 45-to-70-year-olds is the
+     wrong trade. hyphens:auto breaks at syllables and marks the break with a
+     hyphen; break-word only cuts mid-word when nothing else is possible. */
   min-width: 0;
-  overflow-wrap: anywhere;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 /* The highest-value line on the screen: it narrates the 12-prompt middle so
