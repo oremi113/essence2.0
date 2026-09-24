@@ -44,6 +44,11 @@ export const homeACss = `
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  /* A size container, so the stone below can respond to how much room this
+     region ACTUALLY has. See the note on the stone for why a media query
+     cannot do this job. */
+  container-type: size;
+  container-name: homea-scroll;
   display: flex;
   flex-direction: column;
   padding: var(--space-xl) var(--space-xl) 0;
@@ -124,31 +129,31 @@ export const homeACss = `
 }
 
 /* The stone yields space before the content does.
-   As text grows the pinned action block grows with it and eats the scroll
-   region — measured on WebKit at a 200% root, the region fell from 507px to
-   402px while its content rose to 726px. The stone held 140px plus 72px of
-   margin through all of that, so a decorative element (it is aria-hidden) kept
-   half the space while the pill, the band and the next-stop line — the only
-   information on the screen — scrolled out of sight.
-   Height in 'em' is the right query here: em in a media query resolves against
-   the user's own font size, so this fires when the viewport is short RELATIVE
-   TO THEIR TEXT, which is the actual condition. A px height query cannot see
-   it, because the viewport never changed.
+   As the reader's text grows, the pinned action block grows with it and eats
+   this region — measured at 507px down to 402px while its content rose to
+   726px. The stone held a fixed 140px plus 72px of margin throughout, so a
+   decorative element (it is aria-hidden) kept half the space while the pill,
+   the band and the next-stop line scrolled out of sight.
 
-   The thresholds are fitted, not picked. A 390x664 Safari viewport is already
-   41.5em tall at default text, so an earlier 44em threshold shrank the stone
-   for every iPhone user at normal size. The real ladder, at that viewport:
-   100% -> 41.5em, 130% -> 31.9em, 160% -> 25.9em, 200% -> 20.8em. 36em
-   therefore leaves default alone and engages from about 120% up; 24em is where
-   there is nothing left worth trading. */
-@media (max-height: 36em) {
+   A CONTAINER query, not a media query. Two earlier attempts used
+   'max-height: NNem' and neither reached a real phone:
+     - em in a media query resolves against the browser default font size, not
+       the root element, so setting the root inline leaves it inert;
+     - and iOS Safari's AA control does not change that default at all. It
+       applies -webkit-text-size-adjust, which scales text while the media
+       query's 16px reference never moves.
+   A container query keys on this region's measured height, so it fires
+   whatever made the region small - larger text by any mechanism, a taller
+   banner, a shorter device. */
+@container homea-scroll (max-height: 470px) {
   .homea__stone { margin: var(--space-lg) 0 var(--space-md); }
   .homea__stone canvas { width: 96px !important; height: 96px !important; }
 }
-@media (max-height: 24em) {
+@container homea-scroll (max-height: 400px) {
   /* Nothing left worth trading: the stone goes so the progress can stay. */
   .homea__stone { display: none; }
 }
+
 
 /* ── register content ─────────────────────────────────────────────────────
    Left-aligned on one margin; the stone is the only centred object. Mixing
