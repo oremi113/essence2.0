@@ -148,27 +148,43 @@
   --font-display: 'Spectral', Georgia, serif;
   --font-body:    'Inter', system-ui, sans-serif;
 
-  /* ─── TYPE SCALE ──────────────────────────────────── */
+
+  /* ─── TYPE SCALE ──────────────────────────────────────────────────────
+     Expressed in `rem`, not px, so the scale answers the reader's own
+     font-size setting (FOLLOW_UPS #106). In px it answered nothing: raising
+     text size in the browser or on Android moved no type in this app at all,
+     which for an audience of adults 45 to 70 is the wrong thing to be rigid
+     about, and is a WCAG 1.4.4 exposure.
+
+     The px equivalent at a default 16px root is kept in each comment — those
+     are the values every design document and review measured against, and
+     losing them would make the scale unreviewable.
+
+     `rem` and not `em`: em compounds with whatever it nests inside, so the
+     same token renders at different sizes depending on where it lands. The
+     root is deliberately not pinned (no `html { font-size }` anywhere), which
+     is what lets this respond at all. Do not add one.
+  ───────────────────────────────────────────────────────────────────────── */
   /* NOTE: the 48px step is `--text-scale-display`. It was renamed
      from `--text-display` when the design system promoted that
      name to the semantic ceremonial role below (34px Spectral).
      The raw scale step had no consumer; the role now owns the name. */
-  --text-scale-display: 48px;
-  --text-h1:      36px;
-  --text-h2:      28px;
-  --text-h3:      20px;
+  --text-scale-display: 3rem;  /* 48px */
+  --text-h1:      2.25rem;  /* 36px */
+  --text-h2:      1.75rem;  /* 28px */
+  --text-h3:      1.25rem;  /* 20px */
 
   /* ─── SEMANTIC TYPE ROLES ─────────────────────────────
      Canonical role-based tokens. Screens should reach for
      these, not raw type-scale values, so future changes
      propagate cleanly across sessions. */
-  --text-title:        28px;   /* screen headlines (Spectral 600 / line 1.4) */
+  --text-title:        1.75rem;   /* 28px ·  screen headlines (Spectral 600 / line 1.4) */
   --line-height-title: 1.4;
-  --text-body-lg: 18px;
-  --text-body:    16px;
-  --text-ui:      15px;  /* semibold UI labels — between body and small */
-  --text-small:   14px;
-  --text-caption: 12px;
+  --text-body-lg: 1.125rem;  /* 18px */
+  --text-body:    1rem;  /* 16px */
+  --text-ui:      0.9375rem;  /* 15px ·  semibold UI labels — between body and small */
+  --text-small:   0.875rem;  /* 14px */
+  --text-caption: 0.75rem;  /* 12px */
 
   /* Ceremonial type roles — promoted from the Step 5 First Playback
      build via ds/dark-stage.html ("Tokens promoted in this pass").
@@ -181,10 +197,10 @@
      so the type is still correct when a 390px frame sits inside a
      desktop review page. Re-fit on `document.fonts.ready`, or you have
      measured the fallback face. */
-  --text-display:           34px;      /* Spectral 400 — the payoff line */
+  --text-display:           2.125rem;      /* 34px ·  Spectral 400 — the payoff line */
   --line-height-display:    1.34;      /* pair with --text-display */
   --tracking-display:       -0.015em;  /* pair with --text-display */
-  --text-ceremonial:        23px;      /* Spectral 600 — ceremonial strong */
+  --text-ceremonial:        1.4375rem;      /* 23px ·  Spectral 600 — ceremonial strong */
   --tracking-ceremonial:    -0.01em;   /* pair with --text-ceremonial */
 
   /* ─── SPACING (8px base unit) ─────────────────────── */

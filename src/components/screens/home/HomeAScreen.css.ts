@@ -150,7 +150,17 @@ export const homeACss = `
   display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-md);
   margin-bottom: var(--space-sm);
 }
-.homea__band-label { font-size: var(--text-small); color: var(--color-text-secondary); }
+.homea__band-label {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  /* Grid children default to min-width:auto, so a word wider than its column
+     pushes the whole row past the viewport instead of wrapping. At a 200% root
+     'Emotional' is about 150px in a 106px column, which is exactly that. Let
+     the column actually be as narrow as it claims, and let the word break
+     rather than shove the layout sideways. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 /* The highest-value line on the screen: it narrates the 12-prompt middle so
    the band doesn't have to. On the ground, never on a card — the CTA is the
