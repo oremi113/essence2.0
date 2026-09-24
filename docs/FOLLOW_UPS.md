@@ -1267,6 +1267,44 @@ message only ever lands in `voice_profiles.last_error_message`, and the user is 
    it — no new infra.
 **Pick up when:** before testers land. This one is launch-blocking for the beta, not backlog.
 
+**Resolved 2026-09-24.** `classifyVendorFailure` (`src/lib/voice-creation/classify-vendor-failure.ts`)
+splits vendor failures into `operator` and `transient`, and the start route acts on the difference:
+
+- **The attempt is refunded.** `markVoiceProfileFailed` takes `restoreAttemptCount` and writes it in
+  the *same* update as the status flip, so the refund and the failure can never be observed
+  disagreeing. The lock still increments before the vendor call — that is what makes start
+  single-flight — but an operator failure gives it back.
+- **`retry_available: false`** is returned, which is what makes the wait screen honest: the
+  `ProcessingActions` change in the same session reads that as terminal and shows the support-tail
+  register immediately instead of "we'll have it ready soon" indefinitely.
+- **It alerts.** A `voice_create_operator_block` ledger row plus a `logError`. Deliberately a
+  different action from `voice_create` so it does not count toward the daily cap and can be grepped
+  on its own:
+  `/rest/v1/usage_events?action=eq.voice_create_operator_block&select=created_at,meta&order=created_at.desc`
+  The row carries the unsanitised vendor message on purpose — it is operator-facing, never reaches a
+  client, and the exact wording is the entire diagnostic value.
+
+**Status: SHIPPED, UNIT-TESTED, NOT DRIVEN** (owner's call, 2026-09-24). Nobody has watched a real
+operator failure produce the support-tail screen, the refunded attempt, or the ledger row in a
+browser. Three attempts to provoke one against production all failed *before reaching the code* —
+see `docs/spot-checks/2026-09-24-operator-failure-honesty.md` for what was learned, including the
+measured fact that **ElevenLabs' `Voices` scope does not gate voice creation**, so no setting of it
+can ever induce this failure. The remaining reliable provocation is a deliberately invalid
+`ELEVENLABS_API_KEY` in Vercel Production, which was judged not worth the disruption.
+Treat the behaviour as reasoned and covered, not observed. If a tester ever hits it, confirm the
+screen and the ledger row before assuming this works.
+
+Coverage: `tests/unit/classify-vendor-failure.test.ts`, 28 cases. It pins the verbatim message from
+the tester's row, and pins the failure *direction*: an unrecognised message degrades to `transient`
+(today's behaviour) rather than escalating to `operator`, which would strand someone who only needed
+to retry.
+
+**One sibling deliberately left open.** The daily voice-creation cap (`CAPS.maxVoiceCreationsPerDay`,
+5/day) is still spent by an operator failure, since the `voice_create` ledger row is written before
+the vendor call is made. Same bug class, much smaller blast radius — the daily cap resets, while
+`attempt_count` was permanent — so it was not widened into this fix. Worth closing next time this
+route is open.
+
 ### 113. [P2] "Email me when it's ready" is an offer that does nothing
 *(found 2026-09-22, same session as #112 — the tester pressed it)*
 `src/app/app/voice/processing/ProcessingActions.tsx` renders `Processing` with `onNotify={() => {}}`.
@@ -1315,3 +1353,51 @@ stack. Step 5 was verified per `docs/session-step5-first-playback/MANUAL_TEST_PL
 verification was true — locally. The manual test plans should state which environment they were run
 against.
 **Pick up when:** before testers land. Same window as #112.
+
+### 115. [P2] Middleware double-encodes `next`, so every signed-out deep link lands on /home
+*(found 2026-09-24 while setting up a spot check)*
+`middleware.ts:23-25` encodes the path and then hands it to `URLSearchParams`, which encodes it again:
+```ts
+const next = encodeURIComponent(pathname + search);  // encode #1
+signInUrl.searchParams.set("next", next);            // encode #2
+```
+The emitted header is `location: /auth/sign-in?next=%252Fapp%252Fvoice%252Fprocessing` — verified
+against production. `searchParams.get("next")` undoes one layer and yields
+`%2Fapp%2Fvoice%2Fprocessing`, which does not start with `/`, so `safeNextPath` correctly rejects it
+and returns `DEFAULT_NEXT` (`/home`).
+**Not a security hole** — the guard behaves exactly as designed, and this is arguably it earning its
+keep. It is a correctness bug: the destination is silently discarded.
+**Why it matters:** this is the closed beta's opening move. A tester is sent a link, is not signed in
+(new device, new account, cleared cookies), gets bounced to sign-in, signs in — and lands on `/home`
+instead of where the link pointed, with nothing to explain it. Deep links are how invites work, so
+this affects the first thirty seconds of every tester's experience.
+**Fix shape:** drop the manual `encodeURIComponent`; `searchParams.set` already encodes. One line.
+Note the comment in `routes.ts:64-69` claiming middleware "builds its own encoded variant... and is
+intentionally left to do so" — the intent was one encode, and the implementation does two, so the
+comment reads as correct while the code is not. Fix both.
+**Coverage to add with it:** a test asserting the emitted `Location` decodes to the original path in
+one step, and one for `safeNextPath` receiving a correctly-encoded value.
+**Pick up when:** before invites go out. Cheap, and it is the tester's first impression.
+
+### 116. [P2] Production and local ran different ElevenLabs keys, and nothing could tell
+*(found 2026-09-24 when a deliberate permission change had no effect on production)*
+`.env.local` and `.env.local.prod-backup` both held `sk_f16a…0cda`. Vercel's Production
+`ELEVENLABS_API_KEY` was a **different key** on the same ElevenLabs account. Discovered only because a
+spot check restricted the local key's scopes and production carried on cloning voices regardless.
+Owner has since overwritten the Vercel value to match; both now provably agree.
+**Why it matters — the debugging cost, not the runtime cost.** Both keys worked, so nothing was
+broken and nothing would ever have surfaced. The damage is that every conclusion drawn by probing the
+local key was a claim about a key production does not use: what it is permitted to do, which scopes
+it carries, whether a change to it means anything. An hour went into a verification that could not
+have worked, and the same mismatch would have made any future incident diagnosis silently wrong.
+Same family as #114 (schema drift): **the thing you inspect is not the thing that runs, and nothing
+says so.**
+**Fix shape:** the values cannot be read back out of Vercel, so detection has to be indirect. A
+fingerprint is enough — log a non-reversible hash prefix of each vendor key at boot (`sha256(key)`,
+first 8 hex), so a production log line and a local one can be compared by eye without either ever
+printing a secret. Ten lines, and it makes "are we even running the same credentials" answerable in
+seconds instead of by experiment.
+**Worth doing at the same time:** the same question applies to every other secret — Supabase service
+role, Stripe, Anthropic. One fingerprint helper covers all of them.
+**Pick up when:** with #114. They are the same lesson about drift between what is inspected and what
+runs, and the fix is the same shape: make the mismatch observable rather than discoverable.
