@@ -23,6 +23,49 @@ Entry template (the agent appends one per run):
 
 ---
 
+## 2026-09-25 — discovery (scheduled triage)
+- Outcome: Scan-only (discovery agent, read-only) — deep pass over the auth
+  redirect round-trip, the less-triaged API routes, and the blast radius of the
+  recent rem type-scale change; 4 new backlog items logged, none a duplicate.
+- Health checks (on `main`, deps installed fresh): typecheck ✅ · lint ✅ (0
+  errors; 2 pre-existing `backup-snapshot.mjs` + 2 test-file unused-var warnings)
+  · test:unit ✅ 586/586 · followups:check ✅ · legal:check ✅. No health
+  failure, so nothing auto-escalated.
+- Scanned: existing backlog (`docs/FOLLOW_UPS.md` archive + all 108 open per-file
+  items, dedup source); recent `main` commits since the last triage window
+  (voice-charging #112, First Playback voice, rem a11y #171, home-a #173) and the
+  active branches (`design/home-a-directions`, `feat/legal-pages`,
+  `fix/step6-cost-control-wedge` — all WIP or superseded, not flagged as debt);
+  marker debt in `src/` (all `eslint-disable` sites are documented/known, no
+  untracked TODO/FIXME/HACK); the auth `next` round-trip; ten less-triaged API
+  routes; the rem-token conversion's effect on fixed-px layout.
+- Discovered (4, all new — most-severe first):
+  - **P2** `2026-09-25-middleware-double-encodes-next-loses-deep-link` —
+    middleware `encodeURIComponent`s `next` then `searchParams.set` encodes it
+    again, so `safeNextPath` rejects the mangled value and every signed-out deep
+    link lands on `/home`. Owner-paired (fix is in `middleware.ts`, never-touch).
+    Distinct from the resolved open-redirect *validation* items; latent since the
+    original auth build.
+  - **P2** `2026-09-25-voice-profile-persisted-before-consent-record` — the
+    voice-create route inserts the profile before the durable consent record and
+    `/start` never re-checks it, so a failed consent write leaves a cloneable
+    profile with no evidence — the invariant the code's own comment claims to
+    hold. Latent until `VOICE_CONSENT_REQUIRED` is flipped on for beta.
+  - **P3** `2026-09-25-delete-my-data-endpoint-swallows-delete-errors` — the
+    non-prod `DELETE /api/me` reset tool reads only `count`, never `{ error }`,
+    so a failed delete collapses to 0 and still returns 200 success. Recurring
+    swallowed-error class, new (testing-only) site.
+  - **P4** `2026-09-25-rem-type-scale-left-fixed-px-sizes-behind` — the rem
+    type-scale conversion left the Home A/B CTAs on a fixed `height: 56px` (HomeB
+    with `overflow: hidden`, so the label clips at large text) plus several
+    px-pinned titles that freeze while body copy scales.
+- Coordination: appends only (new entries + regenerated `INDEX.md`); no existing
+  entry's resolution strike touched, per REFACTORING_SYSTEM §5. Branch
+  `triage/2026-09-25` off latest `main`.
+- Merged: <stamped later when the owner merges>
+
+---
+
 ## 2026-09-21 — scheduled
 - Outcome: Fixed — a past_due subscriber on an iPhone who tapped "Update my card" on
   the vault-restore screen got nothing: no Stripe page, no error. Now the card-update
